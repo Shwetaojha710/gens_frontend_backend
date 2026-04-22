@@ -18,8 +18,16 @@ export class RecruitmentOfferLetterComponent implements OnInit {
   notyf = new Notyf();
   isDownload = false;
   isSaving = false;
+  isGeneratingPdf = false;
   letterheadImage = '/assets/img/Letterhead-2.png';
   aadhaarError = '';
+
+  selectedLetter: any = null;
+  showPreview = false;
+
+  phoneSearchNo = '';
+  isSearchingByPhone = false;
+  phoneSearchError = '';
 
   tenant: any = {};
 
@@ -290,6 +298,116 @@ export class RecruitmentOfferLetterComponent implements OnInit {
       printWindow.focus();
       setTimeout(() => { printWindow.print(); this.isDownload = false; }, 500);
     }).catch(() => { this.isDownload = false; });
+  }
+
+  searchByPhone(): void {
+    const phone = this.phoneSearchNo.trim();
+    if (!phone || !/^[6-9]\d{9}$/.test(phone)) {
+      this.phoneSearchError = 'Enter a valid 10-digit mobile number.';
+      return;
+    }
+    this.phoneSearchError = '';
+    this.isSearchingByPhone = true;
+    this.jobService.getOfferLetterByPhone(phone).subscribe({
+      next: (res: any) => {
+        if (res.status && res.data) {
+          this.viewLetter(res.data);
+        } else {
+          this.phoneSearchError = res.message || 'No offer letter found for this number.';
+        }
+        this.isSearchingByPhone = false;
+      },
+      error: () => {
+        this.phoneSearchError = 'Server error. Please try again.';
+        this.isSearchingByPhone = false;
+      }
+    });
+  }
+
+  clearPhoneSearch(): void {
+    this.phoneSearchNo = '';
+    this.phoneSearchError = '';
+  }
+
+  viewLetter(item: any): void {
+    this.selectedLetter = item;
+    this.showPreview = true;
+    this.showForm = false;
+  }
+
+  closePreview(): void {
+    this.showPreview = false;
+    this.selectedLetter = null;
+  }
+
+  downloadSavedPdf(item: any): void {
+    this.isGeneratingPdf = true;
+    this.jobService.generateRecruitmentOfferLetterPdf(item.id).subscribe({
+      next: (res: any) => {
+        if (res.status && res.data?.downloadUrl) {
+          window.open(res.data.downloadUrl, '_blank');
+        } else {
+          this.notyf.error(res.message || 'Failed to generate PDF.');
+        }
+        this.isGeneratingPdf = false;
+      },
+      error: () => {
+        this.notyf.error('Server error. Please try again.');
+        this.isGeneratingPdf = false;
+      }
+    });
+  }
+
+  printSavedLetter(item: any): void {
+    this.getBase64ImageFromUrl('/assets/img/Letterhead-2.png').then(bgImage => {
+      const salutationPrefix = item.gender === 'Male' ? 'S/O' : item.gender === 'Female' ? 'D/O' : 'C/O';
+      const refNo = item.refNo ? `Quaere/Emp/Offer/${item.refNo}` : 'Quaere/Emp/Offer/';
+      const offerDate = this.formatOrdinalDateHtml(item.offerDate);
+      const joiningDate = this.formatOrdinalDateHtml(item.joiningDate);
+      const printWindow = window.open('', '_blank', 'width=900,height=700');
+      if (!printWindow) return;
+      printWindow.document.write(`<!DOCTYPE html><html><head><title>Offer Letter</title><style>
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+        body { margin: 0; font-family: 'Calibri (Body)'; }
+        .doc { width: 21cm; min-height: 29.7cm; padding: 60px 40px 60px 30px; position: relative;
+          background-image: url('${bgImage}'); background-repeat: no-repeat; background-size: 100% 100%; font-size: 11px; color: #000; }
+        @media print { body { margin: 0; } @page { margin: 0; size: A4; } }
+      </style></head><body><div class="doc">
+        <table style="width:100%; font-size:12px; border:none; margin-top:50px;"><tr>
+          <td><b>Ref: ${refNo}</b></td>
+          <td style="text-align:right;"><b>Dated: ${offerDate}</b></td>
+        </tr></table>
+        <div style="margin:30px 0; line-height:1.8;">
+          <b>${item.firstName} ${item.lastName}</b><br>
+          ${salutationPrefix} ${item.fatherName}<br>
+          ${item.permanentAddress || ''}
+        </div>
+        <p style="font-weight:bold;">Dear ${item.firstName},</p>
+        <p>With reference to your application and subsequent interview with us, we are pleased to offer you employment in our Company as <b>${item.designation}</b> in the <b>${item.department}</b> at our Head Office, as per the mutually agreed terms and conditions discussed with you at the time of interview.</p>
+        <p>You are requested to report for joining on or before <b>${joiningDate}</b>.</p>
+        <p>You are advised to submit the following documents at the time of joining:</p>
+        <ol>
+          <li>Three Latest passport size color photographs.</li>
+          <li>Self-attested copy of address proof &amp; ID proof.</li>
+          <li>One set of all credentials (mark sheet of 10th &amp; 12th and pass certificate with Degree/Diploma).</li>
+          <li>Salary proof from previous Company.</li>
+          <li>Relieving Letter/ No dues/ Clearance Certificate from all previous employers.</li>
+          <li>Two references of immediate reporting person.</li>
+        </ol>
+        <p>This offer would automatically stand revoked in the event of not reporting at the date specified above and/or you not complying with any other terms &amp; conditions of employment. At the time of joining, the formal appointment letter will be issued to you.</p>
+        <p>We take this opportunity to welcome you to our Company and look forward to a long and mutually beneficial association with you.</p>
+        <p>Please confirm your acceptance of this offer by signing and returning a copy of this letter to us.</p>
+        <table width="100%" style="margin-top:40px;">
+          <tr>
+            <td style="width:50%; vertical-align:top;"><p>Thanks &amp; Regards</p><br><br><p><b>Human Resource Dept</b></p></td>
+            <td style="width:50%; text-align:right; vertical-align:top;"><p>Agreed &amp; Accepted</p><p style="margin-top:40px;"><b>${item.firstName} ${item.lastName}</b></p></td>
+          </tr>
+        </table>
+      </div></body></html>`);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => { printWindow.print(); }, 500);
+    });
   }
 
   async downloadPDF(): Promise<void> {

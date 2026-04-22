@@ -7,6 +7,11 @@
     <button type="button" class="btn btn-primary" (click)="saveData(); downloadDoc()">
       <i class="ri ri-download-line me-1"></i> Download DOC
     </button>
+    <button type="button" class="btn btn-danger" (click)="saveData(); generateServerPdf()" [disabled]="isGeneratingPdf">
+      <i class="ri ri-file-pdf-line me-1"></i>
+      <span *ngIf="isGeneratingPdf">Generating...</span>
+      <span *ngIf="!isGeneratingPdf">Download PDF</span>
+    </button>
   </div>
 </div>
 

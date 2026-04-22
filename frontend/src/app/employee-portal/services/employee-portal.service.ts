@@ -293,4 +293,8 @@ export class EmployeePortalService {
       { signature },
     );
   }
+
+  getAppLetterPdfs(): Observable<any> {
+    return this.http.post<any>(`${this.base}get-app-letter-pdfs`, {});
+  }
 }

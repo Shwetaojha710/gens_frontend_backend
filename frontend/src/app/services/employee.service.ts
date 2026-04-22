@@ -132,4 +132,12 @@ getLetterStats(): Observable<any> {
   return this.http.post<any>(`${this.baseUrl}get-letter-stats`, {});
 }
 
+generateLetterPdf(employeeId: string, type: 'appointment' | 'offer' | 'relieving'): Observable<any> {
+  return this.http.post<any>(`${this.baseUrl}generate-letter-pdf`, { employeeId, type });
+}
+
+generateAllLettersPdf(): Observable<any> {
+  return this.http.post<any>(`${this.baseUrl}generate-all-letters-pdf`, {});
+}
+
 }

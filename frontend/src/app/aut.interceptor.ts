@@ -8,7 +8,14 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   const superAdminToken = localStorage.getItem('superadminToken');
   const empPortalToken  = localStorage.getItem('empPortalToken');
+  const panelToken      = localStorage.getItem('panelToken');
   const adminToken      = localStorage.getItem('token');
+  const panelApiPaths = [
+    'panel-user-logout',
+    'get-my-interviews',
+    'panel-save-feedback',
+    'panel-feedback-detail'
+  ];
 
   // Detect context: URL-based check AND token presence as fallback
   const isSuperAdmin = !!(
@@ -16,6 +23,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     (req.url.includes('/superadmin/') || req.url.includes('superadmin/'))
   ) && !req.url.includes('/superadmin/login');
 
+  const isPanelUser = !!panelToken && panelApiPaths.some((path) => req.url.includes(path));
   const isEmpPortal = !!empPortalToken && !isSuperAdmin;
 
   let token: string | null;
@@ -23,6 +31,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   if (isSuperAdmin) {
     token    = superAdminToken;
+    branchId = null;
+  } else if (isPanelUser) {
+    token    = panelToken;
     branchId = null;
   } else if (isEmpPortal) {
     token    = empPortalToken;
@@ -53,7 +64,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
         if (body && body.status === 'expired') {
           // Save current page before clearing storage so login can redirect back
-          if (!superAdminToken && !req.url.includes('superadmin/') && !isEmpPortal) {
+          if (!superAdminToken && !req.url.includes('superadmin/') && !isEmpPortal && !isPanelUser) {
             sessionStorage.setItem('returnUrl', router.url);
           }
           localStorage.clear();
@@ -62,6 +73,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
             router.navigate(['/superadmin/login']);
           } else if (isEmpPortal) {
             router.navigate(['/employee-portal/login']);
+          } else if (isPanelUser) {
+            router.navigate(['/login']);
           } else {
             router.navigate(['/login']);
           }

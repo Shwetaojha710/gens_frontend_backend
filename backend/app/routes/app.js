@@ -3,6 +3,7 @@ const router = express.Router();
 const {AppAdmin, Admin} = require('../middleware/auth');
 const {getDailyAttendance,getAttendance, employeeByDepartment, TeamsAttendance,EmployeeDetails, EmployeeLeaveList,getAppAppliedLeaves, AppupdatedApplyLeaveStatus,AppapplyForLeave, getAppLeaveTypes, AppgetHolidayList, upcomingLeave, AppgetBillDetails, PrintBill, TeamLeaderLeaveList, DirectorLeaveList, notification, applyRegularization, getMyRegularizations, getPendingApproverRequests, updateRegularizationStatus, markattendance, addAppReimbursement, reimbursementList, updateAppEmp, getEmpLetterDocs, saveEmpLetterSignature}=require("../controller/tenant/appApi");
 const { trackLocation, getLatestLocation, PinnedtrackLocation, listVistData, updateTrackRemark } = require('../controller/tenant/tracking');
+const { generateAllLettersPdf } = require('../controller/tenant/letter_data');
 const upload = require('../middleware/upload');
 const excel_pdf_upload = require('../middleware/excel_pdf_upload');
 const { branchDD } = require('../controller/tenant/branch');
@@ -53,5 +54,6 @@ router.get('/reimbursement-list',AppAdmin,reimbursementList)
 router.post('/update-app-emp',AppAdmin,updateAppEmp)
 router.get('/get-emp-letter-docs', AppAdmin, getEmpLetterDocs)
 router.post('/save-emp-letter-signature', AppAdmin, saveEmpLetterSignature)
+router.post('/get-app-letter-pdfs', AppAdmin, generateAllLettersPdf)
 
 module.exports = router

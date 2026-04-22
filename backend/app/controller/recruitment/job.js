@@ -555,6 +555,131 @@ exports.checkDuplicateOfferLetter = async (req, res) => {
   }
 };
 
+const PdfPrinter = require("pdfmake");
+const path = require("path");
+const fs = require("fs");
+
+const pdfFonts = {
+  Roboto: { normal: "Helvetica", bold: "Helvetica-Bold", italics: "Helvetica-Oblique", bolditalics: "Helvetica-BoldOblique" }
+};
+const offerPrinter = new PdfPrinter(pdfFonts);
+
+const formatLetterDate = (dateStr) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '';
+  const day = date.getDate();
+  const month = date.toLocaleString('en-US', { month: 'long' });
+  const year = date.getFullYear();
+  const v = day % 100;
+  const suffixes = ['TH','ST','ND','RD'];
+  const suffix = (v >= 11 && v <= 13) ? 'TH' : (suffixes[day % 10] || 'TH');
+  return `${day}${suffix} ${month}, ${year}`;
+};
+
+exports.getOfferLetterByPhone = async (req, res) => {
+  try {
+    const { mobileNo } = req.body;
+    const tenantId = req.users?.tenantId;
+    const branchId = req.users?.branchId;
+
+    if (!mobileNo) return Helper.response(false, "Mobile number is required", {}, res, 400);
+
+    const letter = await OfferLetter.findOne({ where: { mobileNo, tenantId, branchId } });
+    if (!letter) return Helper.response(false, "No offer letter found for this mobile number", {}, res, 200);
+
+    return Helper.response(true, "Offer letter found", letter, res, 200);
+  } catch (error) {
+    console.error(error);
+    return Helper.response(false, error.message, {}, res, 500);
+  }
+};
+
+exports.generateOfferLetterPdf = async (req, res) => {
+  try {
+    const { id } = req.body;
+    const tenantId = req.users?.tenantId;
+    const branchId = req.users?.branchId;
+
+    if (!id) return Helper.response(false, "ID is required", {}, res, 400);
+
+    const d = await OfferLetter.findOne({ where: { id, tenantId, branchId } });
+    if (!d) return Helper.response(false, "Offer letter not found", {}, res, 404);
+
+    const salutationPrefix = d.gender == 'Male' ? 'S/O' : d.gender == 'Female' ? 'D/O' : 'C/O';
+    const refNo = d.refNo ? `Quaere/Emp/Offer/${d.refNo}` : 'Quaere/Emp/Offer/';
+    const offerDateStr = formatLetterDate(d.offerDate);
+    const joiningDateStr = formatLetterDate(d.joiningDate);
+
+    const docDefinition = {
+      pageSize: 'A4',
+      pageMargins: [60, 80, 60, 60],
+      content: [
+        {
+          columns: [
+            { text: `Ref: ${refNo}`, bold: true, fontSize: 10 },
+            { text: `Dated: ${offerDateStr}`, bold: true, fontSize: 10, alignment: 'right' }
+          ],
+          margin: [0, 20, 0, 20]
+        },
+        {
+          stack: [
+            { text: `${d.firstName} ${d.lastName}`, bold: true, fontSize: 10 },
+            { text: `${salutationPrefix} ${d.fatherName}`, fontSize: 10 },
+            { text: d.permanentAddress || '', fontSize: 10 }
+          ],
+          margin: [0, 0, 0, 20]
+        },
+        { text: `Dear ${d.firstName},`, bold: true, margin: [0, 0, 0, 12] },
+        { text: `With reference to your application and subsequent interview with us, we are pleased to offer you employment in our Company as ${d.designation} in the ${d.department} at our Head Office, as per the mutually agreed terms and conditions discussed with you at the time of interview.`, fontSize: 10, margin: [0, 0, 0, 8] },
+        { text: `You are requested to report for joining on or before ${joiningDateStr}.`, fontSize: 10, margin: [0, 0, 0, 8] },
+        { text: 'You are advised to submit the following documents at the time of joining:', fontSize: 10, margin: [0, 0, 0, 5] },
+        {
+          ol: [
+            'Three Latest passport size color photographs.',
+            'Self-attested copy of address proof & ID proof.',
+            'One set of all credentials (mark sheet of 10th & 12th and pass certificate with Degree/Diploma).',
+            'Salary proof from previous Company.',
+            'Relieving Letter/ No dues/ Clearance Certificate from all previous employers.',
+            'Two references of immediate reporting person.'
+          ],
+          fontSize: 10, margin: [0, 0, 0, 8]
+        },
+        { text: 'This offer would automatically stand revoked in the event of not reporting at the date specified above and/or you not complying with any other terms & conditions of employment or in case of a negative reference check received. At the time of joining, the formal appointment letter, containing detailed terms & conditions, will be issued to you.', fontSize: 10, margin: [0, 0, 0, 8] },
+        { text: 'We take this opportunity to welcome you to our Company and look forward to a long and mutually beneficial association with you.', fontSize: 10, margin: [0, 0, 0, 8] },
+        { text: 'Please confirm your acceptance of this offer by signing and returning a copy of this letter to us.', fontSize: 10, margin: [0, 0, 0, 30] },
+        {
+          columns: [
+            { width: '50%', stack: [{ text: 'Thanks & Regards', fontSize: 10 }, { text: '\n\n' }, { text: 'Human Resource Dept', bold: true, fontSize: 10 }] },
+            { width: '50%', stack: [{ text: 'Agreed & Accepted', fontSize: 10, alignment: 'right' }, { text: '\n\n' }, { text: `${d.firstName} ${d.lastName}`, bold: true, fontSize: 10, alignment: 'right' }] }
+          ]
+        }
+      ],
+      defaultStyle: { font: 'Roboto' }
+    };
+
+    const fileName = `offer_letter_${d.firstName}_${d.lastName}_${Date.now()}.pdf`;
+    const filePath = path.join(__dirname, "../../../uploads/pdfs", fileName);
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+
+    const pdfDoc = offerPrinter.createPdfKitDocument(docDefinition);
+    const writeStream = fs.createWriteStream(filePath);
+    pdfDoc.pipe(writeStream);
+    pdfDoc.end();
+
+    await new Promise((resolve, reject) => {
+      writeStream.on('finish', resolve);
+      writeStream.on('error', reject);
+    });
+
+    const downloadUrl = `${process.env.BASE_URL}/uploads/pdfs/${fileName}`;
+    return Helper.response(true, "PDF generated successfully", { downloadUrl }, res, 200);
+  } catch (error) {
+    console.error(error);
+    return Helper.response(false, error.message, {}, res, 500);
+  }
+};
+
 exports.saveOfferLetter = async (req, res) => {
   try {
     const {

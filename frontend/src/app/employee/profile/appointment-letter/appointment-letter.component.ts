@@ -380,4 +380,46 @@ printDoc() {
     setTimeout(() => document.body.removeChild(iframe), 1000);
   };
 }
+
+isGeneratingPdf = false;
+isGeneratingAllPdf = false;
+allLettersResult: any = null;
+
+generateServerPdf(): void {
+  this.isGeneratingPdf = true;
+  this.employeeService.generateLetterPdf(this.personalDetails.id, 'appointment').subscribe({
+    next: (res: any) => {
+      if (res.status && res.data?.downloadUrl) {
+        window.open(res.data.downloadUrl, '_blank');
+      } else {
+        this.notyf.error(res.message || 'Failed to generate PDF.');
+      }
+      this.isGeneratingPdf = false;
+    },
+    error: () => {
+      this.notyf.error('Server error. Please try again.');
+      this.isGeneratingPdf = false;
+    }
+  });
+}
+
+generateAllLettersPdf(): void {
+  this.isGeneratingAllPdf = true;
+  this.allLettersResult = null;
+  this.employeeService.generateAllLettersPdf().subscribe({
+    next: (res: any) => {
+      if (res.status) {
+        this.allLettersResult = res.data;
+        this.notyf.success('All available letters generated successfully.');
+      } else {
+        this.notyf.error(res.message || 'No letter data found.');
+      }
+      this.isGeneratingAllPdf = false;
+    },
+    error: () => {
+      this.notyf.error('Server error. Please try again.');
+      this.isGeneratingAllPdf = false;
+    }
+  });
+}
 }

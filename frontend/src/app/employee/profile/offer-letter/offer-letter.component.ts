@@ -276,4 +276,24 @@ printDoc() {
       this.isDownload = false;
     });
   }
+
+  isGeneratingPdf = false;
+
+  generateServerPdf(): void {
+    this.isGeneratingPdf = true;
+    this.employeeService.generateLetterPdf(this.personalDetails.id, 'offer').subscribe({
+      next: (res: any) => {
+        if (res.status && res.data?.downloadUrl) {
+          window.open(res.data.downloadUrl, '_blank');
+        } else {
+          this.notyf.error(res.message || 'Failed to generate PDF.');
+        }
+        this.isGeneratingPdf = false;
+      },
+      error: () => {
+        this.notyf.error('Server error. Please try again.');
+        this.isGeneratingPdf = false;
+      }
+    });
+  }
 }

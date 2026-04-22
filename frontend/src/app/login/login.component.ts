@@ -144,12 +144,13 @@ export class LoginComponent {
         if (data.status) {
           localStorage.setItem('panelToken', data.data.token);
           localStorage.setItem('panelUser', JSON.stringify(data.data.user));
+          localStorage.setItem('user', JSON.stringify(data.data.user));
           localStorage.setItem('tenant', JSON.stringify(data.data.tenant));
           localStorage.setItem('branch', JSON.stringify(data.data.branch));
           localStorage.setItem('base_url', data.data.baseUrl);
           localStorage.setItem('PORT', data.data.PORT);
           this.notyf.success('Welcome, ' + data.data.user.first_name + '!');
-          this.router.navigate(['interview']);
+          this.router.navigate(['/interview/interviewer-dashboard']);
         } else {
           this.notyf.error(data.message || 'Invalid OTP');
         }

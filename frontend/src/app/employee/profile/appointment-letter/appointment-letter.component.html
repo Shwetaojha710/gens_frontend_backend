@@ -6,6 +6,43 @@
     <button type="button" class="btn btn-primary" (click)="saveData(); downloadDoc()">
       <i class="fa fa-download mx-2"></i> Download Word
     </button>
+    <button type="button" class="btn btn-danger" (click)="saveData(); generateServerPdf()" [disabled]="isGeneratingPdf">
+      <i class="ri ri-file-pdf-line mx-2"></i>
+      <span *ngIf="isGeneratingPdf">Generating...</span>
+      <span *ngIf="!isGeneratingPdf">Download PDF</span>
+    </button>
+    <button type="button" class="btn btn-dark" (click)="generateAllLettersPdf()" [disabled]="isGeneratingAllPdf">
+      <i class="ri ri-stack-line mx-2"></i>
+      <span *ngIf="isGeneratingAllPdf">Generating All...</span>
+      <span *ngIf="!isGeneratingAllPdf">Download All Letters</span>
+    </button>
+  </div>
+</div>
+
+<!-- All Letters Download Links -->
+<div *ngIf="allLettersResult" class="row mb-3">
+  <div class="col-12">
+    <div class="card border-dark">
+      <div class="card-header bg-dark text-white py-2 fw-semibold" style="font-size:13px;">
+        <i class="ri ri-stack-line me-2"></i>All Letters — Download Links
+      </div>
+      <div class="card-body py-2 d-flex gap-3 flex-wrap">
+        <a *ngIf="allLettersResult.offer" [href]="allLettersResult.offer" target="_blank" class="btn btn-outline-primary btn-sm">
+          <i class="ri ri-file-pdf-line me-1"></i> Offer Letter PDF
+        </a>
+        <span *ngIf="!allLettersResult.offer" class="text-muted small align-self-center">Offer Letter — not generated</span>
+
+        <a *ngIf="allLettersResult.appointment" [href]="allLettersResult.appointment" target="_blank" class="btn btn-outline-success btn-sm">
+          <i class="ri ri-file-pdf-line me-1"></i> Appointment Letter PDF
+        </a>
+        <span *ngIf="!allLettersResult.appointment" class="text-muted small align-self-center">Appointment Letter — not generated</span>
+
+        <a *ngIf="allLettersResult.relieving" [href]="allLettersResult.relieving" target="_blank" class="btn btn-outline-danger btn-sm">
+          <i class="ri ri-file-pdf-line me-1"></i> Relieving Letter PDF
+        </a>
+        <span *ngIf="!allLettersResult.relieving" class="text-muted small align-self-center">Relieving Letter — not generated</span>
+      </div>
+    </div>
   </div>
 </div>
 <div id="appointment-doc">

@@ -84,6 +84,43 @@
     </div>
   </div>
 
+  <!-- Download All Letters PDF -->
+  <div *ngIf="!loading && active" class="mt-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body d-flex flex-column flex-sm-row align-items-sm-center justify-content-sm-between gap-3">
+        <div>
+          <h6 class="mb-1 fw-semibold"><i class="ri ri-stack-line me-2 text-primary"></i>Download All Letters as PDF</h6>
+          <p class="text-muted small mb-0">Generate server-side PDFs for all your available letters in one click.</p>
+        </div>
+        <button class="btn btn-primary btn-sm px-4 flex-shrink-0"
+          (click)="downloadAllServerPdfs()" [disabled]="isLoadingPdfs">
+          <span *ngIf="isLoadingPdfs" class="spinner-border spinner-border-sm me-1"></span>
+          <i *ngIf="!isLoadingPdfs" class="ri ri-download-cloud-line me-1"></i>
+          <span *ngIf="isLoadingPdfs">Generating PDFs...</span>
+          <span *ngIf="!isLoadingPdfs">Generate All PDFs</span>
+        </button>
+      </div>
+
+      <!-- PDF download links shown after generation -->
+      <div *ngIf="letterPdfUrls" class="card-footer bg-light d-flex gap-3 flex-wrap py-2">
+        <ng-container *ngFor="let item of [
+          { key: 'offer',       label: 'Offer Letter',       cls: 'btn-outline-primary'  },
+          { key: 'appointment', label: 'Appointment Letter',  cls: 'btn-outline-success'  },
+          { key: 'relieving',   label: 'Relieving Letter',    cls: 'btn-outline-danger'   }
+        ]">
+          <a *ngIf="letterPdfUrls[item.key]" [href]="letterPdfUrls[item.key]"
+            target="_blank" class="btn btn-sm" [ngClass]="item.cls">
+            <i class="ri ri-file-pdf-line me-1"></i>{{ item.label }}
+          </a>
+          <span *ngIf="!letterPdfUrls[item.key]"
+            class="text-muted small align-self-center fst-italic">
+            {{ item.label }} — not available
+          </span>
+        </ng-container>
+      </div>
+    </div>
+  </div>
+
   <!-- Digital Signature Panel -->
   <div *ngIf="showSignPanel" class="epd-sign-panel mt-4">
     <div class="epd-sign-panel__header">

@@ -270,9 +270,57 @@
     position: relative;
     width: 100%;
     min-height: auto;
+    max-height: 52vh;
+    border-right: 0;
+    border-bottom: 1px solid rgba(147, 170, 210, 0.28);
+    overflow: hidden;
   }
 
   .vertical-navbar.collapsed {
     width: 100%;
+  }
+
+  .navbar-header {
+    padding-bottom: 10px;
+  }
+
+  .brand-logo,
+  .brand-logo-collapsed {
+    width: 128px;
+    max-width: 128px;
+    height: 38px;
+  }
+
+  .menu-shell {
+    max-height: calc(52vh - 72px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-top: 10px;
+  }
+
+  .menu-link {
+    min-height: 40px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .vertical-navbar {
+    padding: 8px;
+    max-height: 48vh;
+  }
+
+  .brand-logo,
+  .brand-logo-collapsed {
+    width: 112px;
+    max-width: 112px;
+    height: 34px;
+  }
+
+  .menu-shell {
+    max-height: calc(48vh - 62px);
+  }
+
+  .menu-link {
+    padding: 9px 10px;
   }
 }
