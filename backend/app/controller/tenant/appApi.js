@@ -2354,7 +2354,10 @@ exports.EmployeeDetails = async (req, res) => {
       // check_out_flag: true ,
       check_in_time: empAttendance?.check_in_time ?? "",
       check_out_time: empAttendance?.check_out_time ?? "",
-      profileImage: empAttendance?.profileImage ?? "",
+      profileImage:
+        (employee?.profileImage && String(employee.profileImage).trim()) ||
+        (empAttendance?.profileImage && String(empAttendance.profileImage).trim()) ||
+        "",
       reportingPersonName: `${reportingPerson?.firstName} ${reportingPerson?.lastName} `,
     };
 
