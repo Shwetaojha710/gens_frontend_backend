@@ -1,0 +1,78 @@
+<div class="feedback-page">
+  <section class="card" *ngIf="isLoading">
+    <div class="card-body loading-state">Loading round feedback form...</div>
+  </section>
+
+  <ng-container *ngIf="!isLoading">
+    <section class="card">
+      <div class="card-body page-head">
+        <div>
+          <span class="eyebrow">Interview Feedback</span>
+          <h2>Round-wise Interviewer Feedback</h2>
+          <p>Capture the interviewer, rating, recommendation, strengths, concerns, and detailed notes for each configured round.</p>
+        </div>
+        <a class="btn btn-outline-primary" routerLink="/recruitment/pipeline">Back to Pipeline</a>
+      </div>
+    </section>
+
+    <section class="card" *ngFor="let round of rounds">
+      <div class="card-body">
+        <div class="feedback-head">
+          <div>
+            <span class="round-pill">Round {{ round.sequence }}</span>
+            <h3>{{ round.round_name }}</h3>
+            <p>{{ round.interviewer_name || 'Interviewer pending' }} • {{ round.mode || 'Virtual' }}</p>
+          </div>
+          <span class="submitted-pill" *ngIf="round.feedback_submitted">Submitted</span>
+        </div>
+
+        <div class="feedback-grid">
+          <label>
+            <span>Interviewer Name</span>
+            <input class="form-control" type="text" [(ngModel)]="round.interviewer_name" />
+          </label>
+
+          <label>
+            <span>Interviewer Email</span>
+            <input class="form-control" type="email" [(ngModel)]="round.interviewer_email" />
+          </label>
+
+          <label>
+            <span>Rating / 10</span>
+            <input class="form-control" type="number" min="1" max="10" [(ngModel)]="round.rating" />
+          </label>
+
+          <label>
+            <span>Recommendation</span>
+            <select class="form-select" [(ngModel)]="round.recommendation">
+              <option value="selected">Selected</option>
+              <option value="hold">Hold</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </label>
+
+          <label class="full-width">
+            <span>Strengths</span>
+            <textarea class="form-control" rows="3" [(ngModel)]="round.strengths"></textarea>
+          </label>
+
+          <label class="full-width">
+            <span>Concerns</span>
+            <textarea class="form-control" rows="3" [(ngModel)]="round.concerns"></textarea>
+          </label>
+
+          <label class="full-width">
+            <span>Feedback Notes</span>
+            <textarea class="form-control" rows="4" [(ngModel)]="round.notes"></textarea>
+          </label>
+        </div>
+
+        <div class="action-row">
+          <button type="button" class="btn btn-primary" (click)="saveFeedback(round)" [disabled]="isSaving">
+            {{ isSaving ? 'Saving...' : 'Save Feedback' }}
+          </button>
+        </div>
+      </div>
+    </section>
+  </ng-container>
+</div>

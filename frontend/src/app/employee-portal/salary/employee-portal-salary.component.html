@@ -1,0 +1,118 @@
+<div class="container-fluid ep-salary">
+  <header class="ep-salary__hero mb-4">
+    <div>
+      <p class="ep-salary__eyebrow mb-1">Pay</p>
+      <h4 class="mb-1 ep-page-title">Salary slip</h4>
+      <p class="ep-page-sub mb-0">View earnings and deductions, then download your payslip PDF.</p>
+    </div>
+  </header>
+
+  <div class="card ep-glass-card border-0 ep-salary__toolbar mb-4">
+    <div class="card-body py-3">
+      <div class="row g-3 align-items-end">
+        <div class="col-sm-6 col-md-3 col-lg-2">
+          <label class="form-label small ep-salary__label mb-1">Month</label>
+          <select class="form-select form-select-sm" [(ngModel)]="month">
+            <option *ngFor="let m of months" [ngValue]="m.value">{{ m.label }}</option>
+          </select>
+        </div>
+        <div class="col-sm-6 col-md-3 col-lg-2">
+          <label class="form-label small ep-salary__label mb-1">Year</label>
+          <input type="number" class="form-control form-control-sm" [(ngModel)]="year" min="2000" max="2100" />
+        </div>
+        <div class="col-md-auto d-flex flex-wrap gap-2 pt-md-0 pt-1">
+          <button type="button" class="btn btn-sm btn-primary px-3 rounded-pill" (click)="load()" [disabled]="loading">
+            <i
+              class="icon-base ri me-1"
+              [class.ri-loader-4-line]="loading"
+              [class.ep-salary__spin]="loading"
+              [class.ri-refresh-line]="!loading"
+            ></i>
+            {{ loading ? 'Loading…' : 'Load' }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-primary px-3 rounded-pill"
+            (click)="print()"
+            [disabled]="printing || (!earnings.length && !deductions.length)"
+          >
+            <i class="icon-base ri ri-file-download-line me-1"></i>
+            {{ printing ? 'Preparing…' : 'Download PDF' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="ep-salary__loading card ep-glass-card border-0 mb-4">
+    <div class="card-body text-center py-5">
+      <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading</span></div>
+      <p class="small ep-page-sub mt-3 mb-0">Fetching salary details…</p>
+    </div>
+  </div>
+
+  <div class="row g-4" *ngIf="!loading && (earnings.length || deductions.length)">
+    <div class="col-lg-6">
+      <div class="card ep-glass-card border-0 h-100 ep-salary__panel">
+        <div class="card-header border-0 ep-salary__panel-head ep-salary__panel-head--earn">
+          <i class="icon-base ri ri-add-circle-line" aria-hidden="true"></i>
+          <h6 class="mb-0">Earnings</h6>
+        </div>
+        <ul class="list-group list-group-flush ep-salary__lines">
+          <li *ngFor="let e of earnings" class="list-group-item ep-salary__line">
+            <span class="ep-salary__line-name">{{ e.name || '—' }}</span>
+            <strong class="ep-salary__line-amt">{{ amountDisplay(e.finalAmount) }}</strong>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card ep-glass-card border-0 h-100 ep-salary__panel">
+        <div class="card-header border-0 ep-salary__panel-head ep-salary__panel-head--ded">
+          <i class="icon-base ri ri-subtract-line" aria-hidden="true"></i>
+          <h6 class="mb-0">Deductions</h6>
+        </div>
+        <ul class="list-group list-group-flush ep-salary__lines">
+          <li *ngFor="let d of deductions" class="list-group-item ep-salary__line">
+            <span class="ep-salary__line-name">{{ d.name || '—' }}</span>
+            <strong class="ep-salary__line-amt">{{ amountDisplay(d.finalAmount) }}</strong>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="col-12" *ngIf="hasPayrollData">
+      <div class="card ep-glass-card border-0 ep-salary__net-card overflow-hidden">
+        <div class="row g-0">
+          <div class="col-lg-5 ep-salary__net-highlight d-flex flex-column justify-content-center p-4 p-lg-5">
+            <p class="ep-salary__net-label mb-1">Total salary (net pay)</p>
+            <p class="ep-salary__net-value mb-0">{{ netPayDisplay() }}</p>
+            <p class="ep-salary__net-hint small mb-0 mt-2">As per payroll run for the selected period.</p>
+          </div>
+          <div class="col-lg-7 p-4 border-top border-lg-0 border-lg-start ep-salary__net-meta-wrap">
+            <ng-container *ngIf="!payrollMetaAllEmpty()">
+              <p class="small fw-semibold text-uppercase ep-salary__meta-title mb-3">Attendance &amp; period</p>
+              <dl class="row ep-salary__meta-dl mb-0">
+                <ng-container *ngFor="let meta of payrollMeta">
+                  <dt class="col-sm-5 ep-salary__meta-dt" *ngIf="metaValue(meta.key) !== '—'">{{ meta.label }}</dt>
+                  <dd class="col-sm-7 ep-salary__meta-dd" *ngIf="metaValue(meta.key) !== '—'">{{ metaValue(meta.key) }}</dd>
+                </ng-container>
+              </dl>
+            </ng-container>
+            <p class="small ep-page-sub mb-0" *ngIf="payrollMetaAllEmpty()">
+              No attendance summary on this payslip.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && !earnings.length && !deductions.length" class="card ep-glass-card border-0 ep-salary__empty">
+    <div class="card-body text-center py-5 px-4">
+      <i class="icon-base ri ri-wallet-3-line ep-salary__empty-icon d-block mb-3" aria-hidden="true"></i>
+      <p class="fw-semibold mb-1">No slip loaded</p>
+      <p class="small ep-page-sub mb-0">Choose a month and year, then tap <strong>Load</strong> to see your salary breakdown.</p>
+    </div>
+  </div>
+</div>

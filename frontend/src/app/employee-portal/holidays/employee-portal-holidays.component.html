@@ -1,0 +1,60 @@
+<div class="container-fluid ep-holidays-page">
+  <h4 class="ep-holidays-page__title">Holidays</h4>
+  <p class="ep-holidays-page__sub">Company calendar for the current year.</p>
+
+  <div class="ep-holidays-card">
+    <div class="ep-holidays-card__head">
+      <h5 class="ep-holidays-card__heading">Upcoming holidays</h5>
+    </div>
+
+    <div class="ep-holidays-card__filters" *ngIf="!loading && list.length > 0">
+      <button
+        type="button"
+        class="ep-holidays-chip"
+        [class.ep-holidays-chip--active]="selectedType === null"
+        (click)="selectFilter(null)"
+      >
+        All
+      </button>
+      <button
+        type="button"
+        class="ep-holidays-chip"
+        *ngFor="let typ of uniqueTypes"
+        [class.ep-holidays-chip--active]="selectedType === typ"
+        (click)="selectFilter(typ)"
+      >
+        {{ typ }}
+      </button>
+    </div>
+
+    <div class="ep-holidays-card__body" *ngIf="!loading">
+      <div class="ep-holiday-row" *ngFor="let h of displayList">
+        <div class="ep-holiday-icon" aria-hidden="true">
+          <img
+
+            [src]="holidayImageUrl(h)"
+            [alt]="$any(h['holiday_name'])"
+            class="ep-holiday-img"
+            (error)="$any($event.target).style.display='none'; $any($event.target).nextElementSibling.style.display='flex'"
+          />
+          <span
+            class="ep-holiday-icon__fallback"
+            [style.display]="holidayImageUrl(h) ? 'none' : 'flex'"
+          >{{ holidayIcon(typeLabel(h)) }}</span>
+        </div>
+        <div class="ep-holiday-row__text">
+          <div class="ep-holiday-name">{{ h['holiday_name'] }}</div>
+          <div class="ep-holiday-date">{{ $any(h['date']) | date : 'mediumDate' }}</div>
+          <span [ngClass]="badgeClass(typeLabel(h))">{{ typeLabel(h) }}</span>
+        </div>
+      </div>
+
+      <div class="ep-holidays-empty" *ngIf="list.length === 0">No holidays for this year.</div>
+      <div class="ep-holidays-empty" *ngIf="list.length > 0 && displayList.length === 0">
+        No holidays match this type.
+      </div>
+    </div>
+
+    <div class="ep-holidays-card__loading" *ngIf="loading">Loading…</div>
+  </div>
+</div>

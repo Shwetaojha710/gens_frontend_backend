@@ -1,0 +1,106 @@
+/* Job Requirement View Modal */
+.jrv-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.jrv-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.jrv-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 24px;
+}
+
+.jrv-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.jrv-item.jrv-full {
+  grid-column: 1 / -1;
+}
+
+.jrv-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+}
+
+.jrv-val {
+  font-size: 0.9rem;
+  color: #1e293b;
+  word-break: break-word;
+}
+
+.jrv-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.jrv-skill-chip {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  border-radius: 99px;
+  padding: 2px 10px;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.jrv-rounds {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.jrv-round-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+
+.jrv-round-name {
+  font-weight: 600;
+  color: #334155;
+}
+
+.jrv-round-meta {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.jrv-desc {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 0.87rem;
+  color: #374151;
+  white-space: pre-wrap;
+  max-height: 200px;
+  overflow-y: auto;
+}

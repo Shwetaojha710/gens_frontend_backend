@@ -1,0 +1,225 @@
+<div class="sa-users-page">
+  <div class="row g-3 g-lg-4">
+    <div class="col-12">
+      <div class="sa-hero card sa-um-hero">
+        <div class="card-body">
+          <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
+            <div>
+              <p class="sa-hero-kicker mb-1">Directory</p>
+              <div class="sa-hero-title">Users management</div>
+              <div class="sa-hero-subtitle">Search, filter, and update roles or status across all tenants</div>
+            </div>
+            <button type="button" class="btn btn-sm sa-um-refresh" (click)="search()" [disabled]="loading">
+              <i class="ri ri-refresh-line me-1" [class.sa-spin]="loading"></i>
+              Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card sa-panel sa-filter-card">
+        <div class="sa-panel-head">
+          <h3 class="sa-panel-title mb-0">Filters</h3>
+          <p class="sa-panel-desc">Narrow the list — results update when you click Search</p>
+        </div>
+        <div class="card-body sa-filter-body">
+          <form [formGroup]="filterForm" (ngSubmit)="search()">
+            <div class="row g-3 align-items-end">
+              <div class="col-12 col-md-3">
+                <label class="form-label sa-filter-label">Company</label>
+                <select class="form-select sa-filter-control" formControlName="tenantId">
+                  <option value="">All companies</option>
+                  <option *ngFor="let c of companies" [value]="c.id">{{ c.companyName }} ({{ c.companyCode }})</option>
+                </select>
+              </div>
+              <div class="col-6 col-md-2">
+                <label class="form-label sa-filter-label">Status</label>
+                <select class="form-select sa-filter-control" formControlName="status">
+                  <option value="">All</option>
+                  <option value="active">active</option>
+                  <option value="inactive">inactive</option>
+                </select>
+              </div>
+              <div class="col-6 col-md-2">
+                <label class="form-label sa-filter-label">Role</label>
+                <select class="form-select sa-filter-control" formControlName="role">
+                  <option value="">All</option>
+                  <option value="admin">admin</option>
+                  <option value="hr">hr</option>
+                  <option value="employee">employee</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-3">
+                <label class="form-label sa-filter-label">Search</label>
+                <div class="sa-search-wrap sa-search-wrap--inline">
+                  <i class="ri ri-search-line sa-search-icon" aria-hidden="true"></i>
+                  <input
+                    class="form-control sa-search-input sa-filter-control"
+                    formControlName="q"
+                    placeholder="Name or email"
+                    autocomplete="off"
+                  />
+                </div>
+              </div>
+              <div class="col-12 col-md-2">
+                <div class="d-flex gap-2">
+                  <button class="btn sa-btn-search flex-grow-1" type="submit">
+                    <i class="ri ri-filter-3-line me-1"></i> Search
+                  </button>
+                  <button class="btn sa-btn-ghost flex-grow-1" type="button" (click)="clearFilters()">Reset</button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-8 d-flex">
+      <div class="card sa-panel w-100">
+        <div class="sa-panel-head sa-panel-head--row">
+          <div>
+            <h3 class="sa-panel-title">Users</h3>
+            <p class="sa-panel-desc">Click a row to edit profile on the right</p>
+          </div>
+          <div class="sa-panel-head-meta">
+            <span class="sa-count-pill" *ngIf="!loading">{{ users.length }} {{ users.length === 1 ? 'user' : 'users' }}</span>
+            <span class="sa-loading-pill" *ngIf="loading">
+              <i class="ri ri-loader-2-line sa-spin me-1"></i> Loading
+            </span>
+          </div>
+        </div>
+
+        <div class="sa-table-wrap">
+          <div class="sa-table-scroll table-responsive">
+            <table class="table table-hover mb-0 sa-table sa-table--users">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Company</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  *ngFor="let u of users"
+                  (click)="select(u)"
+                  [class.table-active]="selected?.id === u.id"
+                  class="sa-row"
+                >
+                  <td>
+                    <div class="sa-user-cell">
+                      <div class="sa-avatar">{{ (u.name || '?').slice(0, 1).toUpperCase() }}</div>
+                      <div class="sa-user-cell-text">
+                        <div class="sa-user-name text-truncate">{{ u.name }}</div>
+                        <div class="sa-user-email text-truncate">{{ u.email }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="sa-tenant-name text-truncate">{{ u.tenant?.companyName || '—' }}</div>
+                    <div class="sa-tenant-code text-truncate" *ngIf="u.tenant?.companyCode">{{ u.tenant.companyCode }}</div>
+                  </td>
+                  <td>
+                    <span class="sa-role-pill">{{ u.role }}</span>
+                  </td>
+                  <td>
+                    <span class="sa-pill sa-pill--ok" *ngIf="u.status === 'active'">Active</span>
+                    <span class="sa-pill sa-pill--muted" *ngIf="u.status !== 'active'">{{ u.status }}</span>
+                  </td>
+                  <td class="text-end">
+                    <button
+                      type="button"
+                      class="btn btn-sm sa-row-action"
+                      [class.sa-row-action--warn]="u.status === 'active'"
+                      [class.sa-row-action--ok]="u.status !== 'active'"
+                      (click)="$event.stopPropagation(); quickToggleStatus(u)"
+                    >
+                      <i class="ri" [ngClass]="u.status === 'active' ? 'ri-pause-circle-line' : 'ri-play-circle-line'"></i>
+                      <span>{{ u.status === 'active' ? 'Deactivate' : 'Activate' }}</span>
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="!users?.length && !loading">
+                  <td colspan="5">
+                    <div class="sa-empty-inline">
+                      <i class="ri ri-group-line"></i>
+                      <div>
+                        <div class="sa-empty-inline-title">No users match</div>
+                        <div class="sa-empty-inline-text">Change filters or search, then click Search again.</div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-4 d-flex">
+      <div class="card sa-panel sa-detail-card sa-sticky w-100">
+        <div class="sa-panel-head sa-panel-head--row">
+          <div>
+            <h3 class="sa-panel-title">Edit user</h3>
+            <p class="sa-panel-desc" *ngIf="selected">{{ selected.email }}</p>
+            <p class="sa-panel-desc" *ngIf="!selected">Select someone from the table</p>
+          </div>
+          <button type="button" class="btn btn-sm sa-btn-ghost" (click)="clearSelected()" [disabled]="!selected">Clear</button>
+        </div>
+
+        <div class="card-body sa-detail-body" *ngIf="selected; else emptyState">
+          <div class="sa-user-summary">
+            <div class="sa-user-summary-avatar">{{ (selected.name || '?').slice(0, 1).toUpperCase() }}</div>
+            <div class="sa-user-summary-text">
+              <div class="sa-user-summary-name">{{ selected.name }}</div>
+              <div class="sa-user-summary-meta text-truncate">{{ selected.tenant?.companyName || '—' }}</div>
+            </div>
+          </div>
+
+          <form [formGroup]="editForm" (ngSubmit)="save()">
+            <div class="sa-form-section">
+              <label class="form-label">Display name</label>
+              <input class="form-control" formControlName="name" />
+            </div>
+            <div class="sa-form-section">
+              <label class="form-label">Role</label>
+              <select class="form-select" formControlName="role">
+                <option value="admin">admin</option>
+                <option value="hr">hr</option>
+                <option value="employee">employee</option>
+              </select>
+            </div>
+            <div class="sa-form-section">
+              <label class="form-label">Status</label>
+              <select class="form-select" formControlName="status">
+                <option value="active">active</option>
+                <option value="inactive">inactive</option>
+              </select>
+            </div>
+            <button class="btn sa-btn-save w-100" type="submit">
+              <i class="ri ri-save-3-line me-1"></i> Save changes
+            </button>
+          </form>
+        </div>
+
+        <ng-template #emptyState>
+          <div class="card-body sa-detail-body sa-detail-body--empty">
+            <div class="sa-detail-empty">
+              <div class="sa-detail-empty-icon">
+                <i class="ri ri-user-settings-line"></i>
+              </div>
+              <p class="sa-detail-empty-title">No user selected</p>
+              <p class="sa-detail-empty-text">Pick a user from the list to change name, role, or status.</p>
+            </div>
+          </div>
+        </ng-template>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,79 @@
+<div class="mt-5">
+
+  <div class="row mb-6">
+    <div class="col-md">
+      <!-- <div class="card"> -->
+      <h5 class="card-header d-flex justify-content-between align-items-center">
+        <span>Allowance List</span>
+      </h5>
+      <div class="table-responsive text-nowrap mt-2">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>SI.No</th>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Type Value</th>
+              <th>Dependent</th>
+              <th>basicAmount</th>
+              <th>startDate</th>
+              <th>Status</th>
+              <th>createdAt</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody class="table-border-bottom-0">
+            <tr *ngFor="let item of desigantionList; let i = index">
+              <th scope="row">{{ i + 1 }}</th>
+              <td>{{ item["name"] }}</td>
+              <td>
+                {{ item["type"] }}
+              </td>
+              <td>
+                {{ item["typeValue"] }}
+              </td>
+              <td>
+                {{ item["dependent"] }}
+              </td>
+              <td>
+                {{ item["finalAmount"] }}
+              </td>
+              <td>
+                {{ item["startDate"] }}
+              </td>
+
+              <td>
+                <span
+                  class="badge rounded overflow-hidden px-2"
+                  [ngClass]="getStatusClass(item['status'])"
+                >
+                  {{ item["status"] }}
+                </span>
+              </td>
+
+              <td>{{ item["createdAt"] }}</td>
+              <td>
+                <button
+                  type="button"
+                  class="btn btn-outline-success btn-sm"
+                  (click)="update(item)"
+                >
+                  <i class="fas fa-edit"></i>
+                </button>
+                &nbsp;
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-danger"
+                  (click)="delete(item.id)"
+                >
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- </div> -->
+    </div>
+  </div>
+</div>

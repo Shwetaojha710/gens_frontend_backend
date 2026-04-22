@@ -1,0 +1,48 @@
+<header class="top-header">
+  <div class="top-header-inner">
+    <div class="header-search-shell">
+      <button type="button" class="search-icon-btn" aria-label="Search">
+        <i class="ri ri-search-line"></i>
+      </button>
+      <div class="search-copy">
+        <span class="search-placeholder">Search</span>
+        <span class="search-shortcut">CTRL + K</span>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div class="header-utilities">
+      </div>
+
+
+
+      <div class="profile-shell" (click)="toggleshow()">
+        <button type="button" class="profile-trigger">
+          <div class="profile-avatar">
+            <img src="../../assets/img/avatars/1.png" alt="avatar" class="rounded-circle" />
+            <span class="profile-status"></span>
+          </div>
+        </button>
+
+        <div class="profile-dropdown" [class.show]="isDropdownOpen">
+          <div class="profile-dropdown-head">
+            <div class="profile-avatar large">
+              <img src="../../assets/img/avatars/1.png" alt="alt" class="rounded-circle" />
+              <span class="profile-status"></span>
+            </div>
+            <div class="profile-meta">
+              <h6>{{ personalDetail['first_name'] }}{{ personalDetail['last_name'] }}</h6>
+              <p>Interviewer</p>
+              <span>{{ personalDetail['email'] }}</span>
+            </div>
+          </div>
+
+          <button type="button" class="profile-logout-btn" (click)="logout()">
+            <span>Logout</span>
+            <i class="ri ri-logout-box-r-line"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>

@@ -1,0 +1,348 @@
+<div class="container-fluid mt-4">
+
+  <!-- ───────── LIST VIEW ───────── -->
+  <ng-container *ngIf="!showForm">
+    <div class="row mb-4">
+      <div class="col-md">
+        <div class="card">
+          <h5 class="card-header d-flex justify-content-between align-items-center">
+            <span>Generated Offer Letters</span>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-xs btn-primary float-end" (click)="loadOfferLetterList()">
+                <i class="fas fa-refresh"></i>&nbsp;Refresh
+              </button>
+              <button type="button" class="btn btn-xs btn-primary" (click)="showForm = true">
+                <i class="ri-add-line"></i>&nbsp;Generate Offer Letter
+              </button>
+            </div>
+          </h5>
+
+          <div *ngIf="isLoadingList" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted mb-0">Loading offer letters...</p>
+          </div>
+
+          <app-search-pagination
+            *ngIf="!isLoadingList"
+            [totalItems]="totalItems"
+            [pageSize]="itemsPerPage"
+            [currentPage]="currentPage"
+            (search)="onSearch($event)"
+            (pageChange)="onPageChange($event)"
+            (pageSizeChange)="onPageSizeChange($event)">
+
+            <div class="table-responsive">
+              <table class="table table-striped dataTable">
+                <thead>
+                  <tr>
+                    <th style="width:10px!important;">SI.NO</th>
+                    <th>Name / Designation</th>
+                    <th>Phone / Email</th>
+                    <th>Department</th>
+                    <th>Offer Date</th>
+                    <th>Joining Date</th>
+                    <!-- <th>Aadhaar No.</th> -->
+                    <th>Ref No.</th>
+                    <th>Created On</th>
+                  </tr>
+                </thead>
+                <tbody class="table-border-bottom-0">
+                  <tr *ngFor="let item of displayList; let i = index">
+                    <td style="width:10px!important;">{{ (currentPage - 1) * itemsPerPage + i + 1 }}</td>
+                    <td>
+                      <div class="d-flex align-items-center">
+                        <div class="avatar avatar-sm me-4">
+                          <img src="assets/img/avatars/1.png" width="100" height="auto"
+                            alt="Avatar" class="rounded-circle"
+                            onerror="this.src='assets/img/avatars/1.png'" />
+                        </div>
+                        <div>
+                          <h6 class="mb-0 text-truncate link-primary">{{ item.firstName }} {{ item.lastName }}</h6>
+                          <small class="text-truncate">{{ item.designation }}</small>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      {{ item.mobileNo || '-' }}<br>
+                      <small class="text-truncate">{{ item.email || '-' }}</small>
+                    </td>
+                    <td>{{ item.department }}</td>
+                    <td>{{ item.offerDate | date:'dd-MM-yyyy' }}</td>
+                    <td>{{ item.joiningDate | date:'dd-MM-yyyy' }}</td>
+                    <!-- <td>{{ maskAadhaar(item.aadhaarNo) }}</td> -->
+                    <td>{{ item.refNo || '-' }}</td>
+                    <td>{{ item.createdAt | date:'dd-MM-yyyy' }}</td>
+                  </tr>
+                  <tr *ngIf="displayList.length === 0">
+                    <td colspan="9" class="text-center text-muted py-3">No offer letters generated yet.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+          </app-search-pagination>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ───────── FORM + PREVIEW VIEW ───────── -->
+  <ng-container *ngIf="showForm">
+
+    <!-- Back button -->
+    <div class="mb-3">
+      <button class="btn btn-outline-secondary btn-sm" (click)="showForm = false">
+        <i class="ri-arrow-left-line me-1"></i>Back to List
+      </button>
+    </div>
+
+    <div class="row">
+
+      <!-- LEFT: Employee Details Form -->
+      <div class="col-md-4">
+        <div class="card shadow-sm">
+          <div class="card-header bg-primary text-white fw-semibold">
+            <i class="ri-file-user-line me-2"></i>Employee Details
+            <small class="d-block text-white-50 fw-normal" style="font-size:11px;">Fill details as per Aadhaar Card</small>
+          </div>
+          <div class="card-body" style="font-size:13px;">
+
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label fw-semibold mb-1">First Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control form-control-sm" [(ngModel)]="details.firstName" placeholder="First name" />
+              </div>
+              <div class="col-6">
+                <label class="form-label fw-semibold mb-1">Last Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control form-control-sm" [(ngModel)]="details.lastName" placeholder="Last name" />
+              </div>
+
+              <div class="col-12">
+                <label class="form-label fw-semibold mb-1">Father's Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control form-control-sm" [(ngModel)]="details.fatherName" placeholder="Father's name" />
+              </div>
+
+              <div class="col-6">
+                <label class="form-label fw-semibold mb-1">Gender <span class="text-danger">*</span></label>
+                <select class="form-select form-select-sm" [(ngModel)]="details.gender">
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <!-- <div class="col-6">
+                <label class="form-label fw-semibold mb-1">Date of Birth</label>
+                <input type="date" class="form-control form-control-sm" [(ngModel)]="details.dob" />
+              </div> -->
+
+              <div class="col-6">
+                <label class="form-label fw-semibold mb-1">Mobile No. <span class="text-danger">*</span></label>
+                <input type="text"
+                  [class.is-invalid]="errors.mobileNo"
+                  [class.is-valid]="!errors.mobileNo && details.mobileNo.length === 10"
+                  class="form-control form-control-sm"
+                  [(ngModel)]="details.mobileNo"
+                  (blur)="validateMobile()"
+                  (input)="errors.mobileNo=''"
+                  placeholder="10-digit mobile"
+                  maxlength="10" />
+                <div class="invalid-feedback" style="font-size:11px;">{{errors.mobileNo}}</div>
+              </div>
+
+              <div class="col-6">
+                <label class="form-label fw-semibold mb-1">Email <span class="text-danger">*</span></label>
+                <input type="email"
+                  [class.is-invalid]="errors.email"
+                  [class.is-valid]="!errors.email && details.email.includes('@')"
+                  class="form-control form-control-sm"
+                  [(ngModel)]="details.email"
+                  (blur)="validateEmail()"
+                  (input)="errors.email=''"
+                  placeholder="candidate@email.com" />
+                <div class="invalid-feedback" style="font-size:11px;">{{errors.email}}</div>
+              </div>
+
+              <!-- <div class="col-12">
+                <label class="form-label fw-semibold mb-1">Aadhaar No.</label>
+                <input type="text"
+                  [class.is-invalid]="aadhaarError"
+                  [class.is-valid]="!aadhaarError && details.aadhaarNo.replace(' ','').length === 12"
+                  class="form-control form-control-sm"
+                  [ngModel]="details.aadhaarNo"
+                  (input)="onAadhaarInput($event)"
+                  placeholder="XXXX XXXX XXXX"
+                  maxlength="14" />
+                <div class="invalid-feedback" style="font-size:11px;">{{aadhaarError}}</div>
+              </div> -->
+
+              <div class="col-12">
+                <label class="form-label fw-semibold mb-1">Permanent Address <span class="text-danger">*</span></label>
+                <textarea class="form-control form-control-sm" [(ngModel)]="details.permanentAddress"
+                  rows="3" placeholder="As per Aadhaar Card"></textarea>
+              </div>
+
+              <div class="col-12"><hr class="my-1" /><p class="fw-semibold text-muted mb-1" style="font-size:12px;">OFFER DETAILS</p></div>
+
+              <div class="col-6">
+                <label class="form-label fw-semibold mb-1">Designation <span class="text-danger">*</span></label>
+                <input type="text"
+                  [class.is-invalid]="errors.designation"
+                  [class.is-valid]="!errors.designation && details.designation.length >= 2"
+                  class="form-control form-control-sm"
+                  [(ngModel)]="details.designation"
+                  (blur)="validateDesignation()"
+                  (input)="errors.designation=''"
+                  placeholder="e.g. Software Engineer" />
+                <div class="invalid-feedback" style="font-size:11px;">{{errors.designation}}</div>
+              </div>
+              <div class="col-6">
+                <label class="form-label fw-semibold mb-1">Department <span class="text-danger">*</span></label>
+                <input type="text"
+                  [class.is-invalid]="errors.department"
+                  [class.is-valid]="!errors.department && details.department.length >= 2"
+                  class="form-control form-control-sm"
+                  [(ngModel)]="details.department"
+                  (blur)="validateDepartment()"
+                  (input)="errors.department=''"
+                  placeholder="e.g. IT" />
+                <div class="invalid-feedback" style="font-size:11px;">{{errors.department}}</div>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label fw-semibold mb-1">Head Office Branch <span class="text-danger">*</span></label>
+                <select class="form-select form-select-sm" [(ngModel)]="details.headOffice">
+                  <option value="" disabled>Select branch</option>
+                  <option *ngFor="let branch of branchOffices" [value]="branch">{{ branch }}</option>
+                </select>
+              </div>
+
+              <div class="col-6">
+                <label class="form-label fw-semibold mb-1">Offer Date <span class="text-danger">*</span></label>
+                <input type="date" class="form-control form-control-sm" [(ngModel)]="details.offerDate" />
+              </div>
+              <div class="col-6">
+                <label class="form-label fw-semibold mb-1">Joining Date <span class="text-danger">*</span></label>
+                <input type="date" class="form-control form-control-sm" [(ngModel)]="details.joiningDate" />
+              </div>
+
+              <div class="col-12">
+                <label class="form-label fw-semibold mb-1">Ref. No.</label>
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text" style="font-size:11px;">Quaere/Emp/Offer/</span>
+                  <input type="text" class="form-control form-control-sm" [(ngModel)]="details.refNo" placeholder="001" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-grid gap-2 mt-3">
+              <button class="btn btn-success btn-sm" (click)="saveOfferLetter()" [disabled]="isSaving">
+                <i class="ri ri-save-line me-1"></i>
+                <span *ngIf="isSaving">Saving...</span>
+                <span *ngIf="!isSaving">Save to Database</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Offer Letter Preview -->
+      <div class="col-md-8">
+        <div class="card shadow-sm">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span class="fw-semibold"><i class="ri ri-file-text-line me-2"></i>Offer Letter Preview</span>
+            <div class="d-flex gap-2 align-items-center">
+              <label class="btn btn-outline-secondary btn-sm mb-0">
+                <i class="fa fa-image mx-1"></i> Letterhead
+                <input type="file" hidden accept="image/*" (change)="onLetterheadUpload($event)">
+              </label>
+              <button type="button" class="btn btn-outline-primary btn-sm" (click)="printDoc()" [disabled]="isDownload">
+                <i class="fa fa-print mx-1"></i> Print
+              </button>
+              <button type="button" class="btn btn-primary btn-sm" (click)="downloadPDF()" [disabled]="isDownload">
+                <i class="fa fa-download mx-1"></i>
+                <span *ngIf="isDownload">Generating...</span>
+                <span *ngIf="!isDownload">Download PDF</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="card-body p-2 overflow-auto" style="background:#e0e0e0;">
+            <div id="offer-doc" style="width:794px; min-height:1123px; margin:auto; font-family:'Calibri (Body)';
+              font-size:14px; color:#000; background:#fff; position:relative;
+              background-image:url('/assets/img/Letterhead-2.png');
+              background-repeat:no-repeat; background-size:100% 100%;">
+
+              <div style="padding:60px 20px 60px 10px;">
+
+                <table style="width:100%; font-size:12px; border:none; margin-top:50px; color:#000; font-family:'Calibri (Body)';">
+                  <tr>
+                    <td><b>Ref: Quaere/Emp/Offer/{{details.refNo}}</b></td>
+                    <td style="text-align:right; color:#000;">
+                      <b>Dated: <span [innerHTML]="formatOrdinalDateHtml(details.offerDate)"></span></b>
+                    </td>
+                  </tr>
+                </table>
+
+                <div style="margin:30px 0; line-height:1.8; font-size:11px; color:#000;">
+                  <b>{{details.firstName}} {{details.lastName}}</b><br>
+                  <span *ngIf="details.gender === 'Male'">S/O</span>
+                  <span *ngIf="details.gender === 'Female'">D/O</span>
+                  <span *ngIf="details.gender === 'Other'">C/O</span>
+                  {{details.fatherName}}<br>
+                  {{details.permanentAddress}}
+                </div>
+
+                <p style="margin:30px 0 20px 0; font-weight:bold;">Dear {{details.firstName || '________'}},</p>
+
+                <div style="font-size:11px; line-height:1.6; color:#000;">
+                  <p>With reference to your application and subsequent interview with us, we are pleased to offer you employment in our Company as
+                    <b>{{details.designation || '________________'}}</b> in the
+                    <b>{{details.department || '________________'}}</b>
+                    at our Head Office &ndash; {{details.headOffice || '________________'}}, as per the mutually agreed terms and conditions discussed with you at the time of interview.</p>
+
+                  <p>You are requested to report for joining on or before
+                    <b><span [innerHTML]="formatOrdinalDateHtml(details.joiningDate)"></span></b>.
+                  </p>
+
+                  <p>You are advised to submit the following documents at the time of joining:</p>
+                  <ol>
+                    <li>Three Latest passport size color photographs.</li>
+                    <li>Self-attested copy of address proof &amp; ID proof.</li>
+                    <li>One set of all credentials (mark sheet of 10<sup>th</sup> &amp; 12<sup>th</sup> and pass certificate with Degree/Diploma).</li>
+                    <li>Salary proof from previous Company.</li>
+                    <li>Relieving Letter/ No dues/ Clearance Certificate from all previous employers.</li>
+                    <li>Two references of immediate reporting person (one of current employer &amp; one of previous employer, in case of one company need to give both references of same company).</li>
+                  </ol>
+
+                  <p>This offer would automatically stand revoked in the event of not reporting at the date specified above and / or you not complying with any other terms &amp; conditions of employment or in case of a negative reference check received. At the time of joining, the formal appointment letter, containing detailed terms &amp; conditions, will be issued to you.</p>
+
+                  <p>We take this opportunity to welcome you to our Company and look forward to a long and mutually beneficial association with you.</p>
+
+                  <p>Please confirm your acceptance of this offer by signing and returning a copy of this letter to us.</p>
+                </div>
+
+                <table width="100%" style="margin-top:40px; font-size:11px; color:#000;">
+                  <tr>
+                    <td style="width:50%; vertical-align:top;">
+                      <p>Thanks &amp; Regards</p>
+                      <br><br>
+                      <p><b>Human Resource Dept</b></p>
+                    </td>
+                    <td style="width:50%; text-align:right; vertical-align:top;">
+                      <p>Agreed &amp; Accepted</p>
+                      <p style="margin-top:40px;"><b>{{details.firstName}} {{details.lastName}}</b></p>
+                    </td>
+                  </tr>
+                </table>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </ng-container>
+
+</div>

@@ -1,0 +1,68 @@
+/* Match login / authentication-cover layout */
+.authentication-wrapper {
+  --bs-auth-basic-inner-max-width: 450px;
+  display: flex;
+  flex-basis: 100%;
+  inline-size: 100%;
+  min-block-size: 100vh;
+}
+
+.authentication-wrapper .authentication-inner {
+  inline-size: 100%;
+}
+
+.authentication-wrapper .auth-cover-illustration {
+  z-index: 1;
+  max-inline-size: 38rem;
+}
+
+.authentication-wrapper.authentication-cover .authentication-inner {
+  position: relative;
+  min-block-size: 100vh;
+}
+
+.authentication-wrapper .authentication-image {
+  position: absolute;
+  z-index: -1;
+  inline-size: 100%;
+  inset-block-end: 7%;
+  inset-inline-start: 0;
+}
+
+.authentication-wrapper.authentication-cover .authentication-image {
+  inline-size: 70%;
+  inset-inline-start: unset;
+}
+
+@media (max-width: 1199.98px) {
+  .authentication-cover .authentication-image-model {
+    position: relative;
+    inline-size: 575px;
+    inset-block-start: 1rem;
+  }
+}
+
+.creg-toggle-eye {
+  cursor: pointer;
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+.creg-preview {
+  max-height: 96px;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+@media (max-width: 991.98px) {
+  .creg-glass-outer {
+    padding: 28px 20px !important;
+  }
+
+  .creg-glass-inner {
+    padding: 32px 20px 28px !important;
+  }
+}

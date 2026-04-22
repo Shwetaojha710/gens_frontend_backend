@@ -1,0 +1,53 @@
+.ep-ep-placeholder {
+  padding-bottom: 2rem;
+}
+
+.ep-ep-placeholder__back {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #005fa8;
+  text-decoration: none;
+  margin-bottom: 1rem;
+}
+
+.ep-ep-placeholder__back:hover {
+  text-decoration: underline;
+  color: #0d4f8a;
+}
+
+.ep-ep-placeholder__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.ep-ep-placeholder__icon-wrap {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 95, 168, 0.12);
+  color: #005fa8;
+  font-size: 1.35rem;
+  flex-shrink: 0;
+}
+
+.ep-ep-placeholder__title {
+  color: #0f172a;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.ep-ep-placeholder__card .card-body {
+  padding: 1.25rem 1.35rem;
+}
+
+.ep-ep-placeholder__body {
+  color: #334155;
+  line-height: 1.55;
+  font-size: 0.95rem;
+}

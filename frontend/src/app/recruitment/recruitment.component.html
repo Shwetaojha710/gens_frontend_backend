@@ -1,0 +1,24 @@
+<!-- <div class="layout">
+
+<app-header></app-header>
+
+  <div class="main-container">
+
+    <app-recruitment-navbar></app-recruitment-navbar>
+
+    <div class="content">
+      <router-outlet></router-outlet>
+    </div>
+
+  </div>
+</div> -->
+<div class="app-layout-shell">
+ <app-recruitment-navbar class="app-layout-sidebar"></app-recruitment-navbar>
+
+  <div class="app-layout-main">
+    <app-header></app-header>
+    <main class="app-layout-content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

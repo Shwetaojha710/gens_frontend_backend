@@ -1,0 +1,463 @@
+<div class="sa-co-page">
+  <!-- Hero -->
+  <div class="sa-co-hero card sa-hero">
+    <div class="card-body">
+      <div class="sa-co-hero-top">
+        <button type="button" class="btn btn-sm sa-co-back" (click)="backToCompanies()">
+          <i class="ri ri-arrow-left-line" aria-hidden="true"></i>
+          <span>All companies</span>
+        </button>
+      </div>
+
+      <div class="sa-co-hero-main">
+        <div class="sa-co-hero-copy">
+          <p class="sa-hero-kicker">Tenant overview</p>
+          <h1 class="sa-co-title" *ngIf="snapshot?.tenant as t; else titleLoad">{{ t.companyName }}</h1>
+          <ng-template #titleLoad>
+            <h1 class="sa-co-title sa-co-title--ghost">{{ loading ? 'Loading workspace…' : 'Company' }}</h1>
+          </ng-template>
+
+          <div class="sa-co-meta" *ngIf="snapshot?.tenant as t">
+            <span class="sa-co-chip">
+              <i class="ri ri-hashtag" aria-hidden="true"></i>
+              {{ t.companyCode }}
+            </span>
+            <span [class]="tenantStatusClass(t.status)">{{ t.status }}</span>
+          </div>
+          <p class="sa-co-lede" *ngIf="snapshot && !loading">
+            Read-only snapshot of HR data for support and monitoring. Lists are capped for performance.
+          </p>
+        </div>
+
+        <div class="sa-co-kpi-grid" *ngIf="snapshot?.counts as c">
+          <div class="sa-co-kpi">
+            <div class="sa-co-kpi-icon" aria-hidden="true"><i class="ri ri-user-smile-line"></i></div>
+            <div class="sa-co-kpi-body">
+              <span class="sa-co-kpi-value">{{ c.employeesActive ?? 0 }}</span>
+              <span class="sa-co-kpi-label">Active employees</span>
+            </div>
+          </div>
+          <div class="sa-co-kpi">
+            <div class="sa-co-kpi-icon sa-co-kpi-icon--alt" aria-hidden="true"><i class="ri ri-group-line"></i></div>
+            <div class="sa-co-kpi-body">
+              <span class="sa-co-kpi-value">{{ c.employeesTotal ?? 0 }}</span>
+              <span class="sa-co-kpi-label">Total profiles</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="sa-co-hero-branch"
+        *ngIf="snapshot && !loading && branchesList.length && (branchesList.length > 1 || (branchesList[0]?.name || '').trim())"
+      >
+        <div class="sa-co-branch-single" *ngIf="branchesList.length === 1">
+          <i class="ri ri-building-2-line" aria-hidden="true"></i>
+          <span class="sa-co-branch-label">Branch</span>
+          <strong class="sa-co-branch-name">{{ branchesList[0].name }}</strong>
+        </div>
+        <div class="sa-co-branch-multi" *ngIf="branchesList.length > 1">
+          <label class="sa-co-branch-label" for="saCoBranchSelect">Branch</label>
+          <select
+            id="saCoBranchSelect"
+            class="sa-co-branch-select"
+            [(ngModel)]="selectedBranchId"
+            (ngModelChange)="branchOnChange()"
+          >
+            <option [ngValue]="null">All branches</option>
+            <option *ngFor="let b of branchesList" [ngValue]="b.id">{{ b.name }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="sa-co-hero-metrics" *ngIf="snapshot && !loading">
+        <div class="sa-co-metric">
+          <i class="ri ri-calendar-event-line" aria-hidden="true"></i>
+          <span><strong>{{ leaveSource.length }}</strong> leave rows in view</span>
+        </div>
+        <div class="sa-co-metric">
+          <i class="ri ri-time-line" aria-hidden="true"></i>
+          <span><strong>{{ attSource.length }}</strong> attendance rows in view</span>
+        </div>
+        <div class="sa-co-metric">
+          <i class="ri ri-calendar-todo-line" aria-hidden="true"></i>
+          <span><strong>{{ holSource.length }}</strong> holidays in view</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="sa-co-loading card" *ngIf="loading">
+    <div class="card-body text-center py-5">
+      <div class="sa-co-loader-ring" aria-hidden="true"></div>
+      <p class="sa-co-loading-text mt-3 mb-0">Fetching employee, leave, and attendance data…</p>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="sa-co-content" *ngIf="!loading && snapshot">
+    <!-- Employees -->
+    <section class="card sa-co-panel">
+      <header class="sa-co-panel-head">
+        <div class="sa-co-panel-icon sa-co-panel-icon--emp"><i class="ri ri-team-line" aria-hidden="true"></i></div>
+        <div class="sa-co-panel-titles">
+          <h2 class="sa-co-panel-title">Employees</h2>
+          <p class="sa-co-panel-desc">
+            {{ empSource.length }} loaded
+            <ng-container *ngIf="empSearch.trim() && empFiltered.length !== empSource.length">
+              · {{ empFiltered.length }} match filter
+            </ng-container>
+          </p>
+        </div>
+        <span class="sa-co-panel-badge">{{ empFiltered.length }}</span>
+      </header>
+
+      <div class="sa-co-toolbar" *ngIf="empSource.length">
+        <div class="sa-co-search">
+          <i class="ri ri-search-line sa-co-search-icon" aria-hidden="true"></i>
+          <input
+            type="search"
+            class="sa-co-search-input"
+            placeholder="Search name, email, code, status…"
+            [(ngModel)]="empSearch"
+            (ngModelChange)="empOnSearch()"
+            autocomplete="off"
+          />
+        </div>
+        <div class="sa-co-toolbar-meta">
+          <label class="sa-co-page-label" for="coEmpPs">Rows</label>
+          <select id="coEmpPs" class="sa-co-page-select" [(ngModel)]="empPageSize" (ngModelChange)="empOnPageSize()">
+            <option *ngFor="let n of pageSizeOptions" [ngValue]="n">{{ n }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="sa-co-table-shell">
+        <div class="sa-co-scroll" *ngIf="empSource.length && empFiltered.length">
+          <table class="sa-co-table">
+            <thead>
+              <tr>
+                <th>Team member</th>
+                <th>Email</th>
+                <th>Code</th>
+                <th>Status</th>
+                <th>Joined</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let e of empPaged">
+                <td>
+                  <div class="sa-co-name">
+                    <span class="sa-co-avatar-mini">{{ (e.firstName || '?').slice(0, 1).toUpperCase() }}</span>
+                    <span>{{ e.firstName }} {{ e.lastName }}</span>
+                  </div>
+                </td>
+                <td class="sa-co-mono-soft">{{ e.email }}</td>
+                <td class="sa-co-mono">{{ e.empCode || '—' }}</td>
+                <td><span [class]="empStatusClass(e.status)">{{ e.status }}</span></td>
+                <td class="sa-co-muted">{{ e.joiningDate ? (e.joiningDate | date: 'MMM d, y') : '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="sa-co-pager" *ngIf="empSource.length && empFiltered.length && empTotalPages > 1">
+          <span class="sa-co-pager-range"
+            >{{ empRangeStart }}–{{ empRangeEnd }} of {{ empFiltered.length }}</span
+          >
+          <div class="sa-co-pager-btns">
+            <button type="button" class="sa-co-page-btn" (click)="empPrev()" [disabled]="empPage === 0" aria-label="Previous page">
+              <i class="ri ri-arrow-left-s-line"></i>
+            </button>
+            <span class="sa-co-pager-num">Page {{ empPage + 1 }} / {{ empTotalPages }}</span>
+            <button
+              type="button"
+              class="sa-co-page-btn"
+              (click)="empNext()"
+              [disabled]="empPage >= empTotalPages - 1"
+              aria-label="Next page"
+            >
+              <i class="ri ri-arrow-right-s-line"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="sa-co-empty" *ngIf="!empSource.length">
+          <div class="sa-co-empty-icon"><i class="ri ri-user-unfollow-line" aria-hidden="true"></i></div>
+          <p class="sa-co-empty-title">No employees yet</p>
+          <p class="sa-co-empty-text">This tenant has no employee profiles in the system.</p>
+        </div>
+
+        <div class="sa-co-empty sa-co-empty--filter" *ngIf="empSource.length && !empFiltered.length">
+          <div class="sa-co-empty-icon"><i class="ri ri-search-eye-line" aria-hidden="true"></i></div>
+          <p class="sa-co-empty-title">No matches</p>
+          <p class="sa-co-empty-text">Try another search or clear the filter.</p>
+          <button type="button" class="btn btn-sm sa-co-clear-filter" (click)="empClearSearch()">Clear search</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="row g-3 g-lg-4 sa-co-split">
+      <!-- Leave -->
+      <div class="col-12 col-lg-6">
+        <section class="card sa-co-panel h-100">
+          <header class="sa-co-panel-head">
+            <div class="sa-co-panel-icon sa-co-panel-icon--leave"><i class="ri ri-suitcase-line" aria-hidden="true"></i></div>
+            <div class="sa-co-panel-titles">
+              <h2 class="sa-co-panel-title">Leave</h2>
+              <p class="sa-co-panel-desc">
+                {{ leaveSource.length }} loaded
+                <ng-container *ngIf="leaveSearch.trim() && leaveFiltered.length !== leaveSource.length">
+                  · {{ leaveFiltered.length }} match
+                </ng-container>
+              </p>
+            </div>
+            <span class="sa-co-panel-badge sa-co-panel-badge--soft">{{ leaveFiltered.length }}</span>
+          </header>
+
+          <div class="sa-co-toolbar" *ngIf="leaveSource.length">
+            <div class="sa-co-search">
+              <i class="ri ri-search-line sa-co-search-icon" aria-hidden="true"></i>
+              <input
+                type="search"
+                class="sa-co-search-input"
+                placeholder="Search employee, status, dates…"
+                [(ngModel)]="leaveSearch"
+                (ngModelChange)="leaveOnSearch()"
+                autocomplete="off"
+              />
+            </div>
+            <div class="sa-co-toolbar-meta">
+              <label class="sa-co-page-label" for="coLePs">Rows</label>
+              <select id="coLePs" class="sa-co-page-select" [(ngModel)]="leavePageSize" (ngModelChange)="leaveOnPageSize()">
+                <option *ngFor="let n of pageSizeOptions" [ngValue]="n">{{ n }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="sa-co-table-shell">
+            <div class="sa-co-scroll sa-co-scroll--short" *ngIf="leaveSource.length && leaveFiltered.length">
+              <table class="sa-co-table">
+                <thead>
+                  <tr>
+                    <th>Employee</th>
+                    <th>Window</th>
+                    <th>Days</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let l of leavePaged">
+                    <td class="sa-co-strong">{{ l.employeeName }}</td>
+                    <td class="sa-co-muted small">
+                      {{ l.fromDate | date: 'MMM d' }} – {{ l.toDate | date: 'MMM d' }}
+                    </td>
+                    <td class="sa-co-mono">{{ l.days }}</td>
+                    <td><span [class]="leaveStatusClass(l.status)">{{ l.status }}</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="sa-co-pager sa-co-pager--compact" *ngIf="leaveSource.length && leaveFiltered.length && leaveTotalPages > 1">
+              <span class="sa-co-pager-range">{{ leaveRangeStart }}–{{ leaveRangeEnd }} / {{ leaveFiltered.length }}</span>
+              <div class="sa-co-pager-btns">
+                <button type="button" class="sa-co-page-btn" (click)="leavePrev()" [disabled]="leavePage === 0">
+                  <i class="ri ri-arrow-left-s-line"></i>
+                </button>
+                <span class="sa-co-pager-num">{{ leavePage + 1 }}/{{ leaveTotalPages }}</span>
+                <button type="button" class="sa-co-page-btn" (click)="leaveNext()" [disabled]="leavePage >= leaveTotalPages - 1">
+                  <i class="ri ri-arrow-right-s-line"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="sa-co-empty sa-co-empty--compact" *ngIf="!leaveSource.length">
+              <div class="sa-co-empty-icon"><i class="ri ri-calendar-close-line" aria-hidden="true"></i></div>
+              <p class="sa-co-empty-title">No leave data</p>
+              <p class="sa-co-empty-text">No applications returned for this company.</p>
+            </div>
+
+            <div class="sa-co-empty sa-co-empty--compact sa-co-empty--filter" *ngIf="leaveSource.length && !leaveFiltered.length">
+              <div class="sa-co-empty-icon"><i class="ri ri-search-eye-line" aria-hidden="true"></i></div>
+              <p class="sa-co-empty-title">No matches</p>
+              <button type="button" class="btn btn-sm sa-co-clear-filter" (click)="leaveClearSearch()">Clear</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Attendance -->
+      <div class="col-12 col-lg-6">
+        <section class="card sa-co-panel h-100">
+          <header class="sa-co-panel-head">
+            <div class="sa-co-panel-icon sa-co-panel-icon--att"><i class="ri ri-fingerprint-line" aria-hidden="true"></i></div>
+            <div class="sa-co-panel-titles">
+              <h2 class="sa-co-panel-title">Attendance</h2>
+              <p class="sa-co-panel-desc">
+                {{ attSource.length }} loaded
+                <ng-container *ngIf="attSearch.trim() && attFiltered.length !== attSource.length">
+                  · {{ attFiltered.length }} match
+                </ng-container>
+              </p>
+            </div>
+            <span class="sa-co-panel-badge sa-co-panel-badge--soft">{{ attFiltered.length }}</span>
+          </header>
+
+          <div class="sa-co-toolbar" *ngIf="attSource.length">
+            <div class="sa-co-search">
+              <i class="ri ri-search-line sa-co-search-icon" aria-hidden="true"></i>
+              <input
+                type="search"
+                class="sa-co-search-input"
+                placeholder="Search name, date, in/out…"
+                [(ngModel)]="attSearch"
+                (ngModelChange)="attOnSearch()"
+                autocomplete="off"
+              />
+            </div>
+            <div class="sa-co-toolbar-meta">
+              <label class="sa-co-page-label" for="coAtPs">Rows</label>
+              <select id="coAtPs" class="sa-co-page-select" [(ngModel)]="attPageSize" (ngModelChange)="attOnPageSize()">
+                <option *ngFor="let n of pageSizeOptions" [ngValue]="n">{{ n }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="sa-co-table-shell">
+            <div class="sa-co-scroll sa-co-scroll--short" *ngIf="attSource.length && attFiltered.length">
+              <table class="sa-co-table">
+                <thead>
+                  <tr>
+                    <th>Employee</th>
+                    <th>Date</th>
+                    <th>In</th>
+                    <th>Out</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let a of attPaged">
+                    <td class="sa-co-strong">{{ a.employeeName }}</td>
+                    <td class="sa-co-muted">{{ a.date | date: 'MMM d, y' }}</td>
+                    <td class="sa-co-mono">{{ a.check_in_time || '—' }}</td>
+                    <td class="sa-co-mono">{{ a.check_out_time || '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="sa-co-pager sa-co-pager--compact" *ngIf="attSource.length && attFiltered.length && attTotalPages > 1">
+              <span class="sa-co-pager-range">{{ attRangeStart }}–{{ attRangeEnd }} / {{ attFiltered.length }}</span>
+              <div class="sa-co-pager-btns">
+                <button type="button" class="sa-co-page-btn" (click)="attPrev()" [disabled]="attPage === 0">
+                  <i class="ri ri-arrow-left-s-line"></i>
+                </button>
+                <span class="sa-co-pager-num">{{ attPage + 1 }}/{{ attTotalPages }}</span>
+                <button type="button" class="sa-co-page-btn" (click)="attNext()" [disabled]="attPage >= attTotalPages - 1">
+                  <i class="ri ri-arrow-right-s-line"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="sa-co-empty sa-co-empty--compact" *ngIf="!attSource.length">
+              <div class="sa-co-empty-icon"><i class="ri ri-timer-line" aria-hidden="true"></i></div>
+              <p class="sa-co-empty-title">No attendance rows</p>
+              <p class="sa-co-empty-text">No recent attendance records for this tenant.</p>
+            </div>
+
+            <div class="sa-co-empty sa-co-empty--compact sa-co-empty--filter" *ngIf="attSource.length && !attFiltered.length">
+              <div class="sa-co-empty-icon"><i class="ri ri-search-eye-line" aria-hidden="true"></i></div>
+              <p class="sa-co-empty-title">No matches</p>
+              <button type="button" class="btn btn-sm sa-co-clear-filter" (click)="attClearSearch()">Clear</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Holidays -->
+    <section class="card sa-co-panel">
+      <header class="sa-co-panel-head">
+        <div class="sa-co-panel-icon sa-co-panel-icon--hol"><i class="ri ri-calendar-2-line" aria-hidden="true"></i></div>
+        <div class="sa-co-panel-titles">
+          <h2 class="sa-co-panel-title">Holidays</h2>
+          <p class="sa-co-panel-desc">
+            Upcoming (or recent) · {{ holSource.length }} loaded
+            <ng-container *ngIf="holSearch.trim() && holFiltered.length !== holSource.length">
+              · {{ holFiltered.length }} match
+            </ng-container>
+          </p>
+        </div>
+        <span class="sa-co-panel-badge">{{ holFiltered.length }}</span>
+      </header>
+
+      <div class="sa-co-toolbar" *ngIf="holSource.length">
+        <div class="sa-co-search">
+          <i class="ri ri-search-line sa-co-search-icon" aria-hidden="true"></i>
+          <input
+            type="search"
+            class="sa-co-search-input"
+            placeholder="Search name, type, date…"
+            [(ngModel)]="holSearch"
+            (ngModelChange)="holOnSearch()"
+            autocomplete="off"
+          />
+        </div>
+        <div class="sa-co-toolbar-meta">
+          <label class="sa-co-page-label" for="coHoPs">Rows</label>
+          <select id="coHoPs" class="sa-co-page-select" [(ngModel)]="holPageSize" (ngModelChange)="holOnPageSize()">
+            <option *ngFor="let n of pageSizeOptions" [ngValue]="n">{{ n }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="sa-co-table-shell">
+        <div class="sa-co-scroll sa-co-scroll--mid" *ngIf="holSource.length && holFiltered.length">
+          <table class="sa-co-table">
+            <thead>
+              <tr>
+                <th>Holiday</th>
+                <th>Date</th>
+                <th>Type</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let h of holPaged">
+                <td class="sa-co-strong">{{ h.holiday_name }}</td>
+                <td>{{ h.date | date: 'EEEE, MMM d, y' }}</td>
+                <td class="sa-co-muted">{{ h.holiday_type || '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="sa-co-pager" *ngIf="holSource.length && holFiltered.length && holTotalPages > 1">
+          <span class="sa-co-pager-range">{{ holRangeStart }}–{{ holRangeEnd }} of {{ holFiltered.length }}</span>
+          <div class="sa-co-pager-btns">
+            <button type="button" class="sa-co-page-btn" (click)="holPrev()" [disabled]="holPage === 0">
+              <i class="ri ri-arrow-left-s-line"></i>
+            </button>
+            <span class="sa-co-pager-num">Page {{ holPage + 1 }} / {{ holTotalPages }}</span>
+            <button type="button" class="sa-co-page-btn" (click)="holNext()" [disabled]="holPage >= holTotalPages - 1">
+              <i class="ri ri-arrow-right-s-line"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="sa-co-empty" *ngIf="!holSource.length">
+          <div class="sa-co-empty-icon"><i class="ri ri-map-pin-time-line" aria-hidden="true"></i></div>
+          <p class="sa-co-empty-title">No holidays</p>
+          <p class="sa-co-empty-text">No active holidays configured for this company.</p>
+        </div>
+
+        <div class="sa-co-empty sa-co-empty--filter" *ngIf="holSource.length && !holFiltered.length">
+          <div class="sa-co-empty-icon"><i class="ri ri-search-eye-line" aria-hidden="true"></i></div>
+          <p class="sa-co-empty-title">No matches</p>
+          <p class="sa-co-empty-text">Try another search.</p>
+          <button type="button" class="btn btn-sm sa-co-clear-filter" (click)="holClearSearch()">Clear search</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

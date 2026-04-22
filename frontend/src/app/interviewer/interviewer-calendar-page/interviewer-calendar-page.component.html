@@ -1,0 +1,25 @@
+<div class="page-shell">
+  <div class="page-head">
+    <div>
+      <h3>Calendar</h3>
+      <p>See your scheduled interview slots in calendar order.</p>
+    </div>
+    <button type="button" class="btn btn-outline-primary btn-sm" (click)="loadData()">Refresh</button>
+  </div>
+
+  <div class="timeline-card">
+    <div *ngIf="loading" class="state-block">Loading calendar...</div>
+    <div *ngIf="!loading && interviews.length === 0" class="state-block">No scheduled interviews found.</div>
+
+    <div class="timeline" *ngIf="!loading && interviews.length > 0">
+      <div class="timeline-item" *ngFor="let item of interviews">
+        <div class="timeline-dot"></div>
+        <div class="timeline-content">
+          <h5>{{ item.candidate.name }}</h5>
+          <p>{{ item.job.job_title }} • {{ item.round_name }}</p>
+          <span>{{ item.scheduled_at | date:'dd MMM yyyy, h:mm a' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

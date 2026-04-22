@@ -1,0 +1,28 @@
+<article class="section-card" id="feedback-overview">
+  <div class="section-head">
+    <div>
+      <h3>Feedback</h3>
+      <p>Pending feedback, submitted feedback, and feedback history</p>
+    </div>
+    <div class="section-pill">
+      <span>{{ items.length ? items[0].count : 0 }}</span>
+      Pending
+    </div>
+  </div>
+
+  <div class="section-list">
+    <a
+      class="section-item"
+      *ngFor="let item of items; let i = index"
+      [routerLink]="item.route || '/interview/feedback'"
+      [queryParams]="item.filter ? { filter: item.filter } : null">
+      <div class="metric-icon">
+        <i class="ri" [ngClass]="getItemIcon(item.label, i)"></i>
+      </div>
+      <div class="metric-copy">
+        <div class="metric-value">{{ item.count }}</div>
+        <div class="item-label">{{ item.label }}</div>
+      </div>
+    </a>
+  </div>
+</article>

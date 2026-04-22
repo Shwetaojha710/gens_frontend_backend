@@ -1,0 +1,204 @@
+<!-- ═══════════════════════════════════════════════════════════════════
+     LIVE TRACKING COMPONENT
+     ═══════════════════════════════════════════════════════════════════ -->
+
+<div class="lv-root" [class.lv-light]="themeMode === 'light'">
+
+  <!-- ── TOP BAR ─────────────────────────────────────────────────────── -->
+  <div class="lv-topbar">
+
+    <!-- Employee Info -->
+    <div class="lv-emp">
+      <div class="lv-avatar-wrap">
+        <img class="lv-avatar" [src]="user?.profileImage || '../../assets/img/avatars/1.png'" [alt]="user?.firstName" />
+        <span class="lv-status-dot" [class.dot-live]="isLive" [class.dot-offline]="!isLive"></span>
+      </div>
+      <div class="lv-emp-info">
+        <div class="lv-emp-name">{{ user?.firstName }} {{ user?.lastName }}</div>
+        <div class="lv-emp-sub">{{ user?.designation || 'Employee' }} &nbsp;·&nbsp; {{ user?.mobile }}</div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="lv-controls">
+
+      <!-- Map Type Switcher -->
+      <div class="lv-map-switch">
+        <button class="lv-map-btn" [class.active]="mapType === 'osm'"       (click)="changeMapType('osm')">Map</button>
+        <button class="lv-map-btn" [class.active]="mapType === 'satellite'" (click)="changeMapType('satellite')">Satellite</button>
+        <button class="lv-map-btn" [class.active]="mapType === 'dark'"      (click)="changeMapType('dark')">Dark</button>
+      </div>
+
+      <!-- Recenter -->
+      <button class="lv-btn-icon" (click)="recenter()" [disabled]="!hasData" title="Recenter on employee">
+        <i class="fas fa-crosshairs"></i>
+      </button>
+
+      <!-- Open in Google Maps -->
+      <button class="lv-btn-icon" (click)="openInMaps()" [disabled]="!hasData" title="Open in Google Maps">
+        <i class="fas fa-external-link-alt"></i>
+      </button>
+
+      <!-- GO LIVE / STOP button -->
+      <button class="lv-live-btn" [class.live-active]="isLive" (click)="toggleLive()">
+        <span class="lv-live-pip" *ngIf="isLive"></span>
+        <i class="fas" [class.fa-satellite-dish]="!isLive" [class.fa-stop]="isLive"></i>
+        {{ isLive ? 'Stop Live' : 'Go Live' }}
+      </button>
+
+    </div>
+  </div>
+
+  <!-- ── MAIN BODY ────────────────────────────────────────────────────── -->
+  <div class="lv-body">
+
+    <!-- LEFT PANEL -->
+    <div class="lv-panel" [class.panel-offline]="!isLive">
+
+      <!-- Live indicator + last update -->
+      <div class="lv-refresh-row">
+        <div class="lv-indicator" [class.ind-live]="isLive">
+          <span class="ind-dot"></span>
+          {{ isLive ? 'LIVE' : 'OFFLINE' }}
+        </div>
+        <div class="lv-last-updated" *ngIf="lastUpdated">
+          Updated {{ lastUpdated | date:'hh:mm:ss a' }}
+        </div>
+        <div class="lv-loading-spin" *ngIf="isLoading">
+          <i class="fas fa-circle-notch fa-spin"></i>
+        </div>
+      </div>
+
+      <!-- Error Message -->
+      <div class="lv-error" *ngIf="errorMsg">
+        <i class="fas fa-exclamation-triangle me-1"></i>{{ errorMsg }}
+      </div>
+
+      <!-- No Data State -->
+      <div class="lv-no-data" *ngIf="!hasData && !isLoading && isLive">
+        <i class="fas fa-satellite fa-2x"></i>
+        <p>Acquiring GPS signal…</p>
+      </div>
+
+      <!-- Start Prompt -->
+      <div class="lv-start-prompt" *ngIf="!isLive && !hasData">
+        <div class="lv-start-icon">
+          <i class="fas fa-satellite-dish"></i>
+        </div>
+        <p class="lv-start-title">Ready to Track</p>
+        <p class="lv-start-sub">Press <b>Go Live</b> to start tracking {{ user?.firstName }}'s real-time location.</p>
+        <button class="lv-start-btn" (click)="startLive()">
+          <span class="lv-live-pip"></span>
+          <i class="fas fa-satellite-dish me-2"></i>Go Live
+        </button>
+      </div>
+
+      <!-- Live Data Cards -->
+      <ng-container *ngIf="hasData">
+
+        <!-- Location Card -->
+        <div class="lv-card lv-loc-card">
+          <div class="lv-card-label"><i class="fas fa-map-marker-alt me-1" style="color:#ef4444"></i>Current Location</div>
+          <div class="lv-address" *ngIf="currentAddress">{{ currentAddress }}</div>
+          <div class="lv-address loading" *ngIf="!currentAddress">
+            <i class="fas fa-circle-notch fa-spin me-1"></i>Fetching address…
+          </div>
+          <div class="lv-coords" *ngIf="currentPoint">
+            {{ currentPoint.lat.toFixed(6) }}, {{ currentPoint.lng.toFixed(6) }}
+          </div>
+          <div class="lv-accuracy-row" *ngIf="currentAccuracyM">
+            <i class="fas fa-bullseye me-1" style="color:#60a5fa;font-size:10px"></i>
+            GPS Accuracy: <b>± {{ currentAccuracyM }} m</b>
+            <span class="acc-badge" [class.acc-good]="currentAccuracyM <= 20"
+                                    [class.acc-ok]="currentAccuracyM > 20 && currentAccuracyM <= 50"
+                                    [class.acc-poor]="currentAccuracyM > 50">
+              {{ currentAccuracyM <= 20 ? 'Excellent' : currentAccuracyM <= 50 ? 'Good' : 'Fair' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="lv-stats-grid">
+
+          <div class="lv-stat-card">
+            <div class="lv-stat-icon" style="background:rgba(59,130,246,.15);color:#3b82f6">
+              <i class="fas fa-tachometer-alt"></i>
+            </div>
+            <div class="lv-stat-val">{{ currentSpeedKmh }}</div>
+            <div class="lv-stat-unit">km/h</div>
+            <div class="lv-stat-label">Speed</div>
+          </div>
+
+          <div class="lv-stat-card">
+            <div class="lv-stat-icon" style="background:rgba(34,197,94,.15);color:#22c55e">
+              <i class="fas fa-road"></i>
+            </div>
+            <div class="lv-stat-val">{{ formatDistance(totalDistanceM) }}</div>
+            <div class="lv-stat-unit">&nbsp;</div>
+            <div class="lv-stat-label">Distance Today</div>
+          </div>
+
+          <div class="lv-stat-card">
+            <div class="lv-stat-icon" style="background:rgba(245,158,11,.15);color:#f59e0b">
+              <i class="fas fa-wind"></i>
+            </div>
+            <div class="lv-stat-val">{{ topSpeedKmh | number:'1.0-0' }}</div>
+            <div class="lv-stat-unit">km/h</div>
+            <div class="lv-stat-label">Top Speed</div>
+          </div>
+
+          <div class="lv-stat-card">
+            <div class="lv-stat-icon" style="background:rgba(139,92,246,.15);color:#8b5cf6">
+              <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="lv-stat-val">{{ avgSpeedKmh | number:'1.0-0' }}</div>
+            <div class="lv-stat-unit">km/h</div>
+            <div class="lv-stat-label">Avg Speed</div>
+          </div>
+
+        </div>
+
+        <!-- Timestamp -->
+        <div class="lv-ts-row" *ngIf="currentPoint">
+          <i class="fas fa-clock me-1" style="color:#64748b"></i>
+          Last point at {{ formatTime(currentPoint.timestamp) }}
+        </div>
+
+        <!-- Open in Google Maps -->
+        <button class="lv-gmaps-btn" (click)="openInMaps()" *ngIf="currentPoint">
+          <i class="fas fa-directions me-2"></i>Open in Google Maps
+        </button>
+
+      </ng-container>
+
+      <!-- Refresh info -->
+      <div class="lv-refresh-hint" *ngIf="isLive">
+        <i class="fas fa-sync-alt me-1"></i>Auto-refreshes every 15 seconds
+      </div>
+
+    </div><!-- /lv-panel -->
+
+    <!-- MAP AREA -->
+    <div class="lv-map-wrap">
+      <div id="live-map" class="lv-map"></div>
+
+      <!-- Map overlay: not live -->
+      <div class="lv-map-overlay" *ngIf="!isLive && !hasData">
+        <div class="lv-map-cta" (click)="startLive()">
+          <div class="lv-map-cta-icon">
+            <i class="fas fa-satellite-dish"></i>
+          </div>
+          <div class="lv-map-cta-text">Click <b>Go Live</b> to start</div>
+        </div>
+      </div>
+
+      <!-- Speed badge on map (top-right of map) -->
+      <div class="lv-speed-badge" *ngIf="isLive && hasData">
+        <i class="fas fa-tachometer-alt me-1"></i>{{ currentSpeedKmh }} km/h
+      </div>
+
+    </div><!-- /lv-map-wrap -->
+
+  </div><!-- /lv-body -->
+
+</div><!-- /lv-root -->

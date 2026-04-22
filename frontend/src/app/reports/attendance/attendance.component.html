@@ -1,0 +1,173 @@
+<div class="container-fluid  mt-5">
+  <div class="row mb-6">
+    <div class="col-md">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center">
+          <span>Late Arrival List</span>
+        </h5>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label">Select Employee</label>
+              <ng-select [items]="EmpList" bindLabel="label" bindValue="value" [(ngModel)]="obj['emp_id']"
+                [multiple]="false" placeholder="Select Employee" name="state" id="select2Danger" required
+                #enCashableRef="ngModel">
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label">Select Month
+                <span style="color: red">*</span>
+              </label>
+              <ng-select [items]="monthList" bindLabel="label" bindValue="value" [(ngModel)]="obj['month']"
+                [multiple]="false" placeholder="Select Month" name="state" id="select2Danger" required
+                #enCashableRef="ngModel">
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label">Select Year
+                <span style="color: red"> * </span>
+              </label>
+              <ng-select [items]="yearList" bindLabel="label" bindValue="value" [(ngModel)]="obj['year']"
+                [multiple]="false" placeholder="Select Year" name="state" id="select2Danger" required
+                #enCashableRef="ngModel">
+              </ng-select>
+            </div>
+          </div>
+          <div class="row mt-2">
+            <div class="col-12 justify-content-center">
+              <button type="button" class="btn btn-sm btn-primary waves-effect waves-light" (click)="fetchAttendance()">
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-datatable text-nowrap">
+      <div id="DataTables_Table_0_wrapper" class="dt-container dt-bootstrap5 dt-empty-footer">
+        <div class="row card-header mx-0 px-2 text-end justify-content-end">
+
+          <div class="d-md-flex justify-content-end align-items-center dt-layout-end col-md-auto mt-0">
+            <div class="dt-buttons btn-group flex-wrap">
+              <div class="btn-group">
+                <button
+                  class="btn btn-xs buttons-collection btn-label-primary dropdown-toggle me-4 waves-effect border-none"
+                  tabindex="0" aria-controls="DataTables_Table_0" type="button" aria-haspopup="dialog"
+                  aria-expanded="false" (click)="export()">
+                  <span><span class="d-flex align-items-center gap-2"><i
+                        class="icon-base ri ri-external-link-line icon-18px"></i>
+                      <span class="d-none d-sm-inline-block">Export</span></span></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row m-3 mx-2 my-0 justify-content-between">
+          <div class="d-md-flex justify-content-between align-items-center dt-layout-start col-md-auto me-auto">
+            <div class="dt-length">
+              <label for="dt-length-0">Show
+                <select name="DataTables_Table_0_length" aria-controls="DataTables_Table_0"
+                  class="form-select form-select-sm" id="dt-length-0" (change)="onItemsPerPageChange($event)">
+                  <!-- <option value="7">7</option> -->
+                  <option value="10">10</option>
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>entries</label>
+            </div>
+          </div>
+          <div class="d-md-flex justify-content-between align-items-center dt-layout-end col-md-auto mt-0">
+            <div class="dt-search mt-md-5 mt-0">
+              <label for="dt-search-0">Search:</label><input type="search" class="form-control" id="dt-search-0"
+                placeholder="Search By Name" aria-controls="DataTables_Table_0" (input)="applyFilter($event)" />
+            </div>
+          </div>
+        </div>
+        <div class="justify-content-between dt-layout-table">
+          <div class="d-md-flex justify-content-between align-items-center dt-layout-full table-responsive">
+            <table class="datatables-basic table table-bordered table-responsive dataTable dtr-column"
+              id="DataTables_Table_0" aria-describedby="DataTables_Table_0_info">
+              <thead>
+                <tr role="row">
+                  <th style="width: 120px; font-size: 12px">Employee</th>
+
+                  <th style="width: 50px; font-size: 12px">Date</th>
+                  <th style="width: 50px; font-size: 12px">check In</th>
+
+                  <th style="width: 50px; font-size: 12px">Late By Minutes</th>
+                  <!-- <th style="width: 50px; font-size: 12px">Status</th> -->
+                  <th style="width: 50px; font-size: 12px">Action</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr *ngFor="let item of AttendanceMasterList">
+                  <td style="width: 100px; font-size: 12px">
+                    {{ item.employeeName }} <br>
+                    {{ item.empCode }}
+                  </td>
+                  <td>
+                    {{item?.date}}
+                    <!-- {{item?.status}} -->
+                  </td>
+                  <td>{{item?.checkIn}}
+
+                  </td>
+
+                  <td>
+                    {{item?.lateByMinutes}}
+                  </td>
+                  <td>
+                    <button type="button" class="btn btn-sm btn-primary waves-effect waves-light" (click)="allow(item)">
+                      Allow
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot></tfoot>
+            </table>
+          </div>
+        </div>
+        <!-- Pagination & Info -->
+        <div class="row mx-3 justify-content-between">
+          <div class="d-md-flex justify-content-between align-items-center dt-layout-start col-md-auto me-auto">
+            <div class="dt-info" aria-live="polite" role="status">
+              Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to
+              {{ getMin(currentPage * itemsPerPage, originalList.length) }} of
+              {{ originalList.length }} entries
+            </div>
+          </div>
+
+          <div class="d-md-flex justify-content-between align-items-center dt-layout-end col-md-auto mt-0">
+            <div class="dt-paging">
+              <nav aria-label="pagination">
+                <ul class="pagination">
+                  <li class="page-item" [class.disabled]="currentPage === 1">
+                    <a class="page-link" (click)="goToPage(currentPage - 1)">Prev</a>
+                  </li>
+
+                  <li class="page-item" *ngFor="let p of [].constructor(totalPages); let i = index"
+                    [class.active]="i + 1 === currentPage">
+                    <a class="page-link" (click)="goToPage(i + 1)">{{
+                      i + 1
+                      }}</a>
+                  </li>
+
+                  <li class="page-item" [class.disabled]="currentPage === totalPages">
+                    <a class="page-link" (click)="goToPage(currentPage + 1)">Next</a>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

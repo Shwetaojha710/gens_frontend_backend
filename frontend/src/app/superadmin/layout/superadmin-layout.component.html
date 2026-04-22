@@ -1,0 +1,93 @@
+<div class="sa-shell" [class.sa-shell--nav-open]="sidebarOpen">
+  <aside id="superadmin-sidebar" class="sa-sidebar" [class.sa-sidebar--open]="sidebarOpen">
+    <div class="sa-sidebar-brand">
+      <div class="sa-sidebar-brand-text">
+        <img src="assets/img/logo/gens-logo-color.png" alt="GENS" class="sa-logo" />
+        <div>
+          <div class="sa-title">SuperAdmin</div>
+          <div class="sa-subtitle">Control panel</div>
+        </div>
+      </div>
+      <button type="button" class="sa-sidebar-close d-lg-none" (click)="closeSidebar()" aria-label="Close menu">
+        <i class="ri ri-close-line"></i>
+      </button>
+    </div>
+
+    <nav class="sa-nav">
+      <a class="sa-nav-link" routerLink="/superadmin/dashboard" routerLinkActive="active">
+        <i class="ri ri-dashboard-line"></i>
+        <span>Overview</span>
+      </a>
+      <a class="sa-nav-link" routerLink="/superadmin/companies" routerLinkActive="active">
+        <i class="ri ri-building-4-line"></i>
+        <span>Company Management</span>
+      </a>
+      <a class="sa-nav-link" routerLink="/superadmin/plans" routerLinkActive="active">
+        <i class="ri ri-vip-crown-2-line"></i>
+        <span>Plan Management</span>
+      </a>
+      <a class="sa-nav-link" routerLink="/superadmin/landing" routerLinkActive="active">
+        <i class="ri ri-layout-masonry-line"></i>
+        <span>Home page CMS</span>
+      </a>
+      <a class="sa-nav-link" routerLink="/superadmin/contact-inquiries" routerLinkActive="active">
+        <i class="ri ri-mail-line"></i>
+        <span>Contact inquiries</span>
+      </a>
+      <a class="sa-nav-link" routerLink="/superadmin/users" routerLinkActive="active">
+        <i class="ri ri-group-line"></i>
+        <span>Users Management</span>
+      </a>
+    </nav>
+  </aside>
+
+  <main class="sa-main">
+    <div class="sa-topbar">
+      <div class="sa-topbar-start">
+        <button
+          type="button"
+          class="sa-topbar-menu"
+          (click)="toggleSidebar()"
+          [attr.aria-expanded]="sidebarOpen"
+          aria-controls="superadmin-sidebar"
+          aria-label="Toggle navigation menu"
+        >
+          <i class="ri ri-menu-line" aria-hidden="true"></i>
+        </button>
+        <div class="sa-topbar-title">{{ pageTitle }}</div>
+      </div>
+      <div class="sa-topbar-actions">
+        <div class="sa-profile" [class.sa-profile--open]="profileMenuOpen">
+          <button
+            type="button"
+            class="sa-profile-trigger"
+            (click)="toggleProfileMenu($event)"
+            [attr.aria-expanded]="profileMenuOpen"
+            aria-haspopup="true"
+            aria-label="Account menu"
+          >
+            <span class="sa-profile-avatar" aria-hidden="true">
+              <i class="ri ri-user-3-line"></i>
+            </span>
+          </button>
+          <div class="sa-profile-dropdown" *ngIf="profileMenuOpen" role="menu">
+            <div class="sa-profile-email text-truncate" [title]="userEmail || 'SuperAdmin'">
+              {{ userEmail || 'SuperAdmin' }}
+            </div>
+            <button type="button" class="sa-profile-logout" (click)="logout()" role="menuitem">
+              <i class="ri ri-logout-box-r-line"></i>
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sa-content container-fluid py-3">
+      <router-outlet></router-outlet>
+    </div>
+  </main>
+
+  <div class="sa-nav-backdrop" (click)="closeSidebar()" role="presentation" tabindex="-1"></div>
+</div>
+

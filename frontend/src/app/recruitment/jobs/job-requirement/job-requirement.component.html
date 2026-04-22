@@ -1,0 +1,422 @@
+<div class="container-fluid mt-5">
+  <div class="row mb-6" *ngIf="createFlag">
+    <div class="col-md">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center">
+          <span>Apply Job Requirement</span>
+          <button type="button" class="btn btn-xs btn-primary float-end" (click)="back()">
+            <i class="fa-solid fa-arrow-left"></i>&nbsp;back
+          </button>
+        </h5>
+
+
+        <div class="card-body">
+          <div class="row g-3 align-items-start">
+            <div class="col-12 col-md-6 col-xl-4">
+              <label for="jobTitle" class="col-form-label fw-bold">Job Title <span style="color: red">*</span></label>
+              <input type="text" id="jobTitle" name="job_title" placeholder="Job title" class="form-control"
+                [(ngModel)]="obj['job_title']" />
+            </div>
+
+
+            <div class="col-12 col-md-6 col-xl-4">
+              <label class="col-form-label fw-bold">Department
+                <span style="color: red">*</span></label>
+
+              <ng-select [items]="departmentDD" bindLabel="label" bindValue="value" [(ngModel)]="obj['department']"
+                [multiple]="false" placeholder="Select Department" name="department" id="department"
+                #departmentRef="ngModel">
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-4">
+              <label class="col-form-label fw-bold">Designation
+              </label>
+              <input type="text" name="designation" placeholder="Designation" class="form-control"
+                [(ngModel)]="obj['designation']" />
+
+
+            </div>
+
+
+
+            <div class="col-12 col-md-6 col-xl-4">
+              <label class="col-form-label fw-bold">Employment Type
+              <span
+                  style="color: red">*</span>
+              </label>
+              <ng-select [items]="employmentTypes" bindLabel="label" bindValue="value" [(ngModel)]="obj['emp_type']"
+                [multiple]="false" placeholder="Select Employment Types" name="emp_type" id="empType">
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-4">
+              <label class="col-form-label fw-bold">Interview Rounds</label>
+              <ng-select [items]="interviewRounds" bindLabel="label" bindValue="value"
+                [(ngModel)]="obj['interview_round_ids']" [multiple]="true" placeholder="Select Interview Rounds"
+                name="interview_round_ids" id="interviewRounds">
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-4">
+              <label class="col-form-label fw-bold">Candidate Preference</label>
+              <ng-select [items]="candidatePreferenceOptions" bindLabel="label" bindValue="value"
+                [(ngModel)]="obj['candidate_preference']" [multiple]="false" placeholder="Select Candidate Preference"
+                name="candidate_preference" id="candidatePreference">
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-4">
+              <label for="skillsInput" class="col-form-label fw-bold">Skills <span style="color: red">*</span></label>
+              <div class="tag-container">
+                <span class="tag" *ngFor="let skill of skills; let i = index">
+                  {{ skill }}
+                  <span class="remove" (click)="removeSkill(i)">×</span>
+                </span>
+
+                <input type="text" id="skillsInput" placeholder="Type skill and press Enter" class="form-control"
+                  (keydown.enter)="addSkill($event)" />
+              </div>
+            </div>
+
+            <!-- <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-4">
+              <label for="defaultFormControlInput" class="col-form-label fw-bold">Skills <span
+                  style="color: red">*</span></label>
+              <input type="text" name="Skills" value="Skills" placeholder="Skills" class="form-control"
+                [(ngModel)]="obj['skills']" />
+
+
+
+            </div> -->
+            <div class="col-12 col-md-6 col-xl-4">
+              <label for="experience" class="col-form-label fw-bold">Experience (Years) <span
+                  style="color: red">*</span></label>
+              <input type="text" id="experience" name="experience" class="form-control" placeholder="Experience (Years)"
+                [(ngModel)]="obj['experience']" />
+
+            </div>
+            <div class="col-12 col-md-6 col-xl-4">
+              <label for="qualification" class="col-form-label fw-bold">Qualification <span
+                  style="color: red">*</span></label>
+              <input type="text" id="qualification" name="qualification" class="form-control"
+                placeholder="Qualification" [(ngModel)]="obj['qualification']" />
+
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-4">
+              <label for="noticePeriod" class="col-form-label fw-bold">Notice Period (In Days) </label>
+              <input type="text" id="noticePeriod" name="notice_period" class="form-control" placeholder="Notice Period"
+                [(ngModel)]="obj['notice_period']" />
+
+            </div>
+            <div class="col-12 col-md-6 col-xl-4">
+              <label for="budgetCtc" class="col-form-label fw-bold">Budget CTC (In LPA)</label>
+              <input type="text" id="budgetCtc" name="budget_ctc" class="form-control" placeholder="Budget CTC"
+                [(ngModel)]="obj['budget_ctc']" />
+
+            </div>
+            <div class="col-12 col-md-6 col-xl-4">
+              <label for="noOfOpening" class="col-form-label fw-bold">No Of Opening</label>
+              <input type="text" id="noOfOpening" name="no_of_opening" class="form-control" placeholder="No Of Opening"
+                [(ngModel)]="obj['no_of_opening']" />
+
+            </div>
+            <div class="col-12 col-md-6 col-xl-4">
+              <label for="location" class="col-form-label fw-bold">Location</label>
+              <input type="text" id="location" name="location" class="form-control" placeholder="Location"
+                [(ngModel)]="obj['location']" />
+
+            </div>
+            <div class="col-12 col-md-6 col-xl-4">
+              <label for="mode" class="col-form-label fw-bold">Mode</label>
+              <input type="text" id="mode" name="mode" class="form-control" placeholder="Mode"
+                [(ngModel)]="obj['mode']" />
+
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-4">
+              <label class="col-form-label fw-bold">Application Link Expiry</label>
+              <ng-select
+                [items]="expireDays"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="obj['expires_days']"
+                [multiple]="false"
+                placeholder="Select expiry period"
+                name="expires_days"
+                id="expiresDays">
+              </ng-select>
+              <small class="text-muted">How long the candidate application link stays active.</small>
+
+            </div>
+
+            <div class="col-12">
+              <label for="jobDescription" class="col-form-label fw-bold">Job Description <span
+                  style="color: red">*</span></label>
+              <textarea
+                class="form-control"
+                id="jobDescription"
+                rows="4"
+                [(ngModel)]="obj['job_description']"
+                #reasonRef="ngModel"
+                style="height: 333px;"
+              ></textarea>
+
+              <small class="text-danger" *ngIf="reasonRef.invalid && reasonRef.touched">
+                Reason Is Required
+              </small>
+            </div>
+          </div>
+          <div class="d-flex justify-content-end gap-2 mt-4">
+            <button *ngIf="updateFlag == false && createFlag == true" type="button" class="btn btn-primary"
+              (click)="onSubmit()">
+              Submit
+            </button>
+            <button *ngIf="updateFlag == true && createFlag == true" type="button" class="btn btn-primary"
+              (click)="updateform()">
+              Update
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mb-6" *ngIf="!createFlag">
+    <div class="col-md">
+
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center">
+          <span>Filter Job Requirement</span>
+          <button *ngIf="createFlag == false" type="button" class="btn btn-xs btn-primary float-end"
+            (click)="opencreate()">
+            <i class="fa-solid fa-plus"></i>&nbsp;Add
+          </button>
+        </h5>
+        <div class="card-body">
+          <div class="row g-3">
+
+            <div class="col-12 col-md-6 col-xl-4">
+              <label class="col-form-label fw-bold">Department
+                <span style="color: red">*</span></label>
+
+              <ng-select [items]="departmentDD" bindLabel="label" bindValue="value" [(ngModel)]="obj['department']"
+                [multiple]="false" placeholder="Select Department" name="department_filter" id="departmentFilter"
+                #departmentRef="ngModel">
+              </ng-select>
+            </div>
+
+            <!-- <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-4">
+              <label for="defaultFormControlInput"class="col-form-label fw-bold">Select Skills
+              </label>
+              <ng-select [items]="skillDD" bindLabel="name" bindValue="id" [(ngModel)]="obj['skills']"
+                [multiple]="false" placeholder="Select Skills" name="state" id="select2Danger" class="w-100 mx-2"
+                required #enCashableRef="ngModel">
+              </ng-select>
+            </div> -->
+
+
+            <div class="col-12 col-md-6 col-xl-4">
+              <label for="statusFilter" class="col-form-label fw-bold">Select Status
+
+              </label>
+              <ng-select [items]="status" bindLabel="label" bindValue="value" [(ngModel)]="obj['status']"
+                [multiple]="false" placeholder="Select Status" name="status_filter" id="statusFilter" required
+                #enCashableRef="ngModel">
+              </ng-select>
+            </div>
+
+          </div>
+          <div class="d-flex justify-content-end mt-3">
+            <button type="button" class="btn btn-sm btn-primary waves-effect waves-light"
+              (click)="getJobRequirementList()">
+              Submit
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="row mb-6">
+    <div class="col-md">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center">
+          <span>Job Requirement List</span>
+          <!-- <button *ngIf="createFlag == false" type="button" class="btn btn-xs btn-primary float-end"
+            (click)="opencreate()">
+            <i class="fa-solid fa-plus"></i>&nbsp;Add
+          </button> -->
+        </h5>
+
+        <!-- <app-search-pagination
+          [totalItems]="applyLeaveList.length"
+          [pageSize]="itemsPerPage"
+          [currentPage]="currentPage"
+          (search)="onSearch($event)"
+          (pageChange)="onPageChange($event)"
+          (pageSizeChange)="onPageSizeChange($event)"
+        > -->
+
+        <app-search-pagination [totalItems]="JobRequirementsList.length" [pageSize]="itemsPerPage"
+          [currentPage]="currentPage" (search)="onSearch($event)" (pageChange)="onPageChange($event)"
+          (pageSizeChange)="onPageSizeChange($event)">
+
+          <div class="table-responsive">
+            <table class="table dataTable">
+              <thead>
+                <tr>
+                  <th>SI.No</th>
+                  <th>Job Title</th>
+                  <th>Department</th>
+                  <th>Designation</th>
+                  <th>Experience</th>
+                  <th>Status</th>
+                  <th>Created At</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody class="table-border-bottom-0">
+                <tr *ngFor="let item of filteredDesignation; let i = index">
+                  <td>{{ i + 1 }}</td>
+                  <td class="fw-semibold">{{ item["job_title"] }}</td>
+                  <td>{{ item?.departmentData?.["name"] || '—' }}</td>
+                  <td>{{ item["designation"] || '—' }}</td>
+                  <td>{{ item["experience"] || '—' }}</td>
+                  <td>
+                    <span class="badge badge-outline-success px-2" [ngClass]="getUserStatusClass(item.status)">
+                      {{ item.status }}
+                    </span>
+                  </td>
+                  <td>{{ item["createdAt"] | date : "M/d/yyyy, h:mm a" }}</td>
+                  <td>
+                    <button type="button" class="btn btn-sm btn-outline-info" title="View"
+                      (click)="viewItem(item)">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                    &nbsp;
+                    <button type="button" class="btn btn-sm btn-outline-primary" title="Edit"
+                      (click)="update(item)">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    &nbsp;
+                    <button type="button" class="btn btn-sm btn-outline-danger" title="Delete"
+                      (click)="delete(item)">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </app-search-pagination>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Job Requirement Detail Modal ── -->
+<div class="modal fade" id="jobReqViewModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title d-flex align-items-center gap-2">
+          <i class="fas fa-briefcase text-primary"></i>
+          Job Requirement Details
+        </h5>
+        <button type="button" class="btn-close" (click)="closeViewModal()"></button>
+      </div>
+
+      <div class="modal-body" *ngIf="selectedItem">
+
+        <!-- Title + Status -->
+        <div class="jrv-hero mb-4">
+          <div class="jrv-icon"><i class="fas fa-briefcase"></i></div>
+          <div class="flex-grow-1">
+            <h5 class="mb-0 fw-bold">{{ selectedItem["job_title"] }}</h5>
+            <div class="text-muted small">
+              {{ selectedItem?.departmentData?.["name"] || '—' }}
+              <span *ngIf="selectedItem['designation']"> · {{ selectedItem["designation"] }}</span>
+            </div>
+          </div>
+          <span class="badge px-3 py-2" [ngClass]="getUserStatusClass(selectedItem.status)">
+            {{ selectedItem.status }}
+          </span>
+        </div>
+
+        <!-- Info Grid -->
+        <div class="jrv-grid mb-3">
+          <div class="jrv-item">
+            <span class="jrv-label"><i class="fas fa-layer-group me-1"></i>Employment Type</span>
+            <span class="jrv-val">{{ selectedItem?.emp_typeData?.["name"] || '—' }}</span>
+          </div>
+          <div class="jrv-item">
+            <span class="jrv-label"><i class="fas fa-star me-1"></i>Experience</span>
+            <span class="jrv-val">{{ selectedItem["experience"] || '—' }}</span>
+          </div>
+          <div class="jrv-item">
+            <span class="jrv-label"><i class="fas fa-graduation-cap me-1"></i>Qualification</span>
+            <span class="jrv-val">{{ selectedItem["qualification"] || '—' }}</span>
+          </div>
+          <div class="jrv-item">
+            <span class="jrv-label"><i class="fas fa-clock me-1"></i>Notice Period</span>
+            <span class="jrv-val">{{ selectedItem["notice_period"] || '—' }}</span>
+          </div>
+          <div class="jrv-item">
+            <span class="jrv-label"><i class="fas fa-rupee-sign me-1"></i>Budget CTC</span>
+            <span class="jrv-val">{{ selectedItem["budget_ctc"] || '—' }}</span>
+          </div>
+          <div class="jrv-item">
+            <span class="jrv-label"><i class="fas fa-users me-1"></i>No. of Openings</span>
+            <span class="jrv-val">{{ selectedItem["no_of_opening"] || '—' }}</span>
+          </div>
+          <div class="jrv-item">
+            <span class="jrv-label"><i class="fas fa-map-marker-alt me-1"></i>Location</span>
+            <span class="jrv-val">{{ selectedItem["location"] || '—' }}</span>
+          </div>
+          <div class="jrv-item">
+            <span class="jrv-label"><i class="fas fa-laptop me-1"></i>Mode</span>
+            <span class="jrv-val">{{ selectedItem["mode"] || '—' }}</span>
+          </div>
+          <div class="jrv-item">
+            <span class="jrv-label"><i class="fas fa-venus-mars me-1"></i>Candidate Preference</span>
+            <span class="jrv-val">{{ getCandidatePreferenceLabel(selectedItem["candidate_preference"]) }}</span>
+          </div>
+          <div class="jrv-item">
+            <span class="jrv-label"><i class="fas fa-calendar-check me-1"></i>Interview Rounds</span>
+            <span class="jrv-val">{{ getInterviewRoundDisplay(selectedItem) }}</span>
+          </div>
+        </div>
+
+        <!-- Skills -->
+        <div class="jrv-section mb-3" *ngIf="selectedItem['skills']?.length">
+          <div class="jrv-label mb-2"><i class="fas fa-tools me-1"></i>Skills</div>
+          <div class="d-flex flex-wrap gap-1">
+            <span *ngFor="let s of (selectedItem['skills'] | slice:0:30)"
+              class="badge bg-primary bg-opacity-10 text-primary fw-normal px-2 py-1">
+              {{ s }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Job Description -->
+        <div class="jrv-section" *ngIf="selectedItem['job_description']">
+          <div class="jrv-label mb-2"><i class="fas fa-align-left me-1"></i>Job Description</div>
+          <div class="jrv-desc">{{ selectedItem["job_description"] }}</div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary btn-sm" (click)="update(selectedItem); closeViewModal()">
+          <i class="fas fa-edit me-1"></i>Edit
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="closeViewModal()">Close</button>
+      </div>
+
+    </div>
+  </div>
+</div>

@@ -1,0 +1,152 @@
+.al-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+/* Summary Cards */
+.al-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.06);
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.al-card__icon {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  color: #fff;
+}
+
+.al-card__count {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #0f172a;
+}
+
+.al-card__label {
+  font-size: 0.70rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-top: 0.2rem;
+}
+
+.al-card--total .al-card__icon       { background: linear-gradient(135deg, #334155, #64748b); }
+.al-card--appointment .al-card__icon  { background: linear-gradient(135deg, #005fa8, #0ea5e9); }
+.al-card--offer .al-card__icon        { background: linear-gradient(135deg, #b45309, #f59e0b); }
+.al-card--nda .al-card__icon          { background: linear-gradient(135deg, #7c3aed, #a78bfa); }
+.al-card--relieving .al-card__icon    { background: linear-gradient(135deg, #0f766e, #2dd4bf); }
+
+/* Filter bar */
+.al-filter-btn {
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 20px;
+  padding: 0.3rem 0.9rem;
+  border: 1.5px solid #cbd5e1;
+  color: #475569;
+  background: #fff;
+  transition: all 0.15s;
+}
+.al-filter-btn:hover { background: #f1f5f9; }
+.al-filter-btn.active {
+  background: #005fa8;
+  border-color: #005fa8;
+  color: #fff;
+}
+
+/* Avatar */
+.al-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #005fa8, #0ea5e9);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Badges */
+.al-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 20px;
+}
+.al-badge--appointment { background: rgba(0,95,168,0.1);  color: #005fa8; }
+.al-badge--offer       { background: rgba(180,83,9,0.1);   color: #b45309; }
+.al-badge--nda         { background: rgba(124,58,237,0.1); color: #7c3aed; }
+.al-badge--relieving   { background: rgba(15,118,110,0.1); color: #0f766e; }
+
+/* Date under badge */
+.al-date {
+  font-size: 0.65rem;
+  color: #64748b;
+}
+
+/* Not generated */
+.al-not-generated {
+  color: #cbd5e1;
+  font-size: 1rem;
+}
+
+/* Action buttons */
+.btn-xs {
+  font-size: 0.68rem;
+  padding: 0.22rem 0.55rem;
+  border-radius: 5px;
+  line-height: 1.4;
+}
+
+.al-action-btn {
+  border: 1.5px solid;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.al-action-btn--print {
+  color: #374151;
+  border-color: #9ca3af;
+  background: #f9fafb;
+}
+.al-action-btn--print:hover {
+  background: #f3f4f6;
+  border-color: #6b7280;
+}
+
+/* Table header */
+table thead th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  font-weight: 700;
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+}
+
+table tbody td {
+  padding-top: 0.65rem;
+  padding-bottom: 0.65rem;
+  vertical-align: middle;
+}

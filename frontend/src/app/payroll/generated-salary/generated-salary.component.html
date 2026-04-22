@@ -1,0 +1,416 @@
+<div class="container-fluid  mt-5">
+  <div class="row mb-6">
+    <div class="col-md">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center">
+          <span>Employee Salary List</span>
+          <!-- <button
+            type="button"
+            class="btn btn-xs btn-primary float-end"
+            (click)="back()"
+          >
+            <i class="fa-solid fa-arrow-left"></i>&nbsp;back
+          </button> -->
+        </h5>
+
+     
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label">Select Employee</label>
+              <ng-select [items]="EmpList" bindLabel="label" bindValue="value" [(ngModel)]="obj['employeeId']"
+                [multiple]="false" placeholder="Select Employee" name="state" id="select2Danger" required
+                #employeeRef="ngModel">
+              </ng-select>
+              <small class="text-danger" *ngIf="employeeRef.invalid && employeeRef.touched">
+                Employee Is required
+              </small>
+            </div>
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label">Select Month</label>
+              <ng-select [items]="monthList" bindLabel="label" bindValue="value" [(ngModel)]="obj['month']"
+                [multiple]="false" placeholder="Select Month" name="state" id="select2Danger" required
+                #monthRef="ngModel">
+              </ng-select>
+              <small class="text-danger" *ngIf="monthRef.invalid && monthRef.touched">
+                Month Is Required
+              </small>
+            </div>
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label">Select Year</label>
+              <ng-select [items]="yearList" bindLabel="label" bindValue="value" [(ngModel)]="obj['year']"
+                [multiple]="false" placeholder="Select Year" name="state" id="select2Danger" required
+                #yearRef="ngModel">
+              </ng-select>
+              <small class="text-danger" *ngIf="yearRef.invalid && yearRef.touched">
+                Year Is Required
+              </small>
+            </div>
+            <div class="col-3  mt-10">
+              <button type="button" class="btn btn-sm btn-primary waves-effect waves-light" (click)="onSubmit()">
+                Submit
+              </button>
+            </div>
+          </div>
+          <hr>
+          <div class="row mt-2" *ngIf="totalAmount>0">
+            <!-- <div class="col-12">
+              <h4>
+
+              </h4>
+            </div> -->
+            <div class="col-3">
+              <label for="defaultFormControlInput" class="form-label">  Total Amount </label>
+              <input type="text" class="form-control" id="defaultFormControlInput" placeholder="Enter Cheque Number"
+                [(ngModel)]="totalAmount" aria-describedby="defaultFormControlHelp" disabled="true"/>
+
+          </div>
+            <div class="col-3">
+              <label for="defaultFormControlInput" class="form-label">Cheque Number</label>
+              <input type="text" class="form-control" id="defaultFormControlInput" placeholder="Enter Cheque Number"
+                [(ngModel)]="chequeNo" aria-describedby="defaultFormControlHelp" />
+            </div>
+            <div class="col-3 mt-7">
+
+              <button
+                class="btn   btn-success  me-4 waves-effect border-none"
+                tabindex="0" aria-controls="DataTables_Table_0" type="button" aria-haspopup="dialog"
+                aria-expanded="false" (click)="generateDoc()">
+                Generate Salary Doc
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mb-6">
+    <div class="col-md">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center">
+          <span>Salary List</span>
+
+
+          <button class="btn btn-xs buttons-collection btn-label-primary dropdown-toggle me-4 waves-effect border-none"
+            tabindex="0" aria-controls="DataTables_Table_0" type="button" aria-haspopup="dialog" aria-expanded="false"
+            (click)="export()">
+            Export
+          </button>
+        </h5>
+
+
+        <app-search-pagination [totalItems]="SalaryArr.length" [pageSize]="itemsPerPage" [currentPage]="currentPage"
+          (search)="onSearch($event)" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)">
+<div class="table-responsive">
+          <table class="table table-striped table-responsive text-nowrap dataTable bg-white">
+            <thead>
+              <tr>
+                <th>
+                  <input type="checkbox" [(ngModel)]="masterSelected" (change)="checkUncheckAll()" />
+                </th>
+                <th>SI.No</th>
+                <th>Employee Id</th>
+                <th>Employee Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <!-- <th>Designation</th> -->
+                <th>Salary</th>
+                <th>PaySlip</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+              <tr *ngFor="let item of filteredSalary; let i = index">
+                <td>
+                  <input type="checkbox" [(ngModel)]="item.isSelected" (change)="isAllSelected()" />
+                </td>
+                <th scope="row">{{ item["si_no"] }}</th>
+                <td> {{ item["empCode"] }} </td>
+                <td> {{ item["employeeName"] }}</td>
+                <td>
+                  <span class="badge rounded-pill bg-label-primary">
+                    {{ item["email"] }}
+                  </span>
+                </td>
+                <td> {{ item["phone"] }}</td>
+                <!-- <td> {{ item["designation"] }}</td> -->
+                <td>{{ item["net_amount"] }}</td>
+                <td>
+                  <button type="button" class="btn btn-outline-success btn-sm" (click)="getPaySlip(item)"> Get Payslip
+                  </button>
+
+                </td>
+                <td>
+                  <button type="button" class="btn btn-outline-danger btn-sm" (click)="view(item)">
+                    <i class="fas fa-eye"></i>
+
+
+                  </button> &nbsp;
+                  <button type="button" class="btn btn-outline-danger btn-sm" (click)="revert(item)">
+                    <i class="fas fa-retweet"></i>
+
+
+                  </button>
+                  &nbsp;
+                </td>
+              </tr>
+            </tbody>
+          </table>
+</div>
+        </app-search-pagination>
+
+
+        <!-- <div class="table-responsive text-nowrap">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>
+                  <input type="checkbox" [(ngModel)]="masterSelected" (change)="checkUncheckAll()" />
+                </th>
+                <th>SI.No</th>
+                <th>Employee Id</th>
+                <th>Employee Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Salary</th>
+                <th>PaySlip</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+              <tr *ngFor="let item of SalaryArr; let i = index">
+                <td>
+                  <input type="checkbox" [(ngModel)]="item.isSelected" (change)="isAllSelected()" />
+                </td>
+                <th scope="row">{{ i + 1 }}</th>
+                <td> {{ item["empCode"] }} </td>
+                <td> {{ item["employeeName"] }}</td>
+                <td>
+                  <span class="badge rounded-pill bg-label-primary">
+                    {{ item["email"] }}
+                  </span>
+                </td>
+                <td> {{ item["phone"] }}</td>
+                <td>{{ item["net_amount"] }}</td>
+                <td>
+                  <button type="button" class="btn btn-outline-success btn-sm" (click)="getPaySlip(item)"> Get Payslip
+                  </button>
+
+                </td>
+                <td>
+                  <button type="button" class="btn btn-outline-danger btn-sm" (click)="view(item)">
+                    <i class="fas fa-eye"></i>
+
+
+                  </button>
+                  <button type="button" class="btn btn-outline-danger btn-sm" (click)="revert(item)">
+                    <i class="fas fa-retweet"></i>
+
+
+                  </button>
+                  &nbsp;
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div> -->
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal -->
+
+<!-- Modal -->
+<div class="modal fade" id="SalaryModal" tabindex="-1" aria-labelledby="imageModalLabel1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Salary Breakup</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+            <label for="defaultFormControlInput" class="form-label">Name :
+            </label>
+            {{ personalDetails?.["employeeName"] }}
+          </div>
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+            <label for="defaultFormControlInput" class="form-label">Employee Code :
+            </label>
+            {{ personalDetails?.["empCode"] }}
+          </div>
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+            <label for="defaultFormControlInput" class="form-label">Designation :
+            </label>
+            {{ personalDetails?.["empCode"] }}
+          </div>
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+            <label for="defaultFormControlInput" class="form-label">Total Salary :
+            </label>
+            {{ personalDetails?.["TotalSalary"] }}
+          </div>
+        </div>
+        <hr />
+
+        <div class="row">
+          <div class="col-md-6">
+            <div class="list-group mb-3">
+              <div class="list-group-item bg-light p-2 border-bottom-0">
+                <h6 class="mb-0">Earnings</h6>
+              </div>
+              <div class="list-group-item" *ngFor="let item of PayArr; let i = index">
+                <div class="d-flex align-items-center justify-content-between">
+                  <p class="mb-0">{{ item?.name }}</p>
+                  <h6 class="fw-medium">{{ item?.finalAmount }}</h6>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="list-group mb-3">
+              <div class="list-group-item bg-light p-2 border-bottom-0">
+                <h6 class="mb-0">Deductions</h6>
+              </div>
+              <div class="list-group-item" *ngFor="let item1 of DedArr; let i = index">
+                <div class="d-flex align-items-center justify-content-between">
+                  <p class="mb-0">{{ item1?.name }}</p>
+                  <h6 class="fw-medium">{{ item1?.finalAmount }}</h6>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="list-group mb-3">
+              <div class="list-group-item bg-light p-2 border-bottom-0">
+                <h6 class="mb-0">Employer Deductions</h6>
+              </div>
+              <div class="list-group-item" *ngFor="let item1 of EmployerDedArr; let i = index">
+                <div class="d-flex align-items-center justify-content-between">
+                  <p class="mb-0">{{ item1?.name }}</p>
+                  <h6 class="fw-medium">{{ item1?.finalAmount }}</h6>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr />
+
+        <p>Leave Deductions</p>
+
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Total Working Days</th>
+                <th>Present Days</th>
+                <th>Absent Days</th>
+                <th>Leave Taken</th>
+                <th>Allowed Leaves</th>
+                <th>Half days</th>
+                <th>Late Attendance</th>
+                <th>Leave Deductions</th>
+                <th>Net Pay</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{{ personalDetails?.totalWorkingDays }}</td>
+                <td>{{ personalDetails?.full_days }}</td>
+                <td>{{ personalDetails?.absent_days }}</td>
+                <td>{{ personalDetails?.leave_taken || personalDetails?.leaveTaken || 0 }}</td>
+                <td>{{ personalDetails?.allowed_leave || personalDetails?.allowedLeave || 0 }}</td>
+                <td>{{ personalDetails?.half_day||personalDetails?.halfDays || 0 }}</td>
+                <td>{{ personalDetails?.late_attendance||0 }}</td>
+                <td>{{ personalDetails?.total_deduction || personalDetails?.totalDeduction || 0 }}</td>
+                <td>{{ personalDetails?.net_amount ||0}}</td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+
+        <!-- <div class="table-responsive text-nowrap">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+
+                <th>SI.No</th>
+                <th>Employee Code</th>
+                 <th>Component</th>
+                 <th>Pay Code</th>
+                 <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+              <tr *ngFor="let item of SalaryBreakup; let i = index">
+
+                <th scope="row">{{ i + 1 }}</th>
+                <td> {{ item["employeeId"] }}
+
+                </td>
+                <td>{{ item["name"] }}</td>
+                <td>{{ item["pay_code"] }}</td>
+                <td>{{ item["amount"] }}</td>
+
+              </tr>
+            </tbody>
+          </table>
+        </div> -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- <div class="modal fade" id="SalaryModal" tabindex="-1" aria-labelledby="imageModalLabel1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Salary Breakup</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+
+        <div class="row">
+          <div class="col-md-6">
+            <div class="list-group mb-3">
+              <div class="list-group-item bg-light p-3 border-bottom-0">
+                <h6>Earnings</h6>
+              </div>
+              <div class="list-group-item" *ngFor="let item of PayArr; let i = index">
+                <div class="d-flex align-items-center justify-content-between">
+                  <p class="mb-0">{{item?.name}}</p>
+                  <h6 class="fw-medium">{{item?.finalAmount}}</h6>
+                </div>
+              </div>
+
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="list-group mb-3">
+              <div class="list-group-item bg-light p-3 border-bottom-0">
+                <h6>Deductions</h6>
+              </div>
+              <div class="list-group-item" *ngFor="let item1 of DedArr; let i = index">
+                <div class="d-flex align-items-center justify-content-between">
+                  <p class="mb-0">{{item1?.name}}</p>
+                  <h6 class="fw-medium">{{item1?.finalAmount}}</h6>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+
+      </div>
+    </div>
+  </div>
+</div> -->
+
+<!-- Full Page Loader -->
+<div class="loading-state" *ngIf="isLoading">
+  <div class="loading"></div>
+</div>

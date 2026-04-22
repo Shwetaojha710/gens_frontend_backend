@@ -1,0 +1,126 @@
+<div class="ep-shell">
+  <aside class="ep-sidebar" [class.ep-sidebar--collapsed]="sidebarCollapsed">
+    <div class="ep-brand-row">
+      <div class="ep-brand">
+        <span class="ep-brand__title">Employee</span>
+        <span class="ep-brand__sub">Self‑service portal</span>
+      </div>
+      <button
+        type="button"
+        class="ep-sidebar-toggle"
+        (click)="toggleSidebar()"
+        [attr.aria-expanded]="!sidebarCollapsed"
+        aria-controls="ep-nav"
+        [attr.aria-label]="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+      >
+        <i class="icon-base ri" [class.ri-menu-fold-line]="!sidebarCollapsed" [class.ri-menu-unfold-line]="sidebarCollapsed"></i>
+      </button>
+    </div>
+    <nav id="ep-nav" class="ep-nav">
+      <a routerLink="/employee-portal/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        <i class="icon-base ri ri-dashboard-3-line ep-nav__icon"></i>
+        <span class="ep-nav__label">Dashboard</span>
+      </a>
+      <a routerLink="/employee-portal/reports" routerLinkActive="active">
+        <i class="icon-base ri ri-bar-chart-box-line ep-nav__icon"></i>
+        <span class="ep-nav__label">Reports</span>
+      </a>
+      <a routerLink="/employee-portal/attendance" routerLinkActive="active">
+        <i class="icon-base ri ri-calendar-line ep-nav__icon"></i>
+        <span class="ep-nav__label">Monthly Attendance</span>
+      </a>
+      <a routerLink="/employee-portal/leave" routerLinkActive="active">
+        <i class="icon-base ri ri-calendar-event-line ep-nav__icon"></i>
+        <span class="ep-nav__label">Leave</span>
+      </a>
+      <a routerLink="/employee-portal/salary" routerLinkActive="active">
+        <i class="icon-base ri ri-money-dollar-circle-line ep-nav__icon"></i>
+        <span class="ep-nav__label">Salary slip</span>
+      </a>
+      <a routerLink="/employee-portal/holidays" routerLinkActive="active">
+        <i class="icon-base ri ri-government-line ep-nav__icon"></i>
+        <span class="ep-nav__label">Holidays</span>
+      </a>
+      <a routerLink="/employee-portal/regularization" routerLinkActive="active">
+        <i class="icon-base ri ri-time-line ep-nav__icon"></i>
+        <span class="ep-nav__label">Regularization</span>
+      </a>
+      <a routerLink="/employee-portal/reimbursement" routerLinkActive="active">
+        <i class="icon-base ri ri-refund-2-line ep-nav__icon"></i>
+        <span class="ep-nav__label">Reimbursement</span>
+      </a>
+      <a routerLink="/employee-portal/documents" routerLinkActive="active">
+        <i class="icon-base ri ri-file-text-line ep-nav__icon"></i>
+        <span class="ep-nav__label">My Documents</span>
+      </a>
+    </nav>
+  </aside>
+  <div class="ep-main">
+    <header class="ep-topbar">
+      <div class="ep-topbar__inner">
+        <div #notifMenuRef class="ep-topbar__notif-wrap">
+          <button
+            type="button"
+            class="ep-topbar__notif-btn"
+            (click)="toggleNotifMenu($event)"
+            [attr.aria-expanded]="notifMenuOpen"
+            [attr.aria-label]="
+              notificationCount > 0
+                ? 'Notifications, ' + notificationCount + ' unread'
+                : 'Notifications'
+            "
+          >
+            <i class="icon-base ri ri-notification-3-line ep-topbar__notif-ico" aria-hidden="true"></i>
+            <span class="ep-topbar__notif-badge" *ngIf="notificationCount > 0" aria-hidden="true">
+              {{ notificationCount > 99 ? '99+' : notificationCount }}
+            </span>
+          </button>
+          <div
+            *ngIf="notifMenuOpen"
+            class="ep-topbar__notif-panel"
+            role="region"
+            aria-label="Notification preview"
+          >
+            <p class="ep-topbar__notif-title mb-2">Notifications</p>
+            <p class="ep-topbar__notif-text mb-3" *ngIf="!notifLoading">{{ notificationPreview }}</p>
+            <p class="ep-topbar__notif-text mb-3 text-muted" *ngIf="notifLoading">Loading…</p>
+            <a
+              routerLink="/employee-portal/reports"
+              fragment="ep-notifications"
+              class="ep-topbar__notif-link"
+              (click)="closeNotifMenu()"
+            >
+              View reports &amp; alerts
+              <i class="icon-base ri ri-arrow-right-s-line ms-1"></i>
+            </a>
+          </div>
+        </div>
+        <div #userMenuRef class="ep-topbar__user">
+          <button
+            type="button"
+            class="ep-topbar__trigger"
+            (click)="toggleUserMenu($event)"
+            [attr.aria-expanded]="userMenuOpen"
+            aria-haspopup="true"
+            aria-label="Account menu"
+          >
+            <span class="ep-topbar__avatar">{{ userInitials }}</span>
+            <span class="ep-topbar__name d-none d-md-inline">{{ userName }}</span>
+            <i class="icon-base ri ri-arrow-down-s-line ep-topbar__chev" [class.ep-topbar__chev--open]="userMenuOpen"></i>
+          </button>
+          <div class="ep-topbar__dropdown" *ngIf="userMenuOpen" role="menu">
+            <a routerLink="/employee-portal/profile" class="ep-topbar__item" role="menuitem" (click)="closeUserMenu()">
+              <i class="icon-base ri ri-user-line me-2"></i> View profile
+            </a>
+            <button type="button" class="ep-topbar__item ep-topbar__item--btn" role="menuitem" (click)="logout()">
+              <i class="icon-base ri ri-logout-box-r-line me-2"></i> Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+    <main class="ep-content">
+      <router-outlet />
+    </main>
+  </div>
+</div>

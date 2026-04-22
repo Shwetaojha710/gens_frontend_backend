@@ -1,0 +1,161 @@
+/* Shared glassmorphism for employee portal (import in layout + feature components) */
+
+.ep-glass-card {
+  position: relative;
+  border-radius: 1.125rem;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.52) 0%,
+    rgba(255, 255, 255, 0.18) 48%,
+    rgba(255, 255, 255, 0.12) 100%
+  );
+  backdrop-filter: blur(20px) saturate(165%);
+  -webkit-backdrop-filter: blur(20px) saturate(165%);
+  box-shadow:
+    0 8px 32px rgba(31, 38, 135, 0.13),
+    0 2px 8px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  overflow: hidden;
+}
+
+.ep-glass-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    125deg,
+    rgba(255, 255, 255, 0.4) 0%,
+    transparent 45%,
+    transparent 55%,
+    rgba(255, 255, 255, 0.08) 100%
+  );
+  opacity: 0.85;
+}
+
+.ep-glass-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.ep-glass-card .card-header {
+  background: rgba(255, 255, 255, 0.28) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.4) !important;
+  padding-top: 1rem;
+  padding-bottom: 0.65rem;
+}
+
+.ep-glass-card .card-body {
+  background: transparent;
+}
+
+.ep-glass-card .list-group-item {
+  background: transparent !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+.ep-glass-card .table {
+  --bs-table-bg: transparent;
+  --bs-table-striped-bg: rgba(255, 255, 255, 0.12);
+  color: #0f172a;
+}
+
+.ep-glass-card .table thead th {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #475569;
+  border-bottom-color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.25);
+  font-weight: 700;
+}
+
+.ep-glass-card .table td {
+  border-color: rgba(255, 255, 255, 0.22);
+  vertical-align: middle;
+}
+
+.ep-glass-card .avatar-initial {
+  box-shadow: 0 4px 14px rgba(13, 110, 253, 0.25);
+}
+
+.ep-glass-card .form-control,
+.ep-glass-card .form-select {
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 0.55rem;
+  width: 100%;
+}
+
+.ep-glass-card .form-control:focus,
+.ep-glass-card .form-select:focus {
+  background: rgba(255, 255, 255, 0.65);
+  border-color: rgba(13, 110, 253, 0.45);
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.12);
+}
+
+.ep-page-title {
+  color: #0f172a;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.ep-page-sub {
+  color: rgba(15, 23, 42, 0.62);
+  font-size: 0.875rem;
+}
+
+/* Glass pill buttons (shortcuts) */
+.ep-shortcut {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.55rem 0.9rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.22);
+  color: #0f172a !important;
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+.ep-shortcut:hover {
+  background: rgba(255, 255, 255, 0.45);
+  border-color: rgba(255, 255, 255, 0.75);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(13, 110, 253, 0.12);
+  color: #025a9d !important;
+}
+
+.ep-glass-refresh {
+  border-radius: 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #0f172a;
+  font-weight: 500;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+}
+
+.ep-glass-refresh:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.55);
+  border-color: rgba(255, 255, 255, 0.85);
+  color: #0d6efd;
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .ep-glass-card {
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: none;
+  }
+}
+

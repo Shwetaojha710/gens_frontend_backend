@@ -1,0 +1,221 @@
+<div class="container-fluid py-4 al-page">
+
+  <!-- Header -->
+  <div class="al-header mb-4">
+    <div>
+      <h4 class="al-title mb-1">All Letters</h4>
+      <p class="text-muted mb-0 small">View, print and download all generated letters for employees.</p>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-2">
+      <div class="al-card al-card--total">
+        <div class="al-card__icon"><i class="fas fa-users"></i></div>
+        <div class="al-card__body">
+          <div class="al-card__count">{{ totalGenerated }}</div>
+          <div class="al-card__label">Employees with Letters</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="al-card al-card--appointment">
+        <div class="al-card__icon"><i class="fas fa-file-signature"></i></div>
+        <div class="al-card__body">
+          <div class="al-card__count">{{ counts.appointment }}</div>
+          <div class="al-card__label">Appointment Letters</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="al-card al-card--offer">
+        <div class="al-card__icon"><i class="fas fa-envelope-open-text"></i></div>
+        <div class="al-card__body">
+          <div class="al-card__count">{{ counts.offer }}</div>
+          <div class="al-card__label">Offer Letters</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="al-card al-card--nda">
+        <div class="al-card__icon"><i class="fas fa-file-contract"></i></div>
+        <div class="al-card__body">
+          <div class="al-card__count">{{ counts.nda }}</div>
+          <div class="al-card__label">NDAs</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="al-card al-card--relieving">
+        <div class="al-card__icon"><i class="fas fa-file-alt"></i></div>
+        <div class="al-card__body">
+          <div class="al-card__count">{{ counts.relieving }}</div>
+          <div class="al-card__label">Relieving Letters</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Tabs -->
+  <div class="al-filter-bar mb-3 d-flex gap-2 flex-wrap">
+    <button class="btn btn-sm al-filter-btn" [class.active]="filterType==='all'" (click)="filterType='all'; applyFilter()">All</button>
+    <button class="btn btn-sm al-filter-btn" [class.active]="filterType==='appointment'" (click)="filterType='appointment'; applyFilter()">Appointment</button>
+    <button class="btn btn-sm al-filter-btn" [class.active]="filterType==='offer'" (click)="filterType='offer'; applyFilter()">Offer</button>
+    <button class="btn btn-sm al-filter-btn" [class.active]="filterType==='nda'" (click)="filterType='nda'; applyFilter()">NDA</button>
+    <button class="btn btn-sm al-filter-btn" [class.active]="filterType==='relieving'" (click)="filterType='relieving'; applyFilter()">Relieving</button>
+  </div>
+
+  <!-- Table -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom d-flex align-items-center justify-content-between py-3">
+      <h6 class="mb-0 fw-semibold">Letter Records</h6>
+      <span class="badge bg-primary">{{ filteredEmployees.length }} records</span>
+    </div>
+
+    <app-search-pagination
+      [totalItems]="filteredEmployees.length"
+      [pageSize]="pageSize"
+      [currentPage]="currentPage"
+      (search)="onSearch($event)"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)">
+
+      <div *ngIf="loading" class="text-center py-5">
+        <div class="spinner-border text-primary"></div>
+        <p class="mt-2 text-muted small">Loading…</p>
+      </div>
+
+      <div class="table-responsive" *ngIf="!loading">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width:40px">SI</th>
+              <th>Employee</th>
+              <th>Dept / Designation</th>
+              <th class="text-center" style="min-width:160px">Appointment Letter</th>
+              <th class="text-center" style="min-width:140px">Offer Letter</th>
+              <th class="text-center" style="min-width:120px">NDA</th>
+              <th class="text-center" style="min-width:150px">Relieving Letter</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let emp of pagedEmployees; let i = index">
+
+              <td class="text-muted small">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+
+              <!-- Employee info -->
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="al-avatar">{{ (emp.firstName?.[0]||'') + (emp.lastName?.[0]||'') | uppercase }}</div>
+                  <div>
+                    <div class="fw-semibold small">{{ emp.firstName }} {{ emp.lastName }}</div>
+                    <div class="text-muted" style="font-size:0.72rem">{{ emp.empCode }}</div>
+                  </div>
+                </div>
+              </td>
+
+              <td>
+                <div class="small fw-semibold">{{ emp.department_name || '—' }}</div>
+                <div class="text-muted" style="font-size:0.72rem">{{ emp.designation_name || '—' }}</div>
+              </td>
+
+              <!-- Appointment Letter -->
+              <td class="text-center">
+                <ng-container *ngIf="isGenerated(emp.id, 'appointment'); else notDone_appointment">
+                  <div class="al-badge al-badge--appointment mb-1">
+                    <i class="fas fa-check-circle me-1"></i>Generated
+                  </div>
+                  <div class="al-date mb-1">{{ generatedDate(emp.id, 'appointment') }}</div>
+                  <div class="d-flex justify-content-center gap-1">
+                    <button class="btn btn-xs al-action-btn al-action-btn--print"
+                      [disabled]="downloading === emp.id + '_appointment'"
+                      (click)="printLetter(emp, 'appointment')">
+                      <i class="fas fa-print"></i>
+                      {{ downloading === emp.id + '_appointment' ? 'Opening...' : 'Print' }}
+                    </button>
+                  </div>
+                </ng-container>
+                <ng-template #notDone_appointment>
+                  <span class="al-not-generated">—</span>
+                </ng-template>
+              </td>
+
+              <!-- Offer Letter -->
+              <td class="text-center">
+                <ng-container *ngIf="isGenerated(emp.id, 'offer'); else notDone_offer">
+                  <div class="al-badge al-badge--offer mb-1">
+                    <i class="fas fa-check-circle me-1"></i>Generated
+                  </div>
+                  <div class="al-date mb-1">{{ generatedDate(emp.id, 'offer') }}</div>
+                  <div class="d-flex justify-content-center gap-1">
+                    <button class="btn btn-xs al-action-btn al-action-btn--print"
+                      [disabled]="downloading === emp.id + '_offer'"
+                      (click)="printLetter(emp, 'offer')">
+                      <i class="fas fa-print"></i>
+                      {{ downloading === emp.id + '_offer' ? 'Opening...' : 'Print' }}
+                    </button>
+                  </div>
+                </ng-container>
+                <ng-template #notDone_offer>
+                  <span class="al-not-generated">—</span>
+                </ng-template>
+              </td>
+
+              <!-- NDA -->
+              <td class="text-center">
+                <ng-container *ngIf="isGenerated(emp.id, 'nda'); else notDone_nda">
+                  <div class="al-badge al-badge--nda mb-1">
+                    <i class="fas fa-check-circle me-1"></i>Generated
+                  </div>
+                  <div class="al-date mb-1">{{ generatedDate(emp.id, 'nda') }}</div>
+                  <div class="d-flex justify-content-center gap-1">
+                    <button class="btn btn-xs al-action-btn al-action-btn--print"
+                      [disabled]="downloading === emp.id + '_nda'"
+                      (click)="printLetter(emp, 'nda')">
+                      <i class="fas fa-print"></i>
+                      {{ downloading === emp.id + '_nda' ? 'Opening...' : 'Print' }}
+                    </button>
+                  </div>
+                </ng-container>
+                <ng-template #notDone_nda>
+                  <span class="al-not-generated">—</span>
+                </ng-template>
+              </td>
+
+              <!-- Relieving Letter -->
+              <td class="text-center">
+                <ng-container *ngIf="isGenerated(emp.id, 'relieving'); else notDone_relieving">
+                  <div class="al-badge al-badge--relieving mb-1">
+                    <i class="fas fa-check-circle me-1"></i>Generated
+  </div>
+                  <div class="al-date mb-1">{{ generatedDate(emp.id, 'relieving') }}</div>
+                  <div class="d-flex justify-content-center gap-1">
+                    <button class="btn btn-xs al-action-btn al-action-btn--print"
+                      [disabled]="downloading === emp.id + '_relieving'"
+                      (click)="printLetter(emp, 'relieving')">
+                      <i class="fas fa-print"></i>
+                      {{ downloading === emp.id + '_relieving' ? 'Opening...' : 'Print' }}
+                    </button>
+                  </div>
+                </ng-container>
+                <ng-template #notDone_relieving>
+                  <span class="al-not-generated">—</span>
+                </ng-template>
+              </td>
+
+            </tr>
+            <tr *ngIf="!loading && pagedEmployees.length === 0">
+              <td colspan="7" class="text-center text-muted py-5">
+                <i class="fas fa-folder-open fa-2x mb-2 d-block text-muted"></i>
+                No letter records found.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </app-search-pagination>
+  </div>
+
+</div>

@@ -1,0 +1,275 @@
+<div class="sa-dashboard">
+  <div class="row g-3 g-lg-4">
+    <div class="col-12">
+      <div class="sa-hero card sa-dashboard-hero">
+        <div class="card-body">
+          <div class="sa-dashboard-hero-row">
+            <div class="sa-dashboard-hero-copy">
+              <p class="sa-hero-kicker mb-1">SuperAdmin</p>
+              <div class="sa-hero-title">Overview</div>
+              <div class="sa-hero-subtitle">Company, plan and user counts across the platform</div>
+
+              <div class="sa-dashboard-hero-actions">
+                <a class="sa-hero-chip" routerLink="/superadmin/companies">
+                  <i class="ri ri-building-4-line" aria-hidden="true"></i>
+                  <span>Companies</span>
+                </a>
+                <a class="sa-hero-chip" routerLink="/superadmin/plans">
+                  <i class="ri ri-vip-crown-2-line" aria-hidden="true"></i>
+                  <span>Plans</span>
+                </a>
+                <a class="sa-hero-chip" routerLink="/superadmin/users">
+                  <i class="ri ri-group-line" aria-hidden="true"></i>
+                  <span>Users</span>
+                </a>
+              </div>
+            </div>
+
+            <div class="sa-dashboard-hero-right">
+              <button type="button" class="btn btn-sm sa-dashboard-refresh" (click)="refresh()" [disabled]="loading">
+                <i class="ri ri-refresh-line me-1" [class.sa-spin]="loading"></i> Refresh
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="row g-3">
+        <div class="col-12 col-md-4 d-flex">
+          <div class="sa-kpi sa-kpi--companies w-100">
+            <div class="sa-kpi-top">
+              <div class="sa-kpi-label">Total Companies</div>
+              <div class="sa-kpi-icon"><i class="ri ri-building-4-line"></i></div>
+            </div>
+            <div class="sa-kpi-value">{{ stats.totalCompanies }}</div>
+            <div class="sa-kpi-sub">Active + inactive companies</div>
+          </div>
+        </div>
+        <div class="col-12 col-md-4 d-flex">
+          <div class="sa-kpi sa-kpi--plans w-100">
+            <div class="sa-kpi-top">
+              <div class="sa-kpi-label">Total Plans</div>
+              <div class="sa-kpi-icon"><i class="ri ri-vip-crown-2-line"></i></div>
+            </div>
+            <div class="sa-kpi-value">{{ stats.totalPlans }}</div>
+            <div class="sa-kpi-sub">Unique plans in use</div>
+          </div>
+        </div>
+        <div class="col-12 col-md-4 d-flex">
+          <div class="sa-kpi sa-kpi--users w-100">
+            <div class="sa-kpi-top">
+              <div class="sa-kpi-label">Total Users</div>
+              <div class="sa-kpi-icon"><i class="ri ri-group-line"></i></div>
+            </div>
+            <div class="sa-kpi-value">{{ stats.totalUsers }}</div>
+            <div class="sa-kpi-sub">All users across companies</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="row g-3 align-items-stretch">
+      <div class="col-12 col-lg-6 d-flex">
+        <div class="card sa-panel w-100">
+          <div class="sa-panel-head">
+            <div>
+              <h3 class="sa-panel-title">Company health</h3>
+              <p class="sa-panel-desc">Active and inactive companies</p>
+            </div>
+          </div>
+          <div class="card-body sa-panel-body">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="text-muted">Active</div>
+              <div class="fw-bold">{{ analytics.companies.active }}</div>
+            </div>
+            <div class="sa-bar mb-3">
+              <div
+                class="sa-bar-fill sa-bar-fill--good"
+                [style.width.%]="analytics.companies.total ? (analytics.companies.active / analytics.companies.total) * 100 : 0"
+              ></div>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="text-muted">Inactive</div>
+              <div class="fw-bold">{{ analytics.companies.inactive }}</div>
+            </div>
+            <div class="sa-bar">
+              <div
+                class="sa-bar-fill sa-bar-fill--warn"
+                [style.width.%]="analytics.companies.total ? (analytics.companies.inactive / analytics.companies.total) * 100 : 0"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-6 d-flex">
+        <div class="card sa-panel w-100">
+          <div class="sa-panel-head">
+            <div>
+              <h3 class="sa-panel-title">Users health</h3>
+              <p class="sa-panel-desc">Active and inactive user accounts</p>
+            </div>
+          </div>
+          <div class="card-body sa-panel-body">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="text-muted">Active</div>
+              <div class="fw-bold">{{ analytics.users.active }}</div>
+            </div>
+            <div class="sa-bar mb-3">
+              <div
+                class="sa-bar-fill sa-bar-fill--good"
+                [style.width.%]="analytics.users.total ? (analytics.users.active / analytics.users.total) * 100 : 0"
+              ></div>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="text-muted">Inactive</div>
+              <div class="fw-bold">{{ analytics.users.inactive }}</div>
+            </div>
+            <div class="sa-bar">
+              <div
+                class="sa-bar-fill sa-bar-fill--warn"
+                [style.width.%]="analytics.users.total ? (analytics.users.inactive / analytics.users.total) * 100 : 0"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-6 d-flex">
+        <div class="card sa-panel w-100">
+          <div class="sa-panel-head">
+            <div>
+              <h3 class="sa-panel-title">Top plans</h3>
+              <p class="sa-panel-desc">Latest subscription mix</p>
+            </div>
+          </div>
+          <div class="card-body sa-panel-body">
+            <div class="row g-3 align-items-center">
+              <div class="col-12 col-md-5">
+                <div class="sa-pie-wrap" *ngIf="pieSegments.length; else noPlanData">
+                  <svg viewBox="0 0 40 40" class="sa-pie">
+                    <circle cx="20" cy="20" r="16" class="sa-pie-bg"></circle>
+                    <ng-container *ngFor="let s of pieSegments">
+                      <circle
+                        cx="20" cy="20" r="16"
+                        class="sa-pie-seg"
+                        [attr.stroke]="s.color"
+                        [attr.stroke-dasharray]="s.dashArray"
+                        [attr.stroke-dashoffset]="s.dashOffset"
+                      ></circle>
+                    </ng-container>
+                  </svg>
+                </div>
+                <ng-template #noPlanData>
+                  <div class="sa-empty sa-empty--compact">
+                    <i class="ri ri-pie-chart-line sa-empty-icon"></i>
+                    <p class="sa-empty-text mb-0">No plan data yet</p>
+                  </div>
+                </ng-template>
+              </div>
+              <div class="col-12 col-md-7">
+                <div *ngFor="let s of pieSegments" class="d-flex align-items-center justify-content-between mb-2">
+                  <div class="d-flex align-items-center gap-2 text-truncate">
+                    <span class="sa-dot" [style.background]="s.color"></span>
+                    <span class="fw-semibold text-truncate">{{ s.label }}</span>
+                  </div>
+                  <div class="text-muted">{{ s.count }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-6 d-flex">
+        <div class="card sa-panel w-100">
+          <div class="sa-panel-head">
+            <div>
+              <h3 class="sa-panel-title">Expiring soon</h3>
+              <p class="sa-panel-desc">Subscriptions ending in the next 30 days</p>
+            </div>
+          </div>
+          <div class="card-body sa-panel-body">
+            <div *ngIf="!analytics.expiringNext30Days?.length" class="sa-empty">
+              <i class="ri ri-calendar-check-line sa-empty-icon"></i>
+              <p class="sa-empty-title">You are all set</p>
+              <p class="sa-empty-text">No subscriptions expiring in the next 30 days.</p>
+            </div>
+            <div *ngFor="let e of analytics.expiringNext30Days" class="sa-expiring-row">
+              <div class="text-truncate">
+                <div class="fw-semibold text-truncate">{{ e.companyName }}</div>
+                <div class="text-muted small text-truncate">{{ e.companyCode }} • {{ e.plan }}</div>
+              </div>
+              <div class="text-end">
+                <div class="fw-bold">{{ e.endsAt | date:'mediumDate' }}</div>
+                <div class="text-muted small">{{ e.status }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-6 d-flex">
+        <div class="card sa-panel w-100">
+          <div class="sa-panel-head">
+            <div>
+              <h3 class="sa-panel-title">Company signups</h3>
+              <p class="sa-panel-desc">Last 30 days</p>
+            </div>
+          </div>
+          <div class="card-body sa-panel-body">
+            <div *ngIf="!linePoints" class="sa-empty">
+              <i class="ri ri-line-chart-line sa-empty-icon"></i>
+              <p class="sa-empty-title">No trend yet</p>
+              <p class="sa-empty-text">Signup data will appear here once available.</p>
+            </div>
+            <svg *ngIf="linePoints" viewBox="0 0 320 120" class="sa-line">
+              <polyline [attr.points]="linePoints" class="sa-line-path"></polyline>
+            </svg>
+            <div class="d-flex justify-content-between text-muted small mt-2" *ngIf="analytics.companySignupsLast30Days?.length">
+              <span>{{ analytics.companySignupsLast30Days[0].date }}</span>
+              <span>{{ analytics.companySignupsLast30Days[analytics.companySignupsLast30Days.length - 1].date }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-6 d-flex">
+        <div class="card sa-panel w-100">
+          <div class="sa-panel-head">
+            <div>
+              <h3 class="sa-panel-title">Users by role</h3>
+              <p class="sa-panel-desc">Distribution across roles</p>
+            </div>
+          </div>
+          <div class="card-body sa-panel-body">
+            <div *ngIf="!analytics.usersByRole?.length" class="sa-empty">
+              <i class="ri ri-user-settings-line sa-empty-icon"></i>
+              <p class="sa-empty-title">No roles data</p>
+              <p class="sa-empty-text">Role breakdown will show when data exists.</p>
+            </div>
+            <div *ngFor="let r of analytics.usersByRole" class="mb-3">
+              <div class="d-flex align-items-center justify-content-between mb-1">
+                <div class="fw-semibold text-capitalize">{{ r.role }}</div>
+                <div class="text-muted">{{ r.count }}</div>
+              </div>
+              <div class="sa-bar">
+                <div
+                  class="sa-bar-fill sa-bar-fill--primary"
+                  [style.width.%]="barMax ? (r.count / barMax) * 100 : 0"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+</div>
+

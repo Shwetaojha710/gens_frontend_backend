@@ -1,0 +1,28 @@
+<article class="section-card" id="interviews-overview">
+  <div class="section-head">
+    <div>
+      <h3>Interviews</h3>
+      <p>All, scheduled, today's, upcoming, and completed interviews</p>
+    </div>
+    <div class="section-pill">
+      <span>{{ items.length ? items[0].count : 0 }}</span>
+      Total
+    </div>
+  </div>
+
+  <div class="section-list">
+    <a
+      class="section-item"
+      *ngFor="let item of items; let i = index"
+      [routerLink]="item.route || '/interview/interviews'"
+      [queryParams]="item.filter ? { filter: item.filter } : null">
+      <div class="metric-icon">
+        <i class="ri" [ngClass]="getItemIcon(item.label, i)"></i>
+      </div>
+      <div class="metric-copy">
+        <div class="metric-value">{{ item.count }}</div>
+        <div class="item-label">{{ item.label }}</div>
+      </div>
+    </a>
+  </div>
+</article>

@@ -1,0 +1,110 @@
+.page {
+  width: 794px;
+  min-height: 1123px;
+  /* margin: auto; */
+  padding: 120px 60px 150px;
+  font-family: "Times New Roman", serif;
+  /* font-size: 13px; */
+  color: #000;
+  background: #fff url('/assets/img/Letterhead-2.png') no-repeat top center / 100% 100%;
+  position: relative;
+      border: 1px solid #ececce;
+    margin: auto;
+}
+
+.logo-row {
+  margin-bottom: 18px;
+}
+
+.ref-date-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.ref-left {
+  flex-shrink: 0;
+}
+
+.dated-right {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.address-block {
+  margin: 20px 0;
+  line-height: 1.8;
+}
+
+.subject-line {
+  margin: 20px 0 14px;
+}
+
+.salutation-line {
+  font-weight: bold;
+  margin-bottom: 14px;
+}
+
+.body-para {
+  text-align: justify;
+  line-height: 1.8;
+  margin-bottom: 14px;
+}
+
+.regards {
+  margin-top: 50px;
+  line-height: 1.8;
+}
+
+/* FOOTER FIX */
+.footer-bar {
+  position: fixed;   /* 🔥 FIXED instead of absolute */
+  bottom: 0;
+  left: 40px;
+  right: 40px;
+  padding-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10.5px;
+  line-height: 1.6;
+  background: #fff;
+}
+
+.footer-inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.blue-bar {
+  width: 30px;
+  min-height: 106px;
+  background: #035696c2;
+}
+
+.footer-logos img {
+  height: 38px;
+}
+/* PRINT FIX */
+@media print {
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .footer-bar {
+    position: fixed;
+    bottom: 0;
+  }
+
+  .page {
+    padding: 80px 40px 160px;
+    width: 100%;
+    min-height: 100vh;
+  }
+
+}

@@ -1,0 +1,267 @@
+<div class="container-fluid mt-5">
+  <div class="row mb-6" *ngIf="createFlag">
+    <div class="col-md">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center">
+          <span>Branch</span>
+          <button type="button" class="btn btn-xs btn-primary float-end" (click)="back()">
+            <i class="fa-solid fa-arrow-left"></i>&nbsp;back
+          </button>
+        </h5>
+
+        <div class="card-body">
+          <div class="row g-2">
+
+            <div class="col-lg-3 col-sm-12">
+              <label class="form-label">Name</label>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Enter Branch Name"
+                [(ngModel)]="obj['name']"
+                required
+                (change)="getLocation()"
+              />
+            </div>
+
+            <div class="col-lg-3 col-sm-12">
+              <label class="form-label">Latitude</label>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Enter Latitude"
+                [(ngModel)]="obj['latitude']"
+              />
+            </div>
+
+            <div class="col-lg-3 col-sm-12">
+              <label class="form-label">Longitude</label>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Enter Longitude"
+                [(ngModel)]="obj['longitude']"
+              />
+            </div>
+
+            <div class="col-lg-3 col-sm-12" *ngIf="updateFlag">
+              <label class="form-label">Status</label>
+              <ng-select
+                [items]="status"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="obj['status']"
+                [multiple]="false"
+                placeholder="Select Status"
+                name="status"
+              ></ng-select>
+            </div>
+
+            <!-- Description -->
+            <div class="col-lg-6 col-sm-12">
+              <label class="form-label">Description</label>
+              <textarea
+                class="form-control"
+                rows="2"
+                placeholder="Enter branch description (optional)"
+                [(ngModel)]="obj['description']"
+              ></textarea>
+            </div>
+
+            <!-- Image upload -->
+            <div class="col-lg-3 col-sm-12">
+              <label class="form-label">Branch Image</label>
+              <input
+                type="file"
+                class="form-control"
+                accept="image/*"
+                (change)="onImageSelected($event)"
+              />
+            </div>
+
+            <!-- Image preview -->
+            <div class="col-lg-3 col-sm-12 d-flex align-items-end" *ngIf="imagePreview">
+              <div class="d-flex align-items-center gap-2">
+                <img
+                  [src]="imagePreview"
+                  alt="Branch Image"
+                  style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #dee2e6;"
+                />
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-danger"
+                  (click)="removeImage()"
+                  title="Remove image"
+                >
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="row">
+            <div class="col-md-12 mt-2">
+              <button
+                *ngIf="createFlag && updateFlag == false"
+                type="button"
+                class="btn btn-sm btn-primary waves-effect waves-light"
+                (click)="onSubmit()"
+              >
+                Submit
+              </button>
+              <button
+                *ngIf="updateFlag"
+                type="button"
+                class="btn btn-sm btn-primary waves-effect waves-light"
+                (click)="updatedata()"
+              >
+                Update
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mb-6">
+    <div class="col-md">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center">
+          <span>Branch List</span>
+          <button
+            *ngIf="createFlag == false"
+            type="button"
+            class="btn btn-xs btn-primary float-end"
+            (click)="opencreate()"
+          >
+            <i class="fa-solid fa-plus"></i>&nbsp;Add
+          </button>
+        </h5>
+
+        <div id="DataTables_Table_3_wrapper" class="dt-container dt-bootstrap5 dt-empty-footer">
+          <div class="row mx-2 justify-content-between">
+            <div class="d-md-flex justify-content-between align-items-center dt-layout-start col-md-auto me-auto">
+              <div class="dt-length">
+                <label for="dt-length-3">
+                  Show
+                  <select
+                    name="DataTables_Table_3_length"
+                    class="form-select form-select-sm"
+                    id="dt-length-3"
+                  >
+                    <option value="7">7</option>
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                  </select>
+                  entries
+                </label>
+              </div>
+            </div>
+            <div class="d-md-flex justify-content-between align-items-center dt-layout-end col-md-auto mt-0">
+              <div class="dt-search mt-md-5 mt-0">
+                <label for="dt-search-3">Search:</label>
+                <input
+                  type="search"
+                  class="form-control form-control-sm"
+                  id="dt-search-3"
+                  placeholder="Type search here"
+                  (input)="applyFilter($event)"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="justify-content-between dt-layout-table mt-2">
+            <div class="d-md-flex justify-content-between align-items-center dt-layout-full table-responsive">
+              <table class="table table-responsive dataTable dtr-column" id="DataTables_Table_3">
+                <thead>
+                  <tr>
+                    <th>SI.No</th>
+                    <th>Image</th>
+                    <th>Name</th>
+                    <th>Latitude</th>
+                    <th>Longitude</th>
+                    <th>Description</th>
+                    <th>Status</th>
+                    <th>Created At</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="table-border-bottom-0">
+                  <tr *ngFor="let item of BranchList; let i = index">
+                    <th scope="row">{{ i + 1 }}</th>
+                    <td>
+                      <img
+                        *ngIf="item['image']"
+                        [src]="getBranchImageUrl(item['image'])"
+                        alt="{{ item['name'] }}"
+                        style="width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6;"
+                      />
+                      <span *ngIf="!item['image']" class="text-muted small">—</span>
+                    </td>
+                    <td>{{ item['name'] }}</td>
+                    <td>{{ item['latitude'] || 0 }}</td>
+                    <td>{{ item['longitude'] || 0 }}</td>
+                    <td>{{ item['description'] || 'Central administration and monitoring access.' }}</td>
+                    <td>
+                      <span class="badge overflow-hidden px-2" [ngClass]="getStatusClass(item['status'])">
+                        {{ item['status'] }}
+                      </span>
+                    </td>
+                    <td>{{ item['createdAt'] }}</td>
+                    <td>
+                      <button type="button" class="btn btn-sm btn-outline-success" (click)="update(item)">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      &nbsp;
+                      <button type="button" class="btn btn-sm btn-outline-danger" (click)="delete(item)">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+                <tfoot></tfoot>
+              </table>
+            </div>
+          </div>
+
+          <!-- Pagination & Info -->
+          <div class="row mx-3 justify-content-between">
+            <div class="d-md-flex justify-content-between align-items-center dt-layout-start col-md-auto me-auto">
+              <div class="dt-info" aria-live="polite" role="status">
+                Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to
+                {{ getMin(currentPage * itemsPerPage, originalList.length) }} of
+                {{ originalList.length }} entries
+              </div>
+            </div>
+            <div class="d-md-flex justify-content-between align-items-center dt-layout-end col-md-auto mt-0">
+              <div class="dt-paging">
+                <nav aria-label="pagination">
+                  <ul class="pagination">
+                    <li class="page-item" [class.disabled]="currentPage === 1">
+                      <a class="page-link" (click)="goToPage(currentPage - 1)">Prev</a>
+                    </li>
+                    <li
+                      class="page-item"
+                      *ngFor="let p of [].constructor(totalPages); let i = index"
+                      [class.active]="i + 1 === currentPage"
+                    >
+                      <a class="page-link" (click)="goToPage(i + 1)">{{ i + 1 }}</a>
+                    </li>
+                    <li class="page-item" [class.disabled]="currentPage === totalPages">
+                      <a class="page-link" (click)="goToPage(currentPage + 1)">Next</a>
+                    </li>
+                  </ul>
+                </nav>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

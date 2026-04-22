@@ -1,0 +1,119 @@
+ <!-- Action Buttons -->
+<div class="row mb-3 no-print">
+  <div class="col-12 d-flex gap-2 justify-content-end">
+    <button type="button" class="btn btn-outline-secondary" (click)="saveData(); printDoc()">
+      <i class="ri ri-printer-line me-1"></i> Print / Save PDF
+    </button>
+    <button type="button" class="btn btn-primary" (click)="saveData(); downloadDoc()">
+      <i class="ri ri-download-line me-1"></i> Download DOC
+    </button>
+  </div>
+</div>
+
+<!-- Letter Document -->
+<div id="relieving-doc">
+  <div class="page">
+
+    <!-- Ref + Dated row -->
+    <div class="ref-date-row">
+      <div class="ref-left">
+        <b>Ref: Quaere/Emp/Relieving/<span *ngIf="!isDownload"><input type="text" [(ngModel)]="refNo" (ngModelChange)="saveData()" class="form-control d-inline-block" style="width:80px; height:24px; font-size:12px; padding:1px 4px; vertical-align:middle; font-weight:normal;" /></span><span *ngIf="isDownload">{{ refNo }}</span></b>
+      </div>
+      <div class="dated-right">
+        <b>Dated:&nbsp;<span *ngIf="!isDownload"><input type="date" [(ngModel)]="relievingDate" (ngModelChange)="saveData()" class="form-control d-inline-block" style="width:140px; height:24px; font-size:12px; padding:1px 4px; vertical-align:middle; font-weight:normal;" /></span><span *ngIf="isDownload">{{ relievingDate | date:'dd MMMM, yyyy' }}</span></b>
+      </div>
+    </div>
+    <!-- EMPLOYEE ADDRESS -->
+    <div class="address-block">
+      <div><b>{{ salutation }} {{ employeeFullName }}</b></div>
+      <div>{{ fatherPrefix }} <b>{{ personalDetails.fatherName || '_______________' }}</b></div>
+      <div>{{ personalDetails.presentAddress || personalDetails.address || '_______________' }}</div>
+      @if (personalDetails.city || personalDetails.state) {
+        <div>
+          {{ personalDetails.city }}@if (personalDetails.city && personalDetails.state) { <span>, </span> }{{ personalDetails.state }}
+          @if (personalDetails.pinCode) { <span>-{{ personalDetails.pinCode }}</span> }
+        </div>
+      }
+    </div>
+
+    <!-- SUBJECT -->
+    <div class="subject-line">
+     Subject:  <b><u>Relieving Cum Experience Letter</u></b>
+    </div>
+
+    <!-- SALUTATION -->
+    <div class="salutation-line">
+      Dear {{ personalDetails.firstName || '___' }},
+    </div>
+
+    <!-- BODY -->
+    <div class="body-para">
+      You are hereby relieved from the services of the company by the closing hours of
+      <b>
+        @if (!isDownload) {
+          <span>
+            <input type="date" [(ngModel)]="relievingDate" (ngModelChange)="saveData()" class="form-control d-inline-block" style="width:150px; height:26px; font-size:13px; padding:1px 5px;" />
+          </span>
+        }
+        @if (isDownload) {
+          <span>{{ relievingDate | date:'dd MMMM, yyyy' }}</span>
+        }
+      </b>
+    </div>
+
+    <div class="body-para">
+      We wish to place on record that you had been under the employment from
+      <b>
+        @if (!isDownload) {
+          <span>
+            <input type="date" [(ngModel)]="joiningDate" (ngModelChange)="saveData()" class="form-control d-inline-block" style="width:150px; height:26px; font-size:13px; padding:1px 5px;" />
+          </span>
+        }
+        @if (isDownload) {
+          <span>{{ joiningDate | date:'dd MMMM, yyyy' }}</span>
+        }
+      </b>
+      to
+      <b>{{ relievingDate | date:'dd MMMM, yyyy' }}</b>
+      with the current position as
+      '<b>{{ personalDetails.designation || '_______________' }}</b>'
+    </div>
+
+    <div class="body-para">
+      All the dues will be paid to you as Full &amp; Final Settlement.
+    </div>
+
+    <div class="body-para">
+      We thank you for your contribution to the Company and wish you all success in your future endeavors.
+    </div>
+
+    <!-- SIGNATURE -->
+    <div class="regards">
+      <div>With warm regards</div>
+      <br /><br /><br />
+      <div><b>Human Resource Department</b></div>
+      <div>Date: {{ todayDate | date:'dd/MM/yyyy' }}</div>
+    </div>
+
+    <!-- Footer is part of the letterhead background image -->
+<!-- FOOTER -->
+<!-- <div class="footer-bar">
+  <div class="footer-inner">
+    <div class="blue-bar"></div>
+    <div>
+      <div><b>Quaere Etechnologies Private Limited</b> AN ISO 9001:2015</div>
+      <div>7th Floor, Cyber Tower, Vibhuti Khand,</div>
+      <div>Gomti Nagar, Lucknow, U.P.-226010</div>
+      <div>Web: www.quaeretech.com | Tel: 0522-4067760</div>
+      <div>E-mail: infoquaeretech.com</div>
+      <div><b>GSTN- 09AAACQ1581F1ZI</b></div>
+    </div>
+  </div>
+
+  <div class="footer-logos">
+    <img src="/assets/img/logo/Picture1.jpg" />
+    <img src="/assets/img/logo/Picture2.png" />
+  </div>
+</div> -->
+  </div>
+</div>

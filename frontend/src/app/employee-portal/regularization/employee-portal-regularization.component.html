@@ -1,0 +1,111 @@
+<div class="container-fluid ep-ep-page ep-reg">
+  <a routerLink="/employee-portal/dashboard" class="ep-ep-page__back">
+    <i class="icon-base ri ri-arrow-left-line me-1"></i> Back to dashboard
+  </a>
+
+  <header class="mb-4">
+    <h4 class="ep-page-title mb-1">Regularization</h4>
+    <p class="ep-page-sub mb-0">
+      Request corrections for check-in / check-out times. Allowed only for dates within the last 2 days (per policy).
+    </p>
+  </header>
+
+  <div class="row g-4">
+    <div class="col-lg-5">
+      <div class="card ep-glass-card border-0 h-100">
+        <div class="card-body">
+          <p class="ep-dash-section__eyebrow mb-2">New request</p>
+          <h5 class="h6 mb-3">Apply for regularization</h5>
+          <form [formGroup]="form" (ngSubmit)="submit()">
+            <div class="mb-3">
+              <label class="form-label small fw-semibold" for="ep-reg-date">Attendance date</label>
+              <input
+                id="ep-reg-date"
+                type="date"
+                class="form-control"
+                formControlName="attendanceDate"
+                [attr.min]="dateMin"
+                [attr.max]="dateMax"
+              />
+            </div>
+            <div class="row g-2 mb-3">
+              <div class="col-sm-6">
+                <label class="form-label small fw-semibold" for="ep-reg-in">Requested in-time</label>
+                <input id="ep-reg-in" type="time" class="form-control" formControlName="inTimeRequested" />
+              </div>
+              <div class="col-sm-6">
+                <label class="form-label small fw-semibold" for="ep-reg-out">Requested out-time</label>
+                <input id="ep-reg-out" type="time" class="form-control" formControlName="outTimeRequested" />
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold" for="ep-reg-reason">Reason</label>
+              <textarea
+                id="ep-reg-reason"
+                class="form-control"
+                rows="3"
+                formControlName="reason"
+                placeholder="Explain why you need this change"
+              ></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary rounded-pill px-4" [disabled]="submitting">
+              {{ submitting ? 'Submitting…' : 'Submit request' }}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-7">
+      <div class="card ep-glass-card border-0 h-100">
+        <div class="card-body">
+          <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
+            <div>
+              <p class="ep-dash-section__eyebrow mb-1">Your requests</p>
+              <h5 class="h6 mb-0">History</h5>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+              <select class="form-select form-select-sm ep-reg__period" [(ngModel)]="month" (ngModelChange)="loadList()">
+                <option *ngFor="let m of months" [ngValue]="m">{{ monthNames[m - 1] }}</option>
+              </select>
+              <input
+                type="number"
+                class="form-control form-control-sm ep-reg__year"
+                [(ngModel)]="year"
+                (change)="loadList()"
+              />
+            </div>
+          </div>
+
+          <div *ngIf="loadingList" class="text-muted py-4 text-center">Loading…</div>
+          <div *ngIf="!loadingList && list.length === 0" class="text-muted py-4 text-center">
+            No regularization requests for this month.
+          </div>
+          <div class="table-responsive" *ngIf="!loadingList && list.length > 0">
+            <table class="table table-sm align-middle mb-0 ep-reg__table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>In</th>
+                  <th>Out</th>
+                  <th>Status</th>
+                  <th>Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of list">
+                  <td>{{ formatDate(row['attendanceDate']) }}</td>
+                  <td>{{ row['inTimeRequested'] || '—' }}</td>
+                  <td>{{ row['outTimeRequested'] || '—' }}</td>
+                  <td>
+                    <span [class]="statusClass(row['status'])">{{ row['status'] || '—' }}</span>
+                  </td>
+                  <td class="text-break small">{{ row['reason'] || '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

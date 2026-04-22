@@ -1,0 +1,284 @@
+<div class="sa-companies-page">
+  <div class="row g-3 g-lg-4">
+    <div class="col-12">
+      <div class="sa-hero card sa-cm-hero">
+        <div class="card-body">
+          <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
+            <div>
+              <p class="sa-hero-kicker mb-1">Companies</p>
+              <div class="sa-hero-title">Company management</div>
+              <div class="sa-hero-subtitle">Directory, status, and subscription details in one place</div>
+            </div>
+            <button
+              type="button"
+              class="btn btn-sm sa-cm-refresh"
+              (click)="refresh()"
+              [disabled]="loading"
+            >
+              <i class="ri ri-refresh-line me-1" [class.sa-spin]="loading"></i>
+              Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-7 d-flex">
+      <div class="card sa-panel w-100">
+        <div class="sa-panel-head sa-panel-head--row">
+          <div>
+            <h3 class="sa-panel-title">Directory</h3>
+            <p class="sa-panel-desc">Click the <strong>company name</strong> to open its dashboard. Click elsewhere on the row for subscription on the right.</p>
+          </div>
+          <div class="sa-panel-head-meta">
+            <span class="sa-count-pill" *ngIf="!loading && tenants?.length !== undefined">
+              {{ tenants.length }} total
+              <ng-container *ngIf="searchQuery.trim() && totalFiltered !== tenants.length">
+                · {{ totalFiltered }} match
+              </ng-container>
+            </span>
+            <span class="sa-loading-pill" *ngIf="loading">
+              <i class="ri ri-loader-2-line sa-spin me-1"></i> Loading
+            </span>
+          </div>
+        </div>
+
+        <div class="sa-table-toolbar">
+          <div class="sa-search-wrap">
+            <i class="ri ri-search-line sa-search-icon" aria-hidden="true"></i>
+            <input
+              type="search"
+              class="form-control sa-search-input"
+              placeholder="Search name or code…"
+              [(ngModel)]="searchQuery"
+              (ngModelChange)="onSearchChange()"
+              autocomplete="off"
+            />
+          </div>
+          <div class="sa-page-size">
+            <label class="sa-page-size-label" for="saPageSize">Per page</label>
+            <select
+              id="saPageSize"
+              class="form-select form-select-sm sa-page-size-select"
+              [ngModel]="pageSize"
+              (ngModelChange)="setPageSize($event)"
+            >
+              <option [ngValue]="10">10</option>
+              <option [ngValue]="15">15</option>
+              <option [ngValue]="25">25</option>
+              <option [ngValue]="50">50</option>
+            </select>
+          </div>
+        </div>
+
+        <div
+          class="sa-jump-banner"
+          *ngIf="selectedTenant && selectedNotInCurrentPage && totalFiltered > 0"
+        >
+          <span>“{{ selectedTenant.companyName }}” is not on this page.</span>
+          <button type="button" class="btn btn-link btn-sm sa-jump-link p-0" (click)="jumpToSelectedRow()">
+            Show in list
+          </button>
+        </div>
+
+        <div class="sa-table-wrap">
+          <div class="sa-table-scroll table-responsive">
+            <table class="table table-hover mb-0 sa-table sa-table--companies">
+              <thead>
+                <tr>
+                  <th>Company</th>
+                  <th>Code</th>
+                  <th>Status</th>
+                  <th>Plan</th>
+                  <th>Ends</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  *ngFor="let t of pagedTenants"
+                  (click)="setSelected(t)"
+                  [class.table-active]="selectedTenant?.id === t.id"
+                  class="sa-row"
+                >
+                  <td (click)="$event.stopPropagation()">
+                    <a
+                      class="sa-company-cell sa-company-dash-link text-decoration-none text-reset"
+                      [routerLink]="['/superadmin/companies', t.id, 'dashboard']"
+                    >
+                      <div class="sa-avatar">{{ (t.companyName || '?').slice(0, 1).toUpperCase() }}</div>
+                      <div class="sa-company-cell-text">
+                        <div class="sa-company-name text-truncate">{{ t.companyName }}</div>
+                        <div class="sa-company-meta text-truncate">Open dashboard · Since {{ t.createdAt | date: 'mediumDate' }}</div>
+                      </div>
+                      <i class="ri ri-dashboard-3-line sa-company-dash-icon" aria-hidden="true"></i>
+                    </a>
+                  </td>
+                  <td><span class="sa-code">{{ t.companyCode }}</span></td>
+                  <td>
+                    <span class="sa-pill sa-pill--ok" *ngIf="t.status === 'active'">Active</span>
+                    <span class="sa-pill sa-pill--muted" *ngIf="t.status !== 'active'">{{ t.status }}</span>
+                  </td>
+                  <td>
+                    <span class="sa-plan-pill sa-plan-pill--empty" *ngIf="!t.latestSubscription?.plan">—</span>
+                    <span class="sa-plan-pill" *ngIf="t.latestSubscription?.plan">{{ t.latestSubscription.plan }}</span>
+                  </td>
+                  <td class="sa-cell-muted">
+                    {{ t.latestSubscription?.endsAt ? (t.latestSubscription.endsAt | date: 'mediumDate') : '—' }}
+                  </td>
+                  <td class="text-end">
+                    <button
+                      type="button"
+                      class="btn btn-sm sa-row-action"
+                      [class.sa-row-action--warn]="t.status === 'active'"
+                      [class.sa-row-action--ok]="t.status !== 'active'"
+                      (click)="$event.stopPropagation(); toggleTenantStatus(t)"
+                    >
+                      <i class="ri" [ngClass]="t.status === 'active' ? 'ri-pause-circle-line' : 'ri-play-circle-line'"></i>
+                      <span>{{ t.status === 'active' ? 'Deactivate' : 'Activate' }}</span>
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="!tenants?.length && !loading">
+                  <td colspan="6">
+                    <div class="sa-empty-inline">
+                      <i class="ri ri-building-4-line"></i>
+                      <div>
+                        <div class="sa-empty-inline-title">No companies yet</div>
+                        <div class="sa-empty-inline-text">Refresh or register companies from your onboarding flow.</div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                <tr *ngIf="tenants?.length && !loading && totalFiltered === 0">
+                  <td colspan="6">
+                    <div class="sa-empty-inline sa-empty-inline--compact">
+                      <i class="ri ri-search-eye-line"></i>
+                      <div>
+                        <div class="sa-empty-inline-title">No matches</div>
+                        <div class="sa-empty-inline-text">Try a different search or clear the filter.</div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="sa-table-footer" *ngIf="!loading && totalFiltered > 0">
+          <span class="sa-table-range">
+            Showing <strong>{{ rangeStart }}–{{ rangeEnd }}</strong> of <strong>{{ totalFiltered }}</strong>
+            <ng-container *ngIf="tenants.length !== totalFiltered"> ({{ tenants.length }} total)</ng-container>
+          </span>
+          <div class="sa-pager" *ngIf="totalPages > 1">
+            <button
+              type="button"
+              class="btn btn-sm sa-pager-btn"
+              (click)="goPrevPage()"
+              [disabled]="pageIndex === 0"
+              aria-label="Previous page"
+            >
+              <i class="ri ri-arrow-left-s-line"></i>
+            </button>
+            <span class="sa-pager-meta">Page {{ pageIndex + 1 }} / {{ totalPages }}</span>
+            <button
+              type="button"
+              class="btn btn-sm sa-pager-btn"
+              (click)="goNextPage()"
+              [disabled]="pageIndex >= totalPages - 1"
+              aria-label="Next page"
+            >
+              <i class="ri ri-arrow-right-s-line"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-5 d-flex">
+      <div class="card sa-panel sa-detail-card w-100">
+        <div class="sa-panel-head sa-panel-head--row">
+          <div>
+            <h3 class="sa-panel-title">Subscription</h3>
+            <p class="sa-panel-desc" *ngIf="selectedTenant">Editing {{ selectedTenant.companyName }}</p>
+            <p class="sa-panel-desc" *ngIf="!selectedTenant">Pick a company from the directory</p>
+          </div>
+          <button
+            type="button"
+            class="btn btn-sm sa-btn-ghost"
+            (click)="clearSelected()"
+            [disabled]="!selectedTenant"
+          >
+            Clear
+          </button>
+        </div>
+
+        <div class="card-body sa-detail-body" *ngIf="selectedTenant; else emptyState">
+          <form [formGroup]="subscriptionForm" (ngSubmit)="saveSubscription()">
+            <div class="sa-form-section">
+              <span class="sa-form-section-label">Plan &amp; status</span>
+              <div class="row g-2">
+                <div class="col-12 col-md-7">
+                  <label class="form-label">Plan</label>
+                  <select class="form-select" formControlName="planId">
+                    <option value="" disabled>Select plan</option>
+                    <option *ngFor="let p of plans" [value]="p.id">{{ p.name }}</option>
+                  </select>
+                </div>
+                <div class="col-12 col-md-5">
+                  <label class="form-label">Status</label>
+                  <select class="form-select" formControlName="status">
+                    <option value="active">active</option>
+                    <option value="expired">expired</option>
+                    <option value="cancelled">cancelled</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="sa-form-section">
+              <span class="sa-form-section-label">Billing period</span>
+              <div class="row g-2">
+                <div class="col-6">
+                  <label class="form-label">Start date</label>
+                  <input type="date" class="form-control" formControlName="startsAt" />
+                </div>
+                <div class="col-6">
+                  <label class="form-label">End date</label>
+                  <input type="date" class="form-control" formControlName="endsAt" />
+                </div>
+              </div>
+            </div>
+
+            <div class="sa-form-section">
+              <label class="form-label">Seats</label>
+              <input type="number" class="form-control" formControlName="seats" placeholder="e.g. 50" min="0" />
+            </div>
+
+            <div class="sa-form-section">
+              <label class="form-label">Notes</label>
+              <textarea class="form-control" rows="3" formControlName="notes" placeholder="Internal notes (optional)"></textarea>
+            </div>
+
+            <button class="btn sa-btn-save w-100" type="submit" [disabled]="subscriptionForm.invalid">
+              <i class="ri ri-save-3-line me-1"></i> Save subscription
+            </button>
+          </form>
+        </div>
+
+        <ng-template #emptyState>
+          <div class="card-body sa-detail-body sa-detail-body--empty">
+            <div class="sa-detail-empty">
+              <div class="sa-detail-empty-icon">
+                <i class="ri ri-settings-3-line"></i>
+              </div>
+              <p class="sa-detail-empty-title">No company selected</p>
+              <p class="sa-detail-empty-text">Choose a row in the directory to view and edit subscription, seats, and dates.</p>
+            </div>
+          </div>
+        </ng-template>
+      </div>
+    </div>
+  </div>
+</div>

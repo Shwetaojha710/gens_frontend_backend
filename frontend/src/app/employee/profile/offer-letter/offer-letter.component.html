@@ -1,0 +1,99 @@
+<!-- Toolbar -->
+<div class="row mb-3 align-items-center">
+  <div class="col-md-6">
+    <label class="btn btn-outline-secondary btn-sm mb-0">
+      <i class="fa fa-image mx-1"></i> Upload Letterhead
+      <input type="file" hidden accept="image/*" (change)="onLetterheadUpload($event)">
+    </label>
+  </div>
+  <div class="col-md-6 text-end">
+    <button type="button" class="btn btn-outline-primary me-2" (click)="saveData(); printDoc()" [disabled]="isDownload">
+      <i class="fa fa-print mx-1"></i> Print
+    </button>
+    <button type="button" class="btn btn-primary" (click)="saveData(); downloadPDF()" [disabled]="isDownload">
+      <i class="fa fa-download mx-1"></i>
+      <span *ngIf="isDownload">Generating...</span>
+      <span *ngIf="!isDownload">Download PDF</span>
+    </button>
+  </div>
+</div>
+
+<!-- Offer Letter Document -->
+<div id="offer-doc">
+
+    <table style="width:100%; font-size:11px; border: none;    margin-top: 50px; color: #000;">
+      <tr>
+        <td>
+          <b>Ref: Quaere/Emp/Offer/
+            <span *ngIf="!isDownload">
+              <input type="text" [(ngModel)]="personalDetails.refNo" (ngModelChange)="saveData()" class="form-control d-inline-block" style="width:80px; height:24px; font-size:12px;" />
+            </span>
+            <span *ngIf="isDownload">{{personalDetails.refNo}}</span>
+          </b>
+        </td>
+        <td style="text-align:right; color: #000;">
+          <b>Dated:
+            <span *ngIf="!isDownload">
+              <input type="date" [(ngModel)]="personalDetails.offerDate" (ngModelChange)="saveData()" class="form-control d-inline-block" style="width:140px; height:24px; font-size:12px;" />
+            </span>
+            <span *ngIf="isDownload">
+              <span [innerHTML]="formatOrdinalDateHtml(personalDetails.offerDate)"></span>
+            </span>
+          </b>
+        </td>
+      </tr>
+    </table>
+
+    <!-- ADDRESS -->
+    <div class="address" style="margin: 30px 0; line-height: 1.8; font-size: 11px; color: #000;">
+      <b>{{personalDetails.firstName}} {{personalDetails.lastName}}</b><br>
+      <span *ngIf="personalDetails.gender=='Male'">S/O</span>
+      <span *ngIf="personalDetails.gender=='Female'">D/O</span> {{personalDetails.fatherName}}<br>
+      {{personalDetails.permanentAddress}}
+    </div>
+
+    <!-- GREETING -->
+    <p style="margin: 30px 0 20px 0; font-weight: bold;">Dear {{personalDetails.firstName}},</p>
+
+    <!-- BODY -->
+    <div style="font-size: 11px; line-height: 1.6; color: #000;">
+      <p>With reference to your application and subsequent interview with us, we are pleased to offer you employment in our Company as <b>{{personalDetails.designation}}</b> in the <b>{{personalDetails.department}}</b> at our Head Office &ndash; {{tenant.companyAddress}}, as per the mutually agreed terms and conditions discussed with you at the time of interview.</p>
+
+      <p>You are requested to report for joining on or before <b><span [innerHTML]="formatOrdinalDateHtml(personalDetails.joiningDate)"></span></b>.</p>
+
+      <p>You are advised to submit the following documents at the time of joining:</p>
+      <ol>
+        <li>Three Latest passport size color photographs.</li>
+        <li>Self-attested copy of address proof &amp; ID proof.</li>
+        <li>One set of all credentials (mark sheet of 10<sup>th</sup> &amp; 12<sup>th</sup> and pass certificate with Degree/Diploma).</li>
+        <li>Salary proof from previous Company.</li>
+        <li>Relieving Letter/ No dues/ Clearance Certificate from all previous employers.</li>
+        <li>Two references of immediate reporting person (one of current employer &amp; one of previous employer, in case of one company need to give both references of same company).</li>
+      </ol>
+
+      <p>This offer would automatically stand revoked in the event of not reporting at the date specified above and / or you not complying with any other terms &amp; conditions of employment or in case of a negative reference check received. At the time of joining, the formal appointment letter, containing detailed terms &amp; conditions, will be issued to you.</p>
+
+      <p>We take this opportunity to welcome you to our Company and look forward to a long and mutually beneficial association with you.</p>
+
+      <p>Please confirm your acceptance of this offer by signing and returning a copy of this letter to us.</p>
+    </div>
+
+    <!-- SIGNATURE TABLE -->
+    <table width="100%" style="margin-top:40px; font-size:11px;  color: #000;">
+      <tr>
+        <td style="width:50%; vertical-align:top;">
+          <p>Thanks &amp; Regards</p>
+          <br>
+          <br>
+          <!-- <p style="margin:20px 0;">_________________________________</p> -->
+          <p><b>Human Resource Dept</b></p>
+        </td>
+        <td style="width:50%; text-align:right; vertical-align:top;">
+          <p>Agreed &amp; Accepted</p>
+          <p style="margin-top:40px;">
+            <b>{{personalDetails.firstName}} {{personalDetails.lastName}}</b>
+          </p>
+        </td>
+      </tr>
+    </table>
+</div>

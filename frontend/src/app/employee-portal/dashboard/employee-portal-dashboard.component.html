@@ -1,0 +1,738 @@
+<div class="container-fluid ep-dash ep-dash--home">
+  <!-- Page hero -->
+  <header class="ep-dash-hero mb-4">
+    <div class="ep-dash-hero__main">
+      <p class="ep-dash-hero__eyebrow mb-1">Employee portal</p>
+      <h4 class="ep-dash-hero__title mb-1">Dashboard</h4>
+      <p class="ep-dash-hero__sub mb-0">Attendance, leave, holidays, and pay in one glance.</p>
+    </div>
+    <button type="button" class="btn btn-sm ep-dash-hero__refresh" (click)="refresh()" [disabled]="loading">
+      <i class="icon-base ri ri-refresh-line" [class.ep-dash-hero__spin]="loading"></i>
+      <span>Refresh</span>
+    </button>
+  </header>
+
+  <!-- Payroll preview trigger button -->
+  <div class="mb-4" *ngIf="latePolicyVisible && !chartsLoading">
+    <button type="button" class="btn btn-sm ep-dash-late-policy__cta rounded-pill d-inline-flex align-items-center gap-2"
+      (click)="openLatePolicyModal()">
+      <i class="icon-base ri ri-scales-3-line"></i>
+      Payroll preview · Late allowance &amp; shift rules
+      <i class="icon-base ri ri-arrow-right-line ms-1"></i>
+    </button>
+  </div>
+
+  <!-- Late Policy Modal -->
+  <div class="modal fade" id="latePolicyModal" tabindex="-1" aria-labelledby="latePolicyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header" [ngClass]="latePolicyAlertClass" style="border-radius: 0.375rem 0.375rem 0 0;">
+          <div class="d-flex align-items-center gap-2">
+            <div class="ep-dash-late-policy__icon-wrap flex-shrink-0" aria-hidden="true">
+              <i class="icon-base ri ri-scales-3-line"></i>
+            </div>
+            <div>
+              <p class="ep-dash-late-policy__eyebrow mb-0" id="latePolicyModalLabel">Payroll preview · from attendance master</p>
+              <h5 class="ep-dash-late-policy__title mb-0">Late allowance &amp; shift rules</h5>
+            </div>
+          </div>
+          <button type="button" class="btn-close" (click)="closeLatePolicyModal()" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="small mb-3 ep-dash-late-policy__headline">{{ latePayrollPreview?.['headline'] }}</p>
+
+          <h6 class="fw-bold mb-2">This month's summary</h6>
+          <ul class="small ps-3 mb-3 ep-dash-late-policy__stats">
+            <li class="mb-1">
+              Grace after shift start: <strong>{{ latePolicySettings()['graceMinutes'] }}</strong> min &nbsp;·&nbsp;
+              Monthly late allowance: <strong>{{ latePolicySettings()['lateAllowanceMin'] }}</strong> &nbsp;·&nbsp;
+              Heavy-late cutoff: <strong>+{{ latePolicySettings()['halfDayThresholdMinutes'] }}</strong> min &nbsp;·&nbsp;
+              Min worked hours: <strong>{{ latePolicySettings()['minWorkedHours'] }}</strong> h
+            </li>
+            <li class="mb-1">
+              Allowance used:
+              <strong>{{ latePayrollPreview?.['allowanceUsed'] }} / {{ latePayrollPreview?.['allowanceLimit'] }}</strong>
+              &nbsp;·&nbsp; Remaining:
+              <strong>{{ latePayrollPreview?.['allowanceRemaining'] }}</strong>
+            </li>
+            <li class="mb-1" *ngIf="latePolicyCounts()['moderateLateBeyondAllowanceHalf'] > 0">
+              Late beyond allowance (payroll may count as half-day):
+              <strong>{{ latePolicyCounts()['moderateLateBeyondAllowanceHalf'] }}</strong> day(s)
+            </li>
+            <li class="mb-1" *ngIf="latePolicyCounts()['extremeLateHalf'] > 0">
+              Arrival after shift + {{ latePolicySettings()['halfDayThresholdMinutes'] }} min (half-day path):
+              <strong>{{ latePolicyCounts()['extremeLateHalf'] }}</strong> day(s)
+            </li>
+            <li class="mb-1" *ngIf="latePolicyCounts()['shortWorkDays'] > 0">
+              Short duration (&lt; {{ latePolicySettings()['minWorkedHours'] }} h worked):
+              <strong>{{ latePolicyCounts()['shortWorkDays'] }}</strong> day(s)
+            </li>
+            <li class="mb-1" *ngIf="latePolicyCounts()['estimatedPayrollHalfDays'] > 0">
+              Approx. half-day equivalents from lateness:
+              <strong>{{ latePolicyCounts()['estimatedPayrollHalfDays'] }}</strong>
+            </li>
+          </ul>
+
+          <h6 class="fw-bold mb-2">Policy rules</h6>
+          <ul class="small ps-3 mb-0 ep-dash-late-policy__rules text-muted">
+            <li *ngFor="let line of latePolicyDetailLines()">{{ line }}</li>
+          </ul>
+        </div>
+        <div class="modal-footer">
+          <a routerLink="/employee-portal/attendance" class="btn btn-sm rounded-pill ep-dash-late-policy__cta"
+            (click)="closeLatePolicyModal()">
+            <i class="ri ri-calendar-line me-1"></i>View monthly attendance
+          </a>
+          <button type="button" class="btn btn-sm btn-secondary rounded-pill" (click)="closeLatePolicyModal()">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile + today -->
+  <div class="row g-4 mb-4 align-items-lg-stretch align-items-start">
+    <div class="col-lg-8 align-self-lg-start d-flex flex-column min-h-0">
+      <!--
+        Bootstrap .card-body uses flex: 1 1 auto — in a tall card it steals height and pushes KPI down.
+        ep-dash-left-stack resets that so profile + KPI stay stacked with no gap.
+      -->
+      <div class="card ep-glass-card border-0 ep-dash-left-stack d-flex flex-column w-100">
+        <div class="card-body ep-dash-profile__body ep-dash-left-stack__section ep-dash-left-stack__section--profile">
+          <div class="row g-3 align-items-lg-start ep-dash-profile__grid">
+            <!-- Col 1: identity -->
+            <div class="col-12 col-lg-4 pe-lg-3">
+              <div class="d-flex gap-3 align-items-center ep-dash-profile__identity">
+                <div class="ep-dash-profile__avatar ep-dash-profile__avatar--initials" [attr.aria-label]="displayName">
+                  {{ displayInitials }}
+                </div>
+                <div class="min-w-0 flex-grow-1">
+                  <p class="ep-dash-profile__greet mb-1">{{ greeting }}, {{ displayName }}</p>
+                  <p class="ep-dash-profile__role mb-0">
+                    <span *ngIf="profileLine('designation') !== '—'">{{ profileLine('designation') }}</span>
+                    <span *ngIf="profileLine('department') !== '—'" class="ep-dash__muted">
+                      <span *ngIf="profileLine('designation') !== '—'"> · </span>{{ profileLine('department') }}
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </div>
+            <!-- Col 2: code & contact -->
+            <div class="col-12 col-md-6 col-lg-4 ep-dash-profile__col ep-dash-profile__col--mid">
+              <div class="ep-dash-profile__stack">
+                <div class="ep-dash-profile__item" *ngIf="profileLine('empCode') !== '—'">
+                  <span class="ep-dash-profile__item-icon" aria-hidden="true"><i class="icon-base ri ri-id-card-line"></i></span>
+                  <div class="min-w-0">
+                    <span class="ep-dash-profile__item-label">Code</span>
+                    <span class="ep-dash-profile__item-value">{{ profileLine('empCode') }}</span>
+                  </div>
+                </div>
+                <div class="ep-dash-profile__item" *ngIf="profileLine('email') !== '—'">
+                  <span class="ep-dash-profile__item-icon" aria-hidden="true"><i class="icon-base ri ri-mail-line"></i></span>
+                  <div class="min-w-0">
+                    <span class="ep-dash-profile__item-label">Email</span>
+                    <span class="ep-dash-profile__item-value text-break">{{ profileLine('email') }}</span>
+                  </div>
+                </div>
+                <div class="ep-dash-profile__item" *ngIf="profileLine('mobile') !== '—'">
+                  <span class="ep-dash-profile__item-icon" aria-hidden="true"><i class="icon-base ri ri-phone-line"></i></span>
+                  <div class="min-w-0">
+                    <span class="ep-dash-profile__item-label">Phone</span>
+                    <span class="ep-dash-profile__item-value">{{ profileLine('mobile') }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Col 3: reporting & tenure -->
+            <div class="col-12 col-md-6 col-lg-4 ep-dash-profile__col ep-dash-profile__col--last">
+              <div class="ep-dash-profile__stack">
+                <div class="ep-dash-profile__item" *ngIf="profileLine('reportingPersonName') !== '—'">
+                  <span class="ep-dash-profile__item-icon" aria-hidden="true"><i class="icon-base ri ri-user-follow-line"></i></span>
+                  <div class="min-w-0">
+                    <span class="ep-dash-profile__item-label">Reports to</span>
+                    <span class="ep-dash-profile__item-value">{{ profileLine('reportingPersonName').trim() }}</span>
+                  </div>
+                </div>
+                <div class="ep-dash-profile__item" *ngIf="profile?.['joiningDate']">
+                  <span class="ep-dash-profile__item-icon" aria-hidden="true"><i class="icon-base ri ri-calendar-check-line"></i></span>
+                  <div class="min-w-0">
+                    <span class="ep-dash-profile__item-label">Joined</span>
+                    <span class="ep-dash-profile__item-value">{{ $any(profile?.['joiningDate']) | date : 'mediumDate' }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="small ep-dash__muted mb-0 mt-3 pt-2 ep-dash-profile__loading d-flex align-items-center gap-2" *ngIf="profileLoading">
+            <span class="spinner-border spinner-border-sm text-primary" role="status"></span>
+            Loading profile…
+          </p>
+        </div>
+
+        <div class="ep-dash-left-stack__section ep-dash-left-stack__section--kpi px-3 px-lg-4 pt-2 pb-3 border-top">
+          <div class="row g-3 ep-dash-inline-kpi">
+            <div class="col-12 col-md-6">
+              <div class="ep-dash-kpi ep-dash-kpi--amber">
+                <div class="ep-dash-kpi__icon" aria-hidden="true"><i class="icon-base ri ri-timer-flash-line"></i></div>
+                <div class="ep-dash-kpi__text">
+                  <p class="ep-dash-kpi__label">Pending leave</p>
+                  <p class="ep-dash-kpi__value">{{ leavePendingCount }}</p>
+                  <p class="ep-dash-kpi__hint">Awaiting approval</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <div class="ep-dash-kpi ep-dash-kpi--green">
+                <div class="ep-dash-kpi__icon" aria-hidden="true"><i class="icon-base ri ri-checkbox-circle-line"></i></div>
+                <div class="ep-dash-kpi__text">
+                  <p class="ep-dash-kpi__label">Approved (month)</p>
+                  <p class="ep-dash-kpi__value">{{ leaveApprovedCount }}</p>
+                  <p class="ep-dash-kpi__hint">Applications</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <div class="ep-dash-kpi ep-dash-kpi--blue">
+                <div class="ep-dash-kpi__icon" aria-hidden="true"><i class="icon-base ri ri-suitcase-line"></i></div>
+                <div class="ep-dash-kpi__text">
+                  <p class="ep-dash-kpi__label">Leave days taken</p>
+                  <p class="ep-dash-kpi__value">{{ leaveDaysApprovedThisMonth }}</p>
+                  <p class="ep-dash-kpi__hint">Approved only</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <div class="ep-dash-kpi ep-dash-kpi--violet">
+                <div class="ep-dash-kpi__icon" aria-hidden="true"><i class="icon-base ri ri-flag-line"></i></div>
+                <div class="ep-dash-kpi__text">
+                  <p class="ep-dash-kpi__label">Next holiday</p>
+                  <ng-container *ngIf="nextHolidaySummary as nh">
+                    <p class="ep-dash-kpi__value ep-dash-kpi__value--sm">{{ nh.name }}</p>
+                    <p class="ep-dash-kpi__hint">{{ nh.date | date : 'mediumDate' }}</p>
+                  </ng-container>
+                  <ng-container *ngIf="!nextHolidaySummary">
+                    <p class="ep-dash-kpi__value">—</p>
+                    <p class="ep-dash-kpi__hint">None scheduled</p>
+                  </ng-container>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ep-dash-left-stack__section ep-dash-left-stack__section--quotes px-3 px-lg-4 py-3 border-top">
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <div class="card ep-glass-card border-0 ep-dash-quote-card h-100 mb-0">
+                <div class="card-body">
+                  <p class="ep-dash-quote-card__eyebrow mb-2">
+                    <i class="icon-base ri ri-chat-quote-line me-1" aria-hidden="true"></i> Quote of the day
+                  </p>
+                  <blockquote class="ep-dash-quote-card__quote mb-0">
+                    <p class="ep-dash-quote-card__quote-text mb-2">“{{ dailyQuote.text }}”</p>
+                    <footer class="ep-dash-quote-card__quote-by">— {{ dailyQuote.author }}</footer>
+                  </blockquote>
+                </div>
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <div class="card ep-glass-card border-0 ep-dash-quote-card h-100 mb-0">
+                <div class="card-body">
+                  <p class="ep-dash-quote-card__eyebrow mb-2">
+                    <i class="icon-base ri ri-sparkling-line me-1" aria-hidden="true"></i> Motivation
+                  </p>
+                  <p class="ep-dash-quote-card__body mb-0">{{ dailyMotivation }}</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <div class="card ep-glass-card border-0 ep-dash-quote-card h-100 mb-0">
+                <div class="card-body">
+                  <p class="ep-dash-quote-card__eyebrow mb-2">
+                    <i class="icon-base ri ri-lightbulb-line me-1" aria-hidden="true"></i> Today’s tip
+                  </p>
+                  <p class="ep-dash-quote-card__body mb-0">{{ dailyTip }}</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <div class="card ep-glass-card border-0 ep-dash-quote-card h-100 mb-0">
+                <div class="card-body">
+                  <p class="ep-dash-quote-card__eyebrow mb-2">
+                    <i class="icon-base ri ri-calendar-event-line me-1" aria-hidden="true"></i> Heads-up
+                  </p>
+                  <p class="ep-dash-quote-card__body mb-0">{{ nextHolidayHeadsUp }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4 d-flex flex-column gap-4 align-self-lg-start ep-dash-top-right">
+      <div class="card ep-glass-card border-0 ep-dash-today-card">
+        <div class="card-body d-flex flex-column ep-dash-today-card__body">
+          <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+            <div>
+              <p class="ep-dash-today-card__eyebrow mb-1">Today</p>
+              <p class="ep-dash-today-card__date mb-0">{{ todayLong }}</p>
+            </div>
+            <div class="ep-dash-today-card__icon-wrap" aria-hidden="true">
+              <i class="icon-base ri ri-calendar-todo-line"></i>
+            </div>
+          </div>
+          <div class="mt-auto d-flex flex-column gap-2 pt-2">
+            <a routerLink="/employee-portal/attendance" class="btn btn-sm ep-dash-today-card__btn ep-dash-today-card__btn--outline">
+              <i class="icon-base ri ri-calendar-line me-2"></i>Monthly Attendance
+            </a>
+            <a routerLink="/employee-portal/leave" class="btn btn-sm ep-dash-today-card__btn ep-dash-today-card__btn--primary">
+              <i class="icon-base ri ri-add-line me-2"></i> Apply leave
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Leave balance by category (stacked under Today on large screens) -->
+      <div class="card ep-glass-card border-0 ep-dash-balance-card ep-dash-balance-card--sidebar d-flex flex-column min-w-0">
+        <div class="card-header border-0 pb-0">
+          <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+            <div class="min-w-0">
+              <p class="ep-dash-section__eyebrow mb-1">Leave</p>
+              <h5 class="mb-0 ep-dash-balance-card__title">Balance by category</h5>
+              <p class="ep-dash__muted small mb-0">
+                Available vs assigned days per type.
+                <span class="d-block mt-1">Restricted unused balance expires year-end.</span>
+              </p>
+            </div>
+            <a routerLink="/employee-portal/leave" class="btn btn-sm btn-outline-primary rounded-pill flex-shrink-0"> Manage </a>
+          </div>
+        </div>
+        <div class="card-body pt-3 d-flex flex-column min-h-0">
+          <div *ngIf="leaveBalancesLoading" class="ep-dash-panel-loading py-4 text-center">
+            <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading</span></div>
+            <p class="small ep-dash__muted mt-2 mb-0">Loading leave balances…</p>
+          </div>
+          <div *ngIf="!leaveBalancesLoading && leaveBalances.length === 0" class="ep-dash-balance-card__empty text-center py-4">
+            <i class="icon-base ri ri-calendar-close-line d-block mb-2" aria-hidden="true"></i>
+            <p class="small ep-dash__muted mb-0">No leave balance yet. <a routerLink="/employee-portal/leave">Leave</a></p>
+          </div>
+          <div class="ep-dash-balance-card__scroll" *ngIf="!leaveBalancesLoading && leaveBalances.length > 0">
+            <div class="d-flex flex-column gap-2">
+              <div class="ep-dash-balance-pill" *ngFor="let row of leaveBalances; trackBy: trackBalanceRow">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                  <span class="ep-dash-balance-pill__name text-break">{{ leaveBalanceName(row) }}</span>
+                  <span class="ep-dash-balance-pill__nums" *ngIf="leaveBalanceTotal(row) > 0">
+                    <strong>{{ leaveBalanceAvailable(row) | number : '1.0-2' }}</strong>
+                    <span class="ep-dash__muted"> / {{ leaveBalanceTotal(row) | number : '1.0-2' }} d</span>
+                  </span>
+                  <span class="ep-dash-balance-pill__nums" *ngIf="leaveBalanceTotal(row) <= 0">
+                    <strong>{{ leaveBalanceAvailable(row) | number : '1.0-2' }}</strong>
+                    <span class="ep-dash__muted"> d left</span>
+                  </span>
+                </div>
+                <div class="ep-dash-balance-pill__bar" *ngIf="leaveBalanceTotal(row) > 0" role="progressbar" [attr.aria-valuenow]="leaveBalanceBarPct(row)" aria-valuemin="0" aria-valuemax="100">
+                  <div class="ep-dash-balance-pill__fill" [style.width.%]="leaveBalanceBarPct(row)"></div>
+                </div>
+                <p class="ep-dash-balance-pill__restricted mb-0 mt-2" *ngIf="leaveBalanceIsRestrictedCategory(row)">
+                  <i class="icon-base ri ri-calendar-event-line me-1" aria-hidden="true"></i>
+                  Expires at year-end — unused days do not carry forward.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upcoming leave (self + team) -->
+  <div class="row g-4 mb-4">
+    <div class="col-12">
+      <div class="card ep-glass-card border-0 ep-dash-upcoming-card h-100">
+        <div class="card-header border-0 pb-0">
+          <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+            <div>
+              <p class="ep-dash-section__eyebrow mb-1">Leave</p>
+              <h5 class="mb-0 ep-dash-upcoming-card__title">Upcoming leave</h5>
+              <p class="ep-dash__muted small mb-0">Scheduled from today · you and your team (if applicable)</p>
+            </div>
+            <a routerLink="/employee-portal/leave" class="btn btn-sm btn-outline-primary rounded-pill"> Open leave </a>
+          </div>
+        </div>
+        <div class="card-body pt-3">
+          <div *ngIf="upcomingLeavesLoading" class="ep-dash-panel-loading py-4 text-center">
+            <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading</span></div>
+            <p class="small ep-dash__muted mt-2 mb-0">Loading upcoming leave…</p>
+          </div>
+          <div *ngIf="!upcomingLeavesLoading" class="row g-4 ep-dash-upcoming-card__cols">
+            <div class="col-md-6">
+              <h6 class="ep-dash-upcoming-card__col-title">
+                <i class="icon-base ri ri-user-line me-1" aria-hidden="true"></i> My upcoming
+              </h6>
+              <ul class="list-unstyled mb-0 ep-dash-upcoming-card__list">
+                <li *ngFor="let row of upcomingMyLeaves; trackBy: trackLeaveRow" class="ep-dash-upcoming-card__item">
+                  <div class="d-flex justify-content-between gap-2 align-items-start">
+                    <div class="min-w-0">
+                      <strong class="ep-dash-upcoming-card__type d-block">{{ upcomingLeaveTypeLabel(row) }}</strong>
+                      <span class="ep-dash__muted small d-block">
+                        {{ $any(row).fromDate | date : 'mediumDate' }} – {{ $any(row).toDate | date : 'mediumDate' }}
+                        <span *ngIf="$any(row).days != null && $any(row).days !== ''" class="ms-1">· {{ $any(row).days }} d</span>
+                      </span>
+                    </div>
+                    <span [class]="leaveStatusPillClass($any(row).status)">{{ $any(row).status }}</span>
+                  </div>
+                </li>
+                <li *ngIf="upcomingMyLeaves.length === 0" class="ep-dash-upcoming-card__empty">No upcoming leave</li>
+              </ul>
+            </div>
+            <div class="col-md-6">
+              <h6 class="ep-dash-upcoming-card__col-title">
+                <i class="icon-base ri ri-team-line me-1" aria-hidden="true"></i> Team upcoming
+              </h6>
+              <ul class="list-unstyled mb-0 ep-dash-upcoming-card__list">
+                <li *ngFor="let row of upcomingTeamLeaves; trackBy: trackLeaveRow" class="ep-dash-upcoming-card__item">
+                  <div class="d-flex gap-2 align-items-start">
+                    <span class="ep-dash-upcoming-card__mini-avatar" aria-hidden="true">{{
+                      upcomingTeamApplicantInitials(row)
+                    }}</span>
+                    <div class="flex-grow-1 min-w-0">
+                      <span class="ep-dash-upcoming-card__name d-block text-truncate">{{
+                        upcomingTeamApplicantLabel(row)
+                      }}</span>
+                      <strong class="ep-dash-upcoming-card__type d-block">{{ upcomingLeaveTypeLabel(row) }}</strong>
+                      <span class="ep-dash__muted small d-block">
+                        {{ $any(row).fromDate | date : 'mediumDate' }} – {{ $any(row).toDate | date : 'mediumDate' }}
+                        <span *ngIf="$any(row).days != null && $any(row).days !== ''" class="ms-1">· {{ $any(row).days }} d</span>
+                      </span>
+                    </div>
+                    <span [class]="leaveStatusPillClass($any(row).status)">{{ $any(row).status }}</span>
+                  </div>
+                </li>
+                <li *ngIf="upcomingTeamLeaves.length === 0" class="ep-dash-upcoming-card__empty">
+                  No team leave scheduled
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attendance, shortcuts, holidays -->
+  <div class="row g-4 mb-4">
+    <div class="col-lg-6">
+      <div class="card h-100 ep-glass-card border-0 ep-dash-attendance-card">
+        <div class="card-header border-0 ep-dash-attendance-card__head">
+          <div class="d-flex align-items-center gap-2">
+            <span class="ep-dash-attendance-card__head-icon" aria-hidden="true"><i class="icon-base ri ri-time-line"></i></span>
+            <div>
+              <h5 class="mb-0 ep-dash-attendance-card__title">Today&apos;s attendance</h5>
+              <p class="ep-dash__muted small mb-0">Check in &amp; out</p>
+            </div>
+          </div>
+        </div>
+        <div class="card-body pt-0">
+          <div *ngIf="loading" class="ep-dash-panel-loading py-5 text-center">
+            <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading</span></div>
+            <p class="small ep-dash__muted mt-2 mb-0">Loading attendance…</p>
+          </div>
+          <ng-container *ngIf="!loading && daily">
+            <div class="d-flex align-items-center gap-3 mb-3 ep-dash-attendance-card__status-row">
+              <div class="ep-dash-attendance-card__badge-wrap">
+                <span class="ep-dash-attendance-card__time-icon"><i class="icon-base ri ri-time-line"></i></span>
+              </div>
+              <div class="min-w-0">
+                <p class="mb-0 ep-dash-attendance-card__status">{{ daily['status'] || '—' }}</p>
+                <p class="ep-dash__muted small mb-0 text-truncate">{{ daily['date'] || '' }}</p>
+              </div>
+            </div>
+            <dl class="row small mb-3 ep-dash__dl ep-dash-attendance-card__dl">
+              <dt class="col-5">Check in</dt>
+              <dd class="col-7 mb-1">{{ daily['check_in_time'] || '—' }}</dd>
+              <dt class="col-5">Check out</dt>
+              <dd class="col-7 mb-1">{{ daily['check_out_time'] || '—' }}</dd>
+            </dl>
+            <div class="d-flex flex-wrap gap-2">
+              <button *ngIf="canCheckIn()" type="button" class="btn btn-primary ep-dash-mark-btn" (click)="mark()" [disabled]="marking">
+                {{ marking ? 'Please wait…' : 'Check in' }}
+              </button>
+              <button *ngIf="canCheckOut()" type="button" class="btn btn-outline-primary ep-dash-mark-btn" (click)="mark()" [disabled]="marking">
+                {{ marking ? 'Please wait…' : 'Check out' }}
+              </button>
+              <span *ngIf="!canCheckIn() && !canCheckOut() && daily['check_in_time']" class="ep-dash-done-pill">
+                <i class="icon-base ri ri-check-line me-1"></i> Day complete
+              </span>
+            </div>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6">
+      <div class="card h-100 ep-glass-card border-0 ep-dash-shortcuts-card">
+        <div class="card-body d-flex flex-column">
+          <p class="ep-dash-shortcuts-card__eyebrow mb-2">Navigate</p>
+          <h6 class="mb-3 ep-dash-shortcuts-card__title">Shortcuts</h6>
+          <div class="ep-dash-shortcuts-grid">
+            <a routerLink="/employee-portal/attendance" class="ep-dash-shortcut-tile">
+              <i class="icon-base ri ri-calendar-line"></i>
+              <span>Month view</span>
+            </a>
+            <a routerLink="/employee-portal/leave" class="ep-dash-shortcut-tile">
+              <i class="icon-base ri ri-calendar-event-line"></i>
+              <span>Apply leave</span>
+            </a>
+            <a routerLink="/employee-portal/salary" class="ep-dash-shortcut-tile">
+              <i class="icon-base ri ri-file-text-line"></i>
+              <span>Salary slip</span>
+            </a>
+            <a routerLink="/employee-portal/holidays" class="ep-dash-shortcut-tile">
+              <i class="icon-base ri ri-government-line"></i>
+              <span>Holidays</span>
+            </a>
+            <a routerLink="/employee-portal/regularization" class="ep-dash-shortcut-tile">
+              <i class="icon-base ri ri-time-line"></i>
+              <span>Regularization</span>
+            </a>
+            <a routerLink="/employee-portal/reimbursement" class="ep-dash-shortcut-tile">
+              <i class="icon-base ri ri-refund-2-line"></i>
+              <span>Reimbursement</span>
+            </a>
+            <a routerLink="/employee-portal/reports" class="ep-dash-shortcut-tile">
+              <i class="icon-base ri ri-bar-chart-box-line"></i>
+              <span>Reports</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6">
+      <div class="card h-100 ep-glass-card border-0 ep-dash-holidays-card">
+        <div class="ep-dash-holidays-card__head">
+          <p class="ep-dash-holidays-card__eyebrow mb-1">Plan ahead</p>
+          <h6 class="mb-0 ep-dash-holidays-card__title">Upcoming holidays</h6>
+        </div>
+        <div class="ep-dash-holidays-card__filters" *ngIf="holidaysRaw.length > 0">
+          <button
+            type="button"
+            class="ep-dash-holidays-chip"
+            [class.ep-dash-holidays-chip--active]="holidayTypeFilter === null"
+            (click)="selectHolidayFilter(null)"
+          >
+            All
+          </button>
+          <button
+            type="button"
+            class="ep-dash-holidays-chip"
+            *ngFor="let typ of uniqueHolidayTypes"
+            [class.ep-dash-holidays-chip--active]="holidayTypeFilter === typ"
+            (click)="selectHolidayFilter(typ)"
+          >
+            {{ typ }}
+          </button>
+        </div>
+        <ul class="list-unstyled ep-dash-holidays-card__list mb-0">
+          <li *ngFor="let h of filteredDashboardHolidays" class="ep-dash-holidays-card__item">
+            <strong class="ep-dash__holiday-name">{{ h['holiday_name'] }}</strong>
+            <span class="ep-dash__muted d-block ep-dash-holidays-card__date">{{ $any(h['date']) | date : 'mediumDate' }}</span>
+            <span [ngClass]="holidayBadgeClass(holidayTypeLabel(h))">{{ holidayTypeLabel(h) }}</span>
+          </li>
+          <li *ngIf="holidaysRaw.length === 0" class="ep-dash-holidays-card__empty">No holidays listed</li>
+          <li *ngIf="holidaysRaw.length > 0 && filteredDashboardHolidays.length === 0" class="ep-dash-holidays-card__empty">
+            No holidays for this type.
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts section -->
+  <section class="ep-dash-section mb-3">
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
+      <div>
+        <p class="ep-dash-section__eyebrow mb-1">Analytics</p>
+        <h5 class="ep-dash-section__title mb-0">This month</h5>
+      </div>
+    </div>
+
+    <div class="ep-dash-stat-grid mb-4" *ngIf="!chartsLoading && attendanceSummary">
+      <span class="ep-dash-stat-chip">
+        <strong>{{ attendanceSummary['workingDays'] ?? '—' }}</strong>
+        <span>Working days</span>
+      </span>
+      <span class="ep-dash-stat-chip">
+        <strong>{{ attendanceSummary['presentDays'] ?? '—' }}</strong>
+        <span>Present</span>
+      </span>
+      <span class="ep-dash-stat-chip">
+        <strong>{{ attendanceSummary['absentDays'] ?? '—' }}</strong>
+        <span>Absent</span>
+      </span>
+      <span class="ep-dash-stat-chip">
+        <strong>{{ attendanceSummary['lateDays'] ?? '—' }}</strong>
+        <span>Late</span>
+      </span>
+      <span class="ep-dash-stat-chip">
+        <strong>{{ attendanceSummary['onTimePercentage'] ?? '—' }}</strong>
+        <span>On time</span>
+      </span>
+      <span class="ep-dash-stat-chip">
+        <strong>{{ attendanceSummary['averageWorkingHours'] ?? '—' }}</strong>
+        <span>Avg hrs / day</span>
+      </span>
+      <span class="ep-dash-stat-chip ep-dash-stat-chip--wide">
+        <strong>{{ attendanceSummary['totalWorkingHours'] ?? '—' }}</strong>
+        <span>Total hours</span>
+      </span>
+    </div>
+    <div *ngIf="chartsLoading" class="ep-dash-panel-loading text-muted small py-4 d-flex align-items-center justify-content-center gap-2">
+      <span class="spinner-border spinner-border-sm" role="status"></span>
+      Loading charts…
+    </div>
+  </section>
+
+  <div class="row g-4 mb-3">
+    <div class="col-lg-6">
+      <div class="card h-100 ep-glass-card border-0 ep-dash__chart-card">
+        <div class="card-header border-0 pb-0">
+          <h6 class="mb-1 ep-dash__chart-card-title">Attendance mix</h6>
+          <p class="ep-dash__muted small mb-0">Day status for the current month</p>
+        </div>
+        <div class="card-body pt-2 ep-dash__chart-body">
+          <apx-chart
+            *ngIf="!chartsLoading && donutOptions.series?.length"
+            [series]="donutOptions.series!"
+            [chart]="donutOptions.chart!"
+            [labels]="donutOptions.labels!"
+            [colors]="donutOptions.colors!"
+            [dataLabels]="donutOptions.dataLabels!"
+            [legend]="donutOptions.legend!"
+            [plotOptions]="donutOptions.plotOptions!"
+            [responsive]="donutOptions.responsive!"
+          ></apx-chart>
+          <div *ngIf="!chartsLoading && !donutOptions.series?.length" class="ep-dash-chart-empty">
+            <i class="icon-base ri ri-pie-chart-line"></i>
+            <p class="mb-0">No attendance rows for this month yet.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card h-100 ep-glass-card border-0 ep-dash__chart-card">
+        <div class="card-header border-0 pb-0">
+          <h6 class="mb-1 ep-dash__chart-card-title">Hours per day</h6>
+          <p class="ep-dash__muted small mb-0">From check-in to check-out</p>
+        </div>
+        <div class="card-body pt-2 ep-dash__chart-body">
+          <apx-chart
+            *ngIf="!chartsLoading && hoursChartOptions.series?.length"
+            [series]="hoursChartOptions.series!"
+            [chart]="hoursChartOptions.chart!"
+            [xaxis]="hoursChartOptions.xaxis!"
+            [dataLabels]="hoursChartOptions.dataLabels!"
+            [plotOptions]="hoursChartOptions.plotOptions!"
+            [yaxis]="hoursChartOptions.yaxis!"
+            [colors]="hoursChartOptions.colors!"
+            [grid]="hoursChartOptions.grid!"
+          ></apx-chart>
+          <div *ngIf="!chartsLoading && !hoursChartOptions.series?.length" class="ep-dash-chart-empty">
+            <i class="icon-base ri ri-bar-chart-horizontal-line"></i>
+            <p class="mb-0">No daily data to chart yet.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leave + sidebar -->
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card ep-glass-card border-0 h-100 ep-dash-leave-card">
+        <div class="card-header border-0 ep-dash-leave-card__head">
+          <div>
+            <p class="ep-dash-leave-card__eyebrow mb-1">Leave</p>
+            <h5 class="mb-0 ep-dash-leave-card__title">Recent applications</h5>
+            <p class="ep-dash__muted small mb-0">This month · rejected: {{ leaveRejectedCount }}</p>
+          </div>
+          <a routerLink="/employee-portal/leave" class="btn btn-sm btn-primary rounded-pill px-3 ep-dash__apply"> Apply / view all </a>
+        </div>
+        <div class="table-responsive ep-dash-leave-table-wrap">
+          <table class="table table-sm table-hover align-middle mb-0 ep-dash-leave-table">
+            <thead>
+              <tr>
+                <th scope="col">Applicant</th>
+                <th scope="col">Type</th>
+                <th scope="col">From</th>
+                <th scope="col">To</th>
+                <th scope="col" class="text-end">Days</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of leavesTableRows; trackBy: trackLeaveRow">
+                <td>
+                  <div class="ep-dash-leave-applicant">
+                    <span class="ep-dash-leave-avatar">{{ leaveApplicantInitials(row) }}</span>
+                    <span class="ep-dash-leave-name">{{ leaveApplicantLabel(row) }}</span>
+                  </div>
+                </td>
+                <td class="fw-semibold">{{ $any(row).leaveName || $any(row).leaveType || '—' }}</td>
+                <td class="text-nowrap ep-dash__muted">{{ $any(row).fromDate | date : 'mediumDate' }}</td>
+                <td class="text-nowrap ep-dash__muted">{{ $any(row).toDate | date : 'mediumDate' }}</td>
+                <td class="text-end fw-semibold">{{ $any(row).days ?? '—' }}</td>
+                <td>
+                  <span [class]="leaveStatusPillClass($any(row).status)">{{ $any(row).status }}</span>
+                </td>
+              </tr>
+              <tr *ngIf="leavesAll.length === 0">
+                <td colspan="6" class="ep-dash-leave-empty text-center py-5">
+                  <i class="icon-base ri ri-inbox-line d-block mb-2"></i>
+                  No leave rows this month
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="d-flex flex-column gap-3">
+        <div class="card ep-glass-card border-0 ep-dash-side-card">
+          <div class="card-body">
+            <div class="d-flex align-items-start gap-3">
+              <span class="ep-dash-side-card__icon"><i class="icon-base ri ri-wallet-3-line"></i></span>
+              <div class="min-w-0">
+                <h6 class="fw-bold mb-1">Salary slip</h6>
+                <p class="small ep-dash__muted mb-3">Current month payslip availability.</p>
+                <p class="small mb-2" *ngIf="!payslipChecked">Checking…</p>
+                <p class="small text-success mb-2 d-flex align-items-center gap-1" *ngIf="payslipChecked && payslipHasData">
+                  <i class="icon-base ri ri-checkbox-circle-line"></i> Slip available
+                </p>
+                <p class="small ep-dash__muted mb-3" *ngIf="payslipChecked && !payslipHasData">Not generated yet for this month.</p>
+                <a routerLink="/employee-portal/salary" class="btn btn-sm btn-outline-primary rounded-pill w-100"> Open salary </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card ep-glass-card border-0 ep-dash-side-card ep-dash-side-card--tips">
+          <div class="card-body">
+            <div class="d-flex align-items-start gap-3">
+              <span class="ep-dash-side-card__icon ep-dash-side-card__icon--soft"><i class="icon-base ri ri-lightbulb-line"></i></span>
+              <div class="min-w-0">
+                <h6 class="fw-bold mb-2">Quick tips</h6>
+                <ul class="small ep-dash__muted ps-3 mb-0 ep-dash-tips-list">
+                  <li>Mark attendance from <strong>Today&apos;s attendance</strong>.</li>
+                  <li>Use <strong>Monthly Attendance</strong> for a full review.</li>
+                  <li>Public holidays are listed under <a routerLink="/employee-portal/holidays">Holidays</a>.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

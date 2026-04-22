@@ -1,0 +1,226 @@
+<div class="sa-plans-page">
+  <div class="row g-3 g-lg-4">
+    <div class="col-12">
+      <div class="sa-hero card sa-sp-hero">
+        <div class="card-body">
+          <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
+            <div>
+              <p class="sa-hero-kicker mb-1">Billing</p>
+              <div class="sa-hero-title">Plan management</div>
+              <div class="sa-hero-subtitle">Create subscription products, pricing, and limits for tenants</div>
+            </div>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+              <button
+                type="button"
+                class="btn btn-sm sa-sp-refresh"
+                (click)="refresh()"
+                [disabled]="loading"
+              >
+                <i class="ri ri-refresh-line me-1" [class.sa-spin]="loading"></i>
+                Refresh
+              </button>
+              <button type="button" class="btn btn-sm sa-sp-new" (click)="clear()">
+                <i class="ri ri-add-line me-1"></i>
+                New plan
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-7 d-flex">
+      <div class="card sa-panel w-100">
+        <div class="sa-panel-head sa-panel-head--row">
+          <div>
+            <h3 class="sa-panel-title">Plan catalog</h3>
+            <p class="sa-panel-desc">Select a row to edit billing rules on the right</p>
+          </div>
+          <div class="sa-panel-head-meta">
+            <span class="sa-count-pill" *ngIf="!loading">{{ plans.length }} {{ plans.length === 1 ? 'plan' : 'plans' }}</span>
+            <span class="sa-loading-pill" *ngIf="loading">
+              <i class="ri ri-loader-2-line sa-spin me-1"></i> Loading
+            </span>
+          </div>
+        </div>
+
+        <div class="sa-table-toolbar">
+          <div class="sa-search-wrap">
+            <i class="ri ri-search-line sa-search-icon" aria-hidden="true"></i>
+            <input
+              type="search"
+              class="form-control sa-search-input"
+              placeholder="Filter by name or code…"
+              [(ngModel)]="searchQuery"
+              autocomplete="off"
+            />
+          </div>
+        </div>
+
+        <div class="sa-table-wrap">
+          <div class="sa-table-scroll table-responsive">
+            <table class="table table-hover mb-0 sa-table sa-table--plans">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Code</th>
+                  <th>Cycle</th>
+                  <th>Price</th>
+                  <th>Status</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  *ngFor="let p of filteredPlans"
+                  (click)="select(p)"
+                  [class.table-active]="selectedPlan?.id === p.id"
+                  class="sa-row"
+                >
+                  <td>
+                    <div class="sa-plan-name">{{ p.name }}</div>
+                  </td>
+                  <td><span class="sa-code">{{ p.code || '—' }}</span></td>
+                  <td class="sa-cell-muted">{{ p.billingCycle || '—' }}</td>
+                  <td class="sa-cell-muted">{{ p.price != null ? p.price : '—' }}</td>
+                  <td>
+                    <span class="sa-pill sa-pill--ok" *ngIf="p.status === 'active'">Active</span>
+                    <span class="sa-pill sa-pill--muted" *ngIf="p.status !== 'active'">{{ p.status }}</span>
+                  </td>
+                  <td class="text-end">
+                    <button
+                      type="button"
+                      class="btn btn-sm sa-row-action"
+                      [class.sa-row-action--warn]="p.status === 'active'"
+                      [class.sa-row-action--ok]="p.status !== 'active'"
+                      (click)="$event.stopPropagation(); toggleStatus(p)"
+                    >
+                      <i class="ri" [ngClass]="p.status === 'active' ? 'ri-pause-circle-line' : 'ri-play-circle-line'"></i>
+                      <span>{{ p.status === 'active' ? 'Deactivate' : 'Activate' }}</span>
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="!plans?.length && !loading">
+                  <td colspan="6">
+                    <div class="sa-empty-inline">
+                      <i class="ri ri-price-tag-3-line"></i>
+                      <div>
+                        <div class="sa-empty-inline-title">No plans yet</div>
+                        <div class="sa-empty-inline-text">Use “New plan” to create your first subscription product.</div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                <tr *ngIf="plans?.length && !loading && !filteredPlans.length">
+                  <td colspan="6">
+                    <div class="sa-empty-inline sa-empty-inline--compact">
+                      <i class="ri ri-search-eye-line"></i>
+                      <div>
+                        <div class="sa-empty-inline-title">No matches</div>
+                        <div class="sa-empty-inline-text">Try another search term.</div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-5 d-flex">
+      <div class="card sa-panel sa-detail-card sa-sticky w-100">
+        <div class="sa-panel-head sa-panel-head--row">
+          <div>
+            <h3 class="sa-panel-title">{{ selectedPlan ? 'Edit plan' : 'Create plan' }}</h3>
+            <p class="sa-panel-desc" *ngIf="selectedPlan">Updating {{ selectedPlan.name }}</p>
+            <p class="sa-panel-desc" *ngIf="!selectedPlan">Fill the form to add a new plan</p>
+          </div>
+          <button type="button" class="btn btn-sm sa-btn-ghost" (click)="clear()">Clear</button>
+        </div>
+
+        <div class="card-body sa-detail-body">
+          <form [formGroup]="form" (ngSubmit)="save()">
+            <div class="sa-form-section">
+              <span class="sa-form-section-label">Basics</span>
+              <div class="mb-3">
+                <label class="form-label">Name</label>
+                <input class="form-control" formControlName="name" placeholder="e.g. Professional" />
+              </div>
+              <div class="row g-2">
+                <div class="col-6">
+                  <label class="form-label">Code</label>
+                  <input class="form-control" formControlName="code" placeholder="e.g. PRO" />
+                </div>
+                <div class="col-6">
+                  <label class="form-label">Status</label>
+                  <select class="form-select" formControlName="status">
+                    <option value="active">active</option>
+                    <option value="inactive">inactive</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="sa-form-section">
+              <span class="sa-form-section-label">Pricing</span>
+              <div class="row g-2">
+                <div class="col-6">
+                  <label class="form-label">Billing cycle</label>
+                  <select class="form-select" formControlName="billingCycle">
+                    <option value="monthly">monthly</option>
+                    <option value="yearly">yearly</option>
+                    <option value="one_time">one_time</option>
+                  </select>
+                </div>
+                <div class="col-6">
+                  <label class="form-label">Price</label>
+                  <input type="number" class="form-control" formControlName="price" placeholder="e.g. 999" />
+                </div>
+              </div>
+            </div>
+
+            <div class="sa-form-section">
+              <span class="sa-form-section-label">Limits</span>
+              <div class="row g-2">
+                <div class="col-6">
+                  <label class="form-label">Duration (days)</label>
+                  <input type="number" class="form-control" formControlName="durationDays" placeholder="e.g. 30" />
+                </div>
+                <div class="col-6">
+                  <label class="form-label">Max users</label>
+                  <input type="number" class="form-control" formControlName="maxUsers" placeholder="e.g. 50" />
+                </div>
+              </div>
+            </div>
+
+            <div class="sa-form-section">
+              <span class="sa-form-section-label">Razorpay (paid plans)</span>
+              <label class="form-label">Razorpay plan id</label>
+              <input
+                class="form-control font-monospace small"
+                formControlName="razorpayPlanId"
+                placeholder="plan_xxxxxxxxxxxxxx"
+                autocomplete="off"
+              />
+              <small class="text-muted d-block mt-1">
+                Create a recurring plan in Razorpay Dashboard → Plans, then paste its id. Free plans ignore this.
+              </small>
+            </div>
+
+            <div class="sa-form-section">
+              <label class="form-label">Description</label>
+              <textarea class="form-control" rows="3" formControlName="description" placeholder="Shown internally / invoices"></textarea>
+            </div>
+
+            <button class="btn sa-btn-save w-100" type="submit" [disabled]="form.invalid">
+              <i class="ri ri-save-3-line me-1"></i>
+              {{ selectedPlan ? 'Update plan' : 'Create plan' }}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

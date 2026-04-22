@@ -1,0 +1,71 @@
+:host {
+  display: block;
+}
+
+.page-shell {
+  padding: 24px;
+}
+
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.page-head h3 {
+  margin: 0;
+}
+
+.page-head p {
+  margin: 6px 0 0;
+  color: #6c7a91;
+}
+
+.timeline-card {
+  border-radius: 22px;
+  padding: 22px;
+  background: #fff;
+  border: 1px solid rgba(207, 217, 232, 0.85);
+  box-shadow: 0 22px 48px rgba(42, 64, 94, 0.08);
+}
+
+.timeline {
+  display: grid;
+  gap: 18px;
+}
+
+.timeline-item {
+  display: flex;
+  gap: 14px;
+}
+
+.timeline-dot {
+  width: 14px;
+  height: 14px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: #245d96;
+  box-shadow: 0 0 0 6px rgba(36, 93, 150, 0.12);
+}
+
+.timeline-content h5 {
+  margin: 0 0 4px;
+}
+
+.timeline-content p {
+  margin: 0 0 4px;
+  color: #516178;
+}
+
+.timeline-content span {
+  color: #245d96;
+  font-weight: 600;
+}
+
+.state-block {
+  padding: 28px 12px;
+  text-align: center;
+  color: #6c7a91;
+}

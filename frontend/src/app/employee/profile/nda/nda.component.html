@@ -1,0 +1,221 @@
+<div class="row mb-2">
+  <div class="col-12 d-flex gap-2 justify-content-end">
+    <button type="button" class="btn btn-secondary" (click)="saveData(); printDoc()">
+      <i class="fa fa-print mx-2"></i> Print
+    </button>
+    <!-- <button type="button" class="btn btn-danger" (click)="downloadPDF()">
+      <i class="fa fa-file-pdf-o mx-2"></i> Download PDF
+    </button> -->
+    <button type="button" class="btn btn-primary" (click)="saveData(); downloadDoc()">
+      <i class="fa fa-download mx-2"></i> Download Word
+    </button>
+  </div>
+</div>
+
+<div id="nda-doc" class="nda-content">
+
+
+
+  <h3 style="text-align:center; text-decoration: underline;">
+    Employee/Intern/Contractor IP Rights, Confidentiality, Non-Solicitation, Non-Competition Agreement
+  </h3>
+
+  <p>
+    I <b>{{personalDetails?.firstName}} {{personalDetails?.lastName}}</b> <span *ngIf="personalDetails.gender=='Male'">
+      S/O </span>
+    <span *ngIf="personalDetails.gender=='Female'"> D/O </span> <b> {{personalDetails?.fatherName}}</b>
+    residing at <b>{{personalDetails?.permanentAddress}}</b> do hereby agree with
+    <b>{{tenant?.companyName}}</b> (here in after referred to as “Company”) having its principal office at
+    <b>{{tenant?.companyAddress}}</b> .
+  </p>
+  <p>
+    INDIA and all of its associate companies to abide by the following in consideration of the compensation paid to me
+    by the Company for services, in any capacity, as an Employee, Associate, Intern, Part time Employee or a Contractor.
+    I understand that being associated with the company, my responsibilities and business contacts will enable me to
+    acquire valuable information and skill with respect to the business operations of the Company. In recognition of
+    these acquired benefits, I agree to abide by the following:
+  </p>
+
+  <p>
+    In consideration of the compensation paid to me by the Company for services in any capacity as an Employee,
+    Associate, Intern, Part-time Employee, or Contractor, I understand that my responsibilities and business
+    interactions will expose me to valuable confidential information related to the Company’s business operations.
+  </p>
+
+  <!-- <p>
+In recognition of these benefits, I agree to the following:
+</p> -->
+
+  <ol>
+
+    <li>
+      The Company shall be entitled to sole ownership of any intellectual property rights including but not limited
+      to software programs, hardware specifications and other property rights created, developed and discovered by me
+      while in the course of my employment with the Company, including all registrations for the same. </li>
+
+    <li>
+      I agree that I shall promptly disclose to the Company the following: a) all software programs, inventions,
+      improvements, discoveries and technical developments (‘Inventions’) made, created or conceived by me (either alone
+      or with others) during the term of my employment, b) all Inventions which are based on proprietary information of
+      the Company and are made or conceived by me (either alone or with others), c) any documentation related to the
+      Inventions, which shall become the company’s property, and d) Web content and development concepts, ideas, design,
+      software code, and multimedia graphics, and artwork.
+      <ul>
+        <!-- <li>All software programs, inventions, improvements, discoveries, and developments.</li>
+<li>All inventions based on proprietary information of the Company.</li>
+<li>All related documentation.</li>
+<li>All web content, designs, software code, multimedia graphics, and artwork.</li> -->
+      </ul>
+    </li>
+
+    <li>
+      I hereby assign to the Company my entire right, title and interest in and to such Inventions and documents,
+      which relate in any way to or are useful in the Company’s business and in the course of my employment. I shall do
+      all acts necessary and/or required by the Company to give effect to this provision. I further agrees to cooperate
+      with the Company in the procurement and maintenance of patents, copyrights, and/or other protection of the
+      Company’s rights to such Inventions/Documents, software code, Content Design and Multimedia Graphics, at the
+      Company’s expenses. I shall keep and maintain adequate and current written records of all such Inventions, Content
+      Designs and Development, which shall automatically become the exclusive property of the Company</li>
+
+    <li>
+      I also waive my right to file for any copyright application for any such inventions or concept, designs,
+      software code, ideas while actively employed by the Company and within one (1) year form date of resignation or
+      termination from the company. If within one (1) year after leaving the Company’s employment, a patent application
+      or copyright registration is filed by me or on my behalf describing and Invention within the scope of my work for
+      the Company, or which otherwise relates to a portion of the Company’s business of which I had knowledge of and
+      access to during my employment, I agree to specifically state that “the Invention, Concept, Software code, Design
+      was conceived by me within the scope of my employment with the Company”. </li>
+
+    <li>
+      In order to safeguard the Company’s interest and the confidentiality of its business and affairs, I agree that
+      during the term of my employment and from and after the actual cessation of my employment, I shall maintain strict
+      confidentiality and shall not disclose any technical, business, financial or commercial information, methods,
+      channels, processes, inventions (whether covered by intellectual property protection or not or whether marked
+      confidential or not) including but not limited to: customers, customer lists or requirements, price lists,
+      salaries, business development methods, pricing structures, marketing and sales information, business plans or
+      dealings, employees or officers, financial information, product lines research activities, plans designs, formulae
+      whether authored by me or otherwise – to suit my own purpose or those of any other person, company, business
+      entity or other organization whatsoever.
+
+
+    </li>
+
+    <li>
+      I shall not take out of the Company’s premises any technical plans, charts, drawings, software codes, design
+      and other materials containing technical or confidential data and information unless with the prior written
+      consent or permission of the Company.</li>
+
+    <li>
+      I understand that the Company's trade secret is any information, process or idea that is not generally known in
+      the industry, that the Company considers confidential, and that gives the the Company a competitive advantage.
+      Examples of trade secrets include:<ul>
+        <li>Technical plans and documentation</li>
+        <li>Software code and program listings</li>
+        <li>Products under development</li>
+        <li>Customer and vendor information</li>
+      </ul>
+    </li>
+
+    <li>
+      During and after my term with the Company, I shall at all times practice good discretion, ask permission and
+      seek prior approval from the company in the use or disclosure of any company documents – technical or business
+      information, or any information which one might reasonably expect the company to regard as confidential, whether
+      transmitted or acquired from the Company’s customers, suppliers, employees or other persons – to any person,
+      company or entity.</li>
+
+    <li>
+      I also covenant and agree that during the term of my employment with the Company and for twelve (12) months
+      after the termination thereof, regardless of the reason for the employment termination, I will not, directly or
+      indirectly, solicit or attempt to solicit any business from any of the the Company’s Customers, Clients, Customer
+      Prospects, or Vendors with whom I had Material Contact during the last one (1) years of my employment with the
+      Company.</li>
+
+    <li>
+      I also covenant and agree that during the term of my employment with the Company and for twelve (12) months
+      after the termination thereof, regardless of the reason for the employment termination, I will not, directly or
+      indirectly, on my own behalf or on behalf of or in conjunction with any person or legal entity, recruit, solicit,
+      or induce, or attempt to recruit, solicit, or induce, any non-clerical employee of the Company with whom I had
+      personal contact or supervised while performing my Job Duties, to terminate their employment relationship with the
+      Company.</li>
+
+    <li>
+      I also covenant and agree that I shall not, either during my employment or for a period of twelve (12) months
+      following the termination of my employment for any reason including resignation, without the prior written consent
+      of the Company, carry on, become officer, director, employee, consultant, advisor, partner, co-venturer,
+      stockholder or be engaged in, or be concerned with, or interested in, or employed by, any person engaged in or
+      concerned with or interested in a business which is the same as, or substantially similar to, or in competition
+      with, the the Company's business at the time of any such termination.</li>
+
+    <li>
+      I agree not to seek, encourage, and/or accept direct or indirect employment with any
+      client/customer/prospective customer of the Company for a period of twelve (12) months following the termination
+      of employment or membership with the Company.</li>
+
+    <li>
+      Failure to comply with this IP Rights, Confidentiality, Non-Solicitation, Non-Competition agreement shall be
+      construed and considered as Gross Misconduct and shall be deemed a ground for major or minor punishment or
+      termination of my employment or legal actions including but not limited to recovering the total amount spent on my
+      training & skill development.</li>
+
+    <li>
+      I am aware that the Company does not expect nor does it want me to disclose trade secrets or other
+      confidential information of any of my former employers, and I acknowledge my responsibility not to disclose to the
+      Company any information in the nature of a trade secret that would violate my legal obligation to others.
+
+    </li>
+
+    <li>
+      This Agreement may not be modified on behalf of the Company in whole or in part except by a statement in
+      writing signed by an executive officer of the Company Pvt.Ltd. </li>
+
+  </ol>
+
+  <br />
+
+  <!-- <p><b>Date:</b> {{date}}</p>
+<p><b>Place:</b> {{place}}</p> -->
+
+  <div class="row mb-2">
+    <div class="col-4">
+      <div class="d-flex gap-2 align-items-center">
+        <span class="w-20"> Date : </span> <input type="date" [(ngModel)]="personalDetails.date"
+          (ngModelChange)="saveData()" class="form-control w-80" />
+      </div>
+    </div>
+
+
+
+  </div>
+  <div class="row">
+    <div class="col-4">
+      <div class="d-flex gap-2 align-items-center">
+        <span class="w-20"> Place :</span> <input type="text" [(ngModel)]="personalDetails.place"
+          (ngModelChange)="saveData()" class="form-control" />
+      </div>
+    </div>
+
+
+  </div>
+  <br />
+
+  <table width="100%" style="margin-top:40px;">
+    <tr>
+      <td style="width:50%; text-align:left;">
+        <p>________________________</p>
+        <p><b>Shiv Pal Singh</b></p>
+        <p>Senior Vice President</p>
+        <p></p>
+        <p></p>
+      </td>
+
+      <td style="width:50%; text-align:right;">
+        <p>________________________</p>
+        <p><b>Signature</b></p>
+        <p>(Employee)</p>
+        <p>For {{personalDetails?.firstName}} {{personalDetails?.lastName}}</p>
+        <p>Designation {{personalDetails?.Designation}}</p>
+      </td>
+    </tr>
+  </table>
+
+</div>

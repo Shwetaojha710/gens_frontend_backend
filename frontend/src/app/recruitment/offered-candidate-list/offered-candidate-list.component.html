@@ -1,0 +1,78 @@
+<div class="container-fluid mt-5">
+  <div class="row mb-4">
+    <div class="col-md">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center">
+          <span>Offered Candidates</span>
+          <button type="button" class="btn btn-xs btn-primary float-end" (click)="loadApplications()">
+            <i class="fas fa-refresh"></i>&nbsp;Refresh
+          </button>
+        </h5>
+
+        <div *ngIf="isLoading" class="text-center py-5">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p class="mt-2 text-muted mb-0">Loading offered candidates...</p>
+        </div>
+
+        <app-search-pagination
+          *ngIf="!isLoading"
+          [totalItems]="totalItems"
+          [pageSize]="itemsPerPage"
+          [currentPage]="currentPage"
+          (search)="onSearch($event)"
+          (pageChange)="onPageChange($event)"
+          (pageSizeChange)="onPageSizeChange($event)">
+
+          <div class="table-responsive">
+            <table class="table table-striped dataTable">
+              <thead>
+                <tr>
+                  <th style="width: 10px!important;">SI.NO</th>
+                  <th>Name / Job</th>
+                  <th>Phone / Email</th>
+                  <th>Experience</th>
+                  <th>Current CTC (LPA)</th>
+                  <th>Expected CTC (LPA)</th>
+                  <th>Notice Period</th>
+                  <th>Applied On</th>
+                </tr>
+              </thead>
+              <tbody class="table-border-bottom-0">
+                <tr *ngFor="let app of displayApps; let i = index">
+                  <td style="width: 10px!important;">{{ (currentPage - 1) * itemsPerPage + i + 1 }}</td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="avatar avatar-sm me-4">
+                        <img src="../../assets/img/avatars/1.png" width="100" height="auto"
+                          alt="Avatar" class="rounded-circle"
+                          onerror="this.src='../../assets/img/avatars/1.png'" />
+                      </div>
+                      <div>
+                        <h6 class="mb-0 text-truncate link-primary">{{ app.name }}</h6>
+                        <small class="text-truncate">{{ app.job_title }}</small><br>
+                        <small class="text-truncate">{{ app.department }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    {{ app.phone }}<br>
+                    <small class="text-truncate">{{ app.email }}</small>
+                  </td>
+                  <td>{{ app.experience }} yrs</td>
+                  <td>{{ app.current_ctc || '-' }}</td>
+                  <td>{{ app.expected_ctc || '-' }}</td>
+                  <td>{{ app.notice_period ? app.notice_period + ' days' : '-' }}</td>
+                  <td>{{ app.createdAt | date:'dd-MM-yyyy' }}</td>
+                </tr>
+                <tr *ngIf="displayApps.length === 0">
+                  <td colspan="8" class="text-center text-muted py-3">No offered candidates found.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </app-search-pagination>
+      </div>
+    </div>
+  </div>
+</div>

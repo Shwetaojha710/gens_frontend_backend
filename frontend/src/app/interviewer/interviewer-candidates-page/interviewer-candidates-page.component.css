@@ -1,0 +1,49 @@
+:host {
+  display: block;
+}
+
+.page-shell {
+  padding: 24px;
+}
+
+.page-head,
+.data-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.page-head {
+  margin-bottom: 20px;
+}
+
+.page-head h3,
+.data-card-head h5 {
+  margin: 0;
+}
+
+.page-head p {
+  margin: 6px 0 0;
+  color: #6c7a91;
+}
+
+.filter-caption {
+  margin-top: 6px;
+  color: #7f8ca2;
+  font-size: 0.84rem;
+}
+
+.data-card {
+  border-radius: 22px;
+  padding: 22px;
+  background: #fff;
+  border: 1px solid rgba(207, 217, 232, 0.85);
+  box-shadow: 0 22px 48px rgba(42, 64, 94, 0.08);
+}
+
+.state-block {
+  padding: 28px 12px;
+  text-align: center;
+  color: #6c7a91;
+}

@@ -1,0 +1,136 @@
+<div class="authentication-wrapper authentication-cover">
+  <!-- Logo -->
+  <a href="" class="auth-cover-brand d-flex align-items-center gap-2">
+    <span class="app-brand-logo demo">
+      <span class="text-primary">
+        <img
+          src="../../../assets/img/logo/gens-logo-color.png"
+          alt="Company Logo"
+          width="30%"
+        />
+      </span>
+    </span>
+  </a>
+  <!-- /Logo -->
+
+  <div class="authentication-inner row m-0">
+    <!-- Left Section (Illustration) -->
+    <div class="d-none d-lg-flex col-lg-7 col-xl-8 align-items-center justify-content-center p-12 pb-2">
+      <img
+        src="../../../assets/img/bg-login/Hero.png"
+        class="auth-cover-illustration w-100"
+        alt="auth-illustration"
+      />
+      <img
+        alt="mask"
+        src="assets/img/illustrations/auth-basic-login-mask-light.png"
+        class="authentication-image d-none d-lg-block"
+      />
+    </div>
+
+    <!-- Login Form Section -->
+    <div class="d-flex col-12 col-lg-5 col-xl-4 align-items-center authentication-bg position-relative py-sm-12 px-12 py-6">
+      <div class="w-px-400 mx-auto pt-12 pt-lg-0">
+        <h4 class="mb-1">Welcome to GENS HR Payroll</h4>
+        <p class="mb-5">Update Password</p>
+
+        <form
+          id="formAuthentication"
+          class="mb-5"
+          [formGroup]="form"
+          (ngSubmit)="login()"
+        >
+
+          <!-- Tenant ID -->
+          <div class="form-floating form-floating-outline mb-4">
+            <input
+              type="text"
+              class="form-control"
+              id="company_code"
+              formControlName="tenantId"
+              [ngClass]="{ 'is-invalid': isInvalid('tenantId') }"
+              placeholder="Enter your company code"
+              autofocus
+            />
+            <label for="company_code">Company Code</label>
+            <div class="invalid-feedback">Company code is required.</div>
+          </div>
+
+          <!-- Email -->
+          <div class="form-floating form-floating-outline mb-4">
+            <input
+              type="email"
+              class="form-control"
+              id="email"
+              formControlName="email"
+              [ngClass]="{ 'is-invalid': isInvalid('email') }"
+              placeholder="Enter your email"
+            />
+            <label for="email">Email</label>
+            <div class="invalid-feedback">Enter a valid email address.</div>
+          </div>
+
+          <!-- Password -->
+          <!-- <div class="form-floating form-floating-outline mb-4">
+            <input
+              type="password"
+              class="form-control"
+              id="password"
+              formControlName="password"
+              [ngClass]="{ 'is-invalid': isInvalid('password') }"
+              placeholder="Enter your password"
+            />
+            <label for="password">Update Password </label>
+            <span class="ri ri-eye-line float-end mt-1"></span>
+            <div class="invalid-feedback">Password is required.</div>
+          </div> -->
+          <div class="form-floating form-floating-outline mb-4 position-relative">
+  <input
+    [type]="passwordVisible ? 'text' : 'password'"
+    class="form-control"
+    id="password"
+    formControlName="password"
+    [ngClass]="{ 'is-invalid': isInvalid('password') }"
+    placeholder="Enter your password"
+  />
+  <label for="password">Password</label>
+
+  <!-- Eye Icon -->
+  <span
+    class="ri"
+    [ngClass]="passwordVisible ? 'ri-eye-off-line' : 'ri-eye-line'"
+    (click)="passwordVisible = !passwordVisible"
+    style="cursor: pointer; position: absolute; top: 50%; right: 12px; transform: translateY(-50%);"
+  ></span>
+
+  <div class="invalid-feedback">Password is required.</div>
+</div>
+
+          <!-- Remember + Forgot -->
+          <!-- <div class="mb-4 d-flex justify-content-between mt-4">
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" id="remember-me" />
+              <label class="form-check-label" for="remember-me">Remember Me</label>
+            </div>
+            <a href="#" class="float-end mb-1 mt-2">
+              <span>Forgot Password?</span>
+            </a>
+          </div> -->
+
+          <!-- Submit Button -->
+          <button type="submit" class="btn btn-primary d-grid w-100" [disabled]="form.invalid">
+           Update
+          </button>
+        </form>
+
+        <!-- <p class="text-center">
+          <span>New on our platform?</span>
+          <a href="#">
+            <span> Create an account</span>
+          </a>
+        </p> -->
+      </div>
+    </div>
+    <!-- /Login -->
+  </div>
+</div>

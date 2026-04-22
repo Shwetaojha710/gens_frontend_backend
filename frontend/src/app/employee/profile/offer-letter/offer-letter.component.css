@@ -1,0 +1,134 @@
+.page {
+  width: 794px;
+  min-height: 1123px;
+  margin: auto;
+  /* padding: 40px; */
+  font-family: "Times New Roman", serif;
+  font-size: 14px;
+  color: #000;
+  background: #fff;
+  position: relative;
+    background-image: url('/assets/img/Letterhead-1.png'); /* your full image */
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+
+}
+.page-bg {
+  background-image: url('/assets/img/Letterhead-1.png');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* PRINT SETTINGS */
+@media print {
+  .page-bg {
+    height: 1123px;
+    width: 794px;
+      -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    background-image: url('/assets/img/Letterhead-1.png');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  }
+}
+
+/* Content on top of background */
+.content-layer {
+  position: absolute;
+  top: 120px;   /* adjust based on your design */
+  left: 50px;
+  right: 50px;
+
+  font-family: "Times New Roman", serif;
+  font-size: 14px;
+}
+/* HEADER */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  height: 50px;
+}
+
+.ref-date {
+  text-align: right;
+  font-size: 14px;
+}
+
+/* ADDRESS */
+.address {
+  margin-top: 30px;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+/* CONTENT */
+.salutation {
+  margin-top: 20px;
+}
+
+.content {
+  margin-top: 10px;
+  text-align: justify;
+  line-height: 1.6;
+}
+
+ol {
+  margin-left: 20px;
+}
+
+/* SIGNATURE */
+.signature-section {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 50px;
+}
+
+.sign {
+  height: 40px;
+}
+
+.accepted {
+  text-align: right;
+}
+
+/* FOOTER */
+.footer {
+  position: absolute;
+  bottom: 20px;
+  left: 40px;
+  right: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  border-top: 1px solid #ccc;
+  padding-top: 10px;
+}
+
+.footer img {
+  height: 40px;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #offer-doc, #offer-doc * {
+    visibility: visible;
+  }
+
+  #offer-doc {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}

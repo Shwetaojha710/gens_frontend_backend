@@ -1,0 +1,37 @@
+  <table class="header-table">
+    <tr>
+
+      <!-- LEFT SIDE -->
+      <td class="left">
+        <p class="highlight">{{personalDetails.firstName}}{{personalDetails.lastName}}</p>
+        <p>D/O {{personalDetails.fatherName}}</p>
+        <p class="highlight">{{personalDetails.permanentAddress}}</p>
+      </td>
+
+
+
+        <div class="row mb-2">
+    <div class="col-10">
+      <div class="d-flex gap-2 align-items-center">
+        <span class="w-20"> Date : </span> <input type="date" [(ngModel)]="personalDetails.date"
+          class="form-control w-80" />
+      </div>
+    </div>
+
+
+
+  </div>
+        <div class="row mb-2">
+    <div class="col-10">
+      <div class="d-flex gap-2 align-items-center">
+        <span class="w-20"> Ref No : </span> <input type="text" [(ngModel)]="personalDetails.ref_no"
+          class="form-control w-80" />
+      </div>
+    </div>
+
+
+
+  </div>
+
+    </tr>
+  </table>

@@ -1,0 +1,31 @@
+.text-success{
+  color: #0ead1c !important;
+}
+.text-danger{
+  color: #ab0b0b !important;
+}
+
+.text-primary{
+  color:#005495 !important
+}
+.text-orange{
+  color:#FF5722 !important
+}
+.text-fh{
+  color:#9d7a12 !important
+}
+
+.my-0 {
+    margin-block-start: 0 !important;
+    margin-block-end: 0 !important;
+}
+.mx-2 {
+    margin-inline-end: 0.5rem !important;
+    margin-inline-start: 0.5rem !important;
+}
+.m-3 {
+    margin: 0.75rem !important;
+}
+.justify-content-between {
+    justify-content: space-between !important;
+}

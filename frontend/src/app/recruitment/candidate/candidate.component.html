@@ -1,0 +1,222 @@
+<div class="candidate-page">
+  <div class="candidate-shell">
+    <div class="candidate-hero">
+      <div>
+        <span class="eyebrow">Candidate Application</span>
+        <h1>Apply for your next role in one clean step.</h1>
+        <p>
+          Upload your resume, share your core details, and we will automatically trigger ATS screening and send your confirmation email after submission.
+        </p>
+      </div>
+      <a routerLink="/Home" class="hero-link">Back to Home</a>
+    </div>
+
+    <div *ngIf="isLoadingJob" class="state-card">
+      <div class="loader-ring"></div>
+      <p>Loading job details...</p>
+    </div>
+
+    <div *ngIf="!isLoadingJob && invalidLinkMessage" class="state-card state-card-error">
+      <h2>Invalid Application Link</h2>
+      <p>{{ invalidLinkMessage }}</p>
+    </div>
+
+    <div *ngIf="!isLoadingJob && jobPosting" class="candidate-grid">
+      <section class="job-panel">
+        <div class="job-panel-head">
+          <div>
+            <span class="panel-kicker">Open Position</span>
+            <h2>{{ jobPosting?.job_title || jobPosting?.title || 'Job Opening' }}</h2>
+            <p>{{ jobPosting?.departmentData?.name || jobPosting?.department_name || 'Recruitment Team' }}</p>
+          </div>
+          <span class="job-status-pill" [ngClass]="getStatusClass(jobPosting?.status)">
+            {{ getStatusLabel(jobPosting?.status) }}
+          </span>
+        </div>
+
+        <div class="job-meta-grid">
+          <div class="job-meta-card">
+            <span>Location</span>
+            <strong>{{ jobPosting?.location || '-' }}</strong>
+          </div>
+          <div class="job-meta-card">
+            <span>Experience</span>
+            <strong>{{ jobPosting?.experience || '0' }} years</strong>
+          </div>
+          <div class="job-meta-card">
+            <span>Budget CTC</span>
+            <strong>{{ jobPosting?.budget_ctc || '-' }}</strong>
+          </div>
+          <div class="job-meta-card">
+            <span>Notice Period</span>
+            <strong>{{ jobPosting?.notice_period || '-' }} days</strong>
+          </div>
+        </div>
+
+        <div class="skill-block">
+          <h3>Skills Preferred</h3>
+          <div class="skill-list">
+            <span *ngFor="let skill of getSkillList(jobPosting?.skills)" class="skill-pill">{{ skill }}</span>
+            <span *ngIf="!getSkillList(jobPosting?.skills).length" class="muted-text">Skills will be shared during screening.</span>
+          </div>
+        </div>
+
+        <div class="description-block">
+          <h3>Job Description</h3>
+          <div class="jd-rendered" [innerHTML]="parseJobDescription(jobPosting?.job_description)"></div>
+        </div>
+
+        <div class="info-banner">
+          <div class="info-banner-icon">AI</div>
+          <div>
+            <strong>Automatic ATS workflow enabled</strong>
+            <p>Your submission triggers resume upload, ATS scan, duplicate-email validation, and confirmation email automatically.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="form-panel">
+        <div class="form-panel-head">
+          <div>
+            <span class="panel-kicker">Public Form</span>
+            <h2>Candidate Details</h2>
+          </div>
+          <span class="secure-pill">No login required</span>
+        </div>
+
+        <div *ngIf="!isJobOpen" class="job-closed-banner">
+          <h3>Applications are not open for this posting</h3>
+          <p>You can still review the role details, but new candidate submissions are disabled until the posting is published again.</p>
+        </div>
+
+        <div *ngIf="hasSubmitted" class="success-banner">
+          <h3>Application submitted</h3>
+          <p>Your resume has been uploaded successfully. ATS scanning has started, and a confirmation email is on its way.</p>
+        </div>
+
+        <form [formGroup]="applicationForm" (ngSubmit)="submitApplication()" novalidate>
+          <div class="form-grid">
+            <div class="field-group full-width">
+              <label for="candidateName">Full Name</label>
+              <input id="candidateName" type="text" class="field-input" formControlName="name" placeholder="Enter your full name" />
+              <small class="field-error" *ngIf="nameControl.touched && nameControl.invalid">Please enter your full name.</small>
+            </div>
+
+            <div class="field-group">
+              <label for="candidateEmail">Email Address</label>
+              <input
+                id="candidateEmail"
+                type="email"
+                class="field-input"
+                formControlName="email"
+                placeholder="you@example.com"
+                (input)="onEmailInput()"
+                (blur)="checkDuplicateEmail()"
+              />
+              <small class="field-helper" *ngIf="isCheckingDuplicate">Checking duplicate application...</small>
+              <small class="field-error" *ngIf="emailControl.touched && emailControl.hasError('required')">Email is required.</small>
+              <small class="field-error" *ngIf="emailControl.touched && emailControl.hasError('email')">Enter a valid email address.</small>
+              <small class="field-error" *ngIf="emailControl.touched && duplicateFound">This email has already been used for this posting.</small>
+            </div>
+
+            <div class="field-group">
+              <label for="candidatePhone">Phone Number</label>
+              <input
+                id="candidatePhone"
+                type="text"
+                class="field-input"
+                formControlName="phone"
+                placeholder="10 digit phone number"
+                inputmode="numeric"
+                maxlength="10"
+                (input)="onPhoneInput($event)"
+                (blur)="checkDuplicateMobile()"
+              />
+              <small class="field-helper" *ngIf="isCheckingDuplicatePhone">Checking duplicate application...</small>
+              <small class="field-error" *ngIf="phoneControl.touched && phoneControl.hasError('required')">Phone number is required.</small>
+              <small class="field-error" *ngIf="phoneControl.touched && phoneControl.hasError('pattern')">Phone number must be exactly 10 digits.</small>
+              <small class="field-error" *ngIf="phoneControl.touched && duplicatePhoneFound">This phone number has already been used for this posting.</small>
+            </div>
+
+            <div class="field-group">
+              <label for="candidateCompany">Current Company</label>
+              <input id="candidateCompany" type="text" class="field-input" formControlName="current_company" placeholder="Enter your current company" />
+            </div>
+
+            <div class="field-group full-width">
+              <label for="candidateSkills">Skills</label>
+              <input id="candidateSkills" type="text" class="field-input" formControlName="skills" placeholder="Angular, Node.js, Communication" />
+              <small class="field-helper">Add comma-separated skills.</small>
+            </div>
+
+            <div class="field-group">
+              <label for="candidateExperience">Total Experience (Years)</label>
+              <input id="candidateExperience" type="number" class="field-input" formControlName="experience" placeholder="2" />
+              <small class="field-error" *ngIf="experienceControl.touched && experienceControl.invalid">Enter your experience in years.</small>
+            </div>
+
+            <div class="field-group">
+              <label for="candidateCtc">Current CTC</label>
+              <input id="candidateCtc" type="number" class="field-input" formControlName="current_ctc" placeholder="6.5" />
+              <small class="field-error" *ngIf="currentCtcControl.touched && currentCtcControl.invalid">Enter your current CTC.</small>
+            </div>
+
+            <div class="field-group">
+              <label for="candidateExpectedCtc">Expected CTC</label>
+              <input id="candidateExpectedCtc" type="number" class="field-input" formControlName="expected_ctc" placeholder="8" />
+              <small class="field-error" *ngIf="expectedCtcControl.touched && expectedCtcControl.invalid">Enter a valid expected CTC.</small>
+            </div>
+
+            <div class="field-group full-width">
+              <label for="candidateNoticePeriod">Notice Period (Days)</label>
+              <input id="candidateNoticePeriod" type="number" class="field-input" formControlName="notice_period" placeholder="30" />
+              <small class="field-error" *ngIf="noticePeriodControl.touched && noticePeriodControl.invalid">Enter your notice period in days.</small>
+            </div>
+
+            <div class="field-group full-width">
+              <label for="candidateResume">Resume Upload</label>
+              <label class="upload-box" for="candidateResume">
+                <input id="candidateResume" type="file" accept=".pdf,.doc,.docx" (change)="onResumeSelected($event)" hidden />
+                <div class="upload-icon">
+                  <i class="ri-upload-cloud-2-line"></i>
+                </div>
+                <div>
+                  <strong>{{ selectedFileName || 'Upload your resume' }}</strong>
+                  <p>Accepted formats: PDF, DOC, DOCX. Maximum {{ maxResumeSizeMb }} MB.</p>
+                </div>
+              </label>
+            </div>
+
+            <div class="field-group full-width">
+              <label for="candidateCoverLetter">Cover Letter</label>
+              <textarea
+                id="candidateCoverLetter"
+                class="field-input field-textarea"
+                formControlName="cover_letter"
+                rows="5"
+                placeholder="Tell us why you are a good fit for this role"
+              ></textarea>
+              <small class="field-error" *ngIf="coverLetterControl.touched && coverLetterControl.invalid">Cover letter must be 2000 characters or less.</small>
+              <small class="field-helper">{{ coverLetterLength }} / 2000</small>
+            </div>
+          </div>
+
+          <div class="submit-strip">
+            <div class="submit-copy">
+              <strong>What happens next?</strong>
+              <p>We store your profile, create the application record, upload the resume, run ATS scan, and send email confirmation automatically.</p>
+            </div>
+            <button type="submit" class="submit-btn" [disabled]="!canSubmit">
+              {{ isSubmitting ? 'Submitting...' : 'Submit Application' }}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <footer class="candidate-footer">
+    <span>Candidate Application Portal</span>
+    <span>{{ currentYear }}</span>
+  </footer>
+</div>

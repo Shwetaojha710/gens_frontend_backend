@@ -1,0 +1,21 @@
+<div class="container-fluid ep-dash ep-dash--home ep-ep-placeholder">
+  <a routerLink="/employee-portal/dashboard" class="ep-ep-placeholder__back">
+    <i class="icon-base ri ri-arrow-left-line me-1"></i> Back to dashboard
+  </a>
+  <header class="ep-ep-placeholder__head mb-4">
+    <div class="ep-ep-placeholder__icon-wrap" aria-hidden="true">
+      <i class="icon-base ri" [ngClass]="icon"></i>
+    </div>
+    <div>
+      <p class="ep-dash-section__eyebrow mb-1">Employee portal</p>
+      <h4 class="mb-1 ep-ep-placeholder__title">{{ title }}</h4>
+      <p class="ep-dash__muted mb-0 small">{{ subtitle }}</p>
+    </div>
+  </header>
+
+  <div class="card ep-glass-card border-0 ep-ep-placeholder__card">
+    <div class="card-body">
+      <p class="mb-0 ep-ep-placeholder__body">{{ body }}</p>
+    </div>
+  </div>
+</div>

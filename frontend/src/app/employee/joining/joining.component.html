@@ -1,0 +1,704 @@
+<div class="container-fluid mt-5">
+  <div class="row mb-6" *ngIf="createFlag">
+    <div class="col-xxl">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center mb-0">
+          <span>Personal Details</span>
+          <button type="button" class="btn btn-xs btn-primary float-end" (click)="back()">
+            <i class="fa-solid fa-arrow-left"></i>&nbsp;back
+          </button>
+        </h5>
+
+
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-3">
+              <div class="form-group">
+                <label class="col-form-label fw-bold">First Name
+                  <span *ngIf="!updateFlag" style="color: red">*</span>
+                </label>
+                <input type="text" class="form-control" placeholder="Enter First Name"
+                  [(ngModel)]="personalDetails.firstName" name="firstName" required #firstNameRef="ngModel" />
+                <small class="text-danger" *ngIf=" updateFlag==false && firstNameRef.invalid && firstNameRef.touched">
+                  Enter valid First Name
+                </small>
+              </div>
+            </div>
+
+
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Last Name
+                <span *ngIf="!updateFlag" style="color: red"> *</span>
+              </label>
+              <input type="text" class="form-control" placeholder="Enter Last Name"
+                [(ngModel)]="personalDetails.lastName" name="lastName" required #lastNameRef="ngModel" />
+              <small class="text-danger" *ngIf="updateFlag==false && lastNameRef.invalid && lastNameRef.touched">
+                Enter valid Last Name
+              </small>
+            </div>
+
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Phone Number
+                <span *ngIf="!updateFlag" style="color: red"> *</span>
+              </label>
+              <input type="tel" class="form-control" placeholder="Enter Phone Number"
+                [(ngModel)]="personalDetails.mobile" name="phoneNumber" pattern="^[6-9]\d{9}$" maxlength="10" required
+                #mobileRef="ngModel" (keypress)="
+                  preventMoreThanTenDigits($event, personalDetails.mobile)
+                " />
+
+              <small class="text-danger" *ngIf="updateFlag==false && mobileRef.invalid && mobileRef.touched">
+                Enter valid 10-digit Mobile number
+              </small>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Alternate Phone Number
+                <!-- <span *ngIf="!updateFlag" style="color: red"> * </span> -->
+              </label>
+              <input type="tel" class="form-control" placeholder="Enter Phone Number"
+                [(ngModel)]="personalDetails.alternateMobile" name="phoneNumber" pattern="^[6-9]\d{9}$" maxlength="10"
+                required #alternateMobileRef="ngModel" (keypress)="
+                  preventMoreThanTenDigits(
+                    $event,
+                    personalDetails.alternateMobile
+                  )
+                " />
+
+              <small class="text-danger"
+                *ngIf="updateFlag==false && alternateMobileRef.invalid && alternateMobileRef.touched">
+                Enter valid 10-digit Alternate Mobile number
+              </small>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Gender
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+              <ng-select [items]="genderList" bindLabel="label" bindValue="value" [(ngModel)]="personalDetails.gender"
+                [multiple]="false" placeholder="Select Gender" name="status" id="select2Danger">
+              </ng-select>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Email
+                <span *ngIf="!updateFlag" style="color: red"> *</span>
+              </label>
+
+              <input type="email" class="form-control" placeholder="Enter Email" [(ngModel)]="personalDetails.email"
+                name="email" required  #emailRef="ngModel" />
+              <small class="text-danger" *ngIf="updateFlag==false && emailRef.invalid && emailRef.touched">
+                Enter valid Email
+              </small>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Aadhaar Number
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+              <input type="text" class="form-control" placeholder="Enter Aadhaar Number" maxlength="14"
+                [(ngModel)]="personalDetails.adhaarNo" name="aadhaarNumber" (input)="onAadhaarInput($event, 'space')"
+                (keypress)="adhaarvalidaiton($event, personalDetails.mobile)" pattern="^\d{4}\s\d{4}\s\d{4}$"
+                #aadhaarRef="ngModel" />
+              <small class="text-danger" *ngIf="updateFlag==false && aadhaarRef.invalid && aadhaarRef.touched">
+                Enter valid 12-digit Aadhaar number
+              </small>
+            </div>
+
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">PAN
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+              <input type="text" class="form-control text-uppercase" placeholder="Enter PAN Number"
+                [(ngModel)]="personalDetails.panNo" (ngModelChange)="toUppercase()" name="pan"
+                pattern="^[A-Z]{5}[0-9]{4}[A-Z]{1}$" maxlength="10"  #panRef="ngModel" />
+              <small class="text-danger" *ngIf="updateFlag==false && panRef.invalid && panRef.touched">
+                Enter valid PAN (e.g., ABCDE1234F)
+              </small>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Blood Group
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+              <input type="text" class="form-control" placeholder="Enter Blood Group"
+                [(ngModel)]="personalDetails.bloodGroup" name="bloodGroup"  #bloodGroupRef="ngModel" />
+              <small class="text-danger" *ngIf="updateFlag==false && bloodGroupRef.invalid && bloodGroupRef.touched">
+                Enter valid First Name
+              </small>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Marital Status
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+              <ng-select [items]="maritalStatusList" bindLabel="label" bindValue="value"
+                [(ngModel)]="personalDetails.martialStatus" placeholder="Select Marital Status" name="maritalStatus"
+                id="select2Danger">
+              </ng-select>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Joining Date
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+              <input type="date" class="form-control" placeholder="Select Joining Date"
+                [(ngModel)]="personalDetails.joiningDate" name="joiningDate"  #joiningDateRef="ngModel" />
+              <small class="text-danger" *ngIf="updateFlag==false && joiningDateRef.invalid && joiningDateRef.touched">
+                Select valid joining Date
+              </small>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Father Name
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+              <input type="text" class="form-control" placeholder="Enter Father Name"
+                [(ngModel)]="personalDetails.fatherName" name="fatherName"  #fatherNameRef="ngModel" />
+              <small class="text-danger" *ngIf="updateFlag==false && fatherNameRef.invalid && fatherNameRef.touched">
+                Enter valid Father Name
+              </small>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Mother Name
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+              <input type="text" class="form-control" placeholder="Enter Mother Name"
+                [(ngModel)]="personalDetails.motherName" name="motherName"  #motherNameRef="ngModel" />
+              <small class="text-danger" *ngIf="updateFlag==false && motherNameRef.invalid && motherNameRef.touched">
+                Enter valid Mother Name
+              </small>
+            </div>
+              <div class="col-md-3">
+              <label class="col-form-label fw-bold">Guarantor Name
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+              <input type="text" class="form-control" placeholder="Enter Guarantor Name"
+                [(ngModel)]="personalDetails.guarantorName" name="guarantorName"  #guarantorNameRef="ngModel" />
+              <small class="text-danger" *ngIf="updateFlag==false && guarantorNameRef.invalid && guarantorNameRef.touched">
+                Enter valid Guarantor Name
+              </small>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Nationality
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+              <input type="text" class="form-control" placeholder="Enter Nationality"
+                [(ngModel)]="personalDetails.nationality" name="nationality"  #nationalityRef="ngModel" />
+              <small class="text-danger" *ngIf="updateFlag==false && nationalityRef.invalid && nationalityRef.touched">
+                Enter valid NationalityRef
+              </small>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">DOB
+                <span *ngIf="!updateFlag" style="color: red"> *</span>
+              </label>
+              <input type="date" class="form-control" [(ngModel)]="personalDetails.dateOfBirth" [max]="maxDate"
+                name="dateOfBirth"  #dateOfBirthRef="ngModel" (ngModelChange)="calculateAge($event)" />
+
+              <small class="text-danger" *ngIf="updateFlag==false && dateOfBirthRef.invalid && dateOfBirthRef.touched">
+                Enter valid DOB
+              </small>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Age
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+              <input type="number" class="form-control" placeholder="Enter Age" [(ngModel)]="personalDetails.age"
+                name="age"  #ageRef="ngModel" disabled />
+              <small class="text-danger" *ngIf="updateFlag==false && ageRef.invalid && ageRef.touched">
+                Enter valid Age
+              </small>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold"> Select Branch
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+              <ng-select [items]="branchList" bindLabel="name" bindValue="id" placeholder="Select Branch"
+                class=" me-sm-2 " name="branch" [(ngModel)]="personalDetails['branchId']"
+                (ngModelChange)="onBranchChange($event)" #branchRef="ngModel">
+              </ng-select>
+
+              <small class="text-danger" *ngIf="branchRef.invalid && branchRef.touched">
+                Select Branch
+              </small>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Shift
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+              <ng-select [items]="shift" bindLabel="label" bindValue="value" [(ngModel)]="personalDetails['shift_id']"
+                [multiple]="false" placeholder="Select shift" name="country" id="select2Danger" #shiftRef="ngModel">
+              </ng-select>
+              <small class="text-danger" *ngIf="updateFlag==false && shiftRef.invalid && shiftRef.touched">
+                Select shift
+              </small>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Department
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+              <ng-select [items]="departmentDD" bindLabel="label" bindValue="value"
+                [(ngModel)]="personalDetails['departmentId']" [multiple]="false" placeholder="Select Department"
+                name="country" id="select2Danger" #departmentRef="ngModel" (change)="getDesignation($event)">
+              </ng-select>
+              <small class="text-danger" *ngIf="departmentRef.invalid && departmentRef.touched">
+                Select Department
+              </small>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Designation
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+              <ng-select [items]="designationDD" bindLabel="label" bindValue="value"
+                [(ngModel)]="personalDetails['designationId']" [multiple]="false" placeholder="Select Designation"
+                name="country" id="select2Danger" #designationRef="ngModel">
+              </ng-select>
+              <small class="text-danger" *ngIf="designationRef.invalid && designationRef.touched">
+                Select Designation
+              </small>
+            </div>
+
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Employment Type
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+              <ng-select [items]="employmentTypes" bindLabel="label" bindValue="value"
+                [(ngModel)]="personalDetails['empType']" [multiple]="false" placeholder="Select Employment Types"
+                name="country" id="select2Danger">
+              </ng-select>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Role
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+              <ng-select [items]="role" bindLabel="label" bindValue="value" [(ngModel)]="personalDetails['role']"
+                [multiple]="false" placeholder="Select Role" name="role" id="select2Danger">
+              </ng-select>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Reporting Person
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+              <ng-select [items]="employeeList" bindLabel="label" bindValue="value"
+                [(ngModel)]="personalDetails['reportingPersonId']" [multiple]="false"
+                placeholder="Select Employment Types" name="country" id="select2Danger">
+              </ng-select>
+            </div>
+
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Country
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+              <ng-select [items]="countryList" bindLabel="label" bindValue="value"
+                [(ngModel)]="personalDetails['country']" [multiple]="false" placeholder="Select country" name="country"
+                id="select2Danger" (change)="getstates($event)">
+              </ng-select>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">PIN Code
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+           <input
+  type="text"
+  class="form-control"
+  placeholder="Enter PIN Code"
+  [(ngModel)]="personalDetails.pinCode"
+  name="pinCode"
+  maxlength="6"
+  (input)="personalDetails.pinCode?.length === 6 && getStateDistrict(personalDetails.pinCode)"
+/>
+
+              <!-- <small class="text-danger" *ngIf="pinCodeRef.invalid && pinCodeRef.touched">
+                Please enter a valid 6-digit PIN code.
+              </small> -->
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">State
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+                 <input type="text" class="form-control" placeholder="Enter state"
+                  [(ngModel)]="personalDetails['state']" name="state"  #stateRef="ngModel" disabled="true"/>
+              <!-- <ng-select [items]="states" bindLabel="label" bindValue="value" [(ngModel)]="personalDetails['state']"
+                [multiple]="false" placeholder="Select state" name="state" id="select2Danger"
+                (change)="getcity($event)">
+              </ng-select> -->
+            </div>
+
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">City
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+               <input type="text" class="form-control" placeholder="Enter City"
+                  [(ngModel)]="personalDetails['city']" name="city"  #cityRef="ngModel"  disabled="true" />
+              <!-- <ng-select [items]="cities" bindLabel="label" bindValue="value" [(ngModel)]="personalDetails['city']"
+                [multiple]="false" placeholder="Select City" name="city" id="select2Danger">
+              </ng-select> -->
+            </div>
+
+            <div class="col-md-3">
+              <div class="form-group">
+                <label class="col-form-label fw-bold">Employee Code
+                  <!-- <span *ngIf="!updateFlag" style="color: red">*</span> -->
+                </label>
+                <input type="text" class="form-control" placeholder="Enter Employee Code"
+                  [(ngModel)]="personalDetails.empCode" name="firstName"  #firstNameRef="ngModel" />
+                <small class="text-danger" *ngIf="firstNameRef.invalid && firstNameRef.touched">
+                  Enter valid First Name
+                </small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="col-form-label fw-bold">Permanent Address
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+              <textarea class="form-control" rows="4" placeholder="Enter Permanent Address"
+                [(ngModel)]="personalDetails.permanentAddress" name="address"></textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="col-form-label fw-bold">Current Address
+                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+              </label>
+              <textarea class="form-control" rows="4" placeholder="Enter Current Address"
+                [(ngModel)]="personalDetails.currentAddress" name="address"></textarea>
+            </div>
+            <div class="col-4" *ngIf="updateFlag">
+              <label for="defaultFormControlInput" class="form-label">Status</label>
+              <ng-select [items]="status" bindLabel="label" bindValue="value" [(ngModel)]="personalDetails['status']"
+                [multiple]="false" placeholder="Select Status" name="status" id="select2Danger">
+              </ng-select>
+            </div>
+          </div>
+          <br />
+          <!-- Submit -->
+          <div class="row mb-4 justify-content-end">
+            <div class="col-sm-12">
+              <button *ngIf="updateFlag == false && createFlag == true" type="button" class="btn btn-primary"
+                (click)="submitForm()">
+                Submit
+              </button>
+              <button *ngIf="updateFlag == true && createFlag == true" type="button" class="btn btn-primary"
+                (click)="updateform()">
+                Update
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!--Header-->
+  <div *ngIf="!createFlag"
+    class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-6 row-gap-4">
+    <div class="d-flex flex-column justify-content-center">
+      <h5 class="mb-1">Employee List</h5>
+      <nav>
+        <ol class="breadcrumb mb-0">
+          <li class="breadcrumb-item">
+            <a href="#"><i class="ri ri-home-smile-line"></i></a>
+          </li>
+          <li class="breadcrumb-item active" aria-current="page">
+            Employee List
+          </li>
+        </ol>
+      </nav>
+    </div>
+    <!-- <div class="d-flex align-content-center flex-wrap gap-4">
+        <button class="btn btn-outline-secondary waves-effect">Discard</button>
+        <button class="btn btn-outline-primary waves-effect">Save draft</button>
+        <button type="submit" class="btn btn-primary waves-effect waves-light">Publish product</button>
+      </div> -->
+  </div>
+  <!--Header-->
+
+  <div class="row g-3 mb-6" *ngIf="!createFlag">
+    <div class="col-lg-3 col-sm-6"  (click)="checkTotalEmp()">
+
+
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-2">
+            <div class="avatar me-4">
+              <span class="avatar-initial rounded-3 bg-label-primary"><i class="icon-base ri ri-user-star-line icon-24px"></i></span>
+            </div>
+            <h4 class="mb-0 text-primary">{{cardData?.['totalEmployee']}}</h4>
+          </div>
+          <h6 class="mb-0 fw-normal">Total Employee</h6>
+          <p class="mb-0">
+            <span class="me-1 fw-medium">+2 </span>
+            <small class="text-body-secondary">New Employee added last months</small>
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-sm-6" (click)="checkActiveStatus()">
+
+
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-2">
+            <div class="avatar me-4">
+              <span class="avatar-initial rounded-3 bg-label-success"><i class="icon-base ri ri-pie-chart-2-line icon-24px"></i></span>
+            </div>
+            <h4 class="mb-0 text-success">{{cardData?.['ActiveEmployee']}}</h4>
+          </div>
+          <h6 class="mb-0 fw-normal">Total Active Employee</h6>
+          <p class="mb-0">
+            <span class="me-1 fw-medium">+2 </span>
+            <small class="text-body-secondary">New Employee added last months</small>
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-sm-6" (click)="checkStatus()">
+
+
+
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-2">
+            <div class="avatar me-4">
+              <span class="avatar-initial rounded-3 bg-label-danger"><i class="icon-base ri ri-pie-chart-2-line icon-24px"></i></span>
+            </div>
+            <h4 class="mb-0 text-danger">{{cardData?.['InactiveEmployee']}}</h4>
+          </div>
+          <h6 class="mb-0 fw-normal">Total InActive Employee</h6>
+          <p class="mb-0">
+            <span class="me-1 fw-medium">-5 </span>
+            <small class="text-body-secondary">In active Employees last months</small>
+          </p>
+        </div>
+      </div>
+
+
+    </div>
+    <div class="col-lg-3 col-sm-6" (click)="checknewJoiner()">
+
+ <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-2">
+            <div class="avatar me-4">
+              <span class="avatar-initial rounded-3 bg-label-info"><i class="icon-base ri ri-pie-chart-2-line icon-24px"></i></span>
+            </div>
+            <h4 class="mb-0 text-info">{{cardData?.['newJoiners']}}</h4>
+          </div>
+          <h6 class="mb-0 fw-normal">Total New Joiners Employee</h6>
+          <p class="mb-0">
+            <span class="me-1 fw-medium">+1 </span>
+            <small class="text-body-secondary">New Employee added last months</small>
+          </p>
+        </div>
+      </div>
+
+
+    </div>
+  </div>
+
+  <div class="row mb-6" *ngIf="!createFlag">
+    <div class="col-md">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span style="font-weight: bold">Employee List</span>
+          <button *ngIf="createFlag == false" type="button" class="btn btn-xs btn-primary float-end"
+            (click)="opencreate()">
+            <i class="fa-solid fa-plus"></i>&nbsp;Add
+          </button>
+        </div>
+
+        <app-search-pagination [totalItems]="employees.length" [pageSize]="itemsPerPage" [currentPage]="currentPage"
+          (search)="onSearch($event)" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)">
+          <div class="table-responsive">
+            <table class="table dataTable">
+              <thead>
+                <tr>
+                  <th style="width: 10px!important;">SI.NO </th>
+
+                  <th>Name / Designation</th>
+                  <th>Gender</th>
+                  <th>Phone / Email</th>
+                  <th>Aadhaar No.</th>
+                  <th>DOB</th>
+                  <th>Status</th>
+                  <th>Location</th>
+                  <th>Atten.</th>
+                  <th>All Time Atten.</th>
+                  <th>Actions</th>
+                </tr>
+
+              </thead>
+              <tbody class="table-border-bottom-0">
+                <tr *ngFor="let item of filteredDesignation; let i = index">
+                  <td style="width: 10px!important;">{{item?.si_no}}</td>
+
+                  <td>
+                    <div class="d-flex align-items-center" (click)="view(item)">
+                      <div class="avatar avatar-sm me-4">
+
+                        <img [src]="item?.profileImage" width="100" height="auto" alt="Avatar" class="rounded-circle" />
+
+                      </div>
+                      <div>
+                        <h6 class="mb-0 text-truncate link-primary">
+                          {{ item["firstName"] }} {{ item["lastName"] }}
+                        </h6>
+                        <small class="text-truncate">{{item?.['designation']}}</small>
+
+                          <br>
+                        <small class="text-truncate">{{item?.empCode}}</small>
+
+
+
+
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                   <small class="text-truncate">{{item?.gender}}</small>
+
+                  </td>
+                  <td>
+                    {{ item["mobile"] }}<br><small class="text-truncate">  {{ item["email"] }}</small>
+                  </td>
+                  <td>
+                    {{ item["adhaarNo"] }}
+                  </td>
+                  <td>
+                    {{ item["dateOfBirth"] | date : "dd-MM-yyyy" }}
+                  </td>
+
+                  <td>
+                       <span
+                    class="badge badge-outline-success px-2"
+                    [ngClass]="getUserStatusClass(item.status)"
+                  >
+                    {{ item.status =='active' ? 'Active' : 'InActive' }}
+                  </span>
+                  </td>
+                  <td>
+                       <span
+                    class="badge badge-outline-success px-2"
+                    [ngClass]="getStatusClass(item.isLocation)"
+                  >
+                    {{ item.isLocation ? 'Active' : 'Inactive' }}
+                  </span>
+                  </td>
+                  <td>
+                      <span
+                    class="badge badge-outline-success px-2"
+                    [ngClass]="getStatusClass(item.isofflineAtt)"
+                  >
+                    {{ item.isofflineAtt ? 'Active' : 'Inactive' }}
+                  </span>
+                  </td>
+                  <td>
+                     <span
+                    class="badge badge-outline-success px-2"
+                    [ngClass]="getStatusClass(item.isofflineAllTimeAtt)"
+                  >
+                   {{ item.isofflineAllTimeAtt ? 'Active' : 'Inactive' }}
+                  </span>
+
+                    <!-- {{ item.isofflineAllTimeAtt ? 'Active' : 'Inactive' }} -->
+                  </td>
+                  <td>
+
+                     <button type="button" class="badge badge-center bg-label-primary" title="All Time Attendance"
+                      (click)="enableDisableLoc(item,'attendanceAllTime')">
+                      <!-- Attendance All Time -->
+                      <i class="fa-solid fa-calendar-check"></i>
+                    </button>&nbsp;
+
+                    <button type="button" class="badge badge-center bg-label-warning" title="Attendance"
+                      (click)="enableDisableLoc(item,'attendance')">
+                      <!-- Offline Attendance -->
+
+<!--                       <i class="fa fa-clock"></i> -->
+
+                      <i class="fa-regular fa-clock"></i>
+                      <!-- <i class="fas fa-location"></i> -->
+
+                    </button>&nbsp;
+                    <button type="button" class="badge badge-center bg-label-primary"  title="Location"
+                      (click)="enableDisableLoc(item,'location')">
+                      <i class="fas fa-location"></i></button>&nbsp;
+                    <button type="button" class="badge badge-center bg-label-secondary"  title="View Details" (click)="view(item)">
+                      <i class="far fa-eye"></i></button>&nbsp;
+                    <button type="button" class="badge badge-center bg-label-info"  title="Update" (click)="update(item)">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    &nbsp;
+                    <button type="button" class="btn btn-sm btn-outline-danger"  title="Delete" (click)="delete(item)">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </app-search-pagination>
+
+        <!-- <app-search-pagination *ngIf="inActiveFlag" [totalItems]="employees.length" [pageSize]="itemsPerPage" [currentPage]="currentPage"
+          (search)="onSearch($event)" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)">
+          <table class="table table-striped dataTable">
+            <thead>
+              <tr>
+                <th>SI.NO </th>
+
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Aadhaar Number</th>
+                <th>Date of Birth</th>
+                <th>Gender</th>
+                <th>Actions</th>
+              </tr>
+
+            </thead>
+            <tbody class="table-border-bottom-0">
+              <tr *ngFor="let item of filteredDesignation; let i = index">
+                <td>{{item?.si_no}}</td>
+
+                <td>
+                  <div class="d-flex align-items-center" (click)="view(item)">
+                    <div class="avatar avatar-sm me-4">
+
+                      <img [src]="item?.profileImage" width="100" height="auto" alt="Avatar" class="rounded-circle" />
+
+                    </div>
+                    <div>
+                      <h6 class="mb-0 text-truncate link-primary">
+                        {{ item["firstName"] }} {{ item["lastName"] }}
+                      </h6>
+                      <small class="text-truncate">{{item?.['designation']}}</small>
+                      <small class="text-truncate">{{item?.empCode}}</small>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  {{ item["email"] }}
+                </td>
+                <td>
+                  {{ item["mobile"] }}
+                </td>
+                <td>
+                  {{ item["adhaarNo"] }}
+                </td>
+                <td>
+                  {{ item["dateOfBirth"] | date : "dd-MM-yyyy" }}
+                </td>
+                <td>
+                  {{ item["gender"] }}
+                </td>
+                <td>
+                  <button type="button" class="badge badge-center bg-label-secondary" (click)="view(item)">
+                    <i class="far fa-eye"></i></button>&nbsp;
+                  <button type="button" class="badge badge-center bg-label-primary" (click)="update(item)">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  &nbsp;
+                  <button type="button" class="btn btn-sm btn-outline-danger" (click)="delete(item)">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </app-search-pagination> -->
+
+      </div>
+    </div>
+  </div>
+</div>

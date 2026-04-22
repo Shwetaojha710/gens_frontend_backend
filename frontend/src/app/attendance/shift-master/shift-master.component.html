@@ -1,0 +1,257 @@
+<div class="container-fluid  mt-5">
+  <div class="row mb-6" *ngIf="createFlag">
+    <div class="col-md">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center">
+          <span>Shift</span>
+          <button type="button" class="btn btn-xs btn-primary float-end" (click)="back()">
+            <i class="fa-solid fa-arrow-left"></i>&nbsp;back
+          </button>
+        </h5>
+
+        
+        <div class="card-body">
+          <div class="row">
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-4">
+              <label for="defaultFormControlInput" class="form-label">Type</label>
+              <ng-select [items]="status" bindLabel="label" bindValue="value" [(ngModel)]="obj['shift']"
+                [multiple]="false" placeholder="Select Shift Type" name="status" id="select2Danger">
+              </ng-select>
+            </div>
+          </div>
+
+          <div class="row mt-4">
+            <div class="col-12">
+              <div class="table-responsive">
+                <table class="table table-bordered">
+                <thead>
+                  <tr>
+                    <th scope="col">SI.No</th>
+                    <th scope="col">Day</th>
+                    <th scope="col">Start Time</th>
+                    <th scope="col">End Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of weekArr; let i = index">
+                    <th scope="row">{{ i + 1 }}</th>
+                    <td>{{ item["day_of_week"] }}</td>
+                    <td>
+                      <input class="form-control" type="time" [(ngModel)]="item['startTime']" />
+                    </td>
+                    <td>
+                      <input class="form-control" type="time" [(ngModel)]="item['endTime']" />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-12 mt-2">
+              <button *ngIf="createFlag && updateFlag == false" type="button"
+                class="btn btn-sm btn-primary waves-effect waves-light" (click)="onSubmit()">
+                Submit
+              </button>
+              <button *ngIf="updateFlag" type="button" class="btn btn-sm btn-primary waves-effect waves-light"
+                (click)="updatedata()">
+                Update
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row mb-6">
+    <div class="col-md">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center">
+          <span>Shift List</span>
+          <button *ngIf="createFlag == false" type="button" class="btn btn-xs btn-primary float-end"
+            (click)="opencreate()">
+            <i class="fa-solid fa-plus"></i>&nbsp;Add
+          </button>
+        </h5>
+
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-stripped table-bordered">
+              <thead>
+                <tr>
+                  <th>Shift Type</th>
+                  <th colspan="8" style="text-align: center">Day and Timing</th>
+                </tr>
+                <tr>
+                  <th>Crew</th>
+                  <th>Monday</th>
+                  <th>Tuesday</th>
+                  <th>Wednesday</th>
+                  <th>Thursday</th>
+                  <th>Friday</th>
+                  <th>Saturday</th>
+                  <th>Sunday</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+
+                <tr *ngFor="let shiftGroup of shiftList">
+                  <td>{{ shiftGroup.shift }}</td>
+                  <td *ngFor="let day of weekDays; let i = index">
+                    <span style="font-size: 12px;">
+                      {{ shiftGroup.shifts[i]?.is_week_off == "Working"
+                      ? (formatTime(shiftGroup.shifts[i]?.startTime) + " to " +
+                      formatTime(shiftGroup.shifts[i]?.endTime))
+                      : "Week Off" }}
+
+                    </span>
+                    <br>
+                    <span class="badge badge-outline-success  overflow-hidden px-2"
+                      [ngClass]="getStatusClass(shiftGroup.shifts[i]?.status)">
+                      {{ shiftGroup.shifts[i]?.status }}
+                    </span>
+                  </td>
+                  <td>
+                    <button type="button" class="badge badge-center bg-label-primary" (click)="update(shiftGroup)">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    &nbsp;
+                    <button type="button" class="btn btn-sm btn-outline-danger" (click)="delete(shiftGroup)">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- <table class="table table-stripped">
+          <thead class="text-center">
+            <tr>
+              <th rowspan="2" style="vertical-align: middle">S.No.</th>
+              <th rowspan="2" style="vertical-align: middle">Shift Type</th>
+              <th colspan="5" style="vertical-align: middle">Days & Timing</th>
+              <th rowspan="2" style="vertical-align: middle">Actions</th>
+            </tr>
+            <tr>
+              <th style="text-align: right">Day</th>
+              <th style="text-align: right">Start Time</th>
+              <th style="text-align: right">End Time</th>
+              <th style="text-align: right">Week OFF</th>
+              <th style="text-align: center">Status</th>
+            </tr>
+          </thead>
+          <tbody class="text-center">
+            <ng-container *ngFor="let item of shiftList; let i = index">
+              <tr>
+                <th scope="row">{{ i + 1 }}</th>
+                <td>{{ item.shift }}</td>
+                <td colspan="5" style="padding: 0px">
+                  <table class="table table-bordered">
+                    <tbody class="text-center">
+                      <tr *ngFor="let item1 of item.shifts">
+                        <td>{{ item1.day_of_week }}</td>
+                        <td>{{ item1.startTime }}</td>
+                        <td>{{ item1.endTime }}</td>
+                        <td>
+                          <span class="badge bg-label-primary overflow-hidden px-2"
+                            [ngClass]="getStatusClass(item1.is_week_off)">
+                            {{ item1.is_week_off }}
+                          </span>
+                        </td>
+                        <td>
+                          <span class="badge bg-label-success  overflow-hidden px-2"
+                            [ngClass]="getStatusClass(item1.status)">
+                            {{ item1.status }}
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </td>
+
+                <td>
+                  <button type="button" class="btn btn-outline-success btn-sm" (click)="update(item)">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  &nbsp;
+                  <button type="button" class="btn btn-outline-danger btn-sm" (click)="delete(item)">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </td>
+              </tr>
+            </ng-container>
+          </tbody>
+        </table> -->
+
+        <!-- <div class="table-responsive text-nowrap">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>SI.No</th>
+                <th>Shift Type</th>
+                <th>Day Name</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Status</th>
+                <th>createdAt</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+         <tr *ngFor="let item of shiftList; let i = index">
+  <th scope="row">{{ i + 1 }}</th>
+  <td>{{ item["shift"] }}</td>
+  <td colspan="4"></td>
+  <td>{{ item["createdAt"] | date : "M/d/yy h:mm a" }}</td>
+  <td>
+    <button
+      type="button"
+      class="btn btn-outline-success btn-sm"
+      (click)="update(item)"
+    >
+      <i class="fas fa-edit"></i>
+    </button>
+    &nbsp;
+    <button
+      type="button"
+      class="btn btn-sm btn-outline-danger"
+      (click)="delete(item)"
+    >
+      <i class="fas fa-trash-alt"></i>
+    </button>
+  </td>
+</tr>
+
+
+<tr *ngFor="let item of shiftList">
+  <ng-container *ngFor="let item1 of item.shifts">
+    <tr>
+      <td></td>
+      <td colspan="1"></td>
+      <td>{{ item1["day_of_week"] }}</td>
+      <td>{{ item1["startTime"] }}</td>
+      <td>{{ item1["endTime"] }}</td>
+      <td>
+        <span
+          class="badge rounded overflow-hidden px-2"
+          [ngClass]="getStatusClass(item1['status'])"
+        >
+          {{ item1["status"] }}
+        </span>
+      </td>
+      <td colspan="2"></td>
+    </tr>
+  </ng-container>
+</tr>
+
+            </tbody>
+          </table>
+        </div> -->
+      </div>
+    </div>
+  </div>
+</div>

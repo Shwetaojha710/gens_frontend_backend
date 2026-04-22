@@ -1,0 +1,104 @@
+<aside class="vertical-navbar" [class.collapsed]="isCollapsed">
+  <div class="navbar-header">
+    <a class="brand-wrap" routerLink="/landing-home">
+      <img
+        [src]="companyLogo"
+        alt="Quaere"
+        class="brand-logo"
+        [class.brand-logo-collapsed]="isCollapsed"
+
+      />
+    </a>
+
+    <button class="toggle-btn" type="button" (click)="isCollapsed = !isCollapsed">
+      <i class="ri" [ngClass]="isCollapsed ? 'ri-menu-unfold-line' : 'ri-menu-fold-line'"></i>
+    </button>
+  </div>
+
+  <nav class="menu-shell">
+    <ul class="menu-inner">
+      <ng-container *ngFor="let menu of menuItems">
+        <li class="menu-item" [class.active]="menu['active']" [class.open]="menu['open']">
+          <a
+            *ngIf="!menu['children']"
+            class="menu-link"
+            [routerLink]="menu['link']"
+            routerLinkActive="active-link"
+          >
+            <span class="menu-icon-wrap">
+              <i class="menu-icon ri" [ngClass]="menu['icon']"></i>
+            </span>
+            <span class="menu-title" *ngIf="!isCollapsed">{{ menu['title'] }}</span>
+          </a>
+
+          <a
+            *ngIf="menu['children']"
+            class="menu-link menu-toggle"
+            href="javascript:void(0)"
+            (click)="toggleItem(menu)"
+          >
+            <span class="menu-icon-wrap">
+              <i class="menu-icon ri" [ngClass]="menu['icon']"></i>
+            </span>
+            <span class="menu-title" *ngIf="!isCollapsed">{{ menu['title'] }}</span>
+            <i
+              class="menu-arrow ri ri-arrow-right-s-line"
+              *ngIf="!isCollapsed"
+              [class.rotated]="menu['open']"
+            ></i>
+          </a>
+
+          <ul class="menu-sub" *ngIf="menu['children'] && menu['open'] && !isCollapsed">
+            <ng-container
+              *ngTemplateOutlet="renderSubmenu; context: { $implicit: menu.children }"
+            ></ng-container>
+          </ul>
+        </li>
+      </ng-container>
+    </ul>
+  </nav>
+
+  <div class="menu-footer" *ngIf="!isCollapsed">
+    <button type="button" class="logout-btn" (click)="logout()">
+      <i class="ri ri-logout-circle-r-line"></i>
+      <span>Logout</span>
+    </button>
+  </div>
+
+  <ng-template #renderSubmenu let-submenus>
+    <ng-container *ngFor="let sub of submenus">
+      <li class="menu-item sub-item" [class.active]="sub['active']" [class.open]="sub['open']">
+        <a
+          *ngIf="!sub['children']"
+          class="menu-link"
+          [routerLink]="sub['link']"
+          routerLinkActive="active-link"
+        >
+          <span class="menu-icon-wrap">
+            <i class="menu-icon ri" [ngClass]="sub['icon']"></i>
+          </span>
+          <span class="menu-title">{{ sub['title'] }}</span>
+        </a>
+
+        <a
+          *ngIf="sub['children']"
+          class="menu-link menu-toggle"
+          href="javascript:void(0)"
+          (click)="toggleItem(sub)"
+        >
+          <span class="menu-icon-wrap">
+            <i class="menu-icon ri" [ngClass]="sub['icon']"></i>
+          </span>
+          <span class="menu-title">{{ sub['title'] }}</span>
+          <i class="menu-arrow ri ri-arrow-right-s-line" [class.rotated]="sub['open']"></i>
+        </a>
+
+        <ul class="menu-sub nested-sub" *ngIf="sub['children'] && sub['open']">
+          <ng-container
+            *ngTemplateOutlet="renderSubmenu; context: { $implicit: sub.children }"
+          ></ng-container>
+        </ul>
+      </li>
+    </ng-container>
+  </ng-template>
+</aside>

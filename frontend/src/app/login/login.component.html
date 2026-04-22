@@ -1,0 +1,186 @@
+<div class="authentication-wrapper authentication-cover">
+  <div class="authentication-inner row m-0"
+    style="background-image: url('/assets/img/bg-login/Login1.png');background-size: cover;background-repeat: no-repeat;background-position: center;z-index: 0;">
+
+    <!-- Left Section (Illustration) -->
+    <div class="d-none d-lg-flex col-lg-7 col-xl-8 align-items-center justify-content-center p-12 pb-2">
+      <img src="../../../assets/img/bg-login/Hero.png" class="auth-cover-illustration w-100" alt="auth-illustration" />
+      <img alt="mask" src="assets/img/illustrations/auth-basic-login-mask-light.png"
+        class="authentication-image d-none d-lg-block" />
+    </div>
+
+    <!-- Login Form Section -->
+    <div class="d-flex col-12 col-lg-5 col-xl-4 align-items-center justify-content-center position-relative py-sm-6 px-12 py-6"
+      style="background-image: url('/assets/img/bg-login/Rectangle3.png');background-size: cover;background-position: center;background-repeat: no-repeat;">
+
+      <div style="padding: 50px 40px;background: linear-gradient(110.78deg, rgba(255, 255, 255, 0.41) 7.01%, rgba(255, 255, 255, 0.01) 106.22%),linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));border-radius: 8px;height: 800px;z-index: 0;">
+        <div style="padding: 80px 40px;background: linear-gradient(110.78deg, rgba(255, 255, 255, 0.41) 7.01%, rgba(255, 255, 255, 0.01) 106.22%),linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));border-radius: 8px;height: 720px;z-index: 0;">
+          <div class="w-px-400 mx-auto pt-12 pt-lg-0" style="z-index: 999999;">
+
+            <!-- Logo -->
+            <div class="text-center mb-3">
+              <a href="" class="text-center mx-auto w-100">
+                <img src="../../../assets/img/logo/gens-logo-color.png" alt="Company Logo" width="30%" />
+              </a>
+            </div>
+
+            <!-- ========== EMPLOYEE LOGIN (default) ========== -->
+            <ng-container *ngIf="!showMobileLogin">
+              <h4 class="mb-1">Welcome to GENS HR Payroll</h4>
+              <p class="mb-3">Please sign in to your account</p>
+
+              <form id="formAuthentication" class="mb-5" [formGroup]="form" (ngSubmit)="login()">
+
+                <!-- Company Code -->
+                <div class="form-floating form-floating-outline mb-4">
+                  <input type="text" class="form-control" id="company_code" formControlName="tenantId"
+                    [ngClass]="{ 'is-invalid': isInvalid(form, 'tenantId') }"
+                    placeholder="Enter your company code" autofocus />
+                  <label for="company_code">Company Code</label>
+                  <div class="invalid-feedback">Company code is required.</div>
+                </div>
+
+                <!-- Email -->
+                <div class="form-floating form-floating-outline mb-4">
+                  <input type="email" class="form-control" id="email" formControlName="email"
+                    [ngClass]="{ 'is-invalid': isInvalid(form, 'email') }"
+                    placeholder="Enter your email" />
+                  <label for="email">Email</label>
+                  <div class="invalid-feedback">Enter a valid email address.</div>
+                </div>
+
+                <!-- Password -->
+                <div class="form-floating form-floating-outline mb-4 position-relative">
+                  <input [type]="passwordVisible ? 'text' : 'password'" class="form-control" id="password"
+                    formControlName="password" [ngClass]="{ 'is-invalid': isInvalid(form, 'password') }"
+                    placeholder="Enter your password" />
+                  <label for="password">Password</label>
+                  <span class="ri" [ngClass]="passwordVisible ? 'ri-eye-off-line' : 'ri-eye-line'"
+                    (click)="passwordVisible = !passwordVisible"
+                    style="cursor: pointer; position: absolute; top: 50%; right: 12px; transform: translateY(-50%);"></span>
+                  <div class="invalid-feedback">Password is required.</div>
+                </div>
+
+                <!-- Remember + Forgot -->
+                <div class="mb-4 d-flex justify-content-between align-items-center mt-4">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="remember-me" />
+                    <label class="form-check-label" for="remember-me">Remember Me</label>
+                  </div>
+                  <a (click)="goToEmpProfile()" class="link-info" style="cursor: pointer;">Forgot Password?</a>
+                </div>
+
+                <!-- Sign In Button -->
+                <button type="submit" class="btn btn-primary d-grid w-100" [disabled]="form.invalid">
+                  Sign in
+                </button>
+
+              </form>
+
+              <p class="text-center">
+                <span>New on our platform?</span>
+                <a (click)="gotoRegister()" class="link-info" style="cursor: pointer;">
+                  <span> Create an account</span>
+                </a>
+              </p>
+            </ng-container>
+
+            <!-- ========== INTERVIEWER LOGIN (mobile icon clicked) ========== -->
+            <ng-container *ngIf="showMobileLogin">
+              <h4 class="mb-1">Interviewer Portal</h4>
+              <p class="mb-3">Sign in with company code &amp; mobile OTP</p>
+
+              <!-- Step 1: Company Code + Phone -->
+              <div *ngIf="!interviewerOtpStep" [formGroup]="phoneForm">
+
+                <div class="form-floating form-floating-outline mb-4">
+                  <input type="text" class="form-control" id="iv_tenant" formControlName="tenantId"
+                    placeholder="Enter company code" autofocus />
+                  <label for="iv_tenant">Company Code</label>
+                </div>
+
+                <div class="form-floating form-floating-outline mb-4">
+                  <input type="tel" class="form-control" id="iv_phone" [formControl]="phoneControl"
+                    [ngClass]="{ 'is-invalid': isInvalid(phoneForm, 'phone') }"
+                    placeholder="Mobile Number" (input)="onInterviewerPhoneInput($event)" />
+                  <label for="iv_phone">Mobile Number</label>
+                  <div class="invalid-feedback" *ngIf="phoneControl.touched && phoneControl.hasError('required')">
+                    Mobile number is required.
+                  </div>
+                  <div class="invalid-feedback" *ngIf="phoneControl.touched && phoneControl.hasError('pattern')">
+                    Enter a valid 10-digit number starting with 6-9.
+                  </div>
+                </div>
+
+                <button type="button" class="btn btn-primary d-grid w-100 mb-3" (click)="sendInterviewerOtp()">
+                  Send OTP
+                </button>
+
+                <p class="text-center mb-0">
+                  <a class="link-info" style="cursor:pointer;" (click)="loginWithMobile()">
+                    <i class="ri ri-arrow-left-line me-1"></i> Back to Admin Login
+                  </a>
+                </p>
+              </div>
+
+              <!-- Step 2: OTP Verification -->
+              <div *ngIf="interviewerOtpStep" [formGroup]="otpForm">
+                <p class="text-center mb-3 fw-semibold">Enter the OTP sent to your mobile</p>
+
+                <div class="d-flex justify-content-center gap-2 mb-4">
+                  <input #i1 type="text" class="form-control text-center fs-4 fw-bold" formControlName="digit1"
+                    maxlength="1" style="width:56px;height:56px;" inputmode="numeric"
+                    (input)="onOtpInput($event, i2)" (keydown)="onOtpKeydown($event, null)">
+                  <input #i2 type="text" class="form-control text-center fs-4 fw-bold" formControlName="digit2"
+                    maxlength="1" style="width:56px;height:56px;" inputmode="numeric"
+                    (input)="onOtpInput($event, i3)" (keydown)="onOtpKeydown($event, i1)">
+                  <input #i3 type="text" class="form-control text-center fs-4 fw-bold" formControlName="digit3"
+                    maxlength="1" style="width:56px;height:56px;" inputmode="numeric"
+                    (input)="onOtpInput($event, i4)" (keydown)="onOtpKeydown($event, i2)">
+                  <input #i4 type="text" class="form-control text-center fs-4 fw-bold" formControlName="digit4"
+                    maxlength="1" style="width:56px;height:56px;" inputmode="numeric"
+                    (input)="onOtpInput($event, null)" (keydown)="onOtpKeydown($event, i3)">
+                </div>
+
+                <button type="button" class="btn btn-primary d-grid w-100 mb-3" (click)="verifyInterviewerOtp()">
+                  Verify &amp; Login
+                </button>
+
+                <small class="text-muted d-block text-center">
+                  <span *ngIf="interviewerResendTimer > 0">Resend OTP in {{ interviewerResendTimer }}s</span>
+                  <a *ngIf="interviewerResendTimer === 0" class="link-info" style="cursor:pointer;" (click)="sendInterviewerOtp()">
+                    Resend OTP
+                  </a>
+                </small>
+
+                <p class="text-center mt-3 mb-0">
+                  <a class="link-info" style="cursor:pointer;" (click)="interviewerOtpStep = false">
+                    <i class="ri ri-arrow-left-line me-1"></i> Change Number
+                  </a>
+                </p>
+              </div>
+
+            </ng-container>
+
+          </div>
+
+          <!-- Bottom: "or" + mobile icon (only on employee login) -->
+          <ng-container *ngIf="!showMobileLogin">
+            <div class="divider my-5">
+              <div class="divider-text">or</div>
+            </div>
+            <div class="d-flex justify-content-center gap-2">
+              <a href="javascript:;" class="btn btn-icon rounded-circle btn-text-primary waves-effect"
+                (click)="loginWithMobile()" title="Interviewer Login">
+                <i class="icon-base ri ri-smartphone-line icon-18px"></i>
+              </a>
+            </div>
+          </ng-container>
+
+        </div>
+      </div>
+
+    </div>
+    <!-- /Login -->
+  </div>
+</div>

@@ -1,0 +1,431 @@
+ <div class="container-fluid  mt-5">
+  <div class="row mb-6" *ngIf="createFlag">
+    <div class="col-md">
+      <div class="card">
+        <h5
+          class="card-header d-flex justify-content-between align-items-center"
+        >
+          <span>Leave Master</span>
+          <button
+            type="button"
+            class="btn btn-xs btn-primary float-end"
+            (click)="back()"
+          >
+            <i class="fa-solid fa-arrow-left"></i>&nbsp;back
+          </button>
+        </h5>
+
+     
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label">
+                Leave Name
+                <span style="color: red"> * </span>
+              </label>
+              <input
+                type="text"
+                class="form-control"
+                id="defaultFormControlInput"
+                placeholder="Enter Leave Name"
+                [(ngModel)]="obj['leaveName']"
+                aria-describedby="defaultFormControlHelp"
+                required
+                #leaveNameRef="ngModel"
+              />
+              <small
+                class="text-danger"
+                *ngIf="leaveNameRef.invalid && leaveNameRef.touched"
+              >
+                Please enter a valid Leave Name.
+              </small>
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label"
+                >Leave Code
+                <span style="color: red"> * </span>
+              </label>
+              <input
+                type="text"
+                class="form-control"
+                id="defaultFormControlInput"
+                placeholder="Enter Leave Code"
+                [(ngModel)]="obj['leaveCode']"
+                aria-describedby="defaultFormControlHelp"
+                required
+                #leaveCodeRef="ngModel"
+              />
+              <small
+                class="text-danger"
+                *ngIf="leaveCodeRef.invalid && leaveCodeRef.touched"
+              >
+                Please enter a valid Leave Code.
+              </small>
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label"
+                >Is Paid Leave
+                <span style="color: red"> * </span>
+              </label>
+              <ng-select
+                [items]="paidLeave"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="obj['isPaid']"
+                [multiple]="false"
+                placeholder="Select Paid Leave"
+                name="state"
+                id="select2Danger"
+                required
+                #paidLeaveRef="ngModel"
+              >
+              </ng-select>
+              <small
+                class="text-danger"
+                *ngIf="paidLeaveRef.invalid && paidLeaveRef.touched"
+              >
+                (Is Paid Leave)
+              </small>
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label">
+                Allowed Leave Per Year</label
+              >
+              <input
+                type="number"
+                class="form-control"
+                id="defaultFormControlInput"
+                placeholder="Enter Allowed Leave Per Year"
+                [(ngModel)]="obj['allowedPerYear']"
+                aria-describedby="defaultFormControlHelp"
+                required
+                #allowedLeavePerYearRef="ngModel"
+              />
+
+              <small
+                class="text-danger"
+                *ngIf="
+                  allowedLeavePerYearRef.invalid &&
+                  allowedLeavePerYearRef.touched
+                "
+              >
+                (Allowed Leave Per Year)
+              </small>
+            </div>
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label">
+                Carry Forward Allowed
+                <span style="color: red">*</span>
+              </label>
+              <ng-select
+                [items]="paidLeave"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="obj['carryForward']"
+                [multiple]="false"
+                placeholder="Select Paid Leave"
+                name="state"
+                id="select2Danger"
+                required
+                #carryForwardRef="ngModel"
+                (change)="changePaidLeave()"
+              >
+              </ng-select>
+
+              <small
+                class="text-danger"
+                *ngIf="carryForwardRef.invalid && carryForwardRef.touched"
+              >
+                (select Carry Forward Allowed )
+              </small>
+            </div>
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3" *ngIf="cr_flag">
+              <label for="defaultFormControlInput" class="form-label">
+                Max Carry Forward Days
+                <span style="color: red">*</span>
+              </label>
+              <input
+                type="number"
+                class="form-control"
+                id="defaultFormControlInput"
+                placeholder=" Max Carry Forward Days"
+                [(ngModel)]="obj['maxCarryForward']"
+                aria-describedby="defaultFormControlHelp"
+                required
+                #maxCarryForwardDaysRef="ngModel"
+              />
+
+              <small
+                class="text-danger"
+                *ngIf="
+                  maxCarryForwardDaysRef.invalid &&
+                  maxCarryForwardDaysRef.touched
+                "
+              >
+                (Enter Carry Forward Allowed)
+              </small>
+            </div>
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label">
+                EnCashable ?
+                <span style="color: red">*</span>
+              </label>
+              <ng-select
+                [items]="paidLeave"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="obj['enCashable']"
+                [multiple]="false"
+                placeholder="Select EnCashable"
+                name="state"
+                id="select2Danger"
+                required
+                #enCashableRef="ngModel"
+              >
+              </ng-select>
+
+              <small
+                class="text-danger"
+                *ngIf="enCashableRef.invalid && enCashableRef.touched"
+              >
+                (Select EnCashable)
+              </small>
+            </div>
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label"
+                >Applicable For
+                <span style="color: red">*</span>
+              </label>
+
+              <ng-select
+                [items]="Gender"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="obj['genderRestriction']"
+                [multiple]="false"
+                placeholder="Select Gender"
+                name="state"
+                id="select2Danger"
+                required
+                #applicableLeaveRef="ngModel"
+              >
+              </ng-select>
+
+              <!-- <input
+                type="number"
+                class="form-control"
+                id="defaultFormControlInput"
+                placeholder="Enter Applicable For"
+                [(ngModel)]="obj['genderRestriction']"
+                aria-describedby="defaultFormControlHelp"
+                required
+              /> -->
+
+              <small
+                class="text-danger"
+                *ngIf="applicableLeaveRef.invalid && applicableLeaveRef.touched"
+              >
+                (Select Gender)
+              </small>
+            </div>
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label"
+                >Requires Approval
+                <span style="color: red">*</span>
+              </label>
+              <ng-select
+                [items]="paidLeave"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="obj['requiresApproval']"
+                [multiple]="false"
+                placeholder="Select Approval"
+                name="state"
+                id="select2Danger"
+                required
+                #approvalRef="ngModel"
+              >
+              </ng-select>
+
+              <!-- <input
+                type="number"
+                class="form-control"
+                id="defaultFormControlInput"
+                placeholder="Enter Applicable For"
+                [(ngModel)]="obj['requiresApproval']"
+                aria-describedby="defaultFormControlHelp"
+                required
+              /> -->
+
+              <small
+                class="text-danger"
+                *ngIf="approvalRef.invalid && approvalRef.touched"
+              >
+                Select Gender
+              </small>
+            </div>
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label"
+                >Apply Before (in Days)
+                <span style="color: red">*</span>
+              </label>
+              <input
+                type="number"
+                class="form-control"
+                id="defaultFormControlInput"
+                placeholder="Enter Applicable For"
+                [(ngModel)]="obj['applyBeforeDays']"
+                aria-describedby="defaultFormControlHelp"
+                required
+              />
+            </div>
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label"
+                >Leave Description / Notes</label
+              >
+
+              <textarea
+                class="form-control"
+                rows="4"
+                placeholder="Enter Permanent Address"
+                [(ngModel)]="obj.description"
+                name="address"
+                required
+              ></textarea>
+            </div>
+            <!-- <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3" *ngIf="updateFlag">
+              <label for="defaultFormControlInput" class="form-label"
+                >Status</label
+              >
+              <ng-select
+                [items]="status"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="obj['status']"
+                [multiple]="false"
+                placeholder="Select Status"
+                name="status"
+                id="select2Danger"
+              >
+              </ng-select>
+            </div> -->
+          </div>
+          <div class="row">
+            <div class="col-md-12 mt-2">
+              <button
+                *ngIf="createFlag && updateFlag == false"
+                type="button"
+                class="btn btn-sm btn-primary waves-effect waves-light"
+                (click)="onSubmit()"
+              >
+                Submit
+              </button>
+              <button
+                *ngIf="updateFlag"
+                type="button"
+                class="btn btn-sm btn-primary waves-effect waves-light"
+                (click)="updatedata()"
+              >
+                Update
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row mb-6">
+    <div class="col-md">
+      <div class="card">
+        <h5
+          class="card-header d-flex justify-content-between align-items-center"
+        >
+          <span>Leave List</span>
+          <button
+            *ngIf="createFlag == false"
+            type="button"
+            class="btn btn-xs btn-primary float-end"
+            (click)="opencreate()"
+          >
+            <i class="fa-solid fa-plus"></i>&nbsp;Add
+          </button>
+        </h5>
+
+        <app-search-pagination
+          [totalItems]="leaveList.length"
+          [pageSize]="itemsPerPage"
+          [currentPage]="currentPage"
+          (search)="onSearch($event)"
+          (pageChange)="onPageChange($event)"
+          (pageSizeChange)="onPageSizeChange($event)"
+        >
+          <div class="table-responsive">
+            <table class="table dataTable">
+            <thead>
+              <tr>
+                <th>SI.No</th>
+                <th>Leave Name</th>
+                <th>Leave Code</th>
+                <th>is Paid</th>
+                <th>Allowed Leave Per Year</th>
+                <th>Carry Forward Allowed</th>
+                <th>Max Carry Forward Days</th>
+                <th>EnCashable</th>
+                <th>Applicable For</th>
+                <th>Requires Approval</th>
+                <!-- <th>Status</th> -->
+                <!-- <th>createdAt</th> -->
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+              <tr *ngFor="let item of leaveList; let i = index">
+                <th scope="row">{{ i + 1 }}</th>
+                <td>{{ item["leaveName"] }}</td>
+                <td>{{ item["leaveCode"] }}</td>
+                <td>{{ item["isPaid"] == true ? "Yes" : "NO" }}</td>
+                <td>{{ item["allowedPerYear"] }}</td>
+                <td>{{ item["carryForward"] == true ? "Yes" : "No" }}</td>
+                <td>{{ item["maxCarryForward"] }}</td>
+                <td>{{ item["enCashable"] == true ? "Yes" : "No" }}</td>
+                <td>{{ item["genderRestriction"] }}</td>
+                <td>{{ item["requiresApproval"] == true ? "Yes" : "No" }}</td>
+                <!-- <td>
+                  <span
+                    class="badge rounded overflow-hidden px-2"
+                    [ngClass]="getStatusClass(item['status'])"
+                  >
+                    {{ item["status"] }}
+                  </span>
+                </td> -->
+                <!-- <td>{{ item["createdAt"] }}</td> -->
+
+                <td class="d-flex">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-success"
+                    (click)="update(item)"
+                  >
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  &nbsp;
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    (click)="delete(item)"
+                  >
+                    <i class="fas fa-times"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          </div>
+        </app-search-pagination>
+      </div>
+    </div>
+  </div>
+</div>

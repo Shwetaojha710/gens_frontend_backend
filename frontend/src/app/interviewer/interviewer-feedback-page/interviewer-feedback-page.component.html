@@ -1,0 +1,141 @@
+<div class="page-shell">
+  <div class="page-head">
+    <div>
+      <h3>Feedback</h3>
+      <p>Track pending feedback, submitted feedback, and feedback history for your assigned interviews.</p>
+    </div>
+    <button type="button" class="btn btn-outline-primary btn-sm" (click)="loadData()">Refresh</button>
+  </div>
+
+  <app-interviewer-feedback [items]="items"></app-interviewer-feedback>
+
+  <div class="data-card mt-4">
+    <div class="data-card-head">
+      <div>
+        <h5>Feedback Status</h5>
+        <p class="filter-caption mb-0">{{ currentFilter | titlecase }} feedback</p>
+      </div>
+      <span>{{ feedbackInterviews.length }} records</span>
+    </div>
+
+    <div *ngIf="loading" class="state-block">Loading feedback...</div>
+
+    <div *ngIf="!loading && feedbackInterviews.length === 0" class="state-block">No feedback records found.</div>
+
+    <div class="table-responsive" *ngIf="!loading && feedbackInterviews.length > 0">
+      <table class="table align-middle mb-0">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Candidate</th>
+            <th>Round</th>
+            <th>Job</th>
+            <th>Feedback</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of feedbackInterviews; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td>
+              <div class="fw-semibold text-sm">{{ item.candidate.name }}</div>
+              <div class="text-xs text-muted">{{ item.candidate.email }}</div>
+              <div class="text-xs text-muted" *ngIf="item.candidate.phone">{{ item.candidate.phone }}</div>
+            </td>
+            <td>
+              <span class="badge bg-info">{{ item.round_name }}</span>
+              <small class="d-block text-muted mt-1">{{ getRoundMeta(item) }}</small>
+            </td>
+            <td>
+              <div class="fw-semibold text-sm">{{ item.job.job_title }}</div>
+              <div class="text-xs text-muted" *ngIf="item.job.department">{{ item.job.department }}</div>
+            </td>
+            <td>
+              <span class="badge" [ngClass]="getFeedbackStatusClass(item)">{{ getFeedbackStatusLabel(item) }}</span>
+              <div class="text-xs text-muted mt-1" *ngIf="item.feedback_submitted">
+                {{ getRecommendationLabel(item.recommendation) }}
+              </div>
+            </td>
+            <td>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-success"
+                *ngIf="item.feedback_submitted"
+                (click)="openFeedbackViewModal(item)">
+                <i class="fas fa-eye me-1"></i>View Feedback
+              </button>
+              <span *ngIf="!item.feedback_submitted" class="text-muted text-sm">
+                Awaiting submission
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="showFeedbackViewModal" style="z-index:1040;"></div>
+
+<div class="modal fade show d-block" *ngIf="showFeedbackViewModal" style="z-index:1050;" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-eye me-2"></i>Submitted Feedback
+        </h5>
+        <button type="button" class="btn-close" (click)="closeFeedbackViewModal()"></button>
+      </div>
+      <div class="modal-body" *ngIf="selectedInterview">
+        <div *ngIf="isLoadingFeedbackDetail" class="state-block">Loading feedback details...</div>
+
+        <ng-container *ngIf="!isLoadingFeedbackDetail">
+        <div class="feedback-view-grid">
+          <div class="feedback-view-card">
+            <div class="feedback-view-label">Candidate</div>
+            <div class="feedback-view-value">{{ selectedInterview.candidate.name }}</div>
+            <div class="feedback-view-sub">{{ selectedInterview.candidate.email }}</div>
+          </div>
+          <div class="feedback-view-card">
+            <div class="feedback-view-label">Round</div>
+            <div class="feedback-view-value">{{ selectedInterview.round_name }}</div>
+            <div class="feedback-view-sub">{{ getRoundMeta(selectedInterview) }}</div>
+          </div>
+          <div class="feedback-view-card">
+            <div class="feedback-view-label">Rating</div>
+            <div class="feedback-view-value">{{ getFeedbackRating() }}</div>
+          </div>
+          <div class="feedback-view-card">
+            <div class="feedback-view-label">Recommendation</div>
+            <div class="feedback-view-value">{{ getRecommendationLabel(selectedFeedbackDetail?.recommendation) }}</div>
+          </div>
+        </div>
+
+        <div class="feedback-copy-block">
+          <div class="feedback-view-label">Submitted By</div>
+          <div class="feedback-view-value">{{ selectedFeedbackDetail?.interviewer_name || 'Interviewer' }}</div>
+          <div class="feedback-view-sub" *ngIf="selectedFeedbackDetail?.interviewer_email">{{ selectedFeedbackDetail?.interviewer_email }}</div>
+        </div>
+
+        <div class="feedback-copy-block">
+          <div class="feedback-view-label">Strengths</div>
+          <div class="feedback-view-text">{{ selectedFeedbackDetail?.strengths || 'No strengths added.' }}</div>
+        </div>
+
+        <div class="feedback-copy-block">
+          <div class="feedback-view-label">Concerns</div>
+          <div class="feedback-view-text">{{ selectedFeedbackDetail?.concerns || 'No concerns added.' }}</div>
+        </div>
+
+        <div class="feedback-copy-block">
+          <div class="feedback-view-label">Additional Notes</div>
+          <div class="feedback-view-text">{{ selectedFeedbackDetail?.notes || 'No notes added.' }}</div>
+        </div>
+        </ng-container>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeFeedbackViewModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>

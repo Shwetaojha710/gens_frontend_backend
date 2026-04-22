@@ -1,0 +1,66 @@
+@import '../employee-portal-glass.css';
+
+.ep-ep-page__back {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #005fa8;
+  text-decoration: none;
+  margin-bottom: 1rem;
+}
+
+.ep-ep-page__back:hover {
+  text-decoration: underline;
+  color: #0d4f8a;
+}
+
+.ep-page-title {
+  color: #0f172a;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.ep-page-sub {
+  color: rgba(15, 23, 42, 0.62);
+  font-size: 0.9rem;
+}
+
+.ep-reim__table th {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  border-bottom-color: rgba(0, 95, 168, 0.12);
+}
+
+.ep-reim__table td {
+  font-size: 0.85rem;
+  border-color: rgba(226, 232, 240, 0.9);
+  vertical-align: top;
+}
+
+.ep-reim-status {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.2rem 0.45rem;
+  border-radius: 0.35rem;
+}
+
+.ep-reim-status--ok {
+  background: rgba(34, 197, 94, 0.15);
+  color: #15803d;
+}
+
+.ep-reim-status--warn {
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+}
+
+.ep-reim-status--bad {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}

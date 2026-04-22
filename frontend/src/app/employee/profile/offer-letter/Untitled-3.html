@@ -1,0 +1,192 @@
+<div class="row mb-2">
+  <div class="col-12 text-right">
+    <button type="button" class="btn btn-primary float-end" (click)="downloadDoc()">
+      <i class="fa fa-download mx-2"></i> Download
+    </button>
+  </div>
+</div>
+
+<div id="appointment-doc">
+
+  <!-- ================= PAGE 1 ================= -->
+  <div class="word-page">
+
+    <h3 style="text-align:center;">APPOINTMENT LETTER</h3>
+
+    <table style="width:100%; border:none;">
+      <tr>
+        <td style="width:60%; border:none;">
+          <p><b>{{personalDetails.firstName}} {{personalDetails.lastName}}</b></p>
+          <p><b>D/O {{personalDetails.fatherName}}</b></p>
+          <p><b>{{personalDetails.permanentAddress}}</b></p>
+        </td>
+
+        <td style="width:40%; text-align:right; border:none;">
+          <p>
+            <b>Date:</b>
+            <span *ngIf="!isDownload">
+              <input type="date" [(ngModel)]="personalDetails.date">
+            </span>
+            <span *ngIf="isDownload">{{personalDetails.date}}</span>
+          </p>
+
+          <p>
+            <b>Ref No:</b>
+            <span *ngIf="!isDownload">
+              <input type="text" [(ngModel)]="personalDetails.ref_no">
+            </span>
+            <span *ngIf="isDownload">{{personalDetails.ref_no}}</span>
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    <br>
+
+    <p>Dear <b>{{personalDetails.firstName}} {{personalDetails.lastName}}</b>,</p>
+
+    <p>
+      You are appointed as <b>{{personalDetails.designation}}</b> at
+      <b>{{tenant.companyAddress}}</b> w.e.f
+      <b>{{personalDetails.joiningDate}}</b>.
+    </p>
+
+    <p>Your appointment terms:</p>
+
+    <ol>
+      <li>Probation period of 3 months.</li>
+      <li>Termination rules apply.</li>
+      <li>Resignation acceptance required.</li>
+      <li>90 days notice period.</li>
+      <li>Salary ₹ {{personalDetails.salary}}</li>
+      <li>Performance based increments.</li>
+      <li>Transfer possible.</li>
+      <li>Compliance with company rules.</li>
+      <li>Maintain discipline.</li>
+      <li>Manage responsibilities.</li>
+      <li>Follow company policies.</li>
+      <li>Training responsibility.</li>
+      <li>Full-time commitment.</li>
+      <li>Confidentiality required.</li>
+      <li>Legal compliance mandatory.</li>
+      <li>Company policies apply.</li>
+      <li>Decision of management final.</li>
+    </ol>
+
+  </div>
+
+  <!-- PAGE BREAK -->
+  <div style="page-break-after: always;"></div>
+
+  <!-- ================= PAGE 2 ================= -->
+  <div class="word-page">
+
+    <ol start="18">
+      <li>Training responsibilities.</li>
+      <li>Full time work required.</li>
+      <li>Confidentiality required.</li>
+      <li>Company may recover damages.</li>
+      <li>Termination without notice possible.</li>
+      <li>Leave rules apply.</li>
+      <li>Medical fitness required.</li>
+      <li>Communication updates mandatory.</li>
+      <li>Company rules apply.</li>
+      <li>Holiday rules apply.</li>
+      <li>Discuss before resignation.</li>
+      <li>Policies may change anytime.</li>
+      <li>Management decision final.</li>
+    </ol>
+
+    <p>We welcome you to the company and wish you success.</p>
+
+    <p>Sincerely,</p>
+
+    <p><b>Authorized Signatory</b></p>
+    <p>Quaere Etechnologies Pvt Ltd</p>
+
+  </div>
+
+  <!-- PAGE BREAK -->
+  <div style="page-break-after: always;"></div>
+
+  <!-- ================= PAGE 3 ================= -->
+  <div class="word-page">
+
+    <p><b>Acceptance:</b></p>
+
+    <p>
+      I, <b>{{personalDetails.firstName}} {{personalDetails.lastName}}</b>,
+      have read and accept all terms.
+    </p>
+
+    <br><br>
+
+    <p>(Signature of Employee)</p>
+
+  </div>
+
+  <!-- PAGE BREAK -->
+  <div style="page-break-after: always;"></div>
+
+  <!-- ================= PAGE 4 (ANNEXURE) ================= -->
+  <div class="word-page">
+
+    <h4 style="text-align:center;">Annexure "A"</h4>
+
+    <p><b>Cost to Company Details</b></p>
+
+    <p>
+      Appointment dated <b>{{personalDetails.date}}</b>
+    </p>
+
+    <h4 style="text-align:center;">Salary Annexure</h4>
+
+    <table style="width:100%; border-collapse: collapse;" border="1">
+
+      <tr>
+        <th>Particulars</th>
+        <th>Annual</th>
+        <th>Monthly</th>
+      </tr>
+
+      <tr>
+        <td><b>Gross Remuneration</b></td>
+        <td>{{salaryTable.totalEarning}}</td>
+        <td>{{salaryTable.totalEarning / 12}}</td>
+      </tr>
+
+      <tr *ngFor="let item of salaryTable.earnings">
+        <td>{{item.name}}</td>
+        <td>{{item.finalAmount}}</td>
+        <td>{{item.finalAmount / 12}}</td>
+      </tr>
+
+      <tr>
+        <td><b>Parts of Benefits</b></td>
+        <td></td>
+        <td></td>
+      </tr>
+
+      <tr *ngFor="let item of salaryTable.deductions">
+        <td>{{item.component_name}}</td>
+        <td>{{item.finalAmount}}</td>
+        <td>{{item.finalAmount / 12}}</td>
+      </tr>
+
+      <tr>
+        <td><b>In Hand</b></td>
+        <td>{{salaryTable.netSalary}}</td>
+        <td>{{salaryTable.netSalary / 12}}</td>
+      </tr>
+
+      <tr>
+        <td><b>Total CTC</b></td>
+        <td>{{ctc}}</td>
+        <td>{{ctc / 12}}</td>
+      </tr>
+
+    </table>
+
+  </div>
+
+</div>

@@ -1,0 +1,74 @@
+<div class="authentication-wrapper authentication-cover">
+  <div
+    class="authentication-inner row m-0"
+    style="background-image: url('/assets/img/bg-login/Login1.png');background-size: cover;background-repeat: no-repeat;background-position: center;z-index: 0;"
+  >
+    <div class="d-none d-lg-flex col-lg-7 col-xl-8 align-items-center justify-content-center p-12 pb-2">
+      <img src="../../../assets/img/bg-login/Hero.png" class="auth-cover-illustration w-100" alt="auth-illustration" />
+      <img
+        alt="mask"
+        src="assets/img/illustrations/auth-basic-login-mask-light.png"
+        class="authentication-image d-none d-lg-block"
+      />
+    </div>
+
+    <div
+      class="d-flex col-12 col-lg-5 col-xl-4 align-items-center justify-content-center position-relative py-sm-6 px-12 py-6"
+      style="background-image: url('/assets/img/bg-login/Rectangle3.png');background-size: cover;background-position: center;background-repeat: no-repeat;"
+    >
+      <div class="auth-shell">
+        <div class="auth-shell-inner">
+          <div class="w-px-400 mx-auto pt-12 pt-lg-0">
+            <div class="text-center mb-3">
+              <a href="" class="text-center mx-auto w-100">
+                <img src="../../../assets/img/logo/gens-logo-color.png" alt="Company Logo" width="30%" />
+              </a>
+            </div>
+
+            <h4 class="mb-1">SuperAdmin Login</h4>
+            <p class="mb-5">Manage companies & subscriptions</p>
+
+            <form class="mb-5" [formGroup]="form" (ngSubmit)="login()">
+              <div class="form-floating form-floating-outline mb-4">
+                <input
+                  type="email"
+                  class="form-control"
+                  formControlName="email"
+                  [ngClass]="{ 'is-invalid': isInvalid('email') }"
+                  placeholder="Email"
+                  autofocus
+                />
+                <label>Email</label>
+                <div class="invalid-feedback">Enter a valid email address.</div>
+              </div>
+
+              <div class="form-floating form-floating-outline mb-4 position-relative">
+                <input
+                  [type]="passwordVisible ? 'text' : 'password'"
+                  class="form-control"
+                  formControlName="password"
+                  [ngClass]="{ 'is-invalid': isInvalid('password') }"
+                  placeholder="Password"
+                />
+                <label>Password</label>
+                <span
+                  class="ri"
+                  [ngClass]="passwordVisible ? 'ri-eye-off-line' : 'ri-eye-line'"
+                  (click)="passwordVisible = !passwordVisible"
+                  style="cursor: pointer; position: absolute; top: 50%; right: 12px; transform: translateY(-50%);"
+                ></span>
+                <div class="invalid-feedback">Password is required.</div>
+              </div>
+
+              <button type="submit" class="btn btn-primary d-grid w-100" [disabled]="form.invalid">
+                Sign in
+              </button>
+            </form>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

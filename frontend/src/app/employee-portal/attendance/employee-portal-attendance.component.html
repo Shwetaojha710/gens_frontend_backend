@@ -1,0 +1,159 @@
+<div class="container-fluid ep-att">
+  <header class="ep-att__hero mb-4">
+    <div class="row align-items-end g-3">
+      <div class="col-lg-6">
+        <p class="ep-att__eyebrow mb-1">Attendance</p>
+        <h1 class="ep-att__title mb-2">Monthly Attendance</h1>
+        <p class="ep-att__subtitle mb-0">
+          Daily check-in, check-out and status for <strong>{{ periodLabel }}</strong>
+        </p>
+      </div>
+      <div class="col-lg-6">
+        <div class="ep-att__toolbar">
+          <div class="ep-att__field">
+            <label class="ep-att__label" for="ep-att-month">Month</label>
+            <select
+              id="ep-att-month"
+              class="form-select ep-att__select"
+              [(ngModel)]="month"
+              (ngModelChange)="load()"
+            >
+              <option *ngFor="let m of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]" [ngValue]="m">
+                {{ monthNames[m - 1] }}
+              </option>
+            </select>
+          </div>
+          <div class="ep-att__field ep-att__field--narrow">
+            <label class="ep-att__label" for="ep-att-year">Year</label>
+            <input
+              id="ep-att-year"
+              type="number"
+              class="form-control ep-att__input"
+              [(ngModel)]="year"
+              (change)="load()"
+            />
+          </div>
+          <button
+            type="button"
+            class="btn ep-att__load-btn"
+            (click)="load()"
+            [disabled]="loading"
+          >
+            <i class="icon-base ri ri-refresh-line me-1" *ngIf="!loading"></i>
+            {{ loading ? 'Loading…' : 'Refresh' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="row g-3 mb-4 ep-att__kpis">
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="ep-att__kpi">
+        <div class="ep-att__kpi-icon ep-att__kpi-icon--primary">
+          <i class="icon-base ri ri-calendar-line"></i>
+        </div>
+        <p class="ep-att__kpi-value">{{ attendanceStats.total }}</p>
+        <p class="ep-att__kpi-label">Days in period</p>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="ep-att__kpi">
+        <div class="ep-att__kpi-icon ep-att__kpi-icon--success">
+          <i class="icon-base ri ri-checkbox-circle-line"></i>
+        </div>
+        <p class="ep-att__kpi-value">{{ attendanceStats.onTime }}</p>
+        <p class="ep-att__kpi-label">On time</p>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="ep-att__kpi">
+        <div class="ep-att__kpi-icon ep-att__kpi-icon--warning">
+          <i class="icon-base ri ri-time-line"></i>
+        </div>
+        <p class="ep-att__kpi-value">{{ attendanceStats.late }}</p>
+        <p class="ep-att__kpi-label">Late</p>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="ep-att__kpi">
+        <div class="ep-att__kpi-icon ep-att__kpi-icon--danger">
+          <i class="icon-base ri ri-close-circle-line"></i>
+        </div>
+        <p class="ep-att__kpi-value">{{ attendanceStats.absent }}</p>
+        <p class="ep-att__kpi-label">Absent</p>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="ep-att__kpi">
+        <div class="ep-att__kpi-icon ep-att__kpi-icon--slate">
+          <i class="icon-base ri ri-moon-clear-line"></i>
+        </div>
+        <p class="ep-att__kpi-value">{{ attendanceStats.weekOff }}</p>
+        <p class="ep-att__kpi-label">Week off</p>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="ep-att__kpi">
+        <div class="ep-att__kpi-icon ep-att__kpi-icon--violet">
+          <i class="icon-base ri ri-plane-line"></i>
+        </div>
+        <p class="ep-att__kpi-value">{{ attendanceStats.timeOff }}</p>
+        <p class="ep-att__kpi-label">Leave / holiday / other</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="ep-att__card">
+    <div class="ep-att__card-head">
+      <h2 class="ep-att__card-title">Daily log</h2>
+      <p class="ep-att__card-sub mb-0">Newest dates first · {{ rows.length }} record(s)</p>
+    </div>
+
+    <div class="ep-att__table-wrap" *ngIf="!loading">
+      <div class="table-responsive" *ngIf="rows.length > 0">
+        <table class="table ep-att__table mb-0">
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Day</th>
+              <th scope="col">Check in</th>
+              <th scope="col">Check out</th>
+              <th scope="col">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of rows" class="ep-att__row">
+              <td>
+                <span class="ep-att__date">{{ $any(r['date']) | date : 'EEE, d MMM yyyy' }}</span>
+              </td>
+              <td><span class="ep-att__day">{{ r['day'] }}</span></td>
+              <td>
+                <span class="ep-att__time" [class.ep-att__time--empty]="!r['checkIn']">{{ r['checkIn'] || '—' }}</span>
+              </td>
+              <td>
+                <span class="ep-att__time" [class.ep-att__time--empty]="!r['checkOut']">{{ r['checkOut'] || '—' }}</span>
+              </td>
+              <td>
+                <span [ngClass]="statusBadgeClass(rowStatus(r))">{{ r['status'] }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div *ngIf="rows.length === 0" class="ep-att__empty">
+        <div class="ep-att__empty-icon">
+          <i class="icon-base ri ri-calendar-todo-line"></i>
+        </div>
+        <p class="ep-att__empty-title">No attendance rows</p>
+        <p class="ep-att__empty-text">Try another month or year, or check back after your attendance is recorded.</p>
+      </div>
+    </div>
+
+    <div *ngIf="loading" class="ep-att__loading">
+      <div class="ep-att__spinner" aria-hidden="true"></div>
+      <p class="mb-0">Loading attendance…</p>
+    </div>
+  </div>
+</div>

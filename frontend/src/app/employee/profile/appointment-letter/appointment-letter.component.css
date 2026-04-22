@@ -1,0 +1,73 @@
+.page {
+  width: 794px;
+  margin: auto;
+  padding: 40px;
+  font-family: "Times New Roman";
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* TITLE */
+.title {
+  text-align: center;
+  font-weight: bold;
+  text-decoration: underline;
+  margin-bottom: 30px;
+}
+
+/* HEADER TABLE */
+.header-table {
+  width: 100%;
+  border: none;
+  margin: 0px;
+}
+
+.header-table td {
+  vertical-align: top;
+  margin: 0px!important;
+  border: none; /* ❗ NO BORDER */
+}
+
+/* LEFT SIDE */
+.left {
+  width: 60%;
+}
+
+/* RIGHT SIDE */
+.right {
+  width: 40%;
+  text-align: right;
+}
+
+/* HIGHLIGHT */
+.highlight {
+  background-color: yellow;
+  font-weight: bold;
+  padding: 2px 4px;
+}
+
+/* TERMS */
+.terms {
+  margin-left: 20px;
+}
+.page-break {
+  page-break-before: always!important;
+  page-break-after: always!important;
+}
+
+.salary-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.salary-table th,
+.salary-table td {
+  border: 1px solid black;
+  padding: 2px;
+}
+
+.highlight {
+  background-color: yellow;
+  font-weight: bold;
+}
+

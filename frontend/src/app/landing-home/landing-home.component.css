@@ -1,0 +1,90 @@
+.card-wrapper {
+    background: transparent;
+    padding: 15px;
+    border-radius: 20px;
+
+    background: linear-gradient(110.78deg, rgba(255, 255, 255, 0.082) 7.01%, rgba(255, 255, 255, 0.002) 106.22%), linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));
+    border: 1px solid #fff;
+}
+
+/* Main Card */
+.city-card {
+    border-radius: 20px;
+    background: url("/assets/img/bg-login/lko-bg.png") center/cover no-repeat!important;
+    position: relative;
+    overflow: hidden;
+    height: 380px;
+    opacity: 1;
+    border-radius: 16px;
+
+}
+
+/* Gradient overlay */
+.city-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    /* background: linear-gradient(180deg,
+            rgba(0, 123, 255, 0.4),
+            rgba(0, 200, 100, 0.5),
+            rgba(0, 0, 0, 0.6)); */
+}
+
+/* Inner Glass Card */
+.overlay {
+    position: absolute;
+    top: 30px;
+    left: 20px;
+    right: 20px;
+    bottom: 30px;
+    border-radius: 20px;
+    border: 1.5px solid rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(2px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    text-align: center;
+    padding: 20px;
+}
+
+/* Text */
+.overlay h2 {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 0px;
+    line-height: 30px;
+}
+
+.overlay h4 {
+    font-size: 14px;
+    margin-bottom: 15px;
+    opacity: 0.9;
+    margin-bottom: 0px;
+}
+
+.overlay p {
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 25px;
+    font-weight: 300;
+}
+
+.btn-dashboard {
+    width: 149px;
+    height: 42px;
+    gap: 16px;
+    opacity: 1;
+    border-radius: 8px;
+    border-width: 1px;
+    border: 1px solid #fff;
+    background: transparent;
+    color: #fff;
+
+
+}
+
+
+

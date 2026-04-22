@@ -1,0 +1,79 @@
+<header class="top-header">
+  <div class="top-header-inner">
+    <div class="header-search-shell">
+      <button type="button" class="search-icon-btn" aria-label="Search">
+        <i class="ri ri-search-line"></i>
+      </button>
+      <div class="search-copy">
+        <span class="search-placeholder">Search</span>
+        <span class="search-shortcut">CTRL + K</span>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div class="header-utilities">
+        <!-- <button type="button" class="utility-btn" aria-label="Translate">
+          <i class="ri ri-translate-2"></i>
+        </button>
+        <button type="button" class="utility-btn" aria-label="Theme">
+          <i class="ri ri-sun-line"></i>
+        </button>
+        <button type="button" class="utility-btn" aria-label="Favorites">
+          <i class="ri ri-star-line"></i>
+        </button>
+        <button type="button" class="utility-btn notification-btn" aria-label="Notifications">
+          <i class="ri ri-notification-3-line"></i>
+          <span class="notification-dot"></span>
+        </button> -->
+      </div>
+
+      <div class="header-cta-group">
+        <ng-select
+          [items]="branchList"
+          bindLabel="name"
+          bindValue="id"
+          placeholder="Select Branch"
+          class="branch-selector"
+          name="branch"
+          [(ngModel)]="obj['branchId']"
+          (ngModelChange)="onBranchChange($event)"
+          #branchIdRef="ngModel"
+        >
+        </ng-select>
+
+        <a *ngIf="showLocationButton" routerLink="/layout/tracking" class="location-btn">
+          <i class="ri ri-route-line"></i>
+          <span>Location</span>
+        </a>
+      </div>
+
+      <div class="profile-shell" (click)="toggleshow()">
+        <button type="button" class="profile-trigger">
+          <div class="profile-avatar">
+            <img src="../../assets/img/avatars/1.png" alt="avatar" class="rounded-circle" />
+            <span class="profile-status"></span>
+          </div>
+        </button>
+
+        <div class="profile-dropdown" [class.show]="isDropdownOpen">
+          <div class="profile-dropdown-head">
+            <div class="profile-avatar large">
+              <img src="../../assets/img/avatars/1.png" alt="alt" class="rounded-circle" />
+              <span class="profile-status"></span>
+            </div>
+            <div class="profile-meta">
+              <h6>{{ personalDetail['name'] }}</h6>
+              <p>{{ personalDetail['role'] }}</p>
+              <span>{{ personalDetail['email'] }}</span>
+            </div>
+          </div>
+
+          <button type="button" class="profile-logout-btn" (click)="logout()">
+            <span>Logout</span>
+            <i class="ri ri-logout-box-r-line"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>

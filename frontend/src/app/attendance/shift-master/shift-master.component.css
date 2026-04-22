@@ -1,0 +1,8 @@
+span.badge {
+    --bs-badge-border-width: 0;
+    --bs-badge-border-color: #ffffff !important;
+    --bs-badge-bg-color: #0054951c;
+    border: var(--bs-badge-border-width) var(--bs-border-style) var(--bs-badge-border-color);
+    background-color: var(--bs-badge-bg-color);
+    line-height: 1.05;
+}

@@ -1,0 +1,14 @@
+/* Scale preview for smaller screens */
+.overflow-auto {
+  max-height: calc(100vh - 200px);
+}
+
+#offer-doc {
+  box-shadow: 0 0 12px rgba(0,0,0,0.15);
+}
+
+@media print {
+  body * { visibility: hidden; }
+  #offer-doc, #offer-doc * { visibility: visible; }
+  #offer-doc { position: absolute; left: 0; top: 0; width: 100%; }
+}

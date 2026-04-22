@@ -1,0 +1,655 @@
+<div class="container-fluid  mt-5">
+  <div class="row mb-6">
+    <div class="col-md">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center">
+          <span>Tracking List</span>
+        </h5>
+
+        <div class="card-body">
+          <div class="row">
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label">Select Employee</label>
+              <ng-select [items]="EmpList" bindLabel="label" bindValue="value" [(ngModel)]="obj['emp_id']"
+                [multiple]="false" placeholder="Select Employee" name="state" id="select2Danger" required
+                #enCashableRef="ngModel">
+              </ng-select>
+            </div>
+
+
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label">Select Year
+                <span style="color: red"> * </span>
+              </label>
+              <ng-select [items]="yearList" bindLabel="label" bindValue="value" [(ngModel)]="obj['year']"
+                [multiple]="false" placeholder="Select Year" name="state" id="select2Danger" required
+                #enCashableRef="ngModel">
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label">Select reportType
+                <span style="color: red"> * </span>
+              </label>
+              <ng-select [items]="reportType" bindLabel="label" bindValue="value" [(ngModel)]="obj['report_type']"
+                [multiple]="false" placeholder="Select Year" name="state" id="select2Danger" required
+                #enCashableRef="ngModel">
+              </ng-select>
+            </div>
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3" *ngIf="obj['report_type']=='monthly'">
+              <label for="defaultFormControlInput" class="form-label">Select Month
+                <span style="color: red">*</span>
+              </label>
+              <ng-select [items]="monthList" bindLabel="label" bindValue="value" [(ngModel)]="obj['month']"
+                [multiple]="false" placeholder="Select Month" name="state" id="select2Danger" required
+                #enCashableRef="ngModel">
+              </ng-select>
+            </div>
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3" *ngIf="obj['report_type']=='quarterly'">
+              <label for="defaultFormControlInput" class="form-label">Select Quarterly
+                <span style="color: red">*</span>
+              </label>
+              <ng-select [items]="quarterList" bindLabel="label" bindValue="value" [(ngModel)]="obj['quarter']"
+                [multiple]="false" placeholder="Select quarter" name="state" id="select2Danger" required
+                #enCashableRef="ngModel">
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label">Select Visit Place
+
+              </label>
+              <ng-select [items]="PlaceDD" bindLabel="visit_place" bindValue="visit_place"
+                [(ngModel)]="obj['visit_place']" [multiple]="false" placeholder="Select Visit Place" name="state"
+                id="select2Danger" required #enCashableRef="ngModel">
+              </ng-select>
+            </div>
+
+
+          </div>
+          <div class="row mt-2">
+            <div class="col-12 justify-content-center">
+              <button type="button" class="btn btn-sm btn-primary waves-effect waves-light" (click)="loadReport()">
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+
+
+
+  <div class="stat-row">
+    <div class="stat-card ">
+      <div class="stat-label">Total Records</div>
+      <div class="stat-value text-primary">{{ originalList.length }}</div>
+      <div class="stat-sub">Day-level entries</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Employees</div>
+      <div class="stat-value text-info">{{ uniqueEmployeeCount }}</div>
+      <div class="stat-sub">Active in period</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Visits</div>
+      <div class="stat-value text-success">{{ totalVisitsCount }}</div>
+      <div class="stat-sub">Check-ins recorded</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Duration</div>
+      <div class="stat-value  text-warning">{{ totalDurationFormatted }}</div>
+      <div class="stat-sub">Field time</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Unique Places</div>
+      <div class="stat-value text-secondary">{{ uniquePlacesCount }}</div>
+      <div class="stat-sub">Locations visited</div>
+    </div>
+  </div>
+
+
+  <div class="row mb-6">
+    <div class="col-md-12">
+      <div class="card">
+        <!-- <div class="table-card"> -->
+
+        <div class="table-toolbar">
+          <div class="toolbar-left">
+            <span class="table-title">Visit Records
+              <span class="record-count">({{ originalList.length }} rows)</span>
+            </span>
+          </div>
+          <div class="toolbar-right">
+            <div class="search-wrap">
+              <span class="search-icon">⌕</span>
+              <input type="search" class="search-input" placeholder="Search employee / place…"
+                (input)="applyFilter($event)" />
+            </div>
+            <select class="page-size-select" (change)="onItemsPerPageChange($event)">
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+            <button class="btn-outline-custom sm" (click)="export()">⬇ Export</button>
+            <button class="btn-outline-custom sm" onclick="window.print()">🖨 Print</button>
+          </div>
+        </div>
+
+        <div class="table-responsive-wrap">
+          <table class="tracking-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th (click)="sortBy('emp_name')" [class.sorted]="sortField == 'emp_name'">
+                  Employee
+                  <span class="sort-icon">{{ sortField == 'emp_name' ? (sortDir === 1 ? '↑' : '↓') : '↕' }}</span>
+                </th>
+                <th (click)="sortBy('visit_date')" [class.sorted]="sortField === 'visit_date'">
+                  Visit Date
+                  <span class="sort-icon">{{ sortField === 'visit_date' ? (sortDir === 1 ? '↑' : '↓') : '↕' }}</span>
+                </th>
+                <th (click)="sortBy('total_visits')" [class.sorted]="sortField === 'total_visits'">
+                  Total Visits
+                  <span class="sort-icon">{{ sortField === 'total_visits' ? (sortDir === 1 ? '↑' : '↓') : '↕' }}</span>
+                </th>
+                <th (click)="sortBy('total_duration')" [class.sorted]="sortField === 'total_duration'">
+                  Duration
+                  <span class="sort-icon">{{ sortField === 'total_duration' ? (sortDir === 1 ? '↑' : '↓') : '↕'
+                    }}</span>
+                </th>
+                <th>Visit Place(s)</th>
+                <th>Purpose</th>
+                <th>Remark</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr *ngIf="reportData.length === 0">
+                <td colspan="9">
+                  <div class="empty-state">
+                    <div class="empty-icon">🔍</div>
+                    <p>No records match the current filters.</p>
+                  </div>
+                </td>
+              </tr>
+
+              <ng-container *ngFor="let item of reportData; let i = index">
+                <tr class="main-row" [class.expanded]="expandedRows.has(getRowKey(i))">
+                  <td class="col-serial">{{ (currentPage - 1) * itemsPerPage + i + 1 }}</td>
+
+                  <td class="col-employee">
+                    <div class="emp-name">{{ getEmployeeName(item.emp_name) }}</div>
+                    <div class="emp-code">{{ getEmployeeCode(item.emp_name) }}</div>
+                  </td>
+
+                  <td class="col-date">
+                    <div class="date-main">{{ item.visit_date }}</div>
+                  </td>
+
+                  <td class="col-visits">
+                    <span class="badge-visits">⬡ {{ item.total_visits }}</span>
+                  </td>
+
+                  <td class="col-duration">
+                    <span class="badge-duration">⏱ {{ item.total_duration }}</span>
+                  </td>
+
+                  <td class="col-places">
+                    <ng-container *ngIf="getUniquePlaces(item.visits).length > 0; else noPlace">
+                      <span class="place-tag" *ngFor="let p of getUniquePlaces(item.visits)">{{ p }}</span>
+                    </ng-container>
+                    <ng-template #noPlace><span class="nil">—</span></ng-template>
+                  </td>
+
+                  <td class="col-purpose">
+                    <ng-container *ngIf="getUniquePurposes(item.visits).length > 0; else noPurpose">
+                      <div class="purpose-text" *ngFor="let p of getUniquePurposes(item.visits)">• {{ p }}</div>
+                    </ng-container>
+                    <ng-template #noPurpose><span class="nil">—</span></ng-template>
+                  </td>
+
+                  <td class="col-remark">
+                    <ng-container *ngIf="getUniqueRemarks(item.visits).length > 0; else noRemark">
+                      <div class="remark-text" *ngFor="let r of getUniqueRemarks(item.visits)">{{ r }}</div>
+                    </ng-container>
+                    <ng-template #noRemark><span class="nil">—</span></ng-template>
+                  </td>
+
+                  <td class="col-expand">
+                    <button class="expand-btn" (click)="toggleExpand(getRowKey(i))"
+                      [title]="expandedRows.has(getRowKey(i)) ? 'Collapse' : 'Expand'">
+                      {{ expandedRows.has(getRowKey(i)) ? '−' : '+' }}
+                    </button>
+                  </td>
+                </tr>
+
+                <tr class="detail-row" *ngIf="expandedRows.has(getRowKey(i))">
+                  <td colspan="9">
+                    <div class="detail-inner">
+                      <div class="detail-heading">
+                        Check-in Log — {{ item.visit_date }}
+                        <span class="detail-count">({{ item.visits.length }} entries)</span>
+                      </div>
+                      <div class="detail-table-wrap">
+                        <table class="detail-table">
+                          <thead>
+                            <tr>
+                              <th>#</th>
+                              <th>Date / Time</th>
+                              <th>Visit Place</th>
+                              <th>Purpose</th>
+                              <th>Remark</th>
+                              <th>Address</th>
+                              <th>Coordinates</th>
+                              <th>Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr *ngFor="let v of item.visits; let j = index">
+                              <td>{{ j + 1 }}</td>
+                              <td>
+                                <div>{{ v.date | date:'dd MMM yyyy' }}</div>
+                                <div class="time-small">{{ v.date | date:'hh:mm a' }}</div>
+                              </td>
+                              <td>
+                                <span class="place-tag sm" *ngIf="v.visit_place; else nilCell">{{ v.visit_place
+                                  }}</span>
+                                <ng-template #nilCell><span class="nil">—</span></ng-template>
+                              </td>
+                              <td class="purpose-text">{{ v.purpose || '—' }}</td>
+                              <td class="remark-text">{{ v.remark || '—' }}</td>
+                              <td class="address-text">{{ v.address || '—' }}</td>
+                              <td class="coord-text">
+                                {{ v.latitude | number:'1.5-5' }},
+                                {{ v.longitude | number:'1.5-5' }}
+                              </td>
+                              <td>
+                                <button class="btn-view-addr" (click)="viewAddress(v)" *ngIf="!v.address"
+                                  title="Fetch Address">
+                                  📍 View
+                                </button>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+
+              </ng-container>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination-bar" *ngIf="originalList.length > 0">
+          <div class="page-info">
+            Showing {{ (currentPage - 1) * itemsPerPage + 1 }} –
+            {{ getMin(currentPage * itemsPerPage, originalList.length) }}
+            of {{ originalList.length }} entries
+          </div>
+          <div class="page-btns">
+            <button class="page-btn" [disabled]="currentPage === 1" (click)="goToPage(currentPage - 1)">‹</button>
+
+            <ng-container *ngFor="let p of pageNumbers">
+              <button class="page-btn" [class.active]="p === currentPage" (click)="goToPage(p)">
+                {{ p }}
+              </button>
+            </ng-container>
+
+            <button class="page-btn" [disabled]="currentPage === totalPages"
+              (click)="goToPage(currentPage + 1)">›</button>
+          </div>
+        </div>
+
+        <!-- </div> -->
+      </div>
+    </div>
+
+
+
+  </div>
+
+</div>
+
+
+<!-- <div class="tracking-wrapper"> -->
+
+<!-- ══════════════════════════════════════════
+       HEADER
+  ══════════════════════════════════════════ -->
+<!-- <div class="tracking-header">
+    <div class="header-brand">
+      <span class="brand-label">QTPL · Field Operations</span>
+      <span class="brand-title">Tracking Report</span>
+    </div>
+    <div class="header-meta">
+      Generated: <strong>{{ today | date:'dd MMM yyyy' }}</strong><br>
+      Total Records: <strong>{{ originalList.length }}</strong>
+    </div>
+  </div> -->
+
+<!-- ══════════════════════════════════════════
+       FILTER CARD
+  ══════════════════════════════════════════ -->
+<!-- <div class="filter-card">
+    <div class="filter-card-title">Filters</div>
+    <div class="filter-row">
+
+
+      <div class="filter-group">
+        <label>Select Employee</label>
+        <ng-select
+          [items]="EmpList"
+          bindLabel="label"
+          bindValue="value"
+          [(ngModel)]="obj['emp_id']"
+          [multiple]="false"
+          placeholder="All Employees"
+          name="emp_id">
+        </ng-select>
+      </div>
+
+
+      <div class="filter-group">
+        <label>Select Year <span class="required">*</span></label>
+        <ng-select
+          [items]="yearList"
+          bindLabel="label"
+          bindValue="value"
+          [(ngModel)]="obj['year']"
+          [multiple]="false"
+          placeholder="Select Year"
+          name="year">
+        </ng-select>
+      </div>
+
+
+      <div class="filter-group">
+        <label>Report Type <span class="required">*</span></label>
+        <ng-select
+          [items]="reportType"
+          bindLabel="label"
+          bindValue="value"
+          [(ngModel)]="obj['report_type']"
+          [multiple]="false"
+          placeholder="Select Type"
+          name="report_type">
+        </ng-select>
+      </div>
+
+
+      <div class="filter-group" *ngIf="obj['report_type'] === 'monthly'">
+        <label>Select Month <span class="required">*</span></label>
+        <ng-select
+          [items]="monthList"
+          bindLabel="label"
+          bindValue="value"
+          [(ngModel)]="obj['month']"
+          [multiple]="false"
+          placeholder="Select Month"
+          name="month">
+        </ng-select>
+      </div>
+
+      <div class="filter-group" *ngIf="obj['report_type'] === 'quarterly'">
+        <label>Select Quarter <span class="required">*</span></label>
+        <ng-select
+          [items]="quarterList"
+          bindLabel="label"
+          bindValue="value"
+          [(ngModel)]="obj['quarter']"
+          [multiple]="false"
+          placeholder="Select Quarter"
+          name="quarter">
+        </ng-select>
+      </div>
+
+
+      <div class="filter-group">
+        <label>Visit Place</label>
+        <ng-select
+          [items]="PlaceDD"
+          bindLabel="visit_place"
+          bindValue="visit_place"
+          [(ngModel)]="obj['visit_place']"
+          [multiple]="false"
+          placeholder="All Places"
+          name="visit_place">
+        </ng-select>
+      </div>
+
+
+      <div class="filter-group filter-actions">
+        <label>&nbsp;</label>
+        <div class="btn-row">
+          <button class="btn-primary-custom" (click)="loadReport()">Apply Filters</button>
+          <button class="btn-outline-custom" (click)="resetFilters()">Reset</button>
+        </div>
+      </div>
+
+    </div>
+  </div> -->
+
+<!-- ══════════════════════════════════════════
+       SUMMARY STAT CARDS
+  ══════════════════════════════════════════ -->
+
+
+<!-- ══════════════════════════════════════════
+       TABLE CARD
+  ══════════════════════════════════════════ -->
+<!-- <div class="table-card">
+
+    <div class="table-toolbar">
+      <div class="toolbar-left">
+        <span class="table-title">Visit Records
+          <span class="record-count">({{ originalList.length }} rows)</span>
+        </span>
+      </div>
+      <div class="toolbar-right">
+        <div class="search-wrap">
+          <span class="search-icon">⌕</span>
+          <input
+            type="search"
+            class="search-input"
+            placeholder="Search employee / place…"
+            (input)="applyFilter($event)" />
+        </div>
+        <select class="page-size-select" (change)="onItemsPerPageChange($event)">
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+        <button class="btn-outline-custom sm" (click)="export()">⬇ Export</button>
+        <button class="btn-outline-custom sm" onclick="window.print()">🖨 Print</button>
+      </div>
+    </div>
+
+    <div class="table-responsive-wrap">
+      <table class="tracking-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th (click)="sortBy('emp_name')" [class.sorted]="sortField === 'emp_name'">
+              Employee
+              <span class="sort-icon">{{ sortField === 'emp_name' ? (sortDir === 1 ? '↑' : '↓') : '↕' }}</span>
+            </th>
+            <th (click)="sortBy('visit_date')" [class.sorted]="sortField === 'visit_date'">
+              Visit Date
+              <span class="sort-icon">{{ sortField === 'visit_date' ? (sortDir === 1 ? '↑' : '↓') : '↕' }}</span>
+            </th>
+            <th (click)="sortBy('total_visits')" [class.sorted]="sortField === 'total_visits'">
+              Total Visits
+              <span class="sort-icon">{{ sortField === 'total_visits' ? (sortDir === 1 ? '↑' : '↓') : '↕' }}</span>
+            </th>
+            <th (click)="sortBy('total_duration')" [class.sorted]="sortField === 'total_duration'">
+              Duration
+              <span class="sort-icon">{{ sortField === 'total_duration' ? (sortDir === 1 ? '↑' : '↓') : '↕' }}</span>
+            </th>
+            <th>Visit Place(s)</th>
+            <th>Purpose</th>
+            <th>Remark</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngIf="reportData.length === 0">
+            <td colspan="9">
+              <div class="empty-state">
+                <div class="empty-icon">🔍</div>
+                <p>No records match the current filters.</p>
+              </div>
+            </td>
+          </tr>
+
+          <ng-container *ngFor="let item of reportData; let i = index">
+            <tr class="main-row" [class.expanded]="expandedRows.has(getRowKey(i))">
+              <td class="col-serial">{{ (currentPage - 1) * itemsPerPage + i + 1 }}</td>
+
+              <td class="col-employee">
+                <div class="emp-name">{{ getEmployeeName(item.emp_name) }}</div>
+                <div class="emp-code">{{ getEmployeeCode(item.emp_name) }}</div>
+              </td>
+
+              <td class="col-date">
+                <div class="date-main">{{ item.visit_date }}</div>
+              </td>
+
+              <td class="col-visits">
+                <span class="badge-visits">⬡ {{ item.total_visits }}</span>
+              </td>
+
+              <td class="col-duration">
+                <span class="badge-duration">⏱ {{ item.total_duration }}</span>
+              </td>
+
+              <td class="col-places">
+                <ng-container *ngIf="getUniquePlaces(item.visits).length > 0; else noPlace">
+                  <span class="place-tag" *ngFor="let p of getUniquePlaces(item.visits)">{{ p }}</span>
+                </ng-container>
+                <ng-template #noPlace><span class="nil">—</span></ng-template>
+              </td>
+
+              <td class="col-purpose">
+                <ng-container *ngIf="getUniquePurposes(item.visits).length > 0; else noPurpose">
+                  <div class="purpose-text" *ngFor="let p of getUniquePurposes(item.visits)">• {{ p }}</div>
+                </ng-container>
+                <ng-template #noPurpose><span class="nil">—</span></ng-template>
+              </td>
+
+              <td class="col-remark">
+                <ng-container *ngIf="getUniqueRemarks(item.visits).length > 0; else noRemark">
+                  <div class="remark-text" *ngFor="let r of getUniqueRemarks(item.visits)">{{ r }}</div>
+                </ng-container>
+                <ng-template #noRemark><span class="nil">—</span></ng-template>
+              </td>
+
+              <td class="col-expand">
+                <button
+                  class="expand-btn"
+                  (click)="toggleExpand(getRowKey(i))"
+                  [title]="expandedRows.has(getRowKey(i)) ? 'Collapse' : 'Expand'">
+                  {{ expandedRows.has(getRowKey(i)) ? '−' : '+' }}
+                </button>
+              </td>
+            </tr>
+
+            <tr class="detail-row" *ngIf="expandedRows.has(getRowKey(i))">
+              <td colspan="9">
+                <div class="detail-inner">
+                  <div class="detail-heading">
+                    Check-in Log — {{ item.visit_date }}
+                    <span class="detail-count">({{ item.visits.length }} entries)</span>
+                  </div>
+                  <div class="detail-table-wrap">
+                    <table class="detail-table">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Date / Time</th>
+                          <th>Visit Place</th>
+                          <th>Purpose</th>
+                          <th>Remark</th>
+                          <th>Address</th>
+                          <th>Coordinates</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let v of item.visits; let j = index">
+                          <td>{{ j + 1 }}</td>
+                          <td>
+                            <div>{{ v.date | date:'dd MMM yyyy' }}</div>
+                            <div class="time-small">{{ v.date | date:'hh:mm a' }}</div>
+                          </td>
+                          <td>
+                            <span class="place-tag sm" *ngIf="v.visit_place; else nilCell">{{ v.visit_place }}</span>
+                            <ng-template #nilCell><span class="nil">—</span></ng-template>
+                          </td>
+                          <td class="purpose-text">{{ v.purpose || '—' }}</td>
+                          <td class="remark-text">{{ v.remark || '—' }}</td>
+                          <td class="address-text">{{ v.address || '—' }}</td>
+                          <td class="coord-text">
+                            {{ v.latitude | number:'1.5-5' }},
+                            {{ v.longitude | number:'1.5-5' }}
+                          </td>
+                          <td>
+                            <button
+                              class="btn-view-addr"
+                              (click)="viewAddress(v)"
+                              *ngIf="!v.address"
+                              title="Fetch Address">
+                              📍 View
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </td>
+            </tr>
+
+          </ng-container>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination-bar" *ngIf="originalList.length > 0">
+      <div class="page-info">
+        Showing {{ (currentPage - 1) * itemsPerPage + 1 }} –
+        {{ getMin(currentPage * itemsPerPage, originalList.length) }}
+        of {{ originalList.length }} entries
+      </div>
+      <div class="page-btns">
+        <button class="page-btn" [disabled]="currentPage === 1" (click)="goToPage(currentPage - 1)">‹</button>
+
+        <ng-container *ngFor="let p of pageNumbers">
+          <button
+            class="page-btn"
+            [class.active]="p === currentPage"
+            (click)="goToPage(p)">
+            {{ p }}
+          </button>
+        </ng-container>
+
+        <button class="page-btn" [disabled]="currentPage === totalPages" (click)="goToPage(currentPage + 1)">›</button>
+      </div>
+    </div>
+
+  </div> -->
+<!-- /.table-card -->
+<!-- </div> -->
+
+<!-- /.tracking-wrapper -->

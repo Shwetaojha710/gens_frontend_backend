@@ -1,0 +1,37 @@
+<div class="container-fluid ep-prof">
+  <a routerLink="/employee-portal/dashboard" class="ep-prof__back">
+    <i class="icon-base ri ri-arrow-left-line me-1"></i> Back to dashboard
+  </a>
+  <h4 class="ep-prof__title">My profile</h4>
+  <p class="ep-prof__sub">Details from HR records (read-only).</p>
+
+  <div *ngIf="loading" class="text-muted py-4">Loading…</div>
+
+  <div *ngIf="!loading && profile" class="card ep-prof__card border-0">
+    <div class="card-body">
+      <dl class="row small mb-0 ep-prof__dl">
+        <dt class="col-sm-4">Name</dt>
+        <dd class="col-sm-8">{{ line('firstName') }} {{ line('lastName') }}</dd>
+        <dt class="col-sm-4">Employee code</dt>
+        <dd class="col-sm-8">{{ line('empCode') }}</dd>
+        <dt class="col-sm-4">Email</dt>
+        <dd class="col-sm-8">{{ line('email') }}</dd>
+        <dt class="col-sm-4">Mobile</dt>
+        <dd class="col-sm-8">{{ line('mobile') }}</dd>
+        <dt class="col-sm-4">Designation</dt>
+        <dd class="col-sm-8">{{ line('designation') }}</dd>
+        <dt class="col-sm-4">Department</dt>
+        <dd class="col-sm-8">{{ line('department') }}</dd>
+        <dt class="col-sm-4">Reporting to</dt>
+        <dd class="col-sm-8">{{ line('reportingPersonName').trim() || '—' }}</dd>
+        <dt class="col-sm-4">Joined</dt>
+        <dd class="col-sm-8">
+          <ng-container *ngIf="profile['joiningDate']">{{ $any(profile['joiningDate']) | date : 'mediumDate' }}</ng-container>
+          <ng-container *ngIf="!profile['joiningDate']">—</ng-container>
+        </dd>
+      </dl>
+    </div>
+  </div>
+
+  <p *ngIf="!loading && !profile" class="text-muted py-4">Could not load profile. Try again from the dashboard.</p>
+</div>

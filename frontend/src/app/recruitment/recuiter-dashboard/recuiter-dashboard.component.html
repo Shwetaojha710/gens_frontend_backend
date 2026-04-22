@@ -1,0 +1,499 @@
+<!-- HR-style analytics shell: soft page bg, white rounded cards, dashboard header + Reports -->
+<div class="rd-shell container-fluid">
+  <header class="rd-header">
+    <h1 class="rd-header__title">Dashboard</h1>
+    <div class="rd-header__actions">
+      <!-- Date filter dropdown -->
+      <div class="rd-date-filter" [class.rd-date-filter--open]="dateFilterOpen">
+        <button type="button" class="rd-header__daterange" (click)="dateFilterOpen = !dateFilterOpen">
+          <i class="icon-base ri ri-calendar-2-line me-1"></i>
+          {{ dateLabel }}
+          <i class="icon-base ri ri-arrow-down-s-line rd-header__caret"></i>
+        </button>
+        <div class="rd-date-filter__panel" *ngIf="dateFilterOpen">
+          <div class="rd-date-filter__row">
+            <label class="rd-date-filter__label">From</label>
+            <input type="date" class="rd-date-filter__input"
+              [(ngModel)]="filterFrom"
+              [max]="today"
+              (change)="onFromChange()" />
+            <span class="rd-date-filter__err" *ngIf="dateError === 'from_future'">
+              <i class="ri ri-error-warning-line me-1"></i>Date cannot be in the future
+            </span>
+          </div>
+          <div class="rd-date-filter__row">
+            <label class="rd-date-filter__label">To</label>
+            <input type="date" class="rd-date-filter__input"
+              [(ngModel)]="filterTo"
+              [max]="today"
+              [min]="filterFrom || ''"
+              (change)="onToChange()" />
+            <span class="rd-date-filter__err" *ngIf="dateError === 'to_future'">
+              <i class="ri ri-error-warning-line me-1"></i>Date cannot be in the future
+            </span>
+            <span class="rd-date-filter__err" *ngIf="dateError === 'range'">
+              <i class="ri ri-error-warning-line me-1"></i>"To" must be after "From"
+            </span>
+          </div>
+          <div class="rd-date-filter__actions">
+            <button type="button" class="rd-date-filter__btn rd-date-filter__btn--clear" (click)="clearDateFilter()">Clear</button>
+            <button type="button" class="rd-date-filter__btn rd-date-filter__btn--apply"
+              (click)="applyDateFilter()" [disabled]="!!dateError">Apply</button>
+          </div>
+        </div>
+      </div>
+      <button
+        type="button"
+        class="rd-header__iconbtn"
+        (click)="load()"
+        [disabled]="loading"
+        title="Refresh"
+        aria-label="Refresh"
+      >
+        <i class="icon-base ri ri-refresh-line" [class.rd-spin]="loading"></i>
+      </button>
+      <a routerLink="/recruitment/application-list" class="rd-header__reports">Reports</a>
+    </div>
+  </header>
+
+  <div *ngIf="loading" class="rd-card rd-card--loading">
+    <div class="rd-card__body py-5 text-center text-muted">
+      <div class="rd-spinner mx-auto mb-3"></div>
+      Loading analytics…
+    </div>
+  </div>
+
+  <ng-container *ngIf="!loading">
+    <!-- Row 1: wide overview | highlight | donut (matches screenshot rhythm) -->
+    <div class="row g-3 g-xl-4 mb-3 mb-xl-4">
+      <div class="col-xl-7 col-lg-12">
+        <div class="rd-card rd-card--elevated h-100">
+          <div class="rd-overview-head">
+            <h2 class="rd-overview-head__title">Recruitment overview</h2>
+            <div class="rd-overview-head__pills">
+              <a [routerLink]="['/recruitment/jobs/job-requirement']"
+                 class="rd-pill-tag rd-pill-tag--soft rd-pill-tag--link"
+                 title="View all open job requisitions">
+                Open reqs <strong>{{ openRoles }}</strong>
+              </a>
+              <a [routerLink]="['/recruitment/application-list']"
+                 class="rd-pill-tag rd-pill-tag--dark rd-pill-tag--link"
+                 title="View full candidate pipeline">
+                Pipeline <strong>{{ totalCandidates }}</strong>
+              </a>
+            </div>
+          </div>
+          <div class="rd-overview-grid">
+            <a class="rd-overview-cell rd-overview-cell--link"
+               [routerLink]="['/recruitment/application-list']"
+               title="View all active candidates">
+              <div class="rd-overview-cell__icon rd-overview-cell__icon--blue">
+                <i class="icon-base ri ri-team-line"></i>
+              </div>
+              <div class="rd-overview-cell__value">{{ totalCandidates }}</div>
+              <div class="rd-overview-cell__trend rd-overview-cell__trend--up">
+                <i class="icon-base ri ri-arrow-up-line"></i>
+                {{ newThisWeek }} new (7d)
+              </div>
+              <div class="rd-overview-cell__label">Active candidates</div>
+            </a>
+            <a class="rd-overview-cell rd-overview-cell--link"
+               [routerLink]="['/recruitment/application-list']"
+               [queryParams]="{ stage: 'interview_scheduled' }"
+               title="View candidates in interview stage">
+              <div class="rd-overview-cell__icon rd-overview-cell__icon--teal">
+                <i class="icon-base ri ri-calendar-event-line"></i>
+              </div>
+              <div class="rd-overview-cell__value">{{ interviewsActive }}</div>
+              <div class="rd-overview-cell__trend rd-overview-cell__trend--neutral">Interview stage</div>
+              <div class="rd-overview-cell__label">Scheduled &amp; in progress</div>
+            </a>
+            <a class="rd-overview-cell rd-overview-cell--link"
+               [routerLink]="['/recruitment/application-list']"
+               [queryParams]="{ stage: 'offered' }"
+               title="View offers and closures">
+              <div class="rd-overview-cell__icon rd-overview-cell__icon--violet">
+                <i class="icon-base ri ri-mail-send-line"></i>
+              </div>
+              <div class="rd-overview-cell__value">{{ offersOut + hiredClosed }}</div>
+              <div class="rd-overview-cell__trend rd-overview-cell__trend--up">
+                {{ offersOut }} offer · {{ hiredClosed }} hired
+              </div>
+              <div class="rd-overview-cell__label">Offers &amp; closures</div>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-3 col-md-6 col-lg-6">
+        <a [routerLink]="['/recruitment/application-list']"
+           class="rd-card rd-card--elevated rd-spotlight h-100 rd-overview-cell--link text-decoration-none"
+           title="View all candidates">
+          <div class="rd-spotlight__badge">
+            <span class="rd-live-dot"></span>
+            Live pipeline
+          </div>
+          <div class="rd-spotlight__stat">
+            <span class="rd-spotlight__num">{{ totalCandidates }}</span>
+            <span class="rd-spotlight__sub">candidates in funnel</span>
+          </div>
+          <div class="rd-spotlight__illus" aria-hidden="true">
+            <div class="rd-spotlight__blob"></div>
+            <i class="icon-base ri ri-user-search-line rd-spotlight__fig"></i>
+          </div>
+          <span class="btn btn-sm btn-outline-primary w-100 mt-auto rd-spotlight__btn">View board</span>
+        </a>
+      </div>
+
+      <div class="col-xl-2 col-md-6 col-lg-6">
+        <div class="rd-card rd-card--elevated h-100 rd-donut-card">
+          <h3 class="rd-donut-card__title">Stage mix</h3>
+          <div class="rd-donut-card__chart">
+            <!-- SVG donut with per-slice tooltips — each slice navigates by stage -->
+            <svg viewBox="0 0 120 120" class="rd-donut-svg" *ngIf="stageSlices.length">
+              <g>
+                <path
+                  *ngFor="let s of stageSlices"
+                  [attr.d]="s.path"
+                  [attr.fill]="s.color"
+                  class="rd-donut-slice rd-donut-slice--clickable"
+                  [class.rd-donut-slice--hovered]="hoveredSlice === s"
+                  (mouseenter)="hoveredSlice = s"
+                  (mouseleave)="hoveredSlice = null"
+                  (click)="navigateToStage(s.key)"
+                >
+                  <title>{{ s.label }}: {{ s.value }} candidate{{ s.value !== 1 ? 's' : '' }} ({{ s.pct }}%) — click to filter</title>
+                </path>
+              </g>
+              <!-- centre — click navigates to all -->
+              <text x="60" y="56" class="rd-donut-centre-n" style="cursor:pointer" (click)="navigateToStage('')">{{ totalCandidates }}</text>
+              <text x="60" y="68" class="rd-donut-centre-sub" style="cursor:pointer" (click)="navigateToStage('')">total</text>
+            </svg>
+
+            <!-- empty state ring -->
+            <svg viewBox="0 0 120 120" class="rd-donut-svg" *ngIf="!stageSlices.length">
+              <circle cx="60" cy="60" r="40" fill="none" stroke="#e2e8f0" stroke-width="18"/>
+              <text x="60" y="56" class="rd-donut-centre-n">0</text>
+              <text x="60" y="68" class="rd-donut-centre-sub">total</text>
+            </svg>
+
+            <!-- floating tooltip -->
+            <div class="rd-donut-tooltip" *ngIf="hoveredSlice">
+              <span class="rd-donut-tooltip__dot" [style.background]="hoveredSlice.color"></span>
+              <span class="rd-donut-tooltip__label">{{ hoveredSlice.label }}</span>
+              <span class="rd-donut-tooltip__val">{{ hoveredSlice.value }} &nbsp;<small>({{ hoveredSlice.pct }}%)</small></span>
+            </div>
+          </div>
+          <ul class="rd-legend-compact list-unstyled mb-0">
+            <li
+              *ngFor="let s of stageSlices.slice(0, 5)"
+              class="rd-legend-tip rd-legend-tip--clickable"
+              [attr.data-tip]="s.label + ': ' + s.value + ' candidate' + (s.value !== 1 ? 's' : '') + ' (' + getSlicePct(s.value) + '%)'"
+              (click)="navigateToStage(s.key)"
+              title="Filter by {{ s.label }}"
+            >
+              <span class="rd-legend-compact__dot" [style.background]="s.color"></span>
+              <span>{{ s.label }}</span>
+              <strong>{{ s.value }}</strong>
+            </li>
+          </ul>
+          <p *ngIf="!stageSlices.length" class="text-muted small text-center mb-0 mt-2">No data</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: dark AI-style panel + department lollipop chart -->
+    <div class="row g-3 g-xl-4 mb-3 mb-xl-4">
+      <div class="col-lg-5">
+        <div class="rd-ai-panel h-100">
+          <div class="rd-ai-panel__robot" aria-hidden="true">
+            <div class="rd-ai-panel__glow"></div>
+            <i class="icon-base ri ri-robot-2-line"></i>
+          </div>
+          <div class="rd-ai-panel__content">
+            <p class="rd-ai-panel__kicker">Hiring intelligence</p>
+            <h3 class="rd-ai-panel__headline">Analytics &amp; next actions</h3>
+            <ul class="rd-ai-panel__bullets">
+              <li>Monitor funnel health from applied → interview → offer.</li>
+              <li>Prioritise departments with the highest candidate volume.</li>
+              <li>Keep interview slots full to protect time-to-hire.</li>
+            </ul>
+            <div class="rd-ai-panel__chips">
+              <a routerLink="/recruitment/application-list" class="rd-ai-chip">Review pipeline</a>
+              <a routerLink="/recruitment/jobs/job-requirement" class="rd-ai-chip">Add requisition</a>
+            </div>
+            <div class="rd-ai-panel__composer">
+              <input type="text" class="form-control rd-ai-panel__input" readonly placeholder="Ask about hiring trends…" />
+              <button type="button" class="rd-ai-panel__mic" aria-label="Voice" disabled>
+                <i class="icon-base ri ri-mic-line"></i>
+              </button>
+              <button type="button" class="rd-ai-panel__send" aria-label="Send" disabled>
+                <i class="icon-base ri ri-send-plane-2-fill"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-7">
+        <div class="rd-card rd-card--elevated h-100">
+          <div class="rd-card__head">
+            <h3 class="rd-card__head-title">Candidates by focus area</h3>
+            <p class="rd-card__head-desc">Volume by department / role (relative scale)</p>
+          </div>
+          <div class="rd-card__body pt-0">
+            <a
+              class="rd-lollipop rd-lollipop--link"
+              *ngFor="let d of deptBars"
+              [routerLink]="['/recruitment/application-list']"
+              [queryParams]="{ department: d.raw }"
+              title="View {{ d.label }} candidates">
+              <span class="rd-lollipop__label">{{ d.label }}</span>
+              <div class="rd-lollipop__track">
+                <div class="rd-lollipop__stem"></div>
+                <div class="rd-lollipop__dot" [style.bottom.%]="d.pct"></div>
+              </div>
+              <span class="rd-lollipop__val">{{ d.count }}</span>
+            </a>
+            <p *ngIf="!deptBars.length" class="text-muted small mb-0 text-center py-4">No applications to chart yet.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: milestones card + wide employee-style table -->
+    <div class="row g-3 g-xl-4">
+      <div class="col-lg-3 col-md-5">
+        <div class="rd-card rd-card--elevated h-100">
+          <div class="rd-card__head rd-card__head--split">
+            <div>
+              <h3 class="rd-card__head-title">Open requisitions</h3>
+              <p class="rd-card__head-desc">Active roles hiring now</p>
+            </div>
+            <div class="rd-toggle-fake">
+              <span class="active">All</span>
+              <span>Live</span>
+            </div>
+          </div>
+          <div class="rd-card__body pt-0">
+            <div *ngFor="let j of topOpenJobs" class="rd-milestone">
+              <div class="rd-milestone__icon"><i class="icon-base ri ri-briefcase-4-line"></i></div>
+              <div class="rd-milestone__text">
+                <div class="rd-milestone__name">{{ j.title }}</div>
+                <div class="rd-milestone__meta">{{ j.code }}</div>
+              </div>
+            </div>
+            <div *ngIf="!topOpenJobs.length" class="text-muted small py-3 text-center">No active requisitions.</div>
+            <a routerLink="/recruitment/jobs/job-requirement" class="btn btn-outline-secondary btn-sm w-100 mt-2">Manage jobs</a>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-9 col-md-7">
+        <div class="rd-card rd-card--elevated h-100">
+          <div class="rd-card__head rd-card__head--tabs">
+            <div>
+              <h3 class="rd-card__head-title">Recent candidates</h3>
+              <p class="rd-card__head-desc">Latest applications</p>
+            </div>
+            <ul class="nav rd-seg-tabs">
+              <li class="nav-item">
+                <span class="nav-link active">Candidate info</span>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" routerLink="/recruitment/application-list">Full pipeline</a>
+              </li>
+            </ul>
+          </div>
+          <div class="table-responsive rd-table-scroll">
+            <table class="table rd-data-table mb-0">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Candidate</th>
+                  <th>Applied</th>
+                  <th>Stage</th>
+                  <th class="text-end">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let r of recentRows">
+                  <td class="rd-mono">{{ r.shortId }}</td>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="rd-face">{{ (r.name || '?').charAt(0) | uppercase }}</div>
+                      <div>
+                        <div class="fw-semibold text-dark">{{ r.name }}</div>
+                        <div class="small text-muted">{{ r.jobTitle }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="text-muted small">{{ r.applied }}</td>
+                  <td>
+                    <span class="rd-pill-stage" [ngClass]="stagePillClass(r.stage)">{{ r.stageLabel }}</span>
+                  </td>
+                  <td class="text-end">
+                    <button class="btn btn-sm btn-outline-primary rd-view-btn" (click)="viewApplication(r)">View</button>
+                  </td>
+                </tr>
+                <tr *ngIf="!recentRows.length">
+                  <td colspan="5" class="text-center text-muted py-5">No applications yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>
+
+<!-- ── Candidate Detail Modal ── -->
+<div class="modal fade" id="rdCandidateModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title d-flex align-items-center gap-2">
+          <i class="fas fa-user-circle text-primary"></i>
+          Candidate Details
+        </h5>
+        <button type="button" class="btn-close" (click)="closeModal()"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <!-- Loading spinner -->
+        <div *ngIf="loadingDetail" class="text-center py-5">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p class="mt-2 text-muted mb-0">Loading details…</p>
+        </div>
+
+        <!-- Detail content -->
+        <ng-container *ngIf="!loadingDetail && selectedApp">
+
+          <!-- Header: avatar + name + stage -->
+          <div class="rd-modal-hero mb-4">
+            <div class="rd-modal-avatar">
+              {{ (selectedApp.name || 'C').charAt(0).toUpperCase() }}
+            </div>
+            <div class="rd-modal-meta">
+              <h5 class="mb-0 fw-bold">{{ selectedApp.name }}</h5>
+              <div class="text-muted small">{{ selectedApp.job_title }}
+                <span *ngIf="selectedApp.department"> · {{ selectedApp.department }}</span>
+              </div>
+              <span class="rd-pill-stage mt-1 d-inline-block" [ngClass]="stagePillClass(selectedApp.stage)">
+                {{ selectedApp.stage.replace('_',' ') | uppercase }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Info grid -->
+          <div class="rd-detail-grid">
+            <div class="rd-detail-item">
+              <span class="rd-detail-label"><i class="fas fa-envelope me-1"></i>Email</span>
+              <span class="rd-detail-val">{{ selectedApp.email || '—' }}</span>
+            </div>
+            <div class="rd-detail-item">
+              <span class="rd-detail-label"><i class="fas fa-phone me-1"></i>Phone</span>
+              <span class="rd-detail-val">{{ selectedApp.phone || '—' }}</span>
+            </div>
+            <div class="rd-detail-item">
+              <span class="rd-detail-label"><i class="fas fa-building me-1"></i>Current Company</span>
+              <span class="rd-detail-val">{{ selectedApp.current_company || '—' }}</span>
+            </div>
+            <div class="rd-detail-item">
+              <span class="rd-detail-label"><i class="fas fa-briefcase me-1"></i>Experience</span>
+              <span class="rd-detail-val">{{ selectedApp.experience || '—' }} yrs</span>
+            </div>
+            <div class="rd-detail-item">
+              <span class="rd-detail-label"><i class="fas fa-rupee-sign me-1"></i>Current CTC</span>
+              <span class="rd-detail-val">{{ selectedApp.current_ctc || '—' }} LPA</span>
+            </div>
+            <div class="rd-detail-item">
+              <span class="rd-detail-label"><i class="fas fa-rupee-sign me-1"></i>Expected CTC</span>
+              <span class="rd-detail-val">{{ selectedApp.expected_ctc || '—' }} LPA</span>
+            </div>
+            <div class="rd-detail-item">
+              <span class="rd-detail-label"><i class="fas fa-clock me-1"></i>Notice Period</span>
+              <span class="rd-detail-val">{{ selectedApp.notice_period || '—' }} days</span>
+            </div>
+            <div class="rd-detail-item">
+              <span class="rd-detail-label"><i class="fas fa-calendar me-1"></i>Applied On</span>
+              <span class="rd-detail-val">{{ selectedApp.createdAt | date:'dd MMM yyyy' }}</span>
+            </div>
+          </div>
+
+          <!-- Skills -->
+          <div class="mt-3" *ngIf="selectedApp.skills?.length">
+            <div class="rd-detail-label mb-2"><i class="fas fa-tools me-1"></i>Skills</div>
+            <div class="d-flex flex-wrap gap-1">
+              <span *ngFor="let s of (selectedApp.skills | slice:0:20)"
+                class="badge bg-primary bg-opacity-10 text-primary fw-normal px-2 py-1">
+                {{ s }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Resume link -->
+          <div class="mt-3" *ngIf="selectedApp.resume_url">
+            <a [href]="selectedApp.resume_url" target="_blank" class="btn btn-sm btn-outline-secondary">
+              <i class="fas fa-file-pdf me-1"></i>View Resume
+            </a>
+          </div>
+
+          <!-- ATS score -->
+          <div class="rd-ats-bar mt-3" *ngIf="selectedApp.ats">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <small class="fw-semibold text-muted">ATS Score</small>
+              <small class="fw-bold">{{ selectedApp.ats.ats_score | number:'1.0-0' }} / 100</small>
+            </div>
+            <div class="progress" style="height:6px;">
+              <div class="progress-bar"
+                [class.bg-success]="selectedApp.ats.ats_score >= 70"
+                [class.bg-warning]="selectedApp.ats.ats_score >= 40 && selectedApp.ats.ats_score < 70"
+                [class.bg-danger]="selectedApp.ats.ats_score < 40"
+                [style.width.%]="selectedApp.ats.ats_score">
+              </div>
+            </div>
+          </div>
+
+          <!-- Interview rounds -->
+          <div class="mt-3" *ngIf="selectedApp.interview_rounds?.length">
+            <div class="rd-detail-label mb-2"><i class="fas fa-calendar-check me-1"></i>Interview Rounds</div>
+            <div class="rd-rounds-list">
+              <div *ngFor="let r of selectedApp.interview_rounds" class="rd-round-row">
+                <div class="rd-round-name">{{ r.round_name }}</div>
+                <div class="rd-round-meta">
+                  <span *ngIf="r.scheduled_at"><i class="fas fa-clock me-1"></i>{{ r.scheduled_at | date:'dd MMM, hh:mm a' }}</span>
+                  <span *ngIf="r.interviewer_name"><i class="fas fa-user-tie me-1"></i>{{ r.interviewer_name }}</span>
+                </div>
+                <span class="badge rounded-pill"
+                  [class.bg-success]="r.status == 'completed'"
+                  [class.bg-warning]="r.status == 'scheduled'"
+                  [class.bg-secondary]="r.status == 'pending'"
+                  [class.bg-danger]="r.status == 'cancelled'">
+                  {{ r.status || 'pending' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+        </ng-container>
+
+        <!-- No data fallback -->
+        <div *ngIf="!loadingDetail && !selectedApp" class="text-center py-4 text-muted">
+          <i class="fas fa-exclamation-circle fa-2x mb-2 d-block"></i>
+          Could not load candidate details.
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary btn-sm" (click)="openPipeline()">
+          <i class="fas fa-list me-1"></i>Open in Pipeline
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="closeModal()">Close</button>
+      </div>
+
+    </div>
+  </div>
+</div>

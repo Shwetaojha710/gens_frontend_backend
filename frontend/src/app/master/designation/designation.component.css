@@ -1,0 +1,10 @@
+/* .form-floating{
+    width: 100%;
+} */
+.d-flex {
+  display: flex !important;
+}
+.justify-content-between {
+  justify-content: space-between !important;
+}
+

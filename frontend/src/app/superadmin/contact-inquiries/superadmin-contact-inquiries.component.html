@@ -1,0 +1,52 @@
+<div class="sa-ci-page">
+  <div class="card sa-panel mb-3">
+    <div class="card-body d-flex flex-wrap justify-content-between align-items-start gap-3">
+      <div>
+        <p class="text-uppercase small text-muted mb-1">Public site</p>
+        <h1 class="h4 mb-1">Contact form submissions</h1>
+        <p class="text-muted small mb-0">
+          Messages from the Home page form. Entries are stored as plain text after server-side sanitisation.
+        </p>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-sm btn-outline-secondary" routerLink="/superadmin/landing">Home page CMS</a>
+        <button type="button" class="btn btn-sm btn-primary" (click)="load()" [disabled]="loading">
+          <i class="ri ri-refresh-line me-1" [class.sa-spin]="loading"></i>
+          Refresh
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card sa-panel">
+    <div class="card-body p-0">
+      <div class="p-3 border-bottom small text-muted" *ngIf="!loading">
+        {{ total }} total
+      </div>
+      <div class="p-5 text-center text-muted" *ngIf="loading">Loading…</div>
+      <div class="p-5 text-center text-muted" *ngIf="!loading && items.length === 0">No submissions yet.</div>
+      <div class="table-responsive" *ngIf="!loading && items.length > 0">
+        <table class="table table-sm table-hover mb-0 sa-ci-table">
+          <thead class="table-light">
+            <tr>
+              <th>Received</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Message</th>
+              <th>IP</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of items">
+              <td class="text-nowrap small">{{ row.createdAt | date : 'medium' }}</td>
+              <td class="small">{{ row.fullName }}</td>
+              <td class="small"><a [href]="'mailto:' + row.email">{{ row.email }}</a></td>
+              <td class="small sa-ci-msg">{{ row.message }}</td>
+              <td class="small text-muted text-nowrap">{{ row.ipAddress || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

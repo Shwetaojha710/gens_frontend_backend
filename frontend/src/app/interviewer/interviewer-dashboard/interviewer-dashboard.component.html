@@ -1,0 +1,341 @@
+<div class="container-fluid mt-2 interviewer-dashboard">
+  <div class="row g-3 align-items-center mb-4">
+    <div class="col-md-6">
+      <h4 class="mb-0">Interviewer Dashboard</h4>
+      <p class="page-subtitle mb-0">
+        Welcome, <strong>{{ currentUser?.first_name || currentUser?.name || 'Interviewer' }}</strong>.
+
+      </p>
+
+    </div>
+    <div class="col-md-6">
+      <div class="demo-inline-spacing text-end">
+        <button type="button" class="btn bg-white waves-effect waves-light dashboard-action-btn" (click)="loadMyInterviews()">
+          <i class="fas fa-sync-alt mx-1"></i>
+          Refresh
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- <div class="row mb-3">
+    <div class="col-12">
+      <h5 class="mb-0">Assigned Interviews Overview</h5>
+      <p class="text-muted text-sm mb-0">{{ currentUser?.email }}</p>
+    </div>
+  </div> -->
+
+  <!-- <div class="row mb-4">
+    <div class="col-xl-3 col-sm-6 mb-3">
+      <div class="card h-100 dashboard-glass-card stat-card">
+        <div class="card-body p-3">
+          <div class="row">
+            <div class="col-8">
+              <p class="text-sm mb-0 text-uppercase font-weight-bold">Total Assigned</p>
+              <h5 class="font-weight-bolder mb-0">{{ stats.total }}</h5>
+            </div>
+            <div class="col-4 text-end">
+              <div class="icon icon-shape bg-gradient-primary shadow-primary text-center rounded-circle">
+                <i class="fas fa-calendar-check text-white opacity-10"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-3 col-sm-6 mb-3">
+      <div class="card h-100 dashboard-glass-card stat-card">
+        <div class="card-body p-3">
+          <div class="row">
+            <div class="col-8">
+              <p class="text-sm mb-0 text-uppercase font-weight-bold">Scheduled</p>
+              <h5 class="font-weight-bolder mb-0 text-warning">{{ stats.scheduled }}</h5>
+            </div>
+            <div class="col-4 text-end">
+              <div class="icon icon-shape bg-gradient-warning shadow-warning text-center rounded-circle">
+                <i class="fas fa-clock text-white opacity-10"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-3 col-sm-6 mb-3">
+      <div class="card h-100 dashboard-glass-card stat-card">
+        <div class="card-body p-3">
+          <div class="row">
+            <div class="col-8">
+              <p class="text-sm mb-0 text-uppercase font-weight-bold">Pending Feedback</p>
+              <h5 class="font-weight-bolder mb-0 text-danger">{{ stats.pending_feedback }}</h5>
+            </div>
+            <div class="col-4 text-end">
+              <div class="icon icon-shape bg-gradient-danger shadow-danger text-center rounded-circle">
+                <i class="fas fa-exclamation-triangle text-white opacity-10"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-3 col-sm-6 mb-3">
+      <div class="card h-100 dashboard-glass-card stat-card">
+        <div class="card-body p-3">
+          <div class="row">
+            <div class="col-8">
+              <p class="text-sm mb-0 text-uppercase font-weight-bold">Completed</p>
+              <h5 class="font-weight-bolder mb-0 text-success">{{ stats.completed }}</h5>
+            </div>
+            <div class="col-4 text-end">
+              <div class="icon icon-shape bg-gradient-success shadow-success text-center rounded-circle">
+                <i class="fas fa-check-circle text-white opacity-10"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div> -->
+
+  <div class="summary-grid mb-4">
+    <app-interviewer-interviews [items]="getSectionItems('Interviews')"></app-interviewer-interviews>
+    <app-interviewer-candidates [items]="getSectionItems('Candidates')"></app-interviewer-candidates>
+    <app-interviewer-feedback [items]="getSectionItems('Feedback')"></app-interviewer-feedback>
+  </div>
+
+  <div class="card dashboard-glass-card">
+    <div class="card-header pb-0 d-flex justify-content-between align-items-center">
+      <h6 class="mb-0">My Interview Assignments</h6>
+      <button class="btn btn-sm approve view-all-btn" (click)="loadMyInterviews()">
+        <i class="fas fa-sync-alt me-1"></i> Refresh
+      </button>
+    </div>
+    <div class="card-body px-0 pb-2">
+      <div *ngIf="loading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 text-muted">Loading your interviews...</p>
+      </div>
+
+      <div *ngIf="!loading && assignedInterviews.length === 0" class="text-center py-5">
+        <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+        <p class="text-muted">No interviews assigned to you yet.</p>
+      </div>
+
+      <div class="table-responsive px-3" *ngIf="!loading && assignedInterviews.length > 0">
+        <table class="table align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>#</th>
+              <th>Candidate</th>
+              <th>Job</th>
+              <th>Round</th>
+              <th>Schedule</th>
+              <th>Mode</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of assignedInterviews; let i = index" [class.table-secondary]="!item.is_unlocked">
+              <td>{{ i + 1 }}</td>
+
+              <td>
+                <ng-container *ngIf="item.is_unlocked; else lockedCandidate">
+                  <div class="d-flex align-items-center gap-2">
+                    <div
+                      class="avatar-initial rounded-circle bg-gradient-primary text-white d-flex align-items-center justify-content-center"
+                      style="width:36px;height:36px;font-size:14px;flex-shrink:0;">
+                      {{ (item.candidate.name || '?')[0].toUpperCase() }}
+                    </div>
+                    <div>
+                      <p class="mb-0 fw-semibold text-sm">{{ item.candidate.name }}</p>
+                      <p class="mb-0 text-xs text-muted">{{ item.candidate.email }}</p>
+                      <p class="mb-0 text-xs text-muted" *ngIf="item.candidate.phone">{{ item.candidate.phone }}</p>
+                    </div>
+                  </div>
+                </ng-container>
+                <ng-template #lockedCandidate>
+                  <div class="d-flex align-items-center gap-2">
+                    <div
+                      class="avatar-initial rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center"
+                      style="width:36px;height:36px;font-size:14px;flex-shrink:0;">
+                      <i class="fas fa-lock" style="font-size:12px;"></i>
+                    </div>
+                    <div>
+                      <p class="mb-0 fw-semibold text-sm text-muted">Locked candidate</p>
+                      <p class="mb-0 text-xs text-muted">Details unlock after the previous round</p>
+                    </div>
+                  </div>
+                </ng-template>
+              </td>
+
+              <td class="text-sm">{{ item.job.job_title }}</td>
+
+              <td>
+                <span class="badge bg-info">{{ item.round_name }}</span>
+                <small class="d-block text-muted mt-1">Round {{ item.sequence }} of {{ item.total_rounds }}</small>
+              </td>
+
+              <td class="text-sm">
+                <ng-container *ngIf="item.is_unlocked; else lockedCell">
+                  <span *ngIf="item.scheduled_at">{{ item.scheduled_at | date:'dd MMM yyyy, h:mm a' }}</span>
+                  <span *ngIf="!item.scheduled_at" class="text-muted">-</span>
+                  <small *ngIf="item.duration_minutes" class="d-block text-muted">{{ item.duration_minutes }} mins</small>
+                </ng-container>
+              </td>
+
+              <td class="text-sm">
+                <ng-container *ngIf="item.is_unlocked; else lockedCell">
+                  <span *ngIf="item.mode">{{ item.mode }}</span>
+                  <span *ngIf="!item.mode" class="text-muted">-</span>
+                  <a *ngIf="item.meeting_link" [href]="item.meeting_link" target="_blank" class="d-block text-xs text-primary">
+                    Join Link
+                  </a>
+                </ng-container>
+              </td>
+
+              <td>
+                <ng-container *ngIf="item.is_unlocked">
+                  <span class="badge" [ngClass]="getStatusClass(item)">{{ getStatusLabel(item) }}</span>
+                </ng-container>
+                <ng-container *ngIf="!item.is_unlocked">
+                  <span class="badge bg-secondary">
+                    <i class="fas fa-lock me-1"></i>Locked
+                  </span>
+                  <small class="d-block text-muted mt-1" style="font-size:.7rem;">
+                    Round {{ item.sequence - 1 }} must complete first
+                  </small>
+                </ng-container>
+              </td>
+
+              <td>
+                <button
+                  class="btn btn-sm btn-primary"
+                  *ngIf="item.is_unlocked && !item.feedback_submitted && item.status !== 'completed'"
+                  (click)="openFeedbackModal(item)">
+                  <i class="fas fa-comment-dots me-1"></i>Give Feedback
+                </button>
+                <span
+                  *ngIf="item.is_unlocked && (item.feedback_submitted || item.status === 'completed')"
+                  class="text-success text-sm">
+                  <i class="fas fa-check-circle me-1"></i>Feedback Done
+                </span>
+                <span *ngIf="!item.is_unlocked" class="text-muted text-sm">
+                  <i class="fas fa-lock me-1"></i>Not available yet
+                </span>
+              </td>
+            </tr>
+
+            <ng-template #lockedCell>
+              <span class="text-muted">Locked</span>
+            </ng-template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="showFeedbackModal" style="z-index:1040;"></div>
+
+<div class="modal fade show d-block" *ngIf="showFeedbackModal" style="z-index:1050;" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-comment-dots me-2"></i>Submit Interview Feedback
+        </h5>
+        <button type="button" class="btn-close" (click)="closeFeedbackModal()"></button>
+      </div>
+      <div class="modal-body" *ngIf="selectedInterview">
+        <div class="alert alert-light border mb-3">
+          <div class="row">
+            <div class="col-6">
+              <strong>Candidate:</strong> {{ selectedInterview.candidate.name }}<br>
+              <strong>Email:</strong> {{ selectedInterview.candidate.email }}
+            </div>
+            <div class="col-6">
+              <strong>Job:</strong> {{ selectedInterview.job.job_title }}<br>
+              <strong>Round:</strong>
+              <span class="badge bg-info ms-1">{{ selectedInterview.round_name }}</span>
+              ({{ selectedInterview.sequence }} of {{ selectedInterview.total_rounds }})
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Rating <span class="text-danger">*</span></label>
+          <div class="d-flex gap-2 align-items-center">
+            <button
+              *ngFor="let star of stars"
+              type="button"
+              class="btn btn-sm"
+              [class.btn-warning]="feedbackForm.rating >= star"
+              [class.btn-outline-secondary]="feedbackForm.rating < star"
+              (click)="setRating(star)"
+              style="font-size:18px;padding:4px 10px;">★</button>
+            <span class="ms-2 text-muted">{{ feedbackForm.rating }}/5</span>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Recommendation <span class="text-danger">*</span></label>
+          <div class="d-flex gap-3">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="recommendation" id="rec-selected" value="selected"
+                [(ngModel)]="feedbackForm.recommendation">
+              <label class="form-check-label text-success fw-semibold" for="rec-selected">
+                <i class="fas fa-check-circle me-1"></i>Selected
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="recommendation" id="rec-hold" value="hold"
+                [(ngModel)]="feedbackForm.recommendation">
+              <label class="form-check-label text-warning fw-semibold" for="rec-hold">
+                <i class="fas fa-pause-circle me-1"></i>Hold
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="recommendation" id="rec-rejected" value="rejected"
+                [(ngModel)]="feedbackForm.recommendation">
+              <label class="form-check-label text-danger fw-semibold" for="rec-rejected">
+                <i class="fas fa-times-circle me-1"></i>Rejected
+              </label>
+            </div>
+          </div>
+          <div
+            *ngIf="feedbackForm.recommendation === 'selected' && selectedInterview.sequence < selectedInterview.total_rounds"
+            class="alert alert-info mt-2 py-2 mb-0 text-sm">
+            <i class="fas fa-info-circle me-1"></i>
+            Approving will unlock <strong>Round {{ selectedInterview.sequence + 1 }}</strong> for the next interviewer.
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Strengths</label>
+          <textarea class="form-control" rows="2" placeholder="Candidate's key strengths..."
+            [(ngModel)]="feedbackForm.strengths"></textarea>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Concerns</label>
+          <textarea class="form-control" rows="2" placeholder="Any concerns or red flags..."
+            [(ngModel)]="feedbackForm.concerns"></textarea>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Additional Notes</label>
+          <textarea class="form-control" rows="2" placeholder="Any other observations..."
+            [(ngModel)]="feedbackForm.notes"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeFeedbackModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" (click)="submitFeedback()" [disabled]="isSubmittingFeedback">
+          <span *ngIf="isSubmittingFeedback" class="spinner-border spinner-border-sm me-1"></span>
+          <i *ngIf="!isSubmittingFeedback" class="fas fa-paper-plane me-1"></i>
+          Submit Feedback
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

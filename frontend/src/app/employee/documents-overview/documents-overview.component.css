@@ -1,0 +1,136 @@
+.doc-overview-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+/* Summary Cards */
+.doc-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.06);
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.doc-summary-card__icon {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  color: #fff;
+}
+
+.doc-summary-card__count {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #0f172a;
+}
+
+.doc-summary-card__label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-top: 0.2rem;
+}
+
+.doc-summary-card--total .doc-summary-card__icon       { background: linear-gradient(135deg, #334155, #64748b); }
+.doc-summary-card--appointment .doc-summary-card__icon { background: linear-gradient(135deg, #005fa8, #0ea5e9); }
+.doc-summary-card--offer .doc-summary-card__icon       { background: linear-gradient(135deg, #b45309, #f59e0b); }
+.doc-summary-card--nda .doc-summary-card__icon         { background: linear-gradient(135deg, #7c3aed, #a78bfa); }
+.doc-summary-card--relieving .doc-summary-card__icon   { background: linear-gradient(135deg, #0f766e, #2dd4bf); }
+
+/* Employee avatar */
+.doc-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #005fa8, #0ea5e9);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Action Buttons */
+.doc-action-btn {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.28rem 0.65rem;
+  border-radius: 6px;
+  white-space: nowrap;
+  border: 1.5px solid;
+  transition: all 0.15s;
+  min-width: 90px;
+}
+
+.doc-action-btn--appointment {
+  color: #005fa8;
+  border-color: #005fa8;
+  background: rgba(0,95,168,0.06);
+}
+.doc-action-btn--appointment:hover { background: rgba(0,95,168,0.14); }
+
+.doc-action-btn--nda {
+  color: #7c3aed;
+  border-color: #7c3aed;
+  background: rgba(124,58,237,0.06);
+}
+.doc-action-btn--nda:hover { background: rgba(124,58,237,0.14); }
+
+.doc-action-btn--offer {
+  color: #b45309;
+  border-color: #b45309;
+  background: rgba(180,83,9,0.06);
+}
+.doc-action-btn--offer:hover { background: rgba(180,83,9,0.14); }
+
+.doc-action-btn--relieving {
+  color: #0f766e;
+  border-color: #0f766e;
+  background: rgba(15,118,110,0.06);
+}
+.doc-action-btn--relieving:hover { background: rgba(15,118,110,0.14); }
+
+.doc-action-btn--done {
+  color: #fff !important;
+  background: #16a34a !important;
+  border-color: #16a34a !important;
+}
+.doc-action-btn--done:hover { background: #15803d !important; }
+
+.doc-gen-date {
+  font-size: 0.65rem;
+  color: #64748b;
+}
+
+/* Table */
+.doc-table thead th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  font-weight: 700;
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+}
+
+.doc-table tbody td {
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+  vertical-align: middle;
+}

@@ -1,0 +1,52 @@
+<div class="page-shell">
+  <div class="page-head">
+    <div>
+      <h3>Candidates</h3>
+      <p>Review all, shortlisted, selected, and rejected candidates from your interview pipeline.</p>
+    </div>
+    <button type="button" class="btn btn-outline-primary btn-sm" (click)="loadData()">Refresh</button>
+  </div>
+
+  <app-interviewer-candidates [items]="items"></app-interviewer-candidates>
+
+  <div class="data-card mt-4">
+    <div class="data-card-head">
+      <div>
+        <h5>Candidate List</h5>
+        <p class="filter-caption mb-0">{{ currentFilter | titlecase }} candidates</p>
+      </div>
+      <span>{{ candidates.length }} records</span>
+    </div>
+
+    <div *ngIf="loading" class="state-block">Loading candidates...</div>
+
+    <div *ngIf="!loading && candidates.length === 0" class="state-block">No candidates found.</div>
+
+    <div class="table-responsive" *ngIf="!loading && candidates.length > 0">
+      <table class="table align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Candidate</th>
+            <th>Email</th>
+            <th>Job</th>
+            <th>Round</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of candidates">
+            <td>{{ item.candidate.name }}</td>
+            <td>{{ item.candidate.email }}</td>
+            <td>{{ item.job.job_title }}</td>
+            <td>
+              <span class="badge bg-info">{{ item.round_name }}</span>
+            </td>
+            <td>
+              <span class="badge" [ngClass]="getCandidateStatusClass(item)">{{ getCandidateStatusLabel(item) }}</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

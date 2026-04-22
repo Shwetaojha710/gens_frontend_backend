@@ -1,0 +1,167 @@
+<div class="mt-2">
+  <div class="row mb-6" *ngIf="createFlag">
+    <div class="col-md">
+      <!-- <div class="card"> -->
+      <h5 class="card-header d-flex justify-content-between align-items-center">
+        <span>Qualification</span>
+        <button type="button" class="btn btn-xs btn-primary float-end" (click)="back()">
+          <i class="fa-solid fa-arrow-left"></i>&nbsp;back
+        </button>
+      </h5>
+
+      <!-- <hr style="margin: 0rem 0 !important" /> -->
+      <!-- <div class="card-body"> -->
+      <div class="row mt-5">
+        <div class="col-4">
+          <label for="defaultFormControlInput" class="form-label">Document Type</label>
+          <ng-select [items]="docTypeList" bindLabel="label" bindValue="value" [(ngModel)]="obj['type']"
+            [multiple]="false" placeholder="Select Doc type" name="doc_type" id="select2Danger">
+          </ng-select>
+        </div>
+
+
+        <div class="col-4">
+          <label for="formFile" class="form-label">Document</label>
+          <input #fileInput class="form-control" type="file" id="formFile" type="file" (change)="onFileChange($event)"
+            accept="image/*" />
+          <div *ngIf="sanitizedImage">
+            <button style="position: absolute; right: 356px" (click)="close()" type="button" class="btn-close"
+              data-dismiss="modal" aria-label="Close"></button>
+            <!-- If image, show thumbnail -->
+            <div *ngIf="fileType?.startsWith('image')">
+              <img [src]="sanitizedImage" alt="Uploaded Image" class="img-thumbnail"
+                style="max-width: 80px; max-height: 80px; margin-top: 8px; object-fit: cover; border: 1px solid #cfd0d6; border-radius: 5px;" />
+            </div>
+
+            <!-- If PDF, show preview + download -->
+            <div *ngIf="fileType == 'application/pdf'" style="margin-top: -10px;">
+              <!-- <iframe [src]="sanitizedImage" width="200" height="80" style="border: 1px solid #cfd0d6; border-radius: 5px;"></iframe> -->
+
+              <br />
+              <a [href]="sanitizedImage" download="uploaded-file.pdf" class="btn btn-sm btn-success"
+                style="margin-top: -10px;">
+                Download PDF
+              </a>
+            </div>
+
+            <!-- <img [src]="sanitizedImage" alt="Uploaded Image" class="img-thumbnail" style="
+                    max-width: 80px;
+                    max-height: 80px;
+                    margin-top: 8px;
+                    object-fit: cover;
+                    border: 1px solid #cfd0d6;
+                    border-radius: 5px;" /> -->
+          </div>
+        </div>
+
+        <div class="col-4" *ngIf="updateFlag">
+          <label for="defaultFormControlInput" class="form-label">Status</label>
+          <ng-select [items]="status" bindLabel="label" bindValue="value" [(ngModel)]="obj['status']" [multiple]="false"
+            placeholder="Select Status" name="status" id="select2Danger">
+          </ng-select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-12 mt-2">
+          <button *ngIf="createFlag && updateFlag == false" type="button"
+            class="btn btn-sm btn-primary waves-effect waves-light" (click)="onSubmit()">
+            Submit
+          </button>
+          <button *ngIf="updateFlag" type="button" class="btn btn-sm btn-primary waves-effect waves-light"
+            (click)="updatedata()">
+            Update
+          </button>
+        </div>
+      </div>
+      <!-- </div> -->
+      <!-- </div> -->
+    </div>
+  </div>
+  <div class="row mb-6">
+    <div class="col-md">
+      <!-- <div class="card"> -->
+
+      <h5 class="card-header d-flex justify-content-between align-items-center">
+        <span>Document List</span>
+        <button *ngIf="createFlag == false" type="button" class="btn btn-xs btn-primary float-end"
+          (click)="opencreate()">
+          <i class="fa-solid fa-plus"></i>&nbsp;Add
+        </button>
+      </h5>
+      <br />
+      <div class="table-responsive table-striped">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>SI.No</th>
+              <th>Type</th>
+              <th>Doc Name</th>
+              <!-- <th>Status</th>
+              <th>createdAt</th> -->
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody class="table-border-bottom-0">
+            <tr *ngFor="let item of DocumentList; let i = index">
+              <th scope="row">{{ i + 1 }}</th>
+              <td>{{ item["typeName"] }}</td>
+              <!-- <td>
+                <img [src]="item['doc_name']" alt="Document" width="100" height="auto" style="cursor: pointer"
+                  (click)="openModal1(item['doc_name'])" />
+
+              </td> -->
+              <td>
+                <!-- Show image preview if doc_type starts with 'image/' -->
+                <ng-container *ngIf="item.doc_type.startsWith('image/'); else pdfBlock">
+                  <img [src]="item.doc_name" alt="Document" width="100" height="auto" style="cursor: pointer" />
+                </ng-container>
+
+                <!-- Show download link if it's PDF -->
+                <ng-template #pdfBlock>
+                  <a [href]="item.doc_name" target="_blank" download style="text-decoration: none;  cursor: pointer;"
+                    class="btn btn-sm btn-primary">
+                    Download PDF
+                  </a>
+                </ng-template>
+              </td>
+              <!-- <td>
+                <span
+                  class="badge rounded overflow-hidden px-2"
+                  [ngClass]="getStatusClass(item['status'])"
+                >
+                  {{ item["status"] }}
+                </span>
+              </td>
+              <td>{{ item["createdAt"] }}</td> -->
+
+              <td>
+                <button type="button" class="btn btn-outline-success btn-sm" (click)="update(item)">
+                  <i class="fas fa-edit"></i>
+                </button>
+                &nbsp;
+                <button type="button" class="btn btn-sm btn-outline-danger" (click)="delete(item)">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- </div> -->
+    </div>
+  </div>
+</div>
+<!-- Modal -->
+<div class="modal fade" id="imageModal1" tabindex="-1" aria-labelledby="imageModalLabel1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Document</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <img [src]="imageUrls" class="img-fluid" />
+      </div>
+    </div>
+  </div>
+</div>

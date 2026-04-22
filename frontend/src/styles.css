@@ -1,0 +1,268 @@
+/* You can add global styles to this file, and also import other style files */
+
+@import "@ng-select/ng-select/themes/default.theme.css";
+ /* .ng-select .ng-select-single .ng-select-container {
+        height: 44px !important;
+        border-radius: 22px !important;
+    } */
+
+:root,
+[data-bs-theme=light] {
+
+--bs-success: #198754;
+
+}
+
+
+.form-control{
+  height: 38px;
+}
+.form-label{
+  font-weight: bold !important;
+}
+
+.table thead tr th {
+    padding-block: 1rem!important;
+}
+
+span.bg-label-success {
+    color: #479613 !important;
+}
+span.bg-light-danger {
+    color: #bb1717 !important;
+}
+span.bg-light-success {
+    color: #12d854 !important;
+}
+
+
+.card-title h5{
+    color: #3B6E8F;
+}
+
+button.btn.btn-xs.btn-primary.waves-effect.waves-light {
+    background: #4FA3D1;
+    border-color: #4FA3D1;
+}
+
+.text-developer{
+   color: #154d71;
+}
+div.dt-container div.dt-length select {
+    margin-inline: 0.5rem;
+}
+div.dt-container div.dt-length select {
+    width: auto;
+    display: inline-block;
+    margin-right: 0.5em;
+}
+
+div.dt-container div.dt-search input {
+    margin-inline: 0.5rem 0;
+}
+
+div.dt-container div.dt-search input {
+    margin-left: 0.5em;
+    display: inline-block;
+    width: auto;
+}
+
+/* nav.layout-navbar {
+    position: fixed;
+    inset-block-start: 0;
+    inset-inline: 0;
+} */
+
+.btn-success{
+  background-color: #2f7400!important;
+  border-color: #2f7400!important;
+}
+
+.btn-success:hover{
+  background-color: #408e0b !important;
+  border-color: #408e0b !important;
+}
+
+.link-primary{
+    color: #0663a9!important;
+}
+
+table.table {
+    font-size: 12px;
+    text-transform: capitalize;
+}
+
+/* =========================
+ * SuperAdmin shared Hero UI
+ * Use: <div class="sa-hero card ..."> with
+ *  - <p class="sa-hero-kicker">
+ *  - <div class="sa-hero-title">
+ *  - <div class="sa-hero-subtitle">
+ * ========================= */
+.sa-hero.card {
+  border-radius: 1rem !important;
+  border: 0 !important;
+  overflow: hidden;
+  position: relative;
+  color: #fff;
+  background: linear-gradient(89.79deg, #209af7 0.92%, #025a9d 99.82%) !important;
+  box-shadow: 0 14px 40px rgba(2, 90, 157, 0.28);
+}
+
+.sa-hero.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 380px at 15% 15%, rgba(255, 255, 255, 0.22), transparent 55%),
+    radial-gradient(760px 340px at 90% 0%, rgba(255, 255, 255, 0.16), transparent 52%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.08), transparent 55%);
+  opacity: 0.95;
+}
+
+.sa-hero.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.sa-hero.card > .card-body {
+  position: relative;
+  z-index: 1;
+}
+
+.sa-hero-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+  margin: 0;
+}
+
+.sa-hero-title {
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: #fff;
+  text-shadow: 0 10px 28px rgba(2, 90, 157, 0.35);
+}
+
+.sa-hero-subtitle {
+  font-size: 0.9rem;
+  opacity: 0.92;
+  margin-top: 0.35rem;
+  max-width: 40rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+
+/*
+* demo.css
+* File include item demo only specific css only
+******************************************************************************/
+
+.menu .app-brand.demo {
+  height: 64px;
+}
+
+.app-brand-logo.demo svg {
+  width: 38px;
+  height: 20px;
+}
+
+.app-brand-text.demo {
+  font-size: 1.25rem;
+  letter-spacing: 0.15px;
+}
+
+.authentication-wrapper .app-brand-text.demo {
+  text-transform: capitalize;
+}
+
+/* ! For .layout-navbar-fixed added fix padding top to .layout-page */
+/* Default navbar */
+.layout-navbar-fixed .layout-wrapper:not(.layout-without-menu) .layout-page {
+  padding-top: 64px !important;
+}
+
+/* Navbar page z-index issue solution */
+.content-wrapper .navbar {
+  z-index: auto;
+}
+
+/*
+* Content
+******************************************************************************/
+
+.demo-blocks > * {
+  display: block !important;
+}
+
+.demo-inline-spacing > * {
+  margin: 1rem 0.375rem 0 0 !important;
+}
+
+/* ? .demo-vertical-spacing class is used to have vertical margins between elements. To remove margin-top from the first-child, use .demo-only-element class with .demo-vertical-spacing class. For example, we have used this class in forms-input-groups.html file. */
+.demo-vertical-spacing > * {
+  margin-top: 1.25rem !important;
+  margin-bottom: 0 !important;
+}
+.demo-vertical-spacing.demo-only-element > :first-child {
+  margin-top: 0 !important;
+}
+
+.demo-vertical-spacing-lg > * {
+  margin-top: 1.875rem !important;
+  margin-bottom: 0 !important;
+}
+.demo-vertical-spacing-lg.demo-only-element > :first-child {
+  margin-top: 0 !important;
+}
+
+.demo-vertical-spacing-xl > * {
+  margin-top: 5rem !important;
+  margin-bottom: 0 !important;
+}
+.demo-vertical-spacing-xl.demo-only-element > :first-child {
+  margin-top: 0 !important;
+}
+
+/* Dropdown buttons going out of small screens */
+@media (max-width: 576px) {
+  #dropdown-variation-demo .btn-group .text-truncate {
+    width: 300px;
+    position: relative;
+  }
+  #dropdown-variation-demo .btn-group .text-truncate::after {
+    position: absolute;
+    top: 45%;
+    right: 0.65rem;
+  }
+}
+/*
+* Layout demo
+******************************************************************************/
+
+.layout-demo-wrapper {
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-align: center;
+  align-items: center;
+  -ms-flex-direction: column;
+  flex-direction: column;
+  margin-top: 1.25rem;
+}
+.layout-demo-placeholder img {
+  width: 900px;
+}
+.layout-demo-info {
+  text-align: center;
+  margin-top: 1.25rem;
+}

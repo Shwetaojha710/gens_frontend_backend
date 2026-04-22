@@ -1,0 +1,328 @@
+<div class="container-fluid mt-3">
+  <div class="row g-3">
+    <div class="col-md-4" *ngFor="let item of jobs">
+      <!-- <div class="card mb-6" [ngClass]="getCardBorderClass(item?.status)">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start text-capitalize">
+            <h5 class="text-primary mb-0">
+              {{item?.job_title}}
+            </h5>
+            <span class="badge rounded-pill text-uppercase" [ngClass]="getStatusBadgeClass(item?.status)">
+              {{ getStatusLabel(item?.status) }}
+            </span>
+          </div>
+
+          <ul class="list-unstyled g-2 my-3">
+            <li class="mb-2 d-flex align-items-center"><i
+                class="icon-base ri ri-circle-fill icon-10px text-body me-2"></i> Job Location
+              : <span class="text-success"> {{item?.location}}</span></li>
+            <li class="mb-2 d-flex align-items-center"><i
+                class="icon-base ri ri-circle-fill icon-10px text-body me-2"></i><span>No Of Opening :
+                {{item?.no_of_opening}}</span></li>
+
+            <li class="mb-2 d-flex align-items-center"><i
+                class="icon-base ri ri-circle-fill icon-10px text-body me-2"></i><span>Notice Period :
+                {{item?.notice_period}}</span></li>
+
+          </ul>
+
+          <div class="d-flex justify-content-between align-items-center mb-1 fw-medium text-heading">
+            Skills Required : <br>
+
+          </div>
+
+
+          <div class="d-flex flex-wrap gap-2 mb-3">
+            <span *ngFor="let skill of getSkillsList(item?.skills)" class="badge rounded-pill bg-label-primary">
+              {{ skill }}
+            </span>
+            <span *ngIf="!getSkillsList(item?.skills).length" class="text-muted">-</span>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mb-1 fw-medium text-heading">
+            Job Description : <br>
+
+          </div>
+
+          <p> {{item?.job_description}}</p>
+          <div class="job-action-row">
+            <button *ngIf="canPublish(item)" type="button" class="btn btn-outline-primary d-grid w-100 waves-effect"
+              (click)="publish(item,'open')">
+              <i class="ri-rocket-line"></i>
+              <span>Publish</span>
+            </button>
+            <button *ngIf="canClose(item)" type="button" class="job-action-btn close-btn"
+              (click)="publish(item,'close')">
+              <i class="ri-lock-line"></i>
+              <span>Close</span>
+            </button>
+          </div>
+          <div *ngIf="item?.url" class="mt-2 d-flex align-items-center gap-2">
+            <a [href]="normalizeUrl(item.url)" target="_blank" rel="noopener noreferrer"
+              class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" title="Open Job URL">
+              <i class="ri-external-link-line"></i>
+              <span>Open</span>
+            </a>
+            <button type="button" class="btn btn-sm d-flex align-items-center gap-1"
+              [ngClass]="copied[item.id] ? 'btn-success' : 'btn-outline-secondary'"
+              [title]="copied[item.id] ? 'Copied!' : 'Copy Job URL'"
+              (click)="copy(item.url, item.id)">
+              <i [class]="copied[item.id] ? 'ri-check-line' : 'ri-file-copy-line'"></i>
+              <span>{{ copied[item.id] ? 'Copied!' : 'Copy URL' }}</span>
+            </button>
+          </div>
+        </div>
+      </div> -->
+
+
+      <div class="card h-100" >
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-4">
+            <a href="javascript:;" class="d-flex align-items-center">
+              <div class="avatar me-2">
+                <img src="../../assets/img/icons/brands/react-label.png" alt="Avatar" class="rounded-circle">
+              </div>
+              <div class="me-2 text-heading h5 mb-0"> {{item?.job_title}}</div>
+            </a>
+            <div class="ms-auto">
+              <ul class="list-inline mb-0 d-flex align-items-center">
+                <li class="list-inline-item me-1">
+                  <a href="javascript:void(0);" class="badge bg-label-primary rounded-pill"> Notice Period : {{ item?.notice_period || '-' }}</a>
+                </li>
+                <li class="list-inline-item me-1">
+                  <!-- <a href="javascript:void(0);"
+                    class="badge bg-label-success rounded-pill" [ngClass]="getStatusBadgeClass(item?.status)">  {{ getStatusLabel(item?.status) }}</a> -->
+                </li>
+                <li class="list-inline-item">
+                  <div class="dropdown" [class.show]="openDropdownId == item?.id">
+                    <button type="button"
+                      class="btn btn-text-secondary btn-icon rounded-pill dropdown-toggle hide-arrow p-0 waves-effect"
+                      (click)="toggleDropdown(item?.id, $event)"
+                      [attr.aria-expanded]="openDropdownId === item?.id"><i
+                        class="icon-base ri ri-more-2-line icon-22px text-body-secondary"></i></button>
+                    <ul class="dropdown-menu dropdown-menu-end" [class.show]="openDropdownId === item?.id" (click)="$event.stopPropagation()">
+                      <li *ngIf="canPublish(item)">
+                        <button type="button" class="dropdown-item waves-effect" (click)="publish(item, 'open')">
+                          Publish
+                        </button>
+                      </li>
+                      <li *ngIf="canClose(item)">
+                        <button type="button" class="dropdown-item waves-effect" (click)="publish(item, 'close')">
+                          Close
+                        </button>
+                      </li>
+                      <li *ngIf="item?.url">
+                        <button type="button" class="dropdown-item waves-effect" (click)="openJobUrl(item?.url)">
+                          Open URL
+                        </button>
+                      </li>
+                      <li>
+                        <hr class="dropdown-divider">
+                      </li>
+
+                    </ul>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <p class="mb-2 flex-wrap "><span class="text-primary">Skills level</span>: <span
+              *ngFor="let skill of getSkillsList(item?.skills)" class="badge rounded-pill bg-label-info mx-1">
+              {{ skill }}
+            </span></p>
+          <p class="mb-3 pb-1 jd-snippet text-muted">
+            {{ truncateDescription(item?.job_description) }}
+          </p>
+          <div class="d-flex align-items-center">
+            <div class="d-flex align-items-center w-px-100">
+              <i class="icon-base ri ri-map-pin-line icon-18px me-1_5 text-primary"></i>
+              <span> {{item?.location}}</span>
+            </div>
+            <div class="d-flex align-items-center w-px-75">
+              <i class="icon-base ri ri-hand icon-18px me-1_5 text-primary"></i>
+              <span>{{item?.no_of_opening}}</span>
+            </div>
+
+            <div class="ms-auto">
+              <a  class="badge bg-label-success rounded-pill mx-1"
+                [ngClass]="getStatusBadgeClass(item?.status)"> {{ getStatusLabel(item?.status) }}</a>
+              <a href="javascript:;" class="me-1" (click)="viewDetails(item)"><span class="badge bg-outilne-primary rounded-pill">View
+                  Details</span></a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Job Detail Modal -->
+<div class="modal fade" id="jobDetailModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <div class="d-flex align-items-center gap-3 flex-grow-1 min-w-0">
+          <div>
+            <h5 class="modal-title mb-0 fw-bold">{{ selectedJob?.job_title }}</h5>
+            <small class="text-muted">
+              {{ tenant?.companyName || tenant?.name || '' }}
+              <span *ngIf="selectedJob?.location"> · {{ selectedJob?.location }}</span>
+            </small>
+          </div>
+          <span class="badge rounded-pill ms-2" [ngClass]="getStatusBadgeClass(selectedJob?.status)">
+            {{ getStatusLabel(selectedJob?.status) }}
+          </span>
+        </div>
+        <button type="button" class="btn-close ms-2" (click)="closeDetailsModal()"></button>
+      </div>
+
+      <div class="modal-body" *ngIf="selectedJob">
+
+        <!-- Meta row -->
+        <div class="d-flex flex-wrap align-items-center gap-3 mb-4 text-muted small">
+          <span><i class="fas fa-map-marker-alt me-1 text-primary"></i>{{ selectedJob?.location || '—' }}</span>
+          <span><i class="fas fa-clock me-1 text-primary"></i>{{ getPostedAgoLabel(selectedJob?.createdAt || selectedJob?.created_at) }}</span>
+          <span><i class="fas fa-users me-1 text-primary"></i>{{ getApplicantCount(selectedJob) }} Applicant(s)</span>
+          <span class="ms-auto text-end"><i class="fas fa-sync-alt me-1"></i>{{ getUpdatedAgoLabel(selectedJob?.updatedAt || selectedJob?.updated_at || selectedJob?.createdAt) }}</span>
+        </div>
+
+        <!-- Info cards -->
+        <div class="row g-3 mb-4">
+          <div class="col-6 col-md-3">
+            <div class="card shadow-none border border-primary-subtle h-100">
+              <div class="card-body py-3">
+                <div class="text-muted small text-uppercase mb-1">Experience</div>
+                <div class="fw-semibold text-primary">{{ selectedJob?.experience || '—' }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="card shadow-none border border-primary-subtle h-100">
+              <div class="card-body py-3">
+                <div class="text-muted small text-uppercase mb-1">Employment Type</div>
+                <div class="fw-semibold text-primary">{{ getEmploymentTypeLabel(selectedJob) }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="card shadow-none border border-primary-subtle h-100">
+              <div class="card-body py-3">
+                <div class="text-muted small text-uppercase mb-1">Budget CTC</div>
+                <div class="fw-semibold text-primary">{{ selectedJob?.budget_ctc || '—' }} LPA</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="card shadow-none border border-primary-subtle h-100">
+              <div class="card-body py-3">
+                <div class="text-muted small text-uppercase mb-1">Openings</div>
+                <div class="fw-semibold text-primary">{{ selectedJob?.no_of_opening || '—' }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Skills -->
+        <div class="mb-4" *ngIf="getSkillsList(selectedJob?.skills).length">
+          <div class="text-uppercase text-muted small fw-semibold mb-2">Skills Required</div>
+          <div class="d-flex flex-wrap gap-2">
+            <span *ngFor="let s of getSkillsList(selectedJob?.skills)" class="badge bg-label-info rounded-pill px-2 py-1">{{ s }}</span>
+          </div>
+        </div>
+
+        <!-- Job Description -->
+        <div class="mb-4" *ngIf="selectedJob?.job_description">
+          <div class="text-uppercase text-muted small fw-semibold mb-2">Job Description</div>
+          <div class="jd-body border rounded p-3" [innerHTML]="parseJobDescription(selectedJob?.job_description)"></div>
+        </div>
+
+        <!-- Sourcing / Application Link -->
+        <div class="border rounded p-3">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="text-uppercase text-muted small fw-semibold">
+              <i class="fas fa-link me-1"></i>Application Link
+              <span *ngIf="generatedUrl" class="badge bg-label-success ms-2" style="font-size:10px;text-transform:none;">
+                <i class="fas fa-lock me-1"></i>Link active
+              </span>
+            </div>
+            <button *ngIf="!generatedUrl" type="button" class="btn btn-sm btn-primary" (click)="generate()" [disabled]="generating">
+              <span *ngIf="generating" class="spinner-border spinner-border-sm me-1"></span>
+              {{ generating ? 'Generating...' : 'Generate Link' }}
+            </button>
+          </div>
+
+          <!-- Config form — only shown before first generate -->
+          <div *ngIf="!generatedUrl" class="mb-3">
+            <div class="alert alert-info py-2 px-3 mb-3 small">
+              <i class="fas fa-info-circle me-1"></i>
+              Once generated, this link is permanent and cannot be regenerated.
+            </div>
+            <div class="row g-2 align-items-end">
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold mb-1">Base URL</label>
+                <input type="url" class="form-control form-control-sm" [(ngModel)]="obj['baseUrl']" placeholder="https://yourdomain.com" />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small fw-semibold mb-1">Slug (optional)</label>
+                <input type="text" class="form-control form-control-sm" [(ngModel)]="obj['slug']" placeholder="auto-generated" />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small fw-semibold mb-1">Expires In</label>
+                <select class="form-select form-select-sm" [(ngModel)]="obj['expiresDays']">
+                  <option *ngFor="let d of expireDays" [value]="d.value">{{ d.label }}</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="generatedUrl">
+            <!-- Main link -->
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <input type="text" class="form-control form-control-sm font-monospace" [value]="normalizeUrl(generatedUrl)" readonly />
+              <button type="button" class="btn btn-sm flex-shrink-0"
+                [ngClass]="copied['main'] ? 'btn-success' : 'btn-outline-secondary'"
+                (click)="copy(generatedUrl, 'main')">
+                <i [class]="copied['main'] ? 'fas fa-check' : 'fas fa-copy'"></i>
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-primary flex-shrink-0" (click)="openJobUrl(generatedUrl)">
+                <i class="fas fa-external-link-alt"></i>
+              </button>
+            </div>
+            <div *ngIf="expiresAt" class="text-muted small mb-3">
+              <i class="fas fa-hourglass-half me-1"></i>Expires: {{ expiresAt | date:'mediumDate' }}
+            </div>
+            <!-- Channel UTM links -->
+            <div class="text-uppercase text-muted small fw-semibold mb-2">Per-Channel Links</div>
+            <div class="row g-2">
+              <div class="col-md-4" *ngFor="let ch of channels">
+                <div class="d-flex align-items-center gap-1 border rounded px-2 py-1">
+                  <span class="fw-semibold small flex-grow-1" [style.color]="ch.color">{{ ch.label }}</span>
+                  <button type="button" class="btn btn-xs p-1"
+                    [ngClass]="copied[ch.id] ? 'btn-success' : 'btn-outline-secondary'"
+                    (click)="copy(buildChannelUrl(ch.id), ch.id)" [title]="'Copy ' + ch.label + ' link'">
+                    <i [class]="copied[ch.id] ? 'fas fa-check' : 'fas fa-copy'" style="font-size:11px;"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button *ngIf="canPublish(selectedJob)" type="button" class="btn btn-success btn-sm me-auto"
+          (click)="publish(selectedJob, 'open'); closeDetailsModal()">
+          <i class="ri-rocket-line me-1"></i>Publish
+        </button>
+        <button *ngIf="canClose(selectedJob)" type="button" class="btn btn-warning btn-sm me-auto"
+          (click)="publish(selectedJob, 'close'); closeDetailsModal()">
+          <i class="ri-lock-line me-1"></i>Close Posting
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="closeDetailsModal()">Close</button>
+      </div>
+
+    </div>
+  </div>
+</div>

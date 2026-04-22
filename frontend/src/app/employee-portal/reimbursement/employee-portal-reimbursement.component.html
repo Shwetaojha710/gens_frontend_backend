@@ -1,0 +1,109 @@
+<div class="container-fluid ep-ep-page ep-reim">
+  <a routerLink="/employee-portal/dashboard" class="ep-ep-page__back">
+    <i class="icon-base ri ri-arrow-left-line me-1"></i> Back to dashboard
+  </a>
+
+  <header class="mb-4">
+    <h4 class="ep-page-title mb-1">Reimbursement</h4>
+    <p class="ep-page-sub mb-0">Submit claims with bills or receipts. HR will review pending requests.</p>
+  </header>
+
+  <div class="row g-4">
+    <div class="col-lg-5">
+      <div class="card ep-glass-card border-0 h-100">
+        <div class="card-body">
+          <p class="ep-dash-section__eyebrow mb-2">New claim</p>
+          <h5 class="h6 mb-3">Submit reimbursement</h5>
+          <form [formGroup]="form" (ngSubmit)="submit()">
+            <div class="row g-2 mb-3">
+              <div class="col-sm-6">
+                <label class="form-label small fw-semibold" for="ep-reim-from">From</label>
+                <input id="ep-reim-from" type="date" class="form-control" formControlName="fromDate" />
+              </div>
+              <div class="col-sm-6">
+                <label class="form-label small fw-semibold" for="ep-reim-to">To</label>
+                <input
+                  id="ep-reim-to"
+                  type="date"
+                  class="form-control"
+                  formControlName="toDate"
+                  [attr.min]="minToDate"
+                />
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold" for="ep-reim-amt">Amount</label>
+              <input id="ep-reim-amt" type="number" class="form-control" formControlName="amount" step="0.01" min="0" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold" for="ep-reim-rem">Remark</label>
+              <textarea id="ep-reim-rem" class="form-control" rows="2" formControlName="remark" placeholder="Purpose of expense"></textarea>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold" for="ep-reim-files">Bills / receipts</label>
+              <input
+                #fileInput
+                id="ep-reim-files"
+                type="file"
+                class="form-control"
+                multiple
+                accept="image/*,.pdf,application/pdf"
+                (change)="onFilesChange($event)"
+              />
+              <p class="small text-muted mb-0 mt-1" *ngIf="selectedFiles.length">
+                {{ selectedFiles.length }} file(s) selected.
+                <button type="button" class="btn btn-link btn-sm p-0 align-baseline" (click)="clearFiles()">Clear</button>
+              </p>
+            </div>
+            <button type="submit" class="btn btn-primary rounded-pill px-4" [disabled]="submitting">
+              {{ submitting ? 'Submitting…' : 'Submit claim' }}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-7">
+      <div class="card ep-glass-card border-0 h-100">
+        <div class="card-body">
+          <p class="ep-dash-section__eyebrow mb-1">Your claims</p>
+          <h5 class="h6 mb-3">History</h5>
+          <div *ngIf="loadingList" class="text-muted py-4 text-center">Loading…</div>
+          <div *ngIf="!loadingList && list.length == 0" class="text-muted py-4 text-center">No reimbursement claims yet.</div>
+          <div class="table-responsive" *ngIf="!loadingList && list.length > 0">
+            <table class="table table-sm align-middle mb-0 ep-reim__table">
+              <thead>
+                <tr>
+                  <th>From</th>
+                  <th>To</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Remark</th>
+                  <th>Files</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of list">
+                  <td>{{ formatDate(row['fromDate']) }}</td>
+                  <td>{{ formatDate(row['toDate']) }}</td>
+                  <td>{{ row['amount'] ?? '—' }}</td>
+                  <td>
+                    <span [class]="statusClass(row['status'])">{{ row['status'] || '—' }}</span>
+                  </td>
+                  <td class="small text-break">{{ row['remark'] || '—' }}</td>
+                  <td>
+                    <ng-container *ngFor="let f of fileList(row); let i = index">
+                      <a *ngIf="f.image" [href]="imageUrl(f.image)" target="_blank" rel="noopener" class="d-inline-block small me-1">
+                        {{ fileList(row).length > 1 ? 'File ' + (i + 1) : 'Open' }}
+                      </a>
+                    </ng-container>
+                    <span *ngIf="fileList(row).length === 0" class="text-muted small">—</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

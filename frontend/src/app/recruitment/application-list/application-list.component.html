@@ -1,0 +1,1245 @@
+<div class="container-fluid">
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span style="font-weight: bold">Candidate Applications Pipeline</span>
+      <button type="button" class="btn btn-xs btn-primary float-end" (click)="loadApplications()">
+        <i class="fas fa-refresh"></i>&nbsp;Refresh
+      </button>
+    </div>
+
+    <!-- Department & Job Title Filters -->
+    <div class="px-3 pt-3 pb-2 d-flex flex-wrap gap-3 align-items-end border-bottom">
+      <div style="min-width:200px;">
+        <label class="form-label fw-semibold mb-1 small">Department</label>
+        <select class="form-select form-select-sm" [(ngModel)]="activeDepartmentFilter" (ngModelChange)="onDepartmentFilterChange()">
+          <option value="">All Departments</option>
+          <option *ngFor="let d of uniqueDepartments" [value]="d">{{ d }}</option>
+        </select>
+      </div>
+      <div style="min-width:200px;">
+        <label class="form-label fw-semibold mb-1 small">Job Title</label>
+        <select class="form-select form-select-sm" [(ngModel)]="activeJobTitleFilter" (ngModelChange)="onJobTitleFilterChange()">
+          <option value="">All Job Titles</option>
+          <option *ngFor="let j of uniqueJobTitles" [value]="j">{{ j }}</option>
+        </select>
+      </div>
+      <div>
+        <button class="btn btn-sm btn-outline-secondary" (click)="clearDropdownFilters()" title="Clear filters">
+          <i class="fas fa-times me-1"></i>Clear
+        </button>
+      </div>
+    </div>
+
+    <!-- Stage Filter Chips (counts reflect dept/job-title selection) -->
+    <div class="filter-chip-bar px-3 pt-3 pb-2">
+      <button *ngFor="let f of stageFilters" class="filter-chip" [class.chip-active]="activeStageFilter === f.key"
+        [attr.data-stage]="f.key" (click)="setStageFilter(f.key)">
+        <span class="chip-dot" [style.background]="f.dotColor"></span>
+        <span class="chip-label">{{ f.label }}</span>
+        <span class="chip-count">{{ getStageCount(f.key) }}</span>
+      </button>
+    </div>
+
+    <div class="card-body p-0">
+      <app-search-pagination [totalItems]="totalItems" [pageSize]="itemsPerPage" ` [currentPage]="currentPage"
+        (search)="onSearch($event)" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)">
+
+        <div *ngIf="isLoading" class="text-center py-4">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-2 text-muted">Loading applications...</p>
+        </div>
+
+        <div *ngIf="!isLoading && filteredApps.length === 0" class="text-center py-5">
+          <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+          <h6 class="text-muted">No applications found</h6>
+          <p class="text-muted mb-0">Try adjusting search or filters</p>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table dataTable">
+            <thead>
+              <tr>
+                <th style="width: 10px!important;">SI.NO</th>
+                <th>Name / Job</th>
+                <th>Email / Phone </th>
+                <th>Experience</th>
+
+                <th>Current CTC <br> Expected CTC in (LPA)</th>
+
+                <th>Notice Period</th>
+                <th>Applied</th>
+                <th>Stage</th>
+                <th style="width: 12% !important;">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+              <tr *ngFor="let app of filteredApps; let i = index">
+                <td style="width: 10px!important;">{{ (currentPage - 1) * itemsPerPage + i + 1 }}</td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="avatar avatar-sm me-4">
+                      <img src="../../assets/img/avatars/1.png" width="100" height="auto" alt="Avatar" class="rounded-circle"
+                        onerror="this.src='../../assets/img/avatars/1.png'" />
+                    </div>
+                    <div>
+                      <h6 class="mb-0 text-truncate link-primary">{{ app.name }}</h6>
+                      <small class="text-truncate">{{ app.job_title }}</small><br>
+                      <small class="text-truncate">{{ app.department }}</small>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <small class="text-truncate">{{ app.email }}</small><br>{{ app.phone }}
+                </td>
+                <td>{{ app.experience }} yrs</td>
+                <td>    Current CTC : <span class="text-info">{{ app.current_ctc }} LPA</span><br> Expected CTC : <span class="text-success">{{ app.expected_ctc }}  LPA</span></td>
+                <td>{{ app.notice_period }} days</td>
+                <td>{{ app.createdAt | date:'dd-MM-yyyy' }}</td>
+                <td>
+                  <span class="badge badge-success px-2" [ngClass]="getStageBadgeClass(app.stage)">
+                    {{ app.stage?.replace('_', ' ') || 'N/A' }}
+                  </span>
+                  <small *ngIf="app.ats" class="d-block text-primary mt-1">
+                    ATS: {{ app.ats.ats_score | number:'1.0-0' }}
+                   
+                  </small>
+                </td>
+                <td style="width: 12% !important;">
+                  <div class="d-flex gap-1 flex-wrap">
+
+                    <!-- Step 1 — Edit: only before ATS -->
+                    <button class="btn btn-sm btn-outline-primary" *ngIf="app.stage === 'candidate_applied'"
+                      (click)="editApplication(app)" title="Edit Application">
+                      <i class="fas fa-edit"></i>
+                    </button>
+
+                    <!-- View: always visible -->
+                    <button class="btn btn-sm btn-outline-primary" (click)="viewApplication(app)" title="View Details">
+                      <i class="fas fa-eye"></i>
+                    </button>
+
+                    <!-- Step 1 → 2 — ATS Evaluate (file): only at candidate_applied -->
+                    <button class="btn btn-sm btn-outline-warning" *ngIf="app.stage === 'candidate_applied'"
+                      (click)="openAtsModal(app)" title="Step 2: Run ATS Screening (Upload Resume)">
+                      <i class="fas fa-robot"></i>
+                    </button>
+
+                    <!-- Step 1 → 2 — ATS Evaluate (URL): only at candidate_applied -->
+                    <button class="btn btn-sm btn-outline-warning"
+                      *ngIf="app.stage === 'candidate_applied' && app.resume_url" (click)="openAtsUrlModal(app)"
+                      title="Step 2: Run ATS Screening (via URL)">
+                      <i class="fas fa-link"></i>
+                    </button>
+
+                    <!-- Step 2 → 3 — Shortlist: only after ATS screening done -->
+                    <button class="btn btn-sm btn-outline-success" *ngIf="app.stage === 'ats_screening'"
+                      (click)="shortlist(app)" title="Step 3: Shortlist Candidate">
+                      <i class="fas fa-check"></i>
+                    </button>
+
+                    <!-- Step 3 → 4 — Assign Interviewer: only when shortlisted -->
+                    <button class="btn btn-sm btn-outline-info" *ngIf="app.stage === 'shortlisted'"
+                      (click)="openAssignModal(app)" title="Step 4: Assign Interviewer & Schedule">
+                      <i class="fas fa-user-tie"></i>
+                    </button>
+
+                    <!-- Resume: always if available -->
+                    <a *ngIf="app.resume_url" class="btn btn-sm btn-outline-secondary" [href]="app.resume_url"
+                      target="_blank" title="View Resume">
+                      <i class="fas fa-file-pdf"></i>
+                    </a>
+
+                    <!-- Reject: allowed from any active stage -->
+                    <button class="btn btn-sm btn-outline-danger"
+                      *ngIf="!['closed','rejected','offered'].includes(app.stage)" (click)="reject(app)" title="Reject">
+                      <i class="fas fa-times"></i>
+                    </button>
+
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </app-search-pagination>
+    </div>
+
+    <!-- Application Details Modal -->
+    <div class="modal fade" id="applicationDetailsModal" tabindex="-1" aria-labelledby="applicationDetailsModalLabel"
+      aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="applicationDetailsModalLabel">
+              <i class="fas fa-user me-2 text-primary"></i>
+              Application Details
+            </h5>
+            <button type="button" class="btn-close" (click)="closeModal()" aria-label="Close"></button>
+          </div>
+          <div class="modal-body" *ngIf="selectedDetailApp">
+            <div *ngIf="loadingDetail" class="text-center py-5">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading details...</span>
+              </div>
+              <p class="mt-2 text-muted">Loading application details...</p>
+            </div>
+
+            <div *ngIf="!loadingDetail" class="row g-4">
+
+              <!-- <div class="col-lg-8"> -->
+                <!-- <div class="row g-3 mb-4">
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold">Name</label>
+                    <p class="mb-0 fw-medium">{{ selectedDetailApp.name }}</p>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold">Email</label>
+                    <p class="mb-0"><a href="mailto:{{ selectedDetailApp.email }}">{{ selectedDetailApp.email }}</a></p>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold">Phone</label>
+                    <p class="mb-0">{{ selectedDetailApp.phone }}</p>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold">Current Company</label>
+                    <p class="mb-0">{{ selectedDetailApp.current_company || 'N/A' }}</p>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold">Experience</label>
+                    <p class="mb-0">{{ selectedDetailApp.experience }} years</p>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold">Notice Period</label>
+                    <p class="mb-0">{{ selectedDetailApp.notice_period }} days</p>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold">Current CTC</label>
+                    <p class="mb-0">{{ selectedDetailApp.current_ctc }} LPA</p>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold">Expected CTC</label>
+                    <p class="mb-0">{{ selectedDetailApp.expected_ctc }} LPA</p>
+                  </div>
+                </div> -->
+
+                <!-- <div class="mb-4">
+                  <label class="form-label fw-semibold mb-2 d-block">Skills</label>
+                  <div class="d-flex flex-wrap gap-2">
+                    <span *ngFor="let skill of selectedDetailApp.skills"
+                      class="badge bg-light text-dark px-2 py-1 rounded-pill">
+                      {{ skill }}
+                    </span>
+                  </div>
+                </div>
+
+
+                <div *ngIf="selectedDetailApp.ats" class="card border-primary mb-4">
+                  <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="fas fa-robot me-2"></i>ATS Score</h6>
+                  </div>
+                  <div class="card-body text-center">
+                    <div class="fw-semibold text-primary" style="font-size:2.2rem;">
+                      {{ selectedDetailApp.ats.ats_score | number:'1.0-0' }}
+                    </div>
+                    <small class="text-muted">ATS Score</small>
+                    <div *ngIf="selectedDetailApp.ats.notes" class="mt-3 p-3 bg-light rounded text-start">
+                      <small class="text-muted">Notes: {{ selectedDetailApp.ats.notes }}</small>
+                    </div>
+                  </div>
+                </div>
+
+
+                <div *ngIf="selectedDetailApp.interview_rounds && selectedDetailApp.interview_rounds.length > 0"
+                  class="card mb-4">
+                  <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Interview Rounds</h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="table-responsive">
+                      <table class="table table-sm">
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th>Round/Number</th>
+                            <th>Interviewer</th>
+                            <th>Scheduled At</th>
+                            <th>Mode</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr *ngFor="let round of selectedDetailApp.interview_rounds; let i = index">
+                            <td>{{ i + 1 }}</td>
+                            <td>
+                              <span class="fw-semibold">{{ round.round_name }}</span>
+                              <small *ngIf="round.sequence" class="d-block text-muted">{{ round.sequence }}</small>
+                            </td>
+                            <td>
+                              <ng-container *ngIf="round.interviewer_name; else tbd">
+                                <div class="fw-semibold">{{ round.interviewer_name }}</div>
+                                <small class="text-muted d-block" *ngIf="round.interviewer_email">
+                                  <i class="fas fa-envelope me-1"></i>{{ round.interviewer_email }}
+                                </small>
+                                <small class="text-muted d-block" *ngIf="getInterviewerPhone(round)">
+                                  <i class="fas fa-phone me-1"></i>{{ getInterviewerPhone(round) }}
+                                </small>
+                              </ng-container>
+                              <ng-template #tbd>
+                                <span class="text-muted fst-italic">Not assigned</span>
+                              </ng-template>
+                            </td>
+                            <td>
+                              <span *ngIf="round.scheduled_at; else noDate">
+                                {{ round.scheduled_at | date:'MMM d, yyyy' }}<br>
+                                <small class="text-muted">{{ round.scheduled_at | date:'h:mm a' }}</small>
+                              </span>
+                              <ng-template #noDate><span class="text-muted">—</span></ng-template>
+                            </td>
+                            <td>
+                              <span *ngIf="round.mode" class="badge bg-light text-dark">{{ round.mode }}</span>
+                              <span *ngIf="!round.mode" class="text-muted">—</span>
+                            </td>
+                            <td>
+                              <span class="badge" [ngClass]="{
+                                  'bg-success': round.status === 'completed',
+                                  'bg-warning text-dark': round.status === 'scheduled',
+                                  'bg-danger': round.status === 'cancelled',
+                                  'bg-secondary': !round.status || round.status === 'pending'
+                                }">
+                                {{ round.status || 'Pending' }}
+                              </span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div> -->
+                <!-- </div> -->
+
+
+                <!-- <div class="col-lg-4">
+                <div class="card h-100">
+                  <div class="card-header">
+                    <h6 class="mb-0 d-flex align-items-center">
+                      <i class="fas fa-info-circle text-primary me-2"></i>
+                      Quick Actions
+                    </h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="d-grid gap-2">
+                      <button *ngIf="selectedDetailApp.stage === 'candidate_applied'"
+                        class="btn btn-warning btn-sm text-white" (click)="closeModal(); openAtsModal(selectedApp!)">
+                        <i class="fas fa-robot me-1"></i>Run ATS Screening
+                      </button>
+                      <button *ngIf="selectedDetailApp.stage === 'ats_screening'" class="btn btn-success btn-sm"
+                        (click)="shortlist(selectedApp!)">
+                        <i class="fas fa-check me-1"></i>Shortlist
+                      </button>
+                      <button *ngIf="selectedDetailApp.stage === 'shortlisted'" class="btn btn-info btn-sm text-white"
+                        (click)="closeModal(); openAssignModal(selectedApp!)">
+                        <i class="fas fa-user-tie me-1"></i>Assign Interviewer
+                      </button>
+                      <button *ngIf="!['closed','rejected','offered'].includes(selectedDetailApp.stage)"
+                        class="btn btn-outline-danger btn-sm" (click)="reject(selectedApp!)">
+                        <i class="fas fa-times me-1"></i>Reject
+                      </button>
+                      <button class="btn btn-primary btn-sm" (click)="loadApplications()">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh List
+                      </button>
+                    </div>
+                  </div>
+                  <div class="card-footer border-top" *ngIf="selectedDetailApp.resume_url">
+                    <a [href]="selectedDetailApp.resume_url" target="_blank" class="btn btn-outline-secondary w-100">
+                      <i class="fas fa-file-pdf me-2"></i>View Resume
+                    </a>
+                  </div>
+                </div>
+
+
+                <div class="card mt-3">
+                  <div class="card-body text-center py-4">
+                    <div class="mb-2">
+                      <span class="badge" [class]="getStageBadgeClass(selectedDetailApp.stage)">
+                        {{ getStageDisplay(selectedDetailApp.stage) }}
+                      </span>
+                    </div>
+                    <div class="fw-semibold">{{ getStageDisplay(selectedDetailApp.stage) }}</div>
+                    <small class="text-muted">Current Status</small>
+                  </div>
+                </div>
+              </div> -->
+              <!-- </div> -->
+
+              <hr>
+
+              <div class="row">
+                <div class="col-xl-5 col-lg-5 col-md-5">
+                  <!-- About User -->
+                  <div class="card mb-6">
+                    <div class="card-body">
+                      <small class="card-text text-uppercase text-body-secondary small">About</small>
+                      <ul class="list-unstyled my-3 py-1">
+                        <li class="d-flex align-items-center mb-4"><span
+                            class="badge badge-center rounded-pill text-bg-primary"><i
+                              class="icon-base ri ri-check-line"></i></span><span class="fw-medium mx-2">Full
+                            Name:</span> <span>{{ selectedDetailApp.name }}</span></li>
+                        <li class="d-flex align-items-center mb-4"><span
+                            class="badge badge-center rounded-pill text-bg-primary"><i
+                              class="icon-base ri ri-check-line"></i></span><span class="fw-medium mx-2">Email:</span>
+                          <span>{{ selectedDetailApp.email }}</span>
+                        </li>
+                        <li class="d-flex align-items-center mb-4"><span
+                            class="badge badge-center rounded-pill text-bg-primary"><i
+                              class="icon-base ri ri-check-line"></i></span><span class="fw-medium mx-2">Phone:</span>
+                          <span>{{ selectedDetailApp.phone }}</span>
+                        </li>
+                        <li class="d-flex align-items-center mb-4"><span
+                            class="badge badge-center rounded-pill text-bg-primary"><i
+                              class="icon-base ri ri-check-line"></i></span><span class="fw-medium mx-2">Current
+                            Company:</span>
+                          <span>{{ selectedDetailApp.current_company || 'N/A' }}</span>
+                        </li>
+                        <li class="d-flex align-items-center mb-4"><span
+                            class="badge badge-center rounded-pill text-bg-primary"><i
+                              class="icon-base ri ri-check-line"></i></span><span
+                            class="fw-medium mx-2">Experience:</span> <span>{{ selectedDetailApp.experience }}
+                            years</span></li>
+                        <li class="d-flex align-items-center mb-4"><span
+                            class="badge badge-center rounded-pill text-bg-primary"><i
+                              class="icon-base ri ri-check-line"></i></span><span class="fw-medium mx-2">Notice
+                            Period:</span> <span>{{ selectedDetailApp.notice_period }} days</span></li>
+                        <li class="d-flex align-items-center mb-4"><span
+                            class="badge badge-center rounded-pill text-bg-primary"><i
+                              class="icon-base ri ri-check-line"></i></span><span class="fw-medium mx-2">Current
+                            CTC:</span> <span>{{ selectedDetailApp.current_ctc }} LPA</span></li>
+                        <li class="d-flex align-items-center mb-4"><span
+                            class="badge badge-center rounded-pill text-bg-primary"><i
+                              class="icon-base ri ri-check-line"></i></span><span class="fw-medium mx-2">Expected
+                            CTC:</span> <span>{{ selectedDetailApp.expected_ctc }} LPA</span></li>
+                        <li class="d-flex align-items-center mb-4"><span
+                            class="badge badge-center rounded-pill text-bg-primary"><i
+                              class="icon-base ri ri-check-line"></i></span><span class="fw-medium mx-2">Skills:</span>
+                          <div>
+                            <span *ngFor="let skill of selectedDetailApp.skills" class="badge bg-label-primary rounded-pill lh-xs mx-1 my-1">
+                            {{ skill }}
+                          </span>
+                          </div>
+                        </li>
+                      </ul>
+
+                    </div>
+                  </div>
+                  <!--/ About User -->
+
+                </div>
+                <div class="col-xl-7 col-lg-7 col-md-7">
+
+                  <div class="row">
+                    <!-- Connections -->
+
+                    <div class="col-md-12 col-xl-12">
+                      <div class="row">
+                        <div class="col-6">
+                          <div class="card">
+                            <div class="row">
+                              <div class="col-6 mb-2">
+                                <div class="card-body" *ngIf="selectedDetailApp.ats">
+                                  <div class="card-info mb-2">
+                                    <h6 class="mb-2 text-nowrap">ATS Score</h6>
+                                    <div class="badge bg-label-primary rounded-pill lh-xs">Year of 2026</div>
+                                  </div>
+                                  <div class="d-flex align-items-center">
+                                    <div class="fw-semibold text-primary" style="font-size:2.2rem;">
+                                      {{ selectedDetailApp.ats.ats_score | number:'1.0-0' }}
+                                    </div>
+
+                                    <div *ngIf="selectedDetailApp.ats.notes"
+                                      class="mt-3 p-3 bg-light rounded text-start">
+                                      <small class="text-muted">Notes: {{ selectedDetailApp.ats.notes }}</small>
+                                    </div>
+                                  </div>
+                                </div>
+                                <!-- <div *ngIf="selectedDetailApp.ats" class="card border-primary mb-4">
+                  <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="fas fa-robot me-2"></i>ATS Score</h6>
+                  </div>
+                  <div class="card-body text-center">
+                    <div class="fw-semibold text-primary" style="font-size:2.2rem;">
+                      {{ selectedDetailApp.ats.ats_score | number:'1.0-0' }}
+                    </div>
+                    <small class="text-muted">ATS Score</small>
+                    <div *ngIf="selectedDetailApp.ats.notes" class="mt-3 p-3 bg-light rounded text-start">
+                      <small class="text-muted">Notes: {{ selectedDetailApp.ats.notes }}</small>
+                    </div>
+                  </div>
+                </div> -->
+                              </div>
+                              <div class="col-6 text-end d-flex align-items-end">
+                                <div class="card-body pb-0 pt-4">
+                                  <img src="../../assets/img/illustrations/boy-verify-email-light.png" alt="Ratings"
+                                    class="img-fluid" width="95">
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-6">
+                          <div class="card mt-3">
+                            <div class="card-body text-center py-4">
+                              <div class="mb-2">
+                                <span class="badge bg-success" [class]="getStageBadgeClass(selectedDetailApp.stage)">
+                                  {{ getStageDisplay(selectedDetailApp.stage) }}
+                                </span>
+                              </div>
+                              <div class="fw-semibold">{{ getStageDisplay(selectedDetailApp.stage) }}</div>
+                              <small class="text-muted">Current Status</small>
+                            </div>
+                          </div>
+                        </div>
+
+
+
+                      </div>
+                    </div>
+
+                    <div class="col-lg-12 col-xl-12">
+                      <div class="card card-action mt-2">
+                        <div class="card-header align-items-center">
+                          <h5 class="card-action-title mb-0">Quick Actions</h5>
+
+                        </div>
+                        <div class="card-body">
+                          <div class="demo-inline-spacing text-center">
+                            <!-- <button type="button"
+                            class="btn rounded-pill btn-primary btn-fab demo waves-effect waves-light"><span
+                              class="icon-base ri ri-check-double-line icon-16px me-2"></span>Primary</button>
+                          <button type="button"
+                            class="btn rounded-pill btn-secondary btn-fab demo waves-effect waves-light"><span
+                              class="icon-base ri ri-notification-4-line icon-16px me-2"></span>Secondary</button> -->
+
+
+                            <button *ngIf="selectedDetailApp.stage === 'candidate_applied'"
+                              class="btn rounded-pill btn-warning btn-fab demo waves-effect waves-light"
+                              (click)="closeModal(); openAtsModal(selectedApp!)">
+                              <i class="fas fa-star me-1"></i> Run ATS Screening
+                            </button>
+                            <button *ngIf="selectedDetailApp.stage === 'ats_screening'"
+                              class="btn rounded-pill btn-success btn-fab demo waves-effect waves-light"
+                              (click)="shortlist(selectedApp!)">
+                              <i class="fas fa-check me-1"></i>Shortlist
+                            </button>
+                            <button *ngIf="selectedDetailApp.stage === 'shortlisted'"
+                              class="btn rounded-pill btn-info btn-fab demo waves-effect waves-light"
+                              (click)="closeModal(); openAssignModal(selectedApp!)">
+                              <i class="fas fa-user-tie me-1"></i>Assign Interviewer
+                            </button>
+                            <button *ngIf="!['closed','rejected','offered'].includes(selectedDetailApp.stage)"
+                              class="btn rounded-pill btn-danger btn-fab demo waves-effect waves-light"
+                              (click)="reject(selectedApp!)">
+                              <i class="fas fa-times me-1"></i>Reject
+                            </button>
+                            <button class="btn rounded-pill btn-info btn-fab demo waves-effect waves-light"
+                              (click)="loadApplications()">
+                              <i class="fas fa-sync-alt me-1"></i>Refresh List
+                            </button>
+
+                            <div *ngIf="selectedDetailApp.resume_url">
+                              <a [href]="selectedDetailApp.resume_url" target="_blank"
+                                class="btn rounded-pill btn-outline-primary w-100">
+                                <i class="fas fa-file-pdf me-2"></i>View Resume
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+
+                    </div>
+                    <!--/ Connections -->
+
+                  </div>
+
+
+                </div>
+
+                <div class="col-xl-12 col-lg-12">
+                  <div *ngIf="selectedDetailApp.interview_rounds && selectedDetailApp.interview_rounds.length > 0"
+                    class="card mb-4">
+                    <div class="card-header">
+                      <h6 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Interview Rounds</h6>
+                    </div>
+                    <div class="card-body">
+                      <div class="table-responsive">
+                        <table class="table table-sm">
+                          <thead>
+                            <tr>
+                              <th>#</th>
+                              <th>Round/Number</th>
+                              <th>Interviewer</th>
+                              <th>Scheduled At</th>
+                              <th>Mode</th>
+                              <th>Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr *ngFor="let round of selectedDetailApp.interview_rounds; let i = index">
+                              <td>{{ i + 1 }}</td>
+                              <td>
+                                <span class="fw-semibold">{{ round.round_name }}</span>
+                                <small *ngIf="round.sequence" class="d-block text-muted">{{ round.sequence }}</small>
+                              </td>
+                              <td>
+                                <ng-container *ngIf="round.interviewer_name; else tbd">
+                                  <div class="fw-semibold">{{ round.interviewer_name }}</div>
+                                  <small class="text-muted d-block" *ngIf="round.interviewer_email">
+                                    <i class="fas fa-envelope me-1"></i>{{ round.interviewer_email }}
+                                  </small>
+                                  <small class="text-muted d-block" *ngIf="getInterviewerPhone(round)">
+                                    <i class="fas fa-phone me-1"></i>{{ getInterviewerPhone(round) }}
+                                  </small>
+                                </ng-container>
+                                <ng-template #tbd>
+                                  <span class="text-muted fst-italic">Not assigned</span>
+                                </ng-template>
+                              </td>
+                              <td>
+                                <span *ngIf="round.scheduled_at; else noDate">
+                                  {{ round.scheduled_at | date:'MMM d, yyyy' }}<br>
+                                  <small class="text-muted">{{ round.scheduled_at | date:'h:mm a' }}</small>
+                                </span>
+                                <ng-template #noDate><span class="text-muted">—</span></ng-template>
+                              </td>
+                              <td>
+                                <span *ngIf="round.mode" class="badge bg-light text-dark">{{ round.mode }}</span>
+                                <span *ngIf="!round.mode" class="text-muted">—</span>
+                              </td>
+                              <td>
+                                <span class="badge" [ngClass]="{
+                                  'bg-success': round.status === 'completed',
+                                  'bg-warning text-dark': round.status === 'scheduled',
+                                  'bg-danger': round.status === 'cancelled',
+                                  'bg-secondary': !round.status || round.status === 'pending'
+                                }">
+                                  {{ round.status || 'Pending' }}
+                                </span>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+
+
+            </div>
+
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="closeModal()">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assign Interviewer Modal -->
+      <div class="modal fade" id="assignInterviewerModal" tabindex="-1" aria-labelledby="assignInterviewerModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="assignInterviewerModalLabel">
+                <i class="fas fa-user-tie me-2 text-info"></i>
+                Assign Interviewers
+                <span *ngIf="assignApp" class="text-muted fw-normal fs-6 ms-2">— {{ assignApp.name }}</span>
+              </h5>
+              <button type="button" class="btn-close" (click)="closeAssignModal()" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+
+              <!-- Same-for-all section -->
+              <div class="card border-info mb-3">
+                <div class="card-header bg-info bg-opacity-10 d-flex align-items-center gap-2 py-2">
+                  <div class="form-check mb-0">
+                    <input class="form-check-input" type="checkbox" id="sameForAll" [(ngModel)]="sameInterviewerForAll"
+                      (ngModelChange)="onSameForAllToggle()" />
+                    <label class="form-check-label fw-semibold" for="sameForAll">
+                      Same interviewer &amp; settings for all rounds
+                    </label>
+                  </div>
+                  <span *ngIf="sameInterviewerForAll" class="badge bg-info ms-2">
+                    <i class="fas fa-link me-1"></i>All rounds linked
+                  </span>
+                </div>
+                <div class="card-body" *ngIf="sameInterviewerForAll">
+                  <div class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                      <label class="form-label fw-semibold mb-1">Interviewer <span class="text-danger">*</span></label>
+                      <select class="form-select form-select-sm" [(ngModel)]="commonAssignFields.panel_user_id"
+                        (ngModelChange)="onCommonFieldChange()">
+                        <option [ngValue]="null" disabled>-- Select interviewer --</option>
+                        <option *ngFor="let u of panelUsers" [ngValue]="u.id">
+                          {{ u.first_name }} {{ u.last_name }}
+                        </option>
+                      </select>
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label fw-semibold mb-1">Date &amp; Time</label>
+                      <input type="datetime-local" class="form-control form-control-sm"
+                        [(ngModel)]="commonAssignFields.scheduled_at" (ngModelChange)="onCommonFieldChange()" />
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label fw-semibold mb-1">Duration (min)</label>
+                      <input type="number" class="form-control form-control-sm"
+                        [(ngModel)]="commonAssignFields.duration_minutes" (ngModelChange)="onCommonFieldChange()"
+                        placeholder="60" min="1" />
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label fw-semibold mb-1">Mode</label>
+                      <select class="form-select form-select-sm" [(ngModel)]="commonAssignFields.mode"
+                        (ngModelChange)="onCommonFieldChange()">
+                        <option value="">-- Mode --</option>
+                        <option value="virtual">Virtual</option>
+                        <option value="walk-in-interview">Walk In Interview</option>
+                        <option value="phone">Phone</option>
+                      </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                      <small class="text-success fw-semibold">
+                        <i class="fas fa-check-circle me-1"></i>Auto-applied to all rounds
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Per-round table -->
+              <div class="table-responsive">
+                <table class="table table-bordered table-sm align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th style="min-width:140px">Round</th>
+                      <th style="min-width:180px">Interviewer <span class="text-danger">*</span></th>
+                      <th style="min-width:170px">Date &amp; Time</th>
+                      <th style="min-width:110px">Duration (min)</th>
+                      <th style="min-width:120px">Mode</th>
+                      <th style="min-width:180px">Meeting Link</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let row of roundAssignments; let i = index" [class.table-info]="sameInterviewerForAll">
+                      <td>
+                        <span class="fw-semibold">{{ row.round_name }}</span>
+                        <span *ngIf="sameInterviewerForAll" class="badge bg-info ms-1" style="font-size:0.65rem;">
+                          <i class="fas fa-link"></i>
+                        </span>
+                      </td>
+                      <td>
+                        <select class="form-select form-select-sm" [(ngModel)]="row.panel_user_id"
+                          [disabled]="sameInterviewerForAll">
+                          <option [ngValue]="null">-- Skip --</option>
+                          <option *ngFor="let u of panelUsers" [ngValue]="u.id">
+                            {{ u.first_name }} {{ u.last_name }}
+                          </option>
+                        </select>
+                      </td>
+                      <td>
+                        <input type="datetime-local" class="form-control form-control-sm"
+                          [(ngModel)]="row.scheduled_at" />
+                      </td>
+                      <td>
+                        <input type="number" class="form-control form-control-sm" [(ngModel)]="row.duration_minutes"
+                          placeholder="60" min="1" />
+                      </td>
+                      <td>
+                        <select class="form-select form-select-sm" [(ngModel)]="row.mode">
+                          <option value="">-- Mode --</option>
+                          <option value="virtual">Virtual</option>
+                          <option value="walk-in-interview">Walk In Interview</option>
+                          <option value="phone">Phone</option>
+                        </select>
+                      </td>
+                      <td>
+                        <input type="url" class="form-control form-control-sm" [(ngModel)]="row.meeting_link"
+                          placeholder="https://meet..." />
+                      </td>
+                    </tr>
+                    <tr *ngIf="roundAssignments.length === 0">
+                      <td colspan="6" class="text-center text-muted py-3">No interview rounds configured.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <small class="text-muted mt-2 d-block">
+                <i class="fas fa-info-circle me-1"></i>
+                Rows with <strong>-- Skip --</strong> selected will not be assigned. At least one interviewer must be
+                selected.
+              </small>
+            </div>
+
+            <div class="modal-footer">
+              <span class="me-auto text-muted small">
+                <i class="fas fa-info-circle me-1"></i>
+                {{ roundAssignments.length }} round(s) total
+              </span>
+              <button type="button" class="btn btn-secondary" (click)="closeAssignModal()">Cancel</button>
+              <button type="button" class="btn btn-info text-white" (click)="confirmAssign()" [disabled]="isAssigning">
+                <span *ngIf="isAssigning" class="spinner-border spinner-border-sm me-1"></span>
+                {{ isAssigning ? 'Assigning...' : 'Assign & Schedule Interview' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Edit Application Modal (only for candidate_applied stage) -->
+      <div class="modal fade" id="editApplicationModal" tabindex="-1" aria-labelledby="editApplicationModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="editApplicationModalLabel">
+                <i class="fas fa-edit me-2 text-primary"></i>Edit Application
+              </h5>
+              <button type="button" class="btn-close" (click)="closeEditModal()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" [(ngModel)]="editObj.name" placeholder="Enter full name" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
+                  <input type="email" class="form-control" [(ngModel)]="editObj.email" placeholder="Enter email" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">Phone <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" [(ngModel)]="editObj.phone" placeholder="Enter phone" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">Current Company</label>
+                  <input type="text" class="form-control" [(ngModel)]="editObj.current_company"
+                    placeholder="Enter current company" />
+                </div>
+                <!-- <div class="col-md-6">
+                  <label class="form-label fw-semibold">Last Company</label>
+                  <input type="text" class="form-control" [(ngModel)]="editObj.last_company"
+                    placeholder="Enter last company" />
+                </div> -->
+                <div class="col-md-4">
+                  <label class="form-label fw-semibold">Experience (yrs)</label>
+                  <input type="number" class="form-control" [(ngModel)]="editObj.experience" placeholder="e.g. 3"
+                    min="0" />
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label fw-semibold">Current CTC (LPA)</label>
+                  <input type="number" class="form-control" [(ngModel)]="editObj.current_ctc" placeholder="e.g. 6"
+                    min="0" />
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label fw-semibold">Expected CTC (LPA)</label>
+                  <input type="number" class="form-control" [(ngModel)]="editObj.expected_ctc" placeholder="e.g. 9"
+                    min="0" />
+                </div>
+
+
+                <div class="col-md-4">
+                  <label class="form-label fw-semibold">Current Location</label>
+                  <input type="text" class="form-control" [(ngModel)]="editObj.current_location"
+                    placeholder="Enter current location" />
+                </div>
+                <div class="col-md-12 mb-3">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="relocateToggle"
+                      [(ngModel)]="editObj.relocateEnabled">
+                    <label class="form-check-label fw-semibold" for="relocateToggle">Relocation Applicable</label>
+                  </div>
+                </div>
+                <div class="col-md-4" [attr.disabled]="!editObj.relocateEnabled ? true : null">
+                  <label class="form-label fw-semibold">Relocate</label>
+                  <input type="number" class="form-control" [(ngModel)]="editObj.relocate" placeholder="e.g. 6"
+                    min="0" />
+                </div>
+
+                <div class="col-md-4">
+                  <label class="form-label fw-semibold">Home Town</label>
+                  <input type="text" class="form-control" [(ngModel)]="editObj.home_town"
+                    placeholder="Enter home town" />
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">Notice Period (days)</label>
+                  <input type="number" class="form-control" [(ngModel)]="editObj.notice_period" placeholder="e.g. 30"
+                    min="0" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">Skills <small
+                      class="text-muted">(comma-separated)</small></label>
+                  <input type="text" class="form-control" [(ngModel)]="editObj.skills"
+                    placeholder="e.g. Angular, Node.js, SQL" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">Roles and Responsebilites </label>
+                  <input type="text" class="form-control" [(ngModel)]="editObj.roles_and_responsibilities"
+                    placeholder="e.g. lead development, code reviews" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">project </label>
+                  <input type="text" class="form-control" [(ngModel)]="editObj.project"
+                    placeholder="e.g. Angular, Node.js, SQL" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">Tools </label>
+                  <input type="text" class="form-control" [(ngModel)]="editObj.tools"
+                    placeholder="e.g. Jira, Postman, Git" />
+                </div>
+                <div class="col-md-12 mb-3">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="offerToggle"
+                      [(ngModel)]="editObj.offerInHandEnabled">
+                    <label class="form-check-label fw-semibold" for="offerToggle">Offer In Hand</label>
+                  </div>
+                </div>
+                <div class="col-md-12" [attr.disabled]="!editObj.offerInHandEnabled ? true : null">
+                  <label class="form-label fw-semibold">Offer In hand </label>
+                  <input type="text" class="form-control" [(ngModel)]="editObj.offer_in_hand"
+                    placeholder="Enter offer in hand" />
+                </div>
+
+                <div class="col-md-12">
+                  <label class="form-label fw-semibold">Family Background</label>
+                  <input type="text" class="form-control" [(ngModel)]="editObj.family_background"
+                    placeholder="Enter Family Background" />
+                </div>
+                <div class="col-md-12">
+                  <label class="form-label fw-semibold">Highest Qualification</label>
+                  <input type="text" class="form-control" [(ngModel)]="editObj.highest_qualification"
+                    placeholder="Enter highest qualification" />
+                </div>
+                <div class="col-md-12">
+                  <label class="form-label fw-semibold">Remark </label>
+                  <input type="text" class="form-control" [(ngModel)]="editObj.remark" placeholder="Enter remark" />
+                </div>
+
+                <!-- Resume Upload -->
+                <div class="col-md-12">
+                  <hr class="my-2" />
+                  <label class="form-label fw-semibold">
+                    <i class="fas fa-file-upload me-1 text-primary"></i>Update Resume
+                    <small class="text-muted fw-normal ms-1">(PDF/DOC — ATS score will be auto-evaluated on
+                      save)</small>
+                  </label>
+                  <input type="file" class="form-control" accept=".pdf,.doc,.docx"
+                    (change)="onEditResumeSelected($event)" #resumeFileInput />
+                  <div *ngIf="editResumeFileName" class="mt-1 text-success small">
+                    <i class="fas fa-check-circle me-1"></i>{{ editResumeFileName }}
+                  </div>
+                  <div *ngIf="isUploadingResume" class="mt-2 d-flex align-items-center gap-2 text-primary small">
+                    <span class="spinner-border spinner-border-sm"></span>
+                    Uploading & evaluating ATS score...
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" (click)="closeEditModal()">Cancel</button>
+              <button type="button" class="btn btn-primary" (click)="saveEdit()"
+                [disabled]="isSaving || isUploadingResume">
+                <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1"></span>
+                {{ isSaving ? 'Saving...' : 'Save Changes' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- ATS Evaluate Modal -->
+      <div class="modal fade" id="atsEvaluateModal" tabindex="-1" aria-labelledby="atsEvaluateModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+          <div class="modal-content">
+            <div class="modal-header bg-warning bg-opacity-10">
+              <h5 class="modal-title" id="atsEvaluateModalLabel">
+                <i class="fas fa-robot text-warning me-2"></i>ATS Resume Evaluation
+              </h5>
+              <button type="button" class="btn-close" (click)="closeAtsModal()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <p class="text-muted mb-3" *ngIf="atsApp">
+                Evaluating resume for <strong>{{ atsApp.name }}</strong> — {{ atsApp.job_title }}
+              </p>
+
+              <!-- File Upload -->
+              <div class="mb-4">
+                <label class="form-label fw-semibold">Upload Resume <span class="text-danger">*</span></label>
+                <div class="border rounded p-3 text-center" style="cursor:pointer; border-style: dashed !important;">
+                  <label for="atsResumeInput" style="cursor:pointer; width:100%;">
+                    <i class="fas fa-upload text-warning fa-2x mb-2 d-block"></i>
+                    <div class="fw-semibold">{{ atsFileName || 'Click to choose a resume file' }}</div>
+                    <small class="text-muted">PDF, DOC, DOCX — max 5MB</small>
+                    <input id="atsResumeInput" type="file" accept=".pdf,.doc,.docx" (change)="onAtsFileSelected($event)"
+                      hidden />
+                  </label>
+                </div>
+              </div>
+
+              <!-- Result -->
+              <div *ngIf="isEvaluating" class="text-center py-4">
+                <div class="spinner-border text-warning" role="status"></div>
+                <p class="mt-2 text-muted">Evaluating resume via ATS...</p>
+              </div>
+
+              <ng-container *ngIf="atsResult && !isEvaluating">
+                <ng-container
+                  *ngTemplateOutlet="atsResultBlock; context: { r: normalizeAtsResult(atsResult) }"></ng-container>
+              </ng-container>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" (click)="closeAtsModal()">Close</button>
+              <button *ngIf="atsResult" type="button" class="btn btn-success"
+                (click)="saveAtsScoreToList(atsApp!, atsResult)">
+                <i class="fas fa-save me-1"></i>Save Score to List
+              </button>
+              <button type="button" class="btn btn-warning text-white" (click)="runAtsEvaluate()"
+                [disabled]="!atsFile || isEvaluating">
+                <span *ngIf="isEvaluating" class="spinner-border spinner-border-sm me-1"></span>
+                {{ isEvaluating ? 'Evaluating...' : 'Evaluate Resume' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ATS Evaluate via Resume URL Modal -->
+      <div class="modal fade" id="atsUrlEvaluateModal" tabindex="-1" aria-labelledby="atsUrlEvaluateModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+          <div class="modal-content">
+            <div class="modal-header bg-info bg-opacity-10">
+              <h5 class="modal-title" id="atsUrlEvaluateModalLabel">
+                <i class="fas fa-link text-info me-2"></i>ATS Evaluate via Resume URL
+              </h5>
+              <button type="button" class="btn-close" (click)="closeAtsUrlModal()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div *ngIf="atsUrlApp">
+                <p class="text-muted mb-1">Candidate: <strong>{{ atsUrlApp.name }}</strong> — {{ atsUrlApp.job_title }}
+                </p>
+                <p class="text-muted mb-3">
+                  Resume URL:
+                  <a [href]="atsUrlApp.resume_url" target="_blank" class="text-info text-truncate d-inline-block"
+                    style="max-width:300px; vertical-align:bottom;">
+                    {{ atsUrlApp.resume_url }}
+                  </a>
+                </p>
+              </div>
+
+              <div *ngIf="isUrlEvaluating" class="text-center py-4">
+                <div class="spinner-border text-info" role="status"></div>
+                <p class="mt-2 text-muted">Evaluating resume via URL...</p>
+              </div>
+
+              <ng-container *ngIf="atsUrlResult && !isUrlEvaluating">
+                <ng-container
+                  *ngTemplateOutlet="atsResultBlock; context: { r: normalizeAtsResult(atsUrlResult) }"></ng-container>
+              </ng-container>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" (click)="closeAtsUrlModal()">Close</button>
+              <button type="button" class="btn btn-info text-white" (click)="runAtsEvaluateByUrl()"
+                [disabled]="isUrlEvaluating">
+                <span *ngIf="isUrlEvaluating" class="spinner-border spinner-border-sm me-1"></span>
+                {{ isUrlEvaluating ? 'Evaluating...' : 'Evaluate via URL' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Shared ATS Result Template -->
+  <ng-template #atsResultBlock let-r="r">
+    <!-- Error state -->
+    <div *ngIf="r?._error" class="alert alert-danger d-flex align-items-start gap-3 mb-0">
+      <i class="fas fa-exclamation-circle fa-lg mt-1 flex-shrink-0"></i>
+      <div>
+        <div class="fw-semibold mb-1">Evaluation Failed</div>
+        <div class="small">{{ r._error }}</div>
+        <div class="small text-muted mt-1" *ngIf="r._resumeUrl">
+          Resume URL: <a [href]="r._resumeUrl" target="_blank" class="text-danger">{{ r._resumeUrl }}</a>
+        </div>
+        <div class="small text-muted mt-2">
+          <i class="fas fa-info-circle me-1"></i>The resume URL could not be reached. Check if the file server is
+          accessible from the evaluation service.
+        </div>
+      </div>
+    </div>
+
+    <ng-container *ngIf="r && !r._error">
+
+      <!-- Overall Score + Match Level -->
+      <div class="d-flex align-items-center gap-3 mb-4 p-3 rounded border" style="background:#f8f9fa;">
+        <div class="text-center" style="min-width:90px;">
+          <div class="display-6 fw-bold" [ngClass]="getMatchLevelClass(r.match_level)">
+            {{ r.overall_score | number:'1.0-1' }}
+          </div>
+          <small class="text-muted">/ 100</small>
+        </div>
+        <div>
+          <div class="fw-bold fs-5">
+            Match Level:
+            <span [ngClass]="getMatchLevelClass(r.match_level)">{{ r.match_level || '—' }}</span>
+          </div>
+          <small class="text-muted">{{ r.final_summary }}</small>
+        </div>
+      </div>
+
+      <!-- Breakdown Scores -->
+      <div class="mb-4">
+        <label class="form-label fw-semibold mb-2">Score Breakdown</label>
+        <div class="row g-2">
+          <ng-container
+            *ngTemplateOutlet="scoreBar; context: { label: 'Skills',         score: r.breakdown?.skills?.score }"></ng-container>
+          <ng-container
+            *ngTemplateOutlet="scoreBar; context: { label: 'Experience',     score: r.breakdown?.experience?.score }"></ng-container>
+          <ng-container
+            *ngTemplateOutlet="scoreBar; context: { label: 'Education',      score: r.breakdown?.education?.score }"></ng-container>
+          <ng-container
+            *ngTemplateOutlet="scoreBar; context: { label: 'Keywords',       score: r.breakdown?.keywords?.score }"></ng-container>
+          <ng-container
+            *ngTemplateOutlet="scoreBar; context: { label: 'Certifications', score: r.breakdown?.certifications?.score }"></ng-container>
+        </div>
+      </div>
+
+      <!-- Skills: Matched / Missing / Extra -->
+      <div class="row g-3 mb-3">
+        <div class="col-md-4" *ngIf="r.breakdown?.skills?.matched?.length">
+          <label class="form-label fw-semibold text-success mb-1">
+            <i class="fas fa-check-circle me-1"></i>Matched Skills
+          </label>
+          <div class="d-flex flex-wrap gap-1">
+            <span *ngFor="let s of r.breakdown.skills.matched" class="badge bg-success-subtle text-success px-2 py-1">{{
+              s
+              }}</span>
+          </div>
+        </div>
+        <div class="col-md-4" *ngIf="r.breakdown?.skills?.missing?.length">
+          <label class="form-label fw-semibold text-danger mb-1">
+            <i class="fas fa-times-circle me-1"></i>Missing Skills
+          </label>
+          <div class="d-flex flex-wrap gap-1">
+            <span *ngFor="let s of r.breakdown.skills.missing" class="badge bg-danger-subtle text-danger px-2 py-1">{{ s
+              }}</span>
+          </div>
+        </div>
+        <div class="col-md-4" *ngIf="r.breakdown?.skills?.extra?.length">
+          <label class="form-label fw-semibold text-info mb-1">
+            <i class="fas fa-plus-circle me-1"></i>Extra Skills
+          </label>
+          <div class="d-flex flex-wrap gap-1">
+            <span *ngFor="let s of r.breakdown.skills.extra" class="badge bg-info-subtle text-info px-2 py-1">{{ s
+              }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Keywords -->
+      <div class="row g-3 mb-3"
+        *ngIf="r.breakdown?.keywords?.matched?.length || r.breakdown?.keywords?.missing?.length">
+        <div class="col-md-6" *ngIf="r.breakdown?.keywords?.matched?.length">
+          <label class="form-label fw-semibold mb-1">Matched Keywords</label>
+          <div class="d-flex flex-wrap gap-1">
+            <span *ngFor="let s of r.breakdown.keywords.matched"
+              class="badge bg-primary-subtle text-primary px-2 py-1">{{
+              s }}</span>
+          </div>
+        </div>
+        <div class="col-md-6" *ngIf="r.breakdown?.keywords?.missing?.length">
+          <label class="form-label fw-semibold mb-1">Missing Keywords</label>
+          <div class="d-flex flex-wrap gap-1">
+            <span *ngFor="let s of r.breakdown.keywords.missing"
+              class="badge bg-secondary-subtle text-secondary px-2 py-1">{{ s }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Strengths / Weaknesses / Recommendations -->
+      <div class="row g-3 mb-3">
+        <div class="col-md-4" *ngIf="r.strengths?.length">
+          <label class="form-label fw-semibold text-success mb-1">
+            <i class="fas fa-thumbs-up me-1"></i>Strengths
+          </label>
+          <ul class="list-unstyled mb-0">
+            <li *ngFor="let s of r.strengths" class="small text-muted mb-1">
+              <i class="fas fa-circle text-success me-1" style="font-size:.5rem; vertical-align:middle;"></i>{{ s }}
+            </li>
+          </ul>
+        </div>
+        <div class="col-md-4" *ngIf="r.weaknesses?.length">
+          <label class="form-label fw-semibold text-danger mb-1">
+            <i class="fas fa-thumbs-down me-1"></i>Weaknesses
+          </label>
+          <ul class="list-unstyled mb-0">
+            <li *ngFor="let s of r.weaknesses" class="small text-muted mb-1">
+              <i class="fas fa-circle text-danger me-1" style="font-size:.5rem; vertical-align:middle;"></i>{{ s }}
+            </li>
+          </ul>
+        </div>
+        <div class="col-md-4" *ngIf="r.recommendations?.length">
+          <label class="form-label fw-semibold text-warning mb-1">
+            <i class="fas fa-lightbulb me-1"></i>Recommendations
+          </label>
+          <ul class="list-unstyled mb-0">
+            <li *ngFor="let s of r.recommendations" class="small text-muted mb-1">
+              <i class="fas fa-circle text-warning me-1" style="font-size:.5rem; vertical-align:middle;"></i>{{ s }}
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Experience / Education / Certifications details -->
+      <div class="row g-2">
+        <div class="col-md-4" *ngIf="r.breakdown?.experience?.details">
+          <div class="p-2 bg-light rounded small">
+            <span class="fw-semibold">Experience: </span>{{ r.breakdown.experience.details }}
+          </div>
+        </div>
+        <div class="col-md-4" *ngIf="r.breakdown?.education?.details">
+          <div class="p-2 bg-light rounded small">
+            <span class="fw-semibold">Education: </span>{{ r.breakdown.education.details }}
+          </div>
+        </div>
+        <div class="col-md-4" *ngIf="r.breakdown?.certifications?.details">
+          <div class="p-2 bg-light rounded small">
+            <span class="fw-semibold">Certifications: </span>{{ r.breakdown.certifications.details }}
+          </div>
+        </div>
+      </div>
+
+    </ng-container> <!-- end !r._error -->
+  </ng-template>
+
+  <!-- Score bar sub-template -->
+  <ng-template #scoreBar let-label="label" let-score="score">
+    <div class="col-12">
+      <div class="d-flex align-items-center gap-2">
+        <span style="width:110px; font-size:.85rem;" class="text-muted">{{ label }}</span>
+        <div class="progress flex-grow-1" style="height:10px;">
+          <div class="progress-bar" role="progressbar" [ngClass]="getScoreBarClass(score)" [style.width.%]="score ?? 0">
+          </div>
+        </div>
+        <span class="fw-semibold" style="width:36px; font-size:.85rem; text-align:right;">
+          {{ score ?? '—' }}
+        </span>
+      </div>
+    </div>
+  </ng-template>

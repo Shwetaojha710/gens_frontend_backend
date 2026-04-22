@@ -1,0 +1,309 @@
+<div class="sa-land" *ngIf="!loading; else loadTpl">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+      <h1 class="h4 mb-0">Public home page ( /Home )</h1>
+      <p class="text-muted small mb-0" *ngIf="updatedAt">Last updated: {{ updatedAt | date : 'medium' }}</p>
+    </div>
+    <button type="button" class="btn btn-primary" (click)="save()" [disabled]="saving">
+      {{ saving ? 'Saving…' : 'Save changes' }}
+    </button>
+  </div>
+
+  <p class="text-muted small mb-4">
+    Plans and pricing cards come from <strong>Plan Management</strong> (active plans only). Use plan
+    <code>metadata.landingFeatured</code> to highlight a tier, and <code>metadata.landingBullets</code> (JSON array of
+    strings) for bullet lines. Subscriptions are assigned per company under <strong>Company Management</strong>.
+  </p>
+
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <div class="card mb-3">
+      <div class="card-header fw-semibold">Hero</div>
+      <div class="card-body row g-3" formGroupName="hero">
+        <div class="col-md-6">
+          <label class="form-label small">Title (first line)</label>
+          <input class="form-control form-control-sm" formControlName="titleLead" />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small">Accent phrase</label>
+          <input class="form-control form-control-sm" formControlName="titleAccent" />
+        </div>
+        <div class="col-12">
+          <label class="form-label small">Subtitle</label>
+          <textarea class="form-control form-control-sm" rows="2" formControlName="subtitle"></textarea>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Primary CTA label</label>
+          <input class="form-control form-control-sm" formControlName="primaryCtaLabel" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Primary CTA href</label>
+          <input class="form-control form-control-sm" formControlName="primaryCtaHref" placeholder="#gens-pricing" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Secondary CTA label</label>
+          <input class="form-control form-control-sm" formControlName="secondaryCtaLabel" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Secondary CTA href</label>
+          <input class="form-control form-control-sm" formControlName="secondaryCtaHref" placeholder="/company-reg" />
+        </div>
+        <div class="col-12">
+          <label class="form-label small">Kicker / trust line</label>
+          <input class="form-control form-control-sm" formControlName="trustLine" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">Features</span>
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="addFeature()">Add feature</button>
+      </div>
+      <div class="card-body" formGroupName="features">
+        <div class="row g-2 mb-3">
+          <div class="col-md-4">
+            <label class="form-label small">Section kicker</label>
+            <input class="form-control form-control-sm" formControlName="kicker" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small">Title</label>
+            <input class="form-control form-control-sm" formControlName="title" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small">Subtitle</label>
+            <input class="form-control form-control-sm" formControlName="subtitle" />
+          </div>
+        </div>
+        <div formArrayName="items">
+          <div *ngFor="let ctrl of featureItems().controls; let i = index" [formGroupName]="i" class="row g-2 align-items-end border rounded p-2 mb-2">
+            <div class="col-md-2">
+              <label class="form-label small">Icon class</label>
+              <input class="form-control form-control-sm" formControlName="icon" placeholder="ri-…-line" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small">Title</label>
+              <input class="form-control form-control-sm" formControlName="title" />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small">Description</label>
+              <input class="form-control form-control-sm" formControlName="description" />
+            </div>
+            <div class="col-md-1 text-end">
+              <button type="button" class="btn btn-sm btn-outline-danger" (click)="removeFeature(i)">×</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header fw-semibold">Pricing section intro</div>
+      <div class="card-body row g-3" formGroupName="pricing">
+        <div class="col-md-3">
+          <label class="form-label small">Kicker</label>
+          <input class="form-control form-control-sm" formControlName="kicker" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Title</label>
+          <input class="form-control form-control-sm" formControlName="title" />
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Currency symbol</label>
+          <input class="form-control form-control-sm" formControlName="currencySymbol" />
+        </div>
+        <div class="col-12">
+          <label class="form-label small">Subtitle</label>
+          <textarea class="form-control form-control-sm" rows="2" formControlName="subtitle"></textarea>
+        </div>
+        <div class="col-12">
+          <label class="form-label small">Footer note</label>
+          <input class="form-control form-control-sm" formControlName="footerNote" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">Subscription explainer</span>
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="addBullet()">Add bullet</button>
+      </div>
+      <div class="card-body" formGroupName="subscription">
+        <div class="row g-2 mb-3">
+          <div class="col-md-6">
+            <label class="form-label small">Title</label>
+            <input class="form-control form-control-sm" formControlName="title" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small">Subtitle</label>
+            <input class="form-control form-control-sm" formControlName="subtitle" />
+          </div>
+        </div>
+        <div formArrayName="bullets">
+          <div class="d-flex gap-2 mb-2" *ngFor="let ctrl of subBullets().controls; let i = index">
+            <input class="form-control form-control-sm flex-grow-1" [formControl]="$any(ctrl)" />
+            <button type="button" class="btn btn-sm btn-outline-danger" (click)="removeBullet(i)">×</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">Stats row</span>
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="addStat()">Add stat</button>
+      </div>
+      <div class="card-body" formGroupName="stats">
+        <div formArrayName="items">
+          <div *ngFor="let ctrl of statItems().controls; let i = index" [formGroupName]="i" class="row g-2 align-items-end border rounded p-2 mb-2">
+            <div class="col-md-3">
+              <label class="form-label small">Icon</label>
+              <input class="form-control form-control-sm" formControlName="icon" />
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small">Value</label>
+              <input class="form-control form-control-sm" formControlName="value" />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small">Label</label>
+              <input class="form-control form-control-sm" formControlName="label" />
+            </div>
+            <div class="col-md-1 text-end">
+              <button type="button" class="btn btn-sm btn-outline-danger" (click)="removeStat(i)">×</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">FAQ</span>
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="addFaq()">Add question</button>
+      </div>
+      <div class="card-body" formGroupName="faq">
+        <div class="row g-2 mb-3">
+          <div class="col-md-4">
+            <label class="form-label small">Kicker</label>
+            <input class="form-control form-control-sm" formControlName="kicker" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small">Title</label>
+            <input class="form-control form-control-sm" formControlName="title" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small">Subtitle</label>
+            <input class="form-control form-control-sm" formControlName="subtitle" />
+          </div>
+        </div>
+        <div formArrayName="items">
+          <div *ngFor="let ctrl of faqItems().controls; let i = index" [formGroupName]="i" class="border rounded p-2 mb-2">
+            <div class="d-flex justify-content-between mb-2">
+              <label class="form-label small mb-0">Question</label>
+              <button type="button" class="btn btn-sm btn-outline-danger" (click)="removeFaq(i)">Remove</button>
+            </div>
+            <input class="form-control form-control-sm mb-2" formControlName="q" />
+            <label class="form-label small">Answer</label>
+            <textarea class="form-control form-control-sm" rows="2" formControlName="a"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header fw-semibold">Bottom CTA</div>
+      <div class="card-body row g-3" formGroupName="cta">
+        <div class="col-md-6">
+          <label class="form-label small">Title</label>
+          <input class="form-control form-control-sm" formControlName="title" />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small">Button label</label>
+          <input class="form-control form-control-sm" formControlName="buttonLabel" />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small">Subtitle</label>
+          <input class="form-control form-control-sm" formControlName="subtitle" />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small">Button href</label>
+          <input class="form-control form-control-sm" formControlName="buttonHref" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span class="fw-semibold">Contact section</span>
+        <a class="btn btn-sm btn-outline-primary" routerLink="/superadmin/contact-inquiries">View form submissions</a>
+      </div>
+      <div class="card-body row g-3" formGroupName="contact">
+        <div class="col-md-4">
+          <label class="form-label small">Kicker</label>
+          <input class="form-control form-control-sm" formControlName="kicker" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Title</label>
+          <input class="form-control form-control-sm" formControlName="title" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Subtitle</label>
+          <input class="form-control form-control-sm" formControlName="subtitle" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Card tagline</label>
+          <input class="form-control form-control-sm" formControlName="cardTagline" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Card title</label>
+          <input class="form-control form-control-sm" formControlName="cardTitle" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Form title</label>
+          <input class="form-control form-control-sm" formControlName="formTitle" />
+        </div>
+        <div class="col-12 col-md-6">
+          <div class="form-check mt-2">
+            <input class="form-check-input" type="checkbox" id="contactFormEnabled" formControlName="formEnabled" />
+            <label class="form-check-label small" for="contactFormEnabled">Allow public contact form on Home</label>
+          </div>
+        </div>
+        <div class="col-12">
+          <label class="form-label small">Form help text (under title)</label>
+          <textarea class="form-control form-control-sm" rows="2" formControlName="formHelpText"></textarea>
+        </div>
+        <div class="col-12">
+          <label class="form-label small">Message when form is closed</label>
+          <textarea class="form-control form-control-sm" rows="2" formControlName="formClosedMessage"></textarea>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Name placeholder</label>
+          <input class="form-control form-control-sm" formControlName="namePlaceholder" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Email placeholder</label>
+          <input class="form-control form-control-sm" formControlName="emailPlaceholder" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Submit button label</label>
+          <input class="form-control form-control-sm" formControlName="submitButtonLabel" />
+        </div>
+        <div class="col-12">
+          <label class="form-label small">Message placeholder</label>
+          <input class="form-control form-control-sm" formControlName="messagePlaceholder" />
+        </div>
+        <div class="col-12">
+          <label class="form-label small">Card body</label>
+          <textarea class="form-control form-control-sm" rows="2" formControlName="cardBody"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-end">
+      <button type="submit" class="btn btn-primary" [disabled]="saving">{{ saving ? 'Saving…' : 'Save changes' }}</button>
+    </div>
+  </form>
+</div>
+
+<ng-template #loadTpl>
+  <p class="text-muted py-5 text-center">Loading editor…</p>
+</ng-template>

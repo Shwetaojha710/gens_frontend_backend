@@ -1,0 +1,716 @@
+ <div class="container-fluid  mt-5">
+  <div class="nav-align-top nav-tabs-shadow">
+    <ul class="nav nav-tabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button
+          type="button"
+          class="nav-link waves-effect active"
+          role="tab"
+          data-bs-toggle="tab"
+          data-bs-target="#navs-top-home"
+          aria-controls="navs-top-home"
+          aria-selected="true"
+        >
+          General
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button
+          type="button"
+          class="nav-link waves-effect"
+          role="tab"
+          data-bs-toggle="tab"
+          data-bs-target="#navs-top-profile"
+          aria-controls="navs-top-profile"
+          aria-selected="false"
+          tabindex="-1"
+        >
+          Profile
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button
+          type="button"
+          class="nav-link waves-effect"
+          role="tab"
+          data-bs-toggle="tab"
+          data-bs-target="#navs-top-messages"
+          aria-controls="navs-top-messages"
+          aria-selected="false"
+          tabindex="-1"
+        >
+          Salary
+        </button>
+      </li>
+
+
+    </ul>
+    <div class="tab-content">
+      <div class="tab-pane fade active show" id="navs-top-home" role="tabpanel">
+        <div class="row">
+          <div class="col-md-6">
+            <h5>General Info</h5>
+          </div>
+          <div class="col-md-6">
+            <button
+              type="button"
+              class="btn btn-xs btn-primary float-end"
+              (click)="back()"
+            >
+              <i class="fa-solid fa-arrow-left"></i>&nbsp;Go To Home
+            </button>
+          </div>
+        </div>
+        <hr>
+        <div class="row mt-2">
+          <!-- Navigation -->
+          <div class="col-lg-2 col-md-4 col-12 mb-md-0 mb-4">
+            <div
+              class="d-flex justify-content-between flex-column nav-align-left mb-2 mb-md-0"
+            >
+              <ul class="nav nav-pills flex-column flex-nowrap" role="tablist">
+                <li class="nav-item active" role="presentation">
+                  <button
+                    class="nav-link tab-link waves-effect waves-light active"
+                    data-bs-toggle="tab"
+                    data-bs-target="#payment"
+                    aria-selected="true"
+                    role="tab"
+                    type="link"
+                  >
+                    <i class="icon-base ri ri-bank-card-line icon-sm me-2"></i>
+                    <span class="align-middle">Basic</span>
+                  </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button
+                    class="nav-link tab-link waves-effect waves-light"
+                    data-bs-toggle="tab"
+                    data-bs-target="#delivery"
+                    aria-selected="false"
+                    role="tab"
+                    tabindex="-1"
+                  >
+                    <i class="icon-base ri ri-shopping-cart-line icon-sm me-2"></i>
+
+                    <span class="align-middle"> Document</span>
+                  </button>
+                  <!-- <a href=""routerLink="/layout/employee/add/profile/qualification" routerLinkActive="active">Document</a> -->
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button
+                    class="nav-link tab-link waves-effect waves-light"
+                    data-bs-toggle="tab"
+                    data-bs-target="#cancellation"
+                    aria-selected="false"
+                    role="tab"
+                    tabindex="-1"
+                  >
+                    <i class="icon-base ri ri-refresh-line icon-sm me-2"></i>
+                    <span class="align-middle">Work Experience</span>
+                  </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button
+                    class="nav-link tab-link waves-effect waves-light"
+                    data-bs-toggle="tab"
+                    data-bs-target="#orders"
+                    aria-selected="false"
+                    role="tab"
+                    tabindex="-1"
+                  >
+                    <i
+                      class="icon-base ri ri-inbox-archive-line icon-sm me-2"
+                    ></i>
+                    <span class="align-middle">Bank Account</span>
+                  </button>
+                </li>
+                <!-- <li class="nav-item" role="presentation">
+                        <button class="nav-link waves-effect waves-light active" data-bs-toggle="tab" data-bs-target="#product" aria-selected="true" role="tab">
+                          <i class="icon-base ri ri-settings-4-line icon-sm me-2"></i>
+                          <span class="align-middle">Product &amp; Services</span>
+                        </button>
+                      </li> -->
+              </ul>
+            </div>
+          </div>
+
+          <div class="col-lg-10 col-md-8 col-12">
+            <div class="tab-content p-0">
+              <div
+                class="tab-pane fade show active"
+                id="payment"
+                role="tabpanel"
+              >
+                <div class="d-flex mb-4 gap-4">
+                  <div>
+                    <h5 class="mb-0">Basic Information</h5>
+                  </div>
+                </div>
+               <div class="row">
+            <div class="col-md-3">
+              <div class="form-group">
+                <label class="col-form-label fw-bold">First Name</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Enter First Name"
+                  [(ngModel)]="personalDetails.firstName"
+                  name="firstName"
+                  required
+                  #firstNameRef="ngModel" disabled
+                />
+                <small
+                  class="text-danger"
+                  *ngIf="firstNameRef.invalid && firstNameRef.touched"
+                >
+                  Enter valid First Name
+                </small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Last Name</label>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Enter Last Name"
+                [(ngModel)]="personalDetails.lastName"
+                name="lastName"
+                required
+                #lastNameRef="ngModel"
+                disabled
+              />
+              <small
+                class="text-danger"
+                *ngIf="lastNameRef.invalid && lastNameRef.touched"
+              >
+                Enter valid Last Name
+              </small>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Phone Number</label>
+              <input
+                type="tel"
+                class="form-control"
+                placeholder="Enter Phone Number"
+                [(ngModel)]="personalDetails.mobile"
+                name="phoneNumber"
+                pattern="^[6-9]\d{9}$"
+                maxlength="10"
+                required
+                #mobileRef="ngModel"
+disabled
+              />
+
+              <small
+                class="text-danger"
+                *ngIf="mobileRef.invalid && mobileRef.touched"
+              >
+                Enter valid 10-digit Mobile number
+              </small>
+            </div>
+                <div class="col-md-3">
+              <label class="col-form-label fw-bold"
+                >Alternate Phone Number</label
+              >
+              <input
+                type="tel"
+                class="form-control"
+                placeholder="Enter Phone Number"
+                [(ngModel)]="personalDetails.alternateMobile"
+                name="phoneNumber"
+                pattern="^[6-9]\d{9}$"
+                maxlength="10"
+                required
+                #alternateMobileRef="ngModel"
+disabled
+              />
+
+              <small
+                class="text-danger"
+                *ngIf="alternateMobileRef.invalid && alternateMobileRef.touched"
+              >
+                Enter valid 10-digit Alternate Mobile number
+              </small>
+            </div>
+              <div class="col-md-3">
+              <label class="col-form-label fw-bold">Gender</label>
+              <ng-select
+                [items]="genderList"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="personalDetails.gender"
+                [multiple]="false"
+                placeholder="Select Gender"
+                name="status"
+                id="select2Danger"
+                disabled
+              >
+              </ng-select>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Email</label>
+
+              <input
+                type="email"
+                class="form-control"
+                placeholder="Enter Email"
+                [(ngModel)]="personalDetails.email"
+                name="email"
+                required
+                #emailRef="ngModel"
+                disabled
+              />
+              <small
+                class="text-danger"
+                *ngIf="emailRef.invalid && emailRef.touched"
+              >
+                Enter valid Email
+              </small>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Aadhaar Number</label>
+              <input
+              data-type="adhaar-number"
+                type="text"
+                class="form-control"
+                placeholder="Enter Aadhaar Number"
+                maxlength="12"
+                [(ngModel)]="personalDetails.adhaarNo"
+                name="aadhaarNumber"
+                pattern="^\d{12}$"
+                required
+                #aadhaarRef="ngModel"
+disabled
+              />
+              <small
+                class="text-danger"
+                *ngIf="aadhaarRef.invalid && aadhaarRef.touched"
+                >Enter valid 12-digit Aadhaar number</small
+              >
+            </div>
+
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">PAN</label>
+              <input
+                type="text"
+                class="form-control text-uppercase"
+                placeholder="Enter PAN Number"
+                [(ngModel)]="personalDetails.panNo"
+                (ngModelChange)="toUppercase()"
+                name="pan"
+                pattern="^[A-Z]{5}[0-9]{4}[A-Z]{1}$"
+                maxlength="10"
+                required
+                #panRef="ngModel"
+                disabled
+              />
+              <small
+                class="text-danger"
+                *ngIf="panRef.invalid && panRef.touched"
+              >
+                Enter valid PAN (e.g., ABCDE1234F)
+              </small>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Blood Group</label>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Enter Blood Group"
+                [(ngModel)]="personalDetails.bloodGroup"
+                name="bloodGroup"
+                required
+                #bloodGroupRef="ngModel"
+                disabled
+              />
+              <small
+                class="text-danger"
+                *ngIf="bloodGroupRef.invalid && bloodGroupRef.touched"
+              >
+                Enter valid First Name
+              </small>
+            </div>
+             <div class="col-md-3">
+              <label class="col-form-label fw-bold">Marital Status</label>
+              <ng-select
+                [items]="maritalStatusList"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="personalDetails.martialStatus"
+                placeholder="Select Marital Status"
+                name="maritalStatus"
+                id="select2Danger"
+                disabled
+              >
+              </ng-select>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Father Name</label>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Enter Father Name"
+                [(ngModel)]="personalDetails.fatherName"
+                name="fatherName"
+                required
+                #fatherNameRef="ngModel"
+                disabled
+              />
+              <small
+                class="text-danger"
+                *ngIf="fatherNameRef.invalid && fatherNameRef.touched"
+              >
+                Enter valid Father Name
+              </small>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Mother Name</label>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Enter Mother Name"
+                [(ngModel)]="personalDetails.motherName"
+                name="motherName"
+                required
+                #motherNameRef="ngModel"
+                disabled
+              />
+              <small
+                class="text-danger"
+                *ngIf="motherNameRef.invalid && motherNameRef.touched"
+              >
+                Enter valid Mother Name
+              </small>
+            </div>
+
+
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Nationality</label>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Enter Nationality"
+                [(ngModel)]="personalDetails.nationality"
+                name="nationality"
+                required
+                #nationalityRef="ngModel"
+                disabled
+              />
+              <small
+                class="text-danger"
+                *ngIf="nationalityRef.invalid && nationalityRef.touched"
+              >
+                Enter valid NationalityRef
+              </small>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">DOB</label>
+              <input
+                type="date"
+                class="form-control"
+                [(ngModel)]="personalDetails.dateOfBirth"
+                name="dateOfBirth"
+                required
+                #dateOfBirthRef="ngModel"
+                disabled
+              />
+              <small
+                class="text-danger"
+                *ngIf="dateOfBirthRef.invalid && dateOfBirthRef.touched"
+              >
+                Enter valid DOB
+              </small>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Age</label>
+              <input
+                type="number"
+                class="form-control"
+                placeholder="Enter Age"
+                [(ngModel)]="personalDetails.age"
+                name="age"
+                required
+                #ageRef="ngModel"
+                disabled
+              />
+              <small
+                class="text-danger"
+                *ngIf="ageRef.invalid && ageRef.touched"
+              >
+                Enter valid Age
+              </small>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Country</label>
+              <ng-select
+                [items]="countryList"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="personalDetails['country']"
+                [multiple]="false"
+                placeholder="Select country"
+                name="country"
+                id="select2Danger"
+                (change)="getstates($event)"
+                disabled
+              >
+              </ng-select>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">State</label>
+              <ng-select
+                [items]="states"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="personalDetails['state']"
+                [multiple]="false"
+                placeholder="Select state"
+                name="state"
+                id="select2Danger"
+                (change)="getcity($event)"
+                disabled
+              >
+              </ng-select>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">PIN Code</label>
+              <input
+                type="number"
+                class="form-control"
+                placeholder="Enter PIN Code"
+                [(ngModel)]="personalDetails.pinCode"
+                name="pinCode"
+                required
+                #pinCodeRef="ngModel"
+                disabled
+              />
+              <small
+                class="text-danger"
+                *ngIf="pinCodeRef.invalid && pinCodeRef.touched"
+              >
+                Enter valid PIN Code
+              </small>
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">City</label>
+              <ng-select
+                [items]="cities"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="personalDetails['city']"
+                [multiple]="false"
+                placeholder="Select City"
+                name="city"
+                id="select2Danger"
+                disabled
+              >
+              </ng-select>
+            </div>
+
+
+            <div class="col-md-6">
+              <label class="col-form-label fw-bold">Permanent Address</label>
+              <textarea
+                class="form-control"
+                rows="4"
+                placeholder="Enter Permanent Address"
+                [(ngModel)]="personalDetails.permanentAddress"
+                name="address"
+                disabled
+              ></textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="col-form-label fw-bold">Current Address</label>
+              <textarea
+                class="form-control"
+                rows="4"
+                placeholder="Enter Current Address"
+                [(ngModel)]="personalDetails.currentAddress"
+                name="address"
+                disabled
+              ></textarea>
+            </div>
+          </div>
+              </div>
+              <div class="tab-pane fade" id="delivery" role="tabpanel">
+                <!-- <router-outlet></router-outlet> -->
+
+                <app-qualification></app-qualification>
+              </div>
+              <div class="tab-pane fade" id="cancellation" role="tabpanel">
+                <app-experience></app-experience>
+              </div>
+              <div class="tab-pane fade" id="orders" role="tabpanel">
+                <app-bank-details></app-bank-details>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="tab-pane fade" id="navs-top-profile" role="tabpanel">
+        Profile Picture
+        <hr />
+        <div class="row mb-4" id="employee_profile_photo">
+          <div>
+            <img
+              [src]="DocumentList"
+              alt="Document"
+              width="100"
+              height="auto"
+              (click)="openModal()"
+            />
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-4">
+            <label for="formFile" class="form-label"
+              >Upload Profile Picture</label
+            >
+            <input
+              class="form-control"
+              type="file"
+              id="formFile"
+              (change)="onFileChange($event)"
+              accept="image/*"
+              #fileInput
+            />
+          </div>
+          <div class="row mt-2">
+            <div class="col-md-4">
+              <button
+                type="button"
+                class="btn btn-sm btn-primary waves-effect waves-light"
+                (click)="addPhoto()"
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="navs-top-messages" role="tabpanel">
+        Set Salary
+
+        <hr />
+        <div class="row mt-1">
+          <div class="col-lg-2 col-md-4 col-12 mb-md-0 mb-4">
+            <div
+              class="d-flex justify-content-between flex-column nav-align-left mb-2 mb-md-0"
+            >
+              <ul class="nav nav-pills flex-column flex-nowrap" role="tablist">
+                <li class="nav-item active" role="presentation">
+                  <button
+                    class="nav-link tab-link waves-effect waves-light active"
+                    data-bs-toggle="tab"
+                    data-bs-target="#payment1"
+                    aria-selected="true"
+                    role="tab"
+                    type="link"
+                  >
+                    <i class="fas fa-briefcase"></i> &nbsp;
+                    <span class="align-middle">Basic</span>
+                  </button>
+                  <!-- <a class="nav-link active show" id="payment1" data-toggle="tab" href="#payment1" role="tab" aria-controls="payment1" aria-selected="true" >Basic</a> -->
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button
+                    class="nav-link tab-link waves-effect waves-light"
+                    data-bs-toggle="tab"
+                    data-bs-target="#delivery1"
+                    aria-selected="false"
+                    role="tab"
+                    tabindex="-1"
+                  >
+                    <i
+                      class="fas fa-coins"
+                    ></i> &nbsp;
+                    <span class="align-middle"> Allowance</span>
+                  </button>
+                </li>
+                       <li class="nav-item" role="presentation">
+                  <button
+                    class="nav-link tab-link waves-effect waves-light"
+                    data-bs-toggle="tab"
+                    data-bs-target="#delivery3"
+                    aria-selected="false"
+                    role="tab"
+                    tabindex="-1"
+                  >
+                    <i
+                      class="fas fa-minus-circle"
+                    ></i> &nbsp;
+                    <span class="align-middle">Statutory Deductions</span>
+                  </button>
+                </li>
+                 <li class="nav-item" role="presentation">
+                  <button
+                    class="nav-link tab-link waves-effect waves-light"
+                    data-bs-toggle="tab"
+                    data-bs-target="#delivery2"
+                    aria-selected="false"
+                    role="tab"
+                    tabindex="-1"
+                  >
+                    <i
+                      class="fas fa-money-bill-wave"
+                    ></i> &nbsp;
+                    <span class="align-middle">Total Salary Component</span>
+                  </button>
+                </li>
+
+              </ul>
+            </div>
+          </div>
+
+          <div class="col-lg-10 col-md-8 col-12">
+            <div class="tab-content p-0">
+              <div
+                class="tab-pane fade show active"
+                id="payment1"
+                role="tabpanel"
+              >
+                <app-basic></app-basic>
+              </div>
+              <div class="tab-pane fade" id="delivery1" role="tabpanel">
+                <app-allowances></app-allowances>
+              </div>
+               <div class="tab-pane fade" id="delivery3" role="tabpanel">
+                <app-deductions></app-deductions>
+              </div>
+              <div class="tab-pane fade" id="delivery2" role="tabpanel">
+                <app-total-salary-component></app-total-salary-component>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel"aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="imageModalLabel">Profile Image</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body text-center">
+        <img
+          [src]="DocumentList"
+          alt="Full Profile Image"
+          class="img-fluid rounded"
+        />
+      </div>
+    </div>
+  </div>
+</div>

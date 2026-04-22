@@ -1,0 +1,298 @@
+<div class="page-shell">
+  <div class="page-head">
+    <div>
+      <h3>Interviews</h3>
+      <p>See all interviews, scheduled interviews, today's interviews, upcoming interviews, and completed interviews.</p>
+    </div>
+    <button type="button" class="btn btn-outline-primary btn-sm" (click)="loadData()">Refresh</button>
+  </div>
+
+  <app-interviewer-interviews [items]="items"></app-interviewer-interviews>
+
+  <div class="data-card mt-4">
+    <div class="data-card-head">
+      <div>
+        <h5>Interview List</h5>
+        <p class="filter-caption mb-0">{{ currentFilter | titlecase }} interviews</p>
+      </div>
+      <span>{{ interviews.length }} total</span>
+    </div>
+
+    <div *ngIf="loading" class="state-block">Loading interviews...</div>
+
+    <div *ngIf="!loading && interviews.length === 0" class="state-block">No interviews found.</div>
+
+    <div class="table-responsive" *ngIf="!loading && interviews.length > 0">
+      <table class="table align-middle mb-0">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Candidate</th>
+            <th>Job</th>
+            <th>Round</th>
+            <th>Schedule</th>
+            <th>Mode</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of interviews; let i = index" [class.table-secondary]="!item.is_unlocked">
+            <td>{{ i + 1 }}</td>
+
+            <td>
+              <ng-container *ngIf="item.is_unlocked; else lockedCandidate">
+                <div class="d-flex align-items-center gap-2">
+                  <div class="candidate-avatar">
+                    {{ (item.candidate.name || '?')[0].toUpperCase() }}
+                  </div>
+                  <div>
+                    <p class="mb-0 fw-semibold text-sm">{{ item.candidate.name }}</p>
+                    <p class="mb-0 text-xs text-muted">{{ item.candidate.email }}</p>
+                    <p class="mb-0 text-xs text-muted" *ngIf="item.candidate.phone">{{ item.candidate.phone }}</p>
+                  </div>
+                </div>
+              </ng-container>
+              <ng-template #lockedCandidate>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="candidate-avatar locked">
+                    <i class="fas fa-lock"></i>
+                  </div>
+                  <div>
+                    <p class="mb-0 fw-semibold text-sm text-muted">Locked candidate</p>
+                    <p class="mb-0 text-xs text-muted">Details unlock after the previous round</p>
+                  </div>
+                </div>
+              </ng-template>
+            </td>
+
+            <td>
+              <div class="fw-semibold text-sm">{{ item.job.job_title }}</div>
+              <div class="text-xs text-muted" *ngIf="item.job.department">{{ item.job.department }}</div>
+            </td>
+
+            <td>
+              <span class="badge bg-info">{{ item.round_name }}</span>
+              <small class="d-block text-muted mt-1">{{ getRoundMeta(item) }}</small>
+            </td>
+
+            <td class="text-sm">
+              <ng-container *ngIf="item.is_unlocked; else lockedCell">
+                <span *ngIf="item.scheduled_at">{{ item.scheduled_at | date:'dd MMM yyyy, h:mm a' }}</span>
+                <span *ngIf="!item.scheduled_at" class="text-muted">-</span>
+                <small *ngIf="item.duration_minutes" class="d-block text-muted">{{ item.duration_minutes }} mins</small>
+              </ng-container>
+            </td>
+
+            <td class="text-sm">
+              <ng-container *ngIf="item.is_unlocked; else lockedCell">
+                <span *ngIf="item.mode">{{ item.mode }}</span>
+                <span *ngIf="!item.mode" class="text-muted">-</span>
+                <a *ngIf="item.meeting_link" [href]="item.meeting_link" target="_blank" class="d-block text-xs text-primary">
+                  Join Link
+                </a>
+              </ng-container>
+            </td>
+
+            <td>
+              <ng-container *ngIf="item.is_unlocked; else lockedStatus">
+                <span class="badge" [ngClass]="getStatusClass(item)">{{ getStatusLabel(item) }}</span>
+              </ng-container>
+              <ng-template #lockedStatus>
+                <span class="badge bg-secondary">
+                  <i class="fas fa-lock me-1"></i>Locked
+                </span>
+                <small class="d-block text-muted mt-1">{{ getLockedReason(item) }}</small>
+              </ng-template>
+            </td>
+
+            <td>
+              <button
+                type="button"
+                class="btn btn-sm btn-primary"
+                *ngIf="item.is_unlocked && !item.feedback_submitted && item.status !== 'completed'"
+                (click)="openFeedbackModal(item)">
+                <i class="fas fa-comment-dots me-1"></i>Give Feedback
+              </button>
+
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-success"
+                *ngIf="item.is_unlocked && (item.feedback_submitted || item.status === 'completed')"
+                (click)="openFeedbackViewModal(item)">
+                <i class="fas fa-eye me-1"></i>View Feedback
+              </button>
+
+              <span *ngIf="!item.is_unlocked" class="text-muted text-sm">
+                <i class="fas fa-lock me-1"></i>Not available yet
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<ng-template #lockedCell>
+  <span class="text-muted">Locked</span>
+</ng-template>
+
+<div class="modal-backdrop fade show" *ngIf="showFeedbackModal || showFeedbackViewModal" style="z-index:1040;"></div>
+
+<div class="modal fade show d-block" *ngIf="showFeedbackModal" style="z-index:1050;" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-comment-dots me-2"></i>Submit Interview Feedback
+        </h5>
+        <button type="button" class="btn-close" (click)="closeFeedbackModal()"></button>
+      </div>
+      <div class="modal-body" *ngIf="selectedInterview">
+        <div class="alert alert-light border mb-3">
+          <div class="row">
+            <div class="col-6">
+              <strong>Candidate:</strong> {{ selectedInterview.candidate.name }}<br>
+              <strong>Email:</strong> {{ selectedInterview.candidate.email }}
+            </div>
+            <div class="col-6">
+              <strong>Job:</strong> {{ selectedInterview.job.job_title }}<br>
+              <strong>Round:</strong>
+              <span class="badge bg-info ms-1">{{ selectedInterview.round_name }}</span>
+              ({{ selectedInterview.sequence }} of {{ selectedInterview.total_rounds }})
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Rating <span class="text-danger">*</span></label>
+          <div class="d-flex gap-2 align-items-center">
+            <button
+              *ngFor="let star of stars"
+              type="button"
+              class="btn btn-sm"
+              [class.btn-warning]="feedbackForm.rating >= star"
+              [class.btn-outline-secondary]="feedbackForm.rating < star"
+              (click)="setRating(star)">
+              *
+            </button>
+            <span class="ms-2 text-muted">{{ feedbackForm.rating }}/5</span>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Recommendation <span class="text-danger">*</span></label>
+          <div class="d-flex gap-3 flex-wrap">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="recommendation" id="page-rec-selected" value="selected"
+                [(ngModel)]="feedbackForm.recommendation">
+              <label class="form-check-label text-success fw-semibold" for="page-rec-selected">Selected</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="recommendation" id="page-rec-hold" value="hold"
+                [(ngModel)]="feedbackForm.recommendation">
+              <label class="form-check-label text-warning fw-semibold" for="page-rec-hold">Hold</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="recommendation" id="page-rec-rejected" value="rejected"
+                [(ngModel)]="feedbackForm.recommendation">
+              <label class="form-check-label text-danger fw-semibold" for="page-rec-rejected">Rejected</label>
+            </div>
+          </div>
+          <div
+            *ngIf="feedbackForm.recommendation === 'selected' && selectedInterview.sequence < selectedInterview.total_rounds"
+            class="alert alert-info mt-2 py-2 mb-0 text-sm">
+            Approving will unlock <strong>Round {{ selectedInterview.sequence + 1 }}</strong> for the next interviewer.
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Strengths</label>
+          <textarea class="form-control" rows="2" [(ngModel)]="feedbackForm.strengths"></textarea>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Concerns</label>
+          <textarea class="form-control" rows="2" [(ngModel)]="feedbackForm.concerns"></textarea>
+        </div>
+
+        <div class="mb-0">
+          <label class="form-label fw-semibold">Additional Notes</label>
+          <textarea class="form-control" rows="2" [(ngModel)]="feedbackForm.notes"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeFeedbackModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" (click)="submitFeedback()" [disabled]="isSubmittingFeedback">
+          <span *ngIf="isSubmittingFeedback" class="spinner-border spinner-border-sm me-1"></span>
+          <i *ngIf="!isSubmittingFeedback" class="fas fa-paper-plane me-1"></i>
+          Submit Feedback
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade show d-block" *ngIf="showFeedbackViewModal" style="z-index:1050;" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-eye me-2"></i>Submitted Feedback
+        </h5>
+        <button type="button" class="btn-close" (click)="closeFeedbackViewModal()"></button>
+      </div>
+      <div class="modal-body" *ngIf="selectedInterview">
+        <div *ngIf="isLoadingFeedbackDetail" class="state-block">Loading feedback details...</div>
+
+        <ng-container *ngIf="!isLoadingFeedbackDetail">
+        <div class="feedback-view-grid">
+          <div class="feedback-view-card">
+            <div class="feedback-view-label">Candidate</div>
+            <div class="feedback-view-value">{{ selectedInterview.candidate.name }}</div>
+            <div class="feedback-view-sub">{{ selectedInterview.candidate.email }}</div>
+          </div>
+          <div class="feedback-view-card">
+            <div class="feedback-view-label">Round</div>
+            <div class="feedback-view-value">{{ selectedInterview.round_name }}</div>
+            <div class="feedback-view-sub">{{ getRoundMeta(selectedInterview) }}</div>
+          </div>
+          <div class="feedback-view-card">
+            <div class="feedback-view-label">Rating</div>
+            <div class="feedback-view-value">{{ getFeedbackRating() }}</div>
+          </div>
+          <div class="feedback-view-card">
+            <div class="feedback-view-label">Recommendation</div>
+            <div class="feedback-view-value">{{ getRecommendationLabel(selectedFeedbackDetail?.recommendation) }}</div>
+          </div>
+        </div>
+
+        <div class="feedback-copy-block">
+          <div class="feedback-view-label">Submitted By</div>
+          <div class="feedback-view-value">{{ selectedFeedbackDetail?.interviewer_name || 'Interviewer' }}</div>
+          <div class="feedback-view-sub" *ngIf="selectedFeedbackDetail?.interviewer_email">{{ selectedFeedbackDetail?.interviewer_email }}</div>
+        </div>
+
+        <div class="feedback-copy-block">
+          <div class="feedback-view-label">Strengths</div>
+          <div class="feedback-view-text">{{ selectedFeedbackDetail?.strengths || 'No strengths added.' }}</div>
+        </div>
+
+        <div class="feedback-copy-block">
+          <div class="feedback-view-label">Concerns</div>
+          <div class="feedback-view-text">{{ selectedFeedbackDetail?.concerns || 'No concerns added.' }}</div>
+        </div>
+
+        <div class="feedback-copy-block">
+          <div class="feedback-view-label">Additional Notes</div>
+          <div class="feedback-view-text">{{ selectedFeedbackDetail?.notes || 'No notes added.' }}</div>
+        </div>
+        </ng-container>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeFeedbackViewModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>

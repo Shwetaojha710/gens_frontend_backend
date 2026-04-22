@@ -1,0 +1,584 @@
+/* ═══════════════════════════════════════════════════════════════════
+   LIVE TRACKING COMPONENT — Full Dark Theme
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Root Layout ──────────────────────────────────────────────────── */
+.lv-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #0f172a;
+  color: #f1f5f9;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  overflow: hidden;
+}
+
+/* ── Top Bar ──────────────────────────────────────────────────────── */
+.lv-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  gap: 12px;
+  flex-shrink: 0;
+  height: 60px;
+}
+
+/* Employee info */
+.lv-emp {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.lv-avatar-wrap { position: relative; flex-shrink: 0; }
+
+.lv-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #334155;
+}
+
+.lv-status-dot {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #1e293b;
+  transition: background .3s;
+}
+.lv-status-dot.dot-live    { background: #22c55e; box-shadow: 0 0 6px #22c55e80; }
+.lv-status-dot.dot-offline { background: #64748b; }
+
+.lv-emp-info { overflow: hidden; }
+.lv-emp-name { font-size: 13px; font-weight: 700; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lv-emp-sub  { font-size: 10px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Controls */
+.lv-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Map type toggle */
+.lv-map-switch {
+  display: flex;
+  background: #0f172a;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #334155;
+}
+.lv-map-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.lv-map-btn.active,
+.lv-map-btn:hover { background: #1e293b; color: #f1f5f9; }
+.lv-map-btn.active { color: #3b82f6; font-weight: 600; }
+
+/* Icon buttons */
+.lv-btn-icon {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #334155;
+  background: #0f172a;
+  border-radius: 7px;
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .2s;
+}
+.lv-btn-icon:hover:not(:disabled) { color: #f1f5f9; border-color: #475569; background: #1e293b; }
+.lv-btn-icon:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Go Live / Stop button */
+.lv-live-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 16px;
+  border-radius: 8px;
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .25s;
+  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(59,130,246,.4);
+  letter-spacing: .3px;
+}
+.lv-live-btn:hover { background: linear-gradient(135deg, #1e40af, #2563eb); box-shadow: 0 2px 14px rgba(59,130,246,.6); }
+.lv-live-btn.live-active {
+  background: linear-gradient(135deg, #991b1b, #ef4444);
+  box-shadow: 0 2px 10px rgba(239,68,68,.4);
+  animation: live-glow 2s ease-in-out infinite;
+}
+.lv-live-btn.live-active:hover { background: linear-gradient(135deg, #7f1d1d, #dc2626); }
+
+@keyframes live-glow {
+  0%, 100% { box-shadow: 0 2px 10px rgba(239,68,68,.4); }
+  50%       { box-shadow: 0 2px 20px rgba(239,68,68,.8); }
+}
+
+/* Blinking pip inside button */
+.lv-live-pip {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  display: inline-block;
+  animation: pip-blink 1s step-start infinite;
+  flex-shrink: 0;
+}
+@keyframes pip-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* ── Body ─────────────────────────────────────────────────────────── */
+.lv-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Left Panel ───────────────────────────────────────────────────── */
+.lv-panel {
+  width: 300px;
+  flex-shrink: 0;
+  background: #1e293b;
+  border-right: 1px solid #334155;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 14px 14px 20px;
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
+.lv-panel::-webkit-scrollbar { width: 4px; }
+.lv-panel::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+.lv-panel.panel-offline { opacity: .85; }
+
+/* Refresh row */
+.lv-refresh-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+/* Live/Offline indicator pill */
+.lv-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: #334155;
+  color: #64748b;
+  letter-spacing: .5px;
+}
+.lv-indicator.ind-live {
+  background: rgba(34,197,94,.15);
+  color: #22c55e;
+  border: 1px solid rgba(34,197,94,.3);
+}
+.lv-indicator .ind-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pip-blink 1s step-start infinite;
+}
+.lv-indicator:not(.ind-live) .ind-dot { animation: none; }
+
+.lv-last-updated {
+  font-size: 10px;
+  color: #64748b;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.lv-loading-spin { color: #3b82f6; font-size: 13px; }
+
+/* Error */
+.lv-error {
+  background: rgba(239,68,68,.1);
+  border: 1px solid rgba(239,68,68,.3);
+  color: #fca5a5;
+  font-size: 11px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+/* No data */
+.lv-no-data {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 30px 16px;
+  color: #475569;
+  font-size: 12px;
+  text-align: center;
+}
+.lv-no-data i { color: #334155; font-size: 28px; }
+
+/* Start prompt */
+.lv-start-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 12px;
+  text-align: center;
+}
+.lv-start-icon {
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  background: rgba(59,130,246,.12);
+  border: 2px solid rgba(59,130,246,.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: #3b82f6;
+}
+.lv-start-title { font-size: 15px; font-weight: 700; color: #f1f5f9; margin: 0; }
+.lv-start-sub   { font-size: 11px; color: #64748b; margin: 0; line-height: 1.5; }
+.lv-start-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 22px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 4px;
+  box-shadow: 0 2px 12px rgba(59,130,246,.4);
+  transition: all .2s;
+}
+.lv-start-btn:hover { box-shadow: 0 2px 20px rgba(59,130,246,.7); }
+
+/* ── Cards ─────────────────────────────────────────────────────────── */
+.lv-card {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 12px 13px;
+  margin-bottom: 10px;
+}
+.lv-card-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  margin-bottom: 7px;
+}
+.lv-loc-card {}
+
+.lv-address {
+  font-size: 12px;
+  color: #cbd5e1;
+  line-height: 1.5;
+  margin-bottom: 5px;
+}
+.lv-address.loading { color: #475569; font-style: italic; }
+
+.lv-coords {
+  font-size: 10px;
+  color: #475569;
+  font-family: monospace;
+  margin-bottom: 6px;
+}
+
+.lv-accuracy-row {
+  font-size: 10px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.acc-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 6px;
+  margin-left: 4px;
+}
+.acc-good { background: rgba(34,197,94,.15); color: #22c55e; }
+.acc-ok   { background: rgba(245,158,11,.15); color: #f59e0b; }
+.acc-poor { background: rgba(239,68,68,.15);  color: #ef4444; }
+
+/* ── Stats Grid ────────────────────────────────────────────────────── */
+.lv-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.lv-stat-card {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 11px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+  transition: border-color .2s;
+}
+.lv-stat-card:hover { border-color: #475569; }
+
+.lv-stat-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+.lv-stat-val   { font-size: 18px; font-weight: 800; color: #f1f5f9; line-height: 1; }
+.lv-stat-unit  { font-size: 9px;  color: #64748b; }
+.lv-stat-label { font-size: 9px;  color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: .4px; }
+
+/* ── Misc Panel Items ─────────────────────────────────────────────── */
+.lv-ts-row {
+  font-size: 10px;
+  color: #475569;
+  margin-bottom: 8px;
+}
+
+.lv-gmaps-btn {
+  width: 100%;
+  padding: 9px;
+  border: 1px solid #334155;
+  background: #0f172a;
+  color: #94a3b8;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all .2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.lv-gmaps-btn:hover { background: #1e293b; color: #f1f5f9; border-color: #475569; }
+
+.lv-refresh-hint {
+  font-size: 10px;
+  color: #334155;
+  text-align: center;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+/* ── Map Area ─────────────────────────────────────────────────────── */
+.lv-map-wrap {
+  flex: 1;
+  position: relative;
+  background: #0f172a;
+}
+
+.lv-map {
+  width: 100%;
+  height: 100%;
+}
+
+/* Map overlay when offline */
+.lv-map-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  backdrop-filter: blur(2px);
+}
+
+.lv-map-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: transform .2s;
+}
+.lv-map-cta:hover { transform: scale(1.03); }
+
+.lv-map-cta-icon {
+  width: 70px; height: 70px;
+  border-radius: 50%;
+  background: rgba(59,130,246,.15);
+  border: 2px solid rgba(59,130,246,.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: #3b82f6;
+  box-shadow: 0 0 30px rgba(59,130,246,.25);
+  animation: float 3s ease-in-out infinite;
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+
+.lv-map-cta-text {
+  font-size: 14px;
+  color: #94a3b8;
+  background: rgba(15,23,42,.7);
+  padding: 5px 16px;
+  border-radius: 20px;
+  border: 1px solid #334155;
+}
+
+/* Speed badge floating on map */
+.lv-speed-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(15,23,42,.85);
+  border: 1px solid #334155;
+  color: #f1f5f9;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 20px;
+  z-index: 600;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 12px rgba(0,0,0,.4);
+  pointer-events: none;
+}
+
+/* Zoom control on map */
+.lv-zoom { display: flex; flex-direction: column; }
+.lv-zoom-in, .lv-zoom-out {
+  width: 30px; height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15,23,42,.85);
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid #334155;
+  text-decoration: none;
+  transition: all .2s;
+}
+.lv-zoom-in  { border-radius: 6px 6px 0 0; border-bottom: none; }
+.lv-zoom-out { border-radius: 0 0 6px 6px; }
+.lv-zoom-in:hover, .lv-zoom-out:hover { color: #f1f5f9; background: #1e293b; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   LIVE MARKER CSS — The animated dot on the map
+   ═══════════════════════════════════════════════════════════════════ */
+
+.live-arrow {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Core dot */
+.live-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #3b82f6;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 2px rgba(59,130,246,.5);
+  position: relative;
+  z-index: 3;
+}
+
+/* Pulsing ring */
+.live-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(59,130,246,.15);
+  animation: pulse-ring 2s ease-out infinite;
+  z-index: 1;
+}
+
+@keyframes pulse-ring {
+  0%   { transform: scale(0.4); opacity: 0.8; }
+  70%  { transform: scale(1.6); opacity: 0; }
+  100% { transform: scale(0.4); opacity: 0; }
+}
+
+/* Direction arrow (shown when moving) */
+.live-heading-arrow {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left:  6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 10px solid #3b82f6;
+  z-index: 4;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.6));
+}
+
+/* Leaflet popup override for dark theme */
+.leaflet-popup-content-wrapper {
+  background: #1e293b !important;
+  color: #f1f5f9 !important;
+  border: 1px solid #334155 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 4px 24px rgba(0,0,0,.5) !important;
+}
+.leaflet-popup-tip { background: #1e293b !important; }
+.leaflet-popup-close-button { color: #64748b !important; }
+
+/* ── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .lv-body { flex-direction: column; }
+  .lv-panel { width: 100%; height: 280px; border-right: none; border-bottom: 1px solid #334155; }
+  .lv-map-wrap { flex: 1; min-height: 300px; }
+  .lv-map-switch { display: none; }
+  .lv-topbar { padding: 8px 12px; height: auto; }
+}
+
+@media (max-width: 480px) {
+  .lv-controls { gap: 5px; }
+  .lv-live-btn { padding: 6px 12px; font-size: 12px; }
+  .lv-btn-icon { display: none; }
+}
+
+.lv-root.lv-light,.lv-root.lv-light .lv-map-wrap{background:linear-gradient(180deg,#f8fbff 0%,#eef5ff 100%);color:#0f172a}.lv-root.lv-light .lv-topbar,.lv-root.lv-light .lv-panel,.lv-root.lv-light .lv-card,.lv-root.lv-light .lv-stat-card,.lv-root.lv-light .lv-map-switch,.lv-root.lv-light .lv-speed-badge{background:rgba(255,255,255,.96);border-color:#dbe7f5;box-shadow:0 10px 24px rgba(15,23,42,.08)}.lv-root.lv-light .lv-avatar{border-color:#dbe7f5}.lv-root.lv-light .lv-status-dot{border-color:#fff}.lv-root.lv-light .lv-emp-name,.lv-root.lv-light .lv-stat-val,.lv-root.lv-light .lv-map-btn.active{color:#0f172a}.lv-root.lv-light .lv-emp-sub,.lv-root.lv-light .lv-card-label,.lv-root.lv-light .lv-stat-unit,.lv-root.lv-light .lv-stat-label,.lv-root.lv-light .lv-last-updated,.lv-root.lv-light .lv-coords,.lv-root.lv-light .lv-ts-row,.lv-root.lv-light .lv-refresh-hint{color:#64748b}.lv-root.lv-light .lv-map-btn,.lv-root.lv-light .lv-btn-icon,.lv-root.lv-light .lv-gmaps-btn{background:#fff;border-color:#cbd5e1;color:#475569}.lv-root.lv-light .lv-map-btn:hover,.lv-root.lv-light .lv-map-btn.active,.lv-root.lv-light .lv-btn-icon:hover:not(:disabled),.lv-root.lv-light .lv-gmaps-btn:hover{background:#eff6ff;color:#1d4ed8;border-color:#93c5fd}.lv-root.lv-light .lv-start-sub,.lv-root.lv-light .lv-address.loading,.lv-root.lv-light .lv-no-data{color:#64748b}.lv-root.lv-light .lv-address{color:#334155}.lv-root.lv-light .lv-start-icon,.lv-root.lv-light .lv-map-cta-icon{background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.22)}.lv-root.lv-light .lv-map-cta-text{background:rgba(255,255,255,.92);border-color:#dbe7f5;color:#475569}.lv-root.lv-light .lv-map-overlay{background:rgba(241,245,249,.65)}.lv-root.lv-light .lv-indicator{background:#e2e8f0;color:#64748b}.lv-root.lv-light .lv-indicator.ind-live{background:rgba(34,197,94,.12);color:#16a34a;border:1px solid rgba(34,197,94,.24)}.lv-root.lv-light .leaflet-popup-content-wrapper{background:#fff!important;color:#0f172a!important;border:1px solid #dbe7f5!important;box-shadow:0 10px 26px rgba(15,23,42,.12)!important}.lv-root.lv-light .leaflet-popup-tip{background:#fff!important}.lv-root.lv-light .leaflet-popup-close-button{color:#64748b!important}.lv-root.lv-light .lv-zoom-in,.lv-root.lv-light .lv-zoom-out{background:rgba(255,255,255,.95);color:#475569;border-color:#cbd5e1}.lv-root.lv-light .lv-zoom-in:hover,.lv-root.lv-light .lv-zoom-out:hover{background:#eff6ff;color:#1d4ed8}

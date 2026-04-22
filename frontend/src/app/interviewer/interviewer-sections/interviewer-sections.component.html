@@ -1,0 +1,20 @@
+<section class="sections-grid" *ngIf="sections.length > 0">
+  <article class="section-card" *ngFor="let section of sections" [attr.id]="getSectionId(section.title)">
+    <div class="section-head">
+      <div class="section-icon">
+        <i [class]="section.icon"></i>
+      </div>
+      <div>
+        <h3>{{ section.title }}</h3>
+        <p>Quick overview for your interviewer workspace</p>
+      </div>
+    </div>
+
+    <div class="section-list">
+      <div class="section-item" *ngFor="let item of section.items">
+        <span class="item-label">{{ item.label }}</span>
+        <span class="item-count">{{ item.count }}</span>
+      </div>
+    </div>
+  </article>
+</section>

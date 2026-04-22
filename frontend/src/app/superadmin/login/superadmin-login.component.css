@@ -1,0 +1,16 @@
+.auth-shell {
+  padding: 50px 40px;
+  background: linear-gradient(110.78deg, rgba(255, 255, 255, 0.41) 7.01%, rgba(255, 255, 255, 0.01) 106.22%),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));
+  border-radius: 8px;
+  height: 800px;
+}
+
+.auth-shell-inner {
+  padding: 80px 40px;
+  background: linear-gradient(110.78deg, rgba(255, 255, 255, 0.41) 7.01%, rgba(255, 255, 255, 0.01) 106.22%),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));
+  border-radius: 8px;
+  height: 720px;
+}
+

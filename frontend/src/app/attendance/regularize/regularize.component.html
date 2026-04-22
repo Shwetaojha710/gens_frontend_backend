@@ -1,0 +1,160 @@
+ <div class="container-fluid  mt-5">
+
+
+    <div class="row mb-6" *ngIf="updateFlag == false" >
+    <div class="col-md" *ngIf="fromDashboard != 'true'">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center">
+          <span>Regularize</span>
+          <!-- <button
+            *ngIf="updateFlag == false"
+            type="button"
+            class="btn btn-xs btn-primary float-end"
+            (click)="openupdate()"
+          >
+            <i class="fa-solid fa-plus"></i>&nbsp;Update
+          </button> -->
+        </h5>
+        <div class="card-body">
+          <div class="row g-2">
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label">Select Employee</label>
+              <ng-select [items]="EmpList" bindLabel="label" bindValue="value" [(ngModel)]="obj['emp_id']"
+                [multiple]="false" placeholder="Select Employee" name="state" id="select2Danger" required
+                #enCashableRef="ngModel">
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label">Select Start Date
+                <!-- <span style="color: red">*</span> -->
+              </label>
+              <input type="date" class="form-control" id="defaultFormControlInput" placeholder="Select Start Date"
+                [(ngModel)]="obj['startDate']" name="month" required  (change)="setMinToDate()"/>
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label for="defaultFormControlInput" class="form-label">Select End Date
+                <!-- <span style="color: red"> * </span> -->
+              </label>
+              <input type="date" class="form-control" id="defaultFormControlInput" placeholder="Select End Date"
+                [(ngModel)]="obj['endDate']" name="month" [min]="getToDateMin()" required />
+            </div>
+             <div class="col-3">
+              <label for="defaultFormControlInput" class="form-label">Select Status
+
+              </label>
+              <ng-select [items]="leaveStatus" bindLabel="label" bindValue="value" [(ngModel)]="obj['status']"
+                [multiple]="false" placeholder="Select Status" name="state" id="select2Danger" required
+                #enCashableRef="ngModel">
+              </ng-select>
+            </div>
+          </div>
+          <div class="row mt-2">
+            <div class="col-12 justify-content-center">
+              <button type="button" class="btn btn-sm btn-primary waves-effect waves-light" (click)="getRegularize()">
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mb-6">
+    <div class="col-md">
+      <div class="card">
+        <h5
+          class="card-header d-flex justify-content-between align-items-center"
+        >
+          <span>Regularize List</span>
+          <button
+            *ngIf="createFlag == false"
+            type="button"
+            class="btn btn-xs btn-primary float-end"
+            (click)="approveAll()"
+          >
+            <i class="fa-solid fa-plus"></i>&nbsp;Approve All
+          </button>
+        </h5>
+
+           <!-- <app-search-pagination
+          [totalItems]="applyLeaveList.length"
+          [pageSize]="itemsPerPage"
+          [currentPage]="currentPage"
+          (search)="onSearch($event)"
+          (pageChange)="onPageChange($event)"
+          (pageSizeChange)="onPageSizeChange($event)"
+        > -->
+
+          <app-search-pagination [totalItems]="applyRegularizeList.length" [pageSize]="itemsPerPage" [currentPage]="currentPage"
+          (search)="onSearch($event)" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)">
+<div class="table-responsive">
+          <table class="table table-striped dataTable bg-white">
+            <thead>
+              <tr>
+                 <th>
+                  <input type="checkbox" [(ngModel)]="masterSelected" (change)="checkUncheckAll()" />
+                </th>
+                <th>SI.No</th>
+                <th>Emp. Name/ Emp.code</th>
+                <th>Email</th>
+                <th style="width: 175px;">Attendance Date</th>
+                <th>In Time </th>
+                <th>Out Time </th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th>createdAt</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+              <tr *ngFor="let item of filteredDesignation; let i = index">
+                 <td>
+                  <input type="checkbox" [(ngModel)]="item.isSelected" (change)="isAllSelected()" />
+                </td>
+                <td scope="row">{{ i + 1 }}</td>
+                <td><strong>{{ item["name"] }}</strong>
+                    <br />
+
+                    {{item["empCode"]}}
+
+                </td>
+                <td>
+                  <span class="badge rounded-pill text-right bg-label-primary" style="text-align: left;">
+                    {{item["email"]}}
+                    <br>
+                    </span>
+                </td>
+                <td>{{ item["attendanceDate"] | date : "dd-MM-yyyy"}}</td>
+                <td>{{ item["inTimeRequested"] }}</td>
+
+                <td>{{ item["outTimeRequested"] }}</td>
+                <td>{{ item["reason"] }}</td>
+                <td>{{ item["status"] }}</td>
+
+                <td>{{ item["createdAt"] | date : "M/d/yyyy, h:mm a"}}</td>
+
+                <td>
+                  <button type="button" class="btn btn-sm btn-outline-success" *ngIf="item.status=='pending'" (click)="statuschange(item,'approved')" >
+                    <i class="fas fa-check"></i>
+                  </button>
+                  &nbsp;
+                  <button  *ngIf="item.status=='pending'"
+                    type="button"
+                    class="badge  bg-label-danger"
+                    (click)="statuschange(item,'rejected')"
+                  >
+                 <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          </div>  
+        </app-search-pagination>
+      </div>
+    </div>
+  </div>
+</div>

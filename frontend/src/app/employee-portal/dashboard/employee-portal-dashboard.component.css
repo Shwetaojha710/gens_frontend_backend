@@ -1,0 +1,1306 @@
+@import '../employee-portal-glass.css';
+
+:host {
+  display: block;
+}
+
+.ep-dash--home {
+  scroll-margin-top: 0.5rem;
+  padding-bottom: 2rem;
+}
+
+/* —— Hero —— */
+.ep-dash-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.35rem 1.5rem;
+  border-radius: 1.125rem;
+  background: linear-gradient(
+    125deg,
+    rgba(255, 255, 255, 0.72) 0%,
+    rgba(0, 95, 168, 0.08) 45%,
+    rgba(255, 255, 255, 0.5) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow:
+    0 10px 40px rgba(15, 41, 66, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.ep-dash-hero__eyebrow {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #005fa8;
+  margin: 0;
+}
+
+.ep-dash-hero__title {
+  color: #0f172a;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-size: 1.5rem;
+}
+
+.ep-dash-hero__sub {
+  color: rgba(15, 23, 42, 0.62);
+  font-size: 0.9rem;
+  max-width: 36rem;
+  line-height: 1.45;
+}
+
+.ep-dash-hero__refresh {
+  border-radius: 999px;
+  padding: 0.45rem 1.1rem;
+  border: 1px solid rgba(0, 95, 168, 0.25);
+  background: rgba(255, 255, 255, 0.65);
+  color: #005fa8;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  box-shadow: 0 2px 12px rgba(0, 95, 168, 0.1);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.ep-dash-hero__refresh:hover:not(:disabled) {
+  background: #fff;
+  box-shadow: 0 4px 18px rgba(0, 95, 168, 0.18);
+  transform: translateY(-1px);
+}
+
+.ep-dash-hero__refresh:disabled {
+  opacity: 0.65;
+}
+
+.ep-dash-hero__spin {
+  animation: ep-dash-spin 0.85s linear infinite;
+}
+
+@keyframes ep-dash-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* —— Profile —— */
+.ep-dash-profile {
+  overflow: hidden;
+}
+
+.ep-dash-profile__body {
+  padding: 1.1rem 1.35rem !important;
+}
+
+@media (min-width: 992px) {
+  .ep-dash-profile__col--mid,
+  .ep-dash-profile__col--last {
+    border-left: 1px solid rgba(226, 232, 240, 0.95);
+    padding-left: 1.25rem !important;
+  }
+}
+
+.ep-dash-profile__avatar {
+  width: 3.35rem;
+  height: 3.35rem;
+  border-radius: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: linear-gradient(145deg, #005fa8 0%, #0ea5e9 100%);
+  box-shadow:
+    0 8px 24px rgba(0, 95, 168, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.ep-dash-profile__greet {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f2942;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.ep-dash-profile__role {
+  font-size: 0.95rem;
+  color: #0f172a;
+  font-weight: 600;
+  margin-bottom: 0;
+}
+
+.ep-dash-profile__identity {
+  min-height: 0;
+}
+
+.ep-dash-profile__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.ep-dash-profile__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.ep-dash-profile__item-icon {
+  flex-shrink: 0;
+  width: 1.65rem;
+  height: 1.65rem;
+  border-radius: 0.45rem;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #005fa8;
+  background: rgba(0, 95, 168, 0.1);
+  border: 1px solid rgba(0, 95, 168, 0.12);
+}
+
+.ep-dash-profile__item-label {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #64748b;
+  margin-bottom: 0.12rem;
+}
+
+.ep-dash-profile__item-value {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.35;
+}
+
+.ep-dash-profile__loading {
+  border-top: 1px solid rgba(226, 232, 240, 0.95);
+}
+
+/* Single glass card: profile + KPI + wellness fills column height */
+.ep-dash-left-stack {
+  overflow: hidden;
+}
+
+/* Override Bootstrap .card-body { flex: 1 1 auto } — stops profile from expanding and KPI sticking to bottom */
+.ep-dash-left-stack > .card-body {
+  flex: 0 0 auto;
+}
+
+.ep-dash-left-stack__section--kpi {
+  background: rgba(248, 250, 252, 0.55);
+}
+
+.ep-dash-left-stack__section--quotes {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.ep-dash-quote-card {
+  border-radius: 0.85rem !important;
+  overflow: hidden;
+}
+
+.ep-dash-quote-card .card-body {
+  flex: 0 0 auto;
+  padding: 0.85rem 0.95rem !important;
+}
+
+.ep-dash-quote-card__eyebrow {
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #005fa8;
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+}
+
+.ep-dash-quote-card__quote {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.ep-dash-quote-card__quote-text {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  font-style: italic;
+  color: #334155;
+}
+
+.ep-dash-quote-card__quote-by {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #64748b;
+  font-style: normal;
+}
+
+.ep-dash-quote-card__body {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #475569;
+  font-weight: 500;
+}
+
+.ep-dash-profile__mini {
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.65rem;
+  background: rgba(0, 95, 168, 0.04);
+  border: 1px solid rgba(0, 95, 168, 0.1);
+  min-height: 100%;
+}
+
+.ep-dash-profile__mini-eyebrow {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #005fa8;
+  margin-bottom: 0.45rem;
+  display: flex;
+  align-items: center;
+}
+
+.ep-dash-profile__quote {
+  margin: 0;
+  padding: 0;
+  border: none;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #334155;
+}
+
+.ep-dash-profile__quote-text {
+  font-style: italic;
+  color: #1e293b;
+}
+
+.ep-dash-profile__quote-author {
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.ep-dash-profile__motivation,
+.ep-dash-profile__tip {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #334155;
+  font-weight: 500;
+}
+
+.ep-dash-profile__tip {
+  color: #475569;
+}
+
+/* —— Today card —— */
+.ep-dash-today-card__body {
+  padding: 1.35rem 1.4rem 1.4rem !important;
+}
+
+.ep-dash-today-card__eyebrow {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #64748b;
+  margin: 0;
+}
+
+.ep-dash-today-card__date {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.35;
+}
+
+.ep-dash-today-card__icon-wrap {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 95, 168, 0.1);
+  color: #005fa8;
+  font-size: 1.35rem;
+}
+
+.ep-dash-today-card__btn {
+  border-radius: 999px;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.ep-dash-today-card__btn--outline {
+  border: 1px solid rgba(0, 95, 168, 0.35);
+  background: rgba(255, 255, 255, 0.45);
+  color: #005fa8;
+}
+
+.ep-dash-today-card__btn--outline:hover {
+  background: rgba(0, 95, 168, 0.08);
+  color: #004a87;
+}
+
+.ep-dash-today-card__btn--primary {
+  border: none;
+  background: linear-gradient(135deg, #0d6efd 0%, #005fa8 100%);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(13, 110, 253, 0.35);
+}
+
+.ep-dash-today-card__btn--primary:hover {
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 22px rgba(13, 110, 253, 0.42);
+}
+
+/* —— KPI tiles —— */
+.ep-dash-kpi {
+  height: 100%;
+  border-radius: 1rem;
+  padding: 1rem 1.1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.92) 0%, rgba(248, 250, 252, 0.88) 100%);
+  box-shadow:
+    0 8px 28px rgba(15, 41, 66, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  position: relative;
+  overflow: hidden;
+}
+
+.ep-dash-kpi::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 4px 0 0 4px;
+}
+
+.ep-dash-kpi--amber::before {
+  background: linear-gradient(180deg, #f59e0b, #d97706);
+}
+.ep-dash-kpi--green::before {
+  background: linear-gradient(180deg, #22c55e, #15803d);
+}
+.ep-dash-kpi--blue::before {
+  background: linear-gradient(180deg, #0ea5e9, #0369a1);
+}
+.ep-dash-kpi--violet::before {
+  background: linear-gradient(180deg, #a855f7, #7c3aed);
+}
+
+.ep-dash-kpi__icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.25rem;
+}
+
+.ep-dash-kpi--amber .ep-dash-kpi__icon {
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+}
+.ep-dash-kpi--green .ep-dash-kpi__icon {
+  background: rgba(34, 197, 94, 0.15);
+  color: #15803d;
+}
+.ep-dash-kpi--blue .ep-dash-kpi__icon {
+  background: rgba(14, 165, 233, 0.15);
+  color: #0369a1;
+}
+.ep-dash-kpi--violet .ep-dash-kpi__icon {
+  background: rgba(168, 85, 247, 0.15);
+  color: #7c3aed;
+}
+
+.ep-dash-kpi__text {
+  min-width: 0;
+}
+
+.ep-dash-kpi__label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-weight: 700;
+  color: #647896;
+  margin-bottom: 0.25rem;
+}
+
+.ep-dash-kpi__value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+  margin-bottom: 0.15rem;
+}
+
+.ep-dash-kpi--amber .ep-dash-kpi__value {
+  color: #c2410c;
+}
+
+.ep-dash-kpi--green .ep-dash-kpi__value {
+  color: #15803d;
+}
+
+.ep-dash-kpi--blue .ep-dash-kpi__value {
+  color: #0369a1;
+}
+
+.ep-dash-kpi--violet .ep-dash-kpi__value {
+  color: #7c3aed;
+}
+
+.ep-dash-kpi__value--sm {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f2942 !important;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ep-dash-kpi__hint {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-bottom: 0;
+}
+
+/* KPI row nested under profile (narrower column) */
+.ep-dash-inline-kpi {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.ep-dash-inline-kpi .ep-dash-kpi {
+  padding: 0.8rem 0.65rem;
+  gap: 0.55rem;
+}
+
+.ep-dash-inline-kpi .ep-dash-kpi__icon {
+  width: 2.15rem;
+  height: 2.15rem;
+  font-size: 1.05rem;
+}
+
+.ep-dash-inline-kpi .ep-dash-kpi__value {
+  font-size: 1.25rem;
+}
+
+.ep-dash-inline-kpi .ep-dash-kpi__value--sm {
+  font-size: 0.82rem;
+}
+
+.ep-dash-inline-kpi .ep-dash-kpi__label {
+  font-size: 0.58rem;
+}
+
+.ep-dash__title {
+  color: #0f172a;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.ep-dash__subtitle,
+.ep-dash__muted {
+  color: rgba(15, 23, 42, 0.62);
+  font-size: 0.875rem;
+}
+
+.ep-dash__stat {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.ep-dash__dl dt {
+  color: rgba(15, 23, 42, 0.55);
+  font-weight: 500;
+}
+
+.ep-dash__dl dd {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.ep-dash-panel-loading {
+  color: rgba(15, 23, 42, 0.55);
+}
+
+/* —— Attendance card —— */
+.ep-dash-attendance-card__head {
+  padding-bottom: 0.5rem !important;
+}
+
+.ep-dash-attendance-card__title {
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.ep-dash-attendance-card__head-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  background: rgba(0, 95, 168, 0.12);
+  color: #005fa8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.ep-dash-attendance-card__status-row {
+  padding: 0.85rem 1rem;
+  border-radius: 0.85rem;
+  background: rgba(0, 95, 168, 0.06);
+  border: 1px solid rgba(0, 95, 168, 0.1);
+}
+
+.ep-dash-attendance-card__time-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #005fa8;
+  box-shadow: 0 2px 8px rgba(0, 95, 168, 0.15);
+  font-size: 1.1rem;
+}
+
+.ep-dash-attendance-card__status {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ep-dash-mark-btn {
+  border-radius: 999px;
+  padding: 0.45rem 1.35rem;
+  font-weight: 600;
+}
+
+.ep-dash-done-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* —— Shortcuts grid —— */
+.ep-dash-shortcuts-card__eyebrow {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.ep-dash-shortcuts-card__title {
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.ep-dash-shortcuts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.ep-dash-shortcut-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.4rem;
+  padding: 0.75rem 0.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.35);
+  color: #0f172a !important;
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.ep-dash-shortcut-tile i {
+  font-size: 1.35rem;
+  color: #005fa8;
+}
+
+.ep-dash-shortcut-tile:hover {
+  background: rgba(255, 255, 255, 0.65);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(0, 95, 168, 0.12);
+  color: #005fa8 !important;
+}
+
+/* —— Holidays (glass) —— */
+.ep-dash-holidays-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 280px;
+  overflow: hidden;
+}
+
+.ep-dash-holidays-card__head {
+  padding: 1.1rem 1.25rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+.ep-dash-holidays-card__eyebrow {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #64748b;
+  margin: 0;
+}
+
+.ep-dash-holidays-card__title {
+  color: #0f2942;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.ep-dash-holidays-card__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.65rem 1rem 0.75rem;
+  background: rgba(0, 95, 168, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.ep-dash-holidays-chip {
+  border: 1px solid rgba(0, 95, 168, 0.18);
+  background: rgba(255, 255, 255, 0.5);
+  color: #4e6b8a;
+  border-radius: 999px;
+  padding: 0.28rem 0.65rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.ep-dash-holidays-chip:hover {
+  border-color: rgba(0, 95, 168, 0.35);
+  color: #005fa8;
+}
+
+.ep-dash-holidays-chip--active {
+  background: linear-gradient(135deg, #005fa8, #0284c7);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 2px 10px rgba(0, 95, 168, 0.3);
+}
+
+.ep-dash-holidays-card__list {
+  padding: 0.35rem 1.1rem 1rem;
+  max-height: 280px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.ep-dash-holidays-card__item {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(15, 41, 66, 0.06);
+}
+
+.ep-dash-holidays-card__item:last-of-type {
+  border-bottom: none;
+}
+
+.ep-dash-holidays-card__date {
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+}
+
+.ep-dash__holiday-name {
+  color: #0f2942;
+  font-size: 0.9rem;
+}
+
+.ep-dash-holiday-badge {
+  display: inline-block;
+  margin-top: 0.4rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.18rem 0.45rem;
+  border-radius: 0.3rem;
+}
+
+.ep-dash-holiday-badge--public {
+  background: rgba(59, 130, 246, 0.15);
+  color: #1d4ed8;
+}
+
+.ep-dash-holiday-badge--optional {
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+}
+
+.ep-dash-holiday-badge--regional {
+  background: rgba(139, 92, 246, 0.15);
+  color: #5b21b6;
+}
+
+.ep-dash-holiday-badge--default {
+  background: rgba(148, 163, 184, 0.18);
+  color: #475569;
+}
+
+.ep-dash-holidays-card__empty {
+  padding: 1.5rem 0.5rem;
+  text-align: center;
+  color: rgba(15, 23, 42, 0.5);
+  font-size: 0.82rem;
+}
+
+/* —— Section + stat chips —— */
+.ep-dash-section__eyebrow {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #64748b;
+  margin: 0;
+}
+
+.ep-dash-section__title {
+  color: #0f172a;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.ep-dash-stat-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ep-dash-stat-chip {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.55rem 0.95rem;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(0, 95, 168, 0.12);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+  min-width: 5.5rem;
+}
+
+.ep-dash-stat-chip--wide {
+  min-width: 7rem;
+}
+
+.ep-dash-stat-chip strong {
+  font-size: 1.05rem;
+  color: #0f172a;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ep-dash-stat-chip span:last-child {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #647896;
+  font-weight: 600;
+}
+
+.ep-dash__apply {
+  box-shadow: 0 4px 14px rgba(13, 110, 253, 0.35);
+  font-weight: 600;
+}
+
+/* Leave status pills (table) */
+.ep-dash-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.26rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ep-dash-status--ok {
+  background: rgba(22, 163, 74, 0.14);
+  color: #15803d;
+  border: 1px solid rgba(22, 163, 74, 0.28);
+}
+
+.ep-dash-status--warn {
+  background: rgba(217, 119, 6, 0.14);
+  color: #b45309;
+  border: 1px solid rgba(217, 119, 6, 0.28);
+}
+
+.ep-dash-status--bad {
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
+  border: 1px solid rgba(220, 38, 38, 0.22);
+}
+
+.ep-dash-status--muted {
+  background: rgba(100, 116, 139, 0.12);
+  color: #475569;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+.ep-dash-status--neutral {
+  background: rgba(148, 163, 184, 0.14);
+  color: #334155;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.ep-dash__charts-loading {
+  color: rgba(15, 23, 42, 0.55);
+}
+
+.ep-dash__chart-card-title {
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.ep-dash__chart-card .card-header h6 {
+  color: #0f172a;
+}
+
+.ep-dash__chart-body {
+  min-height: 320px;
+}
+
+.ep-dash-chart-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.75rem;
+  padding: 2.5rem 1rem;
+  color: rgba(15, 23, 42, 0.45);
+  font-size: 0.875rem;
+}
+
+.ep-dash-chart-empty i {
+  font-size: 2rem;
+  opacity: 0.5;
+}
+
+/* —— Leave table —— */
+.ep-dash-leave-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.ep-dash-leave-card__eyebrow {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #64748b;
+  margin: 0;
+}
+
+.ep-dash-leave-card__title {
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.ep-dash-leave-table-wrap {
+  border-top: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.ep-dash-leave-table thead th {
+  font-size: 0.68rem;
+}
+
+.ep-dash-leave-applicant {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.ep-dash-leave-avatar {
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 0.5rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.58rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(145deg, #005fa8, #0ea5e9);
+  box-shadow: 0 2px 8px rgba(0, 95, 168, 0.25);
+}
+
+.ep-dash-leave-name {
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 8rem;
+}
+
+.ep-dash-leave-empty {
+  color: rgba(15, 23, 42, 0.45);
+  font-size: 0.875rem;
+}
+
+.ep-dash-leave-empty i {
+  font-size: 1.75rem;
+  opacity: 0.4;
+}
+
+/* —— Side cards —— */
+.ep-dash-side-card__icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.35rem;
+  background: linear-gradient(145deg, rgba(0, 95, 168, 0.15), rgba(14, 165, 233, 0.1));
+  color: #005fa8;
+}
+
+.ep-dash-side-card__icon--soft {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+
+.ep-dash-tips-list li {
+  margin-bottom: 0.35rem;
+}
+
+.ep-dash-tips-list a {
+  font-weight: 600;
+}
+
+/* —— Upcoming leave card —— */
+.ep-dash-upcoming-card__title {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+  font-size: 1.1rem;
+}
+
+.ep-dash-upcoming-card__cols {
+  margin-top: 0.25rem;
+}
+
+.ep-dash-upcoming-card__col-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  margin-bottom: 0.75rem;
+}
+
+.ep-dash-upcoming-card__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.ep-dash-upcoming-card__item {
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+}
+
+.ep-dash-upcoming-card__type {
+  font-size: 0.875rem;
+  color: #0f172a;
+}
+
+.ep-dash-upcoming-card__name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 0.15rem;
+}
+
+.ep-dash-upcoming-card__mini-avatar {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.45rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.55rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(145deg, #6366f1, #8b5cf6);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+}
+
+.ep-dash-upcoming-card__empty {
+  font-size: 0.875rem;
+  color: rgba(15, 23, 42, 0.45);
+  padding: 0.75rem 0.25rem;
+  text-align: center;
+  border-radius: 0.65rem;
+  border: 1px dashed rgba(148, 163, 184, 0.45);
+  background: rgba(248, 250, 252, 0.6);
+}
+
+/* —— Leave balance by category —— */
+.ep-dash-balance-card__title {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+  font-size: 1.1rem;
+}
+
+.ep-dash-balance-card__empty {
+  color: rgba(15, 23, 42, 0.5);
+  font-size: 0.9rem;
+}
+
+.ep-dash-balance-card__empty i {
+  font-size: 1.75rem;
+  opacity: 0.35;
+  color: #005fa8;
+}
+
+.ep-dash-balance-pill {
+  padding: 0.85rem 1rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.75) 0%, rgba(0, 95, 168, 0.05) 100%);
+  box-shadow: 0 4px 16px rgba(15, 41, 66, 0.05);
+}
+
+.ep-dash-balance-pill__name {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.ep-dash-balance-pill__nums {
+  font-size: 0.8rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.ep-dash-balance-pill__bar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.35);
+  overflow: hidden;
+}
+
+.ep-dash-balance-pill__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #005fa8, #0ea5e9);
+  transition: width 0.35s ease;
+}
+
+.ep-dash-balance-pill__restricted {
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: #92400e;
+  font-weight: 600;
+  padding: 0.4rem 0.55rem;
+  border-radius: 0.45rem;
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.ep-dash-balance-pill__restricted i {
+  vertical-align: -0.1em;
+}
+
+/* Right column: Today + balance — no flex-fill; height follows content like the left stack */
+@media (min-width: 992px) {
+  .ep-dash-balance-card__scroll {
+    max-height: min(18rem, 36vh);
+    overflow-y: auto;
+    padding-right: 0.2rem;
+  }
+
+  .ep-dash-balance-card__scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .ep-dash-balance-card__scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 95, 168, 0.25);
+    border-radius: 999px;
+  }
+}
+
+/* Late allowance / payroll preview (from attendance master + shift) */
+.ep-dash-late-policy {
+  border-radius: 1rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(248, 250, 252, 0.95);
+}
+
+.ep-dash-late-policy__eyebrow {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: #64748b;
+  margin: 0;
+}
+
+.ep-dash-late-policy__title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.ep-dash-late-policy__headline {
+  color: rgba(15, 23, 42, 0.88);
+  line-height: 1.45;
+  margin: 0;
+}
+
+.ep-dash-late-policy__icon-wrap {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  background: rgba(0, 95, 168, 0.1);
+  color: #005fa8;
+}
+
+.ep-dash-late-policy__stats,
+.ep-dash-late-policy__rules {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.ep-dash-late-policy__stats li {
+  margin-bottom: 0.25rem;
+}
+
+.ep-dash-late-policy__cta {
+  font-weight: 600;
+  border: 1px solid rgba(0, 95, 168, 0.35);
+  color: #005fa8;
+  background: #fff;
+}
+
+.ep-dash-late-policy__cta:hover {
+  background: rgba(0, 95, 168, 0.06);
+  color: #004a82;
+}
+
+.ep-dash-late-policy--neutral {
+  border-color: rgba(100, 116, 139, 0.25);
+}
+
+.ep-dash-late-policy--info {
+  border-color: rgba(0, 95, 168, 0.35);
+  background: linear-gradient(135deg, rgba(224, 242, 254, 0.65), rgba(248, 250, 252, 0.98));
+}
+
+.ep-dash-late-policy--warning {
+  border-color: rgba(217, 119, 6, 0.45);
+  background: linear-gradient(135deg, rgba(254, 243, 199, 0.55), rgba(255, 251, 235, 0.95));
+}
+
+.ep-dash-late-policy--warning .ep-dash-late-policy__icon-wrap {
+  background: rgba(217, 119, 6, 0.15);
+  color: #b45309;
+}
+
+.ep-dash-late-policy--danger {
+  border-color: rgba(220, 38, 38, 0.4);
+  background: linear-gradient(135deg, rgba(254, 226, 226, 0.55), rgba(255, 248, 248, 0.98));
+}
+
+.ep-dash-late-policy--danger .ep-dash-late-policy__icon-wrap {
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
+}

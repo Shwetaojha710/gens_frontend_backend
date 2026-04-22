@@ -1,0 +1,207 @@
+<div class="document-wrapper">
+
+  <!-- PAGE 1 -->
+  <div class="page">
+    <div class="content">
+
+      <p>Serial Number : 11B</p>
+      <p>Employee ID : {{personalDetails?.empCode}}</p>
+      <p>Year : 2026</p>
+   <h3 class="center"><b>{{tenant.companyName}}</b></h3>
+      <h3 class="center">SERVICE AGREEMENT</h3>
+
+      <p>
+        THIS SERVICE AGREEMENT executed on  is with effect from Date of Joining <b>{{ formatJoiningDate(personalDetails?.joiningDate) }}</b> to the successful completion of Foundation Training and up to a period of 24 months from the Date of Allocation to a Development Unit at <b>{{tenant?.companyName}}</b>. (hereinafter referred to as the “Service Period”)
+        <!-- This Service Agreement is made on <b>{{agreementDate}}</b> between
+        <b>{{companyName}}</b> and <b>{{employeeName}}</b>. -->
+      </p>
+
+
+      <div class="signature">
+        <div>COMPANY</div>
+        <div>ENGINEER</div>
+        <div>SURETY</div>
+      </div>
+
+    </div>
+  </div>
+<!-- PAGE 2 -->
+<div class="page">
+
+  <h6><b>BETWEEN:</b></h6>
+
+  <p>
+    M/s. {{tenant?.companyName}}, a Company incorporated under the Companies Act, 1956,
+    having its registered office at 7th Floor, Cyber Tower, Vibhuti Khand, Gomti Nagar, Lucknow-UP,
+    represented by Shiv Pal Singh, hereinafter referred to as the Senior Vice President
+    (which term shall unless repugnant to the context mean and include its successors-in-interest
+    and permitted assignees) of the ONE PART:
+  </p>
+
+  <h6><b>AND:</b></h6>
+
+  <p>
+    <!-- Title -->
+    <span *ngIf="personalDetails?.gender == 'Male'">Mr.</span>
+    <span *ngIf="personalDetails?.gender == 'Female'">Ms.</span>
+
+    {{personalDetails?.firstName}} {{personalDetails?.lastName}},
+
+    <!-- S/O or D/O -->
+    <span *ngIf="personalDetails?.gender == 'Male'">S/O</span>
+    <span *ngIf="personalDetails?.gender == 'Female'">D/O</span>
+
+    <!-- Father's Name -->
+    <!-- <span *ngIf="personalDetails?.gender == 'Male'">Mr.</span>
+    <span *ngIf="personalDetails?.gender == 'Female'">Mr.</span> -->
+    {{personalDetails?.fatherName}},
+
+    aged about {{personalDetails?.age || 24}} years,
+
+    currently residing at House Number {{personalDetails?.permanentAddress}},
+
+    hereinafter referred to as Trainee (which term shall unless repugnant to the context
+    mean and include his/her heirs, legal representatives, assigns, executors and administrators)
+    of the SECOND PART:
+  </p>
+<h6><b>AND:</b></h6>
+<p>
+  {{personalDetails?.guarantorName}}, elder sister of {{personalDetails?.firstName}}{{personalDetails?.lastName}}, aged about {{personalDetails?.age}} years (approx) currently residing at House Number {{personalDetails?.permanentAddress}}., hereinafter referred to as the SURETY (which term shall unless repugnant to the context mean and include his/her heirs, legal representatives, assigns, executors and administrators) of the THIRD PART
+</p>
+
+<h6>
+  <b>DEFINITIONS:</b>
+</h6>
+<p>
+  The following terms shall have the following meanings for the purpose of this Service Agreement:
+</p>
+<p>
+  <span>
+   <b>•	Date of Allocation:</b> Is the date when the Engineer is allocated to a Development Unit for On the Job Training.
+  </span>
+</p>
+<p>
+  <span>
+   <b>•	D e v e l o p m e n t U n i t :  </b> D e v e l o p m e n t U n i t r e f e r s to i n d i v i d u a l b u s i n e s s u n i t / horizontal b u s i n e s s u n i t /department where the Engineer is posted. A Practice Unit may be a delivery unit or business enabler function / department.
+  </span>
+</p>
+<p>
+  <span>
+   <b>•	On-the-Job training:  </b> Training imparted to the Engineer on allocation to a Practice Unit.
+  </span>
+</p>
+<h6>
+  <b>
+WHEREAS
+  </b>
+  </h6>
+  <p>
+    The Engineer applied to the Company for the designation of {{personalDetails?.designation}}. Pursuant to such application, the Company appointed his/her as a {{personalDetails?.designation}} on the terms and conditions contained in the offer letter together with this Service Agreement, under which he/she is required to undergo training as may be determined by the Company;
+  </p>
+  <p>
+AND WHEREAS the Engineer recognizes and accepts that at the time of appointment as  {{personalDetails?.designation}}, except exposure to academic knowledge, he/she has received no formal, effective, technical or practical training to independently function as a Engineer who is commercially viable to the Company;  </p>
+
+<p>
+  AND WHEREAS the Engineer further recognizes and accepts that prior to and at the time of joining the Company, he/she has not been exposed to and, therefore, has not acquired any management or communication skills, which are essential to for performance of duties by the Engineer which meet the current business needs, parameters, standards and efficiency levels required by the Company;
+</p>
+
+<p>
+AND WHEREAS consequently and in order for the Company to utilize the skills of the Engineer, the Engineer would need to undergo formal and extensive training in accordance with courses, modules and programmes prescribed or conducted by the Company;
+</p>
+<p>
+
+  AND WHEREAS the Engineer is aware that the Company would be expending substantial sums of money and incurring costs, expenses, man hours etc. in the process of selecting and appointing his/her as Trainee – Software Engineer and thereafter imparting training to such Engineer;
+
+</p>
+   <div class="signature">
+        <div>COMPANY</div>
+        <div>ENGINEER</div>
+        <div>SURETY</div>
+      </div>
+
+</div>
+  <!-- PAGE 3 -->
+  <div class="page">
+    <div class="content">
+
+      <h4>3. TERMS & CONDITIONS</h4>
+
+      <p>
+        The Engineer has been appointed as a Trainee Software Engineer...
+      </p>
+
+      <table class="salary-table">
+        <tr>
+          <th>Component</th>
+          <th>Amount</th>
+        </tr>
+        <tr>
+          <td>Basic Salary</td>
+          <td>{{salary.basic}}</td>
+        </tr>
+        <tr>
+          <td>HRA</td>
+          <td>{{salary.hra}}</td>
+        </tr>
+        <tr>
+          <td>Total</td>
+          <td>{{salary.total}}</td>
+        </tr>
+      </table>
+
+      <div class="signature">
+        <div>COMPANY</div>
+        <div>ENGINEER</div>
+        <div>SURETY</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PAGE 4 -->
+  <div class="page">
+    <div class="content">
+
+      <h4>4. TERMS</h4>
+
+      <ul>
+        <li>Agreement period will be 2 years.</li>
+        <li>Engineer must follow company policies.</li>
+        <li>Violation may lead to termination.</li>
+      </ul>
+
+      <div class="signature">
+        <div>COMPANY</div>
+        <div>ENGINEER</div>
+        <div>SURETY</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PAGE 5-->
+  <div class="page">
+    <div class="content">
+
+      <h4>WITNESSES</h4>
+
+      <p>Witness 1: __________________</p>
+      <p>Witness 2: __________________</p>
+
+      <h4>NOTARY</h4>
+
+      <p>
+        The Engineer has signed before me ☐<br>
+        The Surety has signed before me ☐
+      </p>
+
+      <div class="signature">
+        <div>COMPANY</div>
+        <div>ENGINEER</div>
+        <div>SURETY</div>
+      </div>
+
+    </div>
+  </div>
+
+</div>

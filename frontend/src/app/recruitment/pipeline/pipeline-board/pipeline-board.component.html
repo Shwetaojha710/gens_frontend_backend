@@ -1,0 +1,128 @@
+<div class="pipeline-page">
+  <section class="process-strip card">
+    <div class="card-body">
+      <div class="section-head">
+        <div>
+          <span class="section-kicker">Recruitment Flow</span>
+          <h2>Recruitment Process Overview</h2>
+          <p>Job requirement and posting happen first, then candidate form submission, ATS screening, shortlist, interview scheduling, and round-wise interviewer feedback.</p>
+        </div>
+      </div>
+
+      <div class="stage-list">
+        <div class="stage-item" *ngFor="let stage of processStages; let index = index">
+          <div class="stage-index">{{ index + 1 }}</div>
+          <div>
+            <strong>{{ stage.label }}</strong>
+            <p>{{ stage.description }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-body">
+      <div class="toolbar">
+        <div>
+          <span class="section-kicker">Admin View</span>
+          <h3>Candidate Pipeline Board</h3>
+        </div>
+
+        <div class="toolbar-actions">
+          <input
+            type="text"
+            class="form-control"
+            placeholder="Search candidate, job, email"
+            [(ngModel)]="searchTerm"
+          />
+
+          <select class="form-select" [(ngModel)]="selectedStage">
+            <option value="">All stages</option>
+            <option *ngFor="let stage of processStages" [value]="stage.key">{{ stage.label }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div *ngIf="isLoading" class="empty-state">
+        <p>Loading candidate pipeline...</p>
+      </div>
+
+      <div *ngIf="!isLoading && !filteredCandidates.length" class="empty-state">
+        <p>No candidate applications found for the current filter.</p>
+      </div>
+
+      <div *ngIf="!isLoading && filteredCandidates.length" class="pipeline-grid">
+        <article class="candidate-card" *ngFor="let candidate of filteredCandidates">
+          <div class="candidate-head">
+            <div>
+              <span class="stage-pill" [ngClass]="getStageClass(candidate.stage)">{{ getStageLabel(candidate.stage) }}</span>
+              <h4>{{ candidate.name }}</h4>
+              <p>{{ candidate.job_title }} • {{ candidate.department || 'Recruitment' }}</p>
+            </div>
+            <div class="score-badge">
+              <span>Final Score</span>
+              <strong>{{ getFinalScore(candidate) }}</strong>
+            </div>
+          </div>
+
+          <div class="candidate-meta">
+            <span>{{ candidate.email }}</span>
+            <span>{{ candidate.phone }}</span>
+            <span>{{ candidate.current_company || 'Fresher / Not shared' }}</span>
+          </div>
+
+          <div class="skills-row">
+            <span class="skill-pill" *ngFor="let skill of getSkills(candidate)">{{ skill }}</span>
+          </div>
+
+          <div class="score-grid">
+            <label>
+              <span>ATS Score</span>
+              <input type="number" class="form-control" [(ngModel)]="candidate.ats!.ats_score" min="0" max="100" />
+            </label>
+
+            <label>
+              <span>Manual Score</span>
+              <input type="number" class="form-control" [(ngModel)]="candidate.ats!.manual_score" min="0" max="100" />
+            </label>
+          </div>
+
+          <label class="notes-field">
+            <span>ATS / Recruiter Notes</span>
+            <textarea class="form-control" rows="3" [(ngModel)]="candidate.ats!.notes"></textarea>
+          </label>
+
+          <div class="candidate-stats">
+            <div>
+              <span>Experience</span>
+              <strong>{{ candidate.experience || 0 }} years</strong>
+            </div>
+            <div>
+              <span>Notice</span>
+              <strong>{{ candidate.notice_period || 0 }} days</strong>
+            </div>
+            <div>
+              <span>Rounds Done</span>
+              <strong>{{ getCompletedRounds(candidate) }}/{{ candidate.interview_rounds?.length || 0 }}</strong>
+            </div>
+          </div>
+
+          <div class="card-actions">
+            <button type="button" class="btn btn-outline-primary" (click)="saveScores(candidate)">Save ATS Score</button>
+            <button type="button" class="btn btn-primary" (click)="markShortlisted(candidate)">Shortlist</button>
+          </div>
+
+          <div class="route-actions">
+            <a class="action-link" [routerLink]="['/recruitment/pipeline', candidate.id, 'interview', 'schedule']">
+              Schedule Interview
+            </a>
+            <a class="action-link" [routerLink]="['/recruitment/pipeline', candidate.id, 'interview', 'feedback']">
+              Add Feedback
+            </a>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+</div>

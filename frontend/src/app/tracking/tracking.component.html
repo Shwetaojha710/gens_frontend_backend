@@ -1,0 +1,622 @@
+<div class="container-fluid p-0">
+
+  <!-- ═══════════════════════════════════════════════
+       EMPLOYEE LIST VIEW
+  ════════════════════════════════════════════════ -->
+  <div *ngIf="viewLiveTracking" class="employee-list-wrapper">
+    <div class="card employee-list-card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+          <i class="fas fa-satellite-dish text-white"></i>
+          <h5 class="mb-0 fw-semibold">Live Tracking — Employee List</h5>
+          <span class="badge bg-white text-primary ms-2" *ngIf="ActiveUsers.length > 0">{{ ActiveUsers.length }}</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="live-indicator"><span class="live-dot"></span>Live</span>
+        </div>
+      </div>
+
+      <div class="card-body p-0">
+        <app-search-pagination
+          [totalItems]="ActiveUsers.length"
+          [pageSize]="itemsPerPage"
+          [currentPage]="currentPage"
+          (search)="onSearch($event)"
+          (pageChange)="onPageChange($event)"
+          (pageSizeChange)="onPageSizeChange($event)">
+          <div class="table-responsive">
+            <table class="table employee-table mb-0">
+              <thead>
+                <tr>
+                  <th class="text-center" style="width:60px;">SI.NO</th>
+                  <th style="min-width:200px;">Employee</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Aadhaar</th>
+                  <th>Date of Birth</th>
+                  <th>Gender</th>
+                  <th class="text-center" style="width:300px;">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of ActiveUsers; let i = index" class="employee-row">
+                  <td class="text-center fw-semibold text-muted">{{ item?.si_no }}</td>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="emp-avatar-wrap">
+                        <img [src]="item?.profileImage"
+                          [alt]="item['firstName'] + ' ' + item['lastName']"
+                          class="emp-avatar"
+                          onerror="this.src='../../assets/img/avatars/1.png'" />
+                        <span class="emp-online-dot"></span>
+                      </div>
+                      <div>
+                        <div class="fw-semibold emp-name">{{ item['firstName'] }} {{ item['lastName'] }}</div>
+                        <small class="text-muted d-block" *ngIf="item?.['designation']">
+                          <i class="fas fa-briefcase me-1" style="font-size:10px;"></i>{{ item?.['designation'] }}
+                        </small>
+                        <small class="text-muted d-block" *ngIf="item?.empCode">
+                          <i class="fas fa-id-badge me-1" style="font-size:10px;"></i>{{ item?.empCode }}
+                        </small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <i class="fas fa-envelope text-muted" style="font-size:12px;"></i>
+                      <span class="text-truncate" style="max-width:180px;">{{ item['email'] }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <i class="fas fa-phone text-muted" style="font-size:12px;"></i>
+                      {{ item['mobile'] }}
+                    </div>
+                  </td>
+                  <td>
+                    <span class="aadhaar-pill">{{ maskAadhaarNumber(item['adhaarNo']) }}</span>
+                  </td>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <i class="fas fa-calendar-alt text-muted" style="font-size:12px;"></i>
+                      {{ item['dateOfBirth'] | date:'dd-MM-yyyy' }}
+                    </div>
+                  </td>
+                  <td>
+                    <span class="gender-badge"
+                      [class.male]="item['gender'] === 'Male'"
+                      [class.female]="item['gender'] === 'Female'">
+                      <i class="fas"
+                        [class.fa-mars]="item['gender'] === 'Male'"
+                        [class.fa-venus]="item['gender'] === 'Female'"
+                        [class.fa-genderless]="item['gender'] !== 'Male' && item['gender'] !== 'Female'"></i>
+                      {{ item['gender'] }}
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <div class="d-flex align-items-center justify-content-center gap-2">
+                      <button class="btn btn-sm btn-primary view-btn" (click)="viewTrackingOnMap(item)">
+                        <i class="fas fa-map-marker-alt me-1"></i>View Map
+                      </button>
+                      <button class="btn btn-sm btn-outline-primary" (click)="goLive(item)">
+                        <span class="go-live-pip"></span>
+                        <i class="fas fa-satellite-dish me-1"></i>Go Live
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr *ngIf="ActiveUsers.length === 0">
+                  <td colspan="8" class="text-center py-5">
+                    <i class="fas fa-users fa-3x text-muted mb-3 d-block"></i>
+                    <p class="text-muted mb-0">No employees found</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </app-search-pagination>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════
+       LIVE TRACKING PAGE VIEW
+  ════════════════════════════════════════════════ -->
+  <div *ngIf="viewLivePage" class="live-page-wrap">
+    <!-- Back button bar -->
+    <div class="live-page-topbar">
+      <button class="btn-back-live" (click)="goBackFromLive()">
+        <i class="fas fa-arrow-left me-1"></i> Back to List
+      </button>
+      <div class="live-page-title">
+        <i class="fas fa-satellite-dish me-2" style="color:#22c55e"></i>
+        Live Tracking
+        <span class="live-emp-chip">{{ currentTrackingUser?.firstName }} {{ currentTrackingUser?.lastName }}</span>
+      </div>
+    </div>
+    <!-- The live tracking component fills the rest of the height -->
+    <app-live-tracking [user]="currentTrackingUser" [themeMode]="themeMode"></app-live-tracking>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════
+       TRACKING MAP VIEW
+  ════════════════════════════════════════════════ -->
+  <div *ngIf="!viewLiveTracking && !viewLivePage" class="tracking-root container-fluid" [class.fullscreen-mode]="isFullScreen" [class.tracking-light]="themeMode === 'light'">
+
+    <!-- ── TOP BAR ── -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="btn-back" (click)="goBack()">
+          <i class="fas fa-arrow-left"></i> Back
+        </button>
+        <div class="emp-meta" *ngIf="currentTrackingUser">
+          <div class="emp-meta-avatar">
+            {{ currentTrackingUser?.firstName?.charAt(0) }}{{ currentTrackingUser?.lastName?.charAt(0) }}
+          </div>
+          <div>
+            <div class="emp-meta-name">{{ currentTrackingUser?.firstName }} {{ currentTrackingUser?.lastName }}</div>
+            <div class="emp-meta-sub">{{ currentTrackingUser?.designation }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="topbar-center">
+        <div class="stat-pill"><span class="sp-dot all-dot"></span>Total <strong>{{ locationData.length }}</strong></div>
+        <div class="stat-pill"><span class="sp-dot pin-dot"></span>Pinned <strong>{{ pinnedLocations.length }}</strong></div>
+        <div class="stat-pill"><span class="sp-dot nor-dot"></span>Normal <strong>{{ normalLocations.length }}</strong></div>
+        <div class="stat-pill"><span class="sp-dot stay-dot"></span>Stays <strong>{{ staySummary.length }}</strong></div>
+        <div class="stat-pill"><i class="fas fa-road me-1"></i><strong>{{ (totalDistanceMeters / 1000) | number:'1.2-2' }} km</strong></div>
+        <div class="stat-pill"><i class="fas fa-clock me-1"></i><strong>{{ trackingDuration }}</strong></div>
+      </div>
+
+      <div class="topbar-right">
+        <button class="btn-icon btn-theme" (click)="toggleTheme()" [title]="themeMode === 'light' ? 'Switch to dark theme' : 'Switch to light theme'">
+          <i class="fas" [class.fa-moon]="themeMode === 'light'" [class.fa-sun]="themeMode === 'dark'"></i>
+        </button>
+        <button class="btn-live" [class.live-active]="isLiveTrackingEnabled" (click)="toggleLiveTracking()" [disabled]="!currentTrackingUser">
+          <span class="live-pulse" *ngIf="isLiveTrackingEnabled"></span>
+          <i class="fas" [class.fa-satellite-dish]="!isLiveTrackingEnabled" [class.fa-stop-circle]="isLiveTrackingEnabled"></i>
+          {{ isLiveTrackingEnabled ? 'Stop Live' : 'Go Live' }}
+        </button>
+        <button class="btn-icon" (click)="toggleFullScreen()" [title]="isFullScreen ? 'Exit Fullscreen' : 'Fullscreen'">
+          <i class="fas" [class.fa-expand]="!isFullScreen" [class.fa-compress]="isFullScreen"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- ── MAIN CONTENT ── -->
+    <div class="tracking-body">
+
+      <!-- ────── LEFT SIDEBAR ────── -->
+      <div class="sidebar" [class.sidebar-collapsed]="isPanelCollapsed">
+
+        <button class="sidebar-toggle" (click)="togglePanel()">
+          <i class="fas" [class.fa-chevron-left]="!isPanelCollapsed" [class.fa-chevron-right]="isPanelCollapsed"></i>
+        </button>
+
+        <div class="sidebar-inner" *ngIf="!isPanelCollapsed">
+
+          <!-- Section: Location Type Filter -->
+          <div class="sb-section">
+            <div class="sb-label"><i class="fas fa-layer-group me-1"></i>Map Filter</div>
+
+            <div class="filter-chip-group">
+
+              <!-- ALL -->
+              <button class="filter-chip fc-all" [class.fc-active]="filterType==='all'"
+                      (click)="setFilterType('all')">
+                <span class="fc-dot fc-dot-all"></span>
+                <span class="fc-label">All</span>
+                <span class="fc-count">{{ locationData.length }}</span>
+              </button>
+
+              <!-- NORMAL -->
+              <button class="filter-chip fc-normal" [class.fc-active]="filterType==='normal'"
+                      (click)="setFilterType('normal')">
+                <span class="fc-dot fc-dot-normal"></span>
+                <span class="fc-label">Normal</span>
+                <span class="fc-count">{{ normalLocations.length }}</span>
+              </button>
+
+              <!-- PINNED -->
+              <button class="filter-chip fc-pinned" [class.fc-active]="filterType==='pinned'"
+                      (click)="setFilterType('pinned')">
+                <span class="fc-dot fc-dot-pinned"></span>
+                <span class="fc-label">Pinned</span>
+                <span class="fc-count">{{ pinnedLocations.length }}</span>
+              </button>
+
+            </div>
+
+            <!-- Contextual hint below chips -->
+            <div class="fc-hint" *ngIf="filterType==='all'">
+              <i class="fas fa-info-circle me-1"></i>
+              Showing full route — all track points &amp; pinned visits
+            </div>
+            <div class="fc-hint fc-hint-blue" *ngIf="filterType==='normal'">
+              <i class="fas fa-route me-1"></i>
+              Showing normal GPS track points &amp; route only
+            </div>
+            <div class="fc-hint fc-hint-amber" *ngIf="filterType==='pinned'">
+              <i class="fas fa-map-pin me-1"></i>
+              Showing pinned visit locations only
+            </div>
+          </div>
+
+          <!-- Section: Date & Time -->
+          <div class="sb-section">
+            <div class="sb-label"><i class="fas fa-calendar me-1"></i>Date & Time Filter</div>
+            <div class="form-row">
+              <label class="form-lbl">Start Date</label>
+              <input type="date" class="form-ctrl" [(ngModel)]="obj['startDate']" (change)="setMinToDate()">
+            </div>
+            <div class="form-row">
+              <label class="form-lbl">End Date</label>
+              <input type="date" class="form-ctrl" [(ngModel)]="obj['endDate']" [min]="getToDateMin()">
+            </div>
+            <div class="form-row-split">
+              <div class="form-row">
+                <label class="form-lbl">Start Time</label>
+                <input type="time" class="form-ctrl" [(ngModel)]="obj['startTime']">
+              </div>
+              <div class="form-row">
+                <label class="form-lbl">End Time</label>
+                <input type="time" class="form-ctrl" [(ngModel)]="obj['endTime']">
+              </div>
+            </div>
+            <div class="btn-row">
+              <button class="btn-apply" (click)="DateWiseTracking()">
+                <i class="fas fa-search me-1"></i>Apply Filter
+              </button>
+              <button class="btn-reset-sm" (click)="resetTrackingFilters()">
+                <i class="fas fa-undo"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Section: Map Style -->
+          <div class="sb-section">
+            <div class="sb-label"><i class="fas fa-layer-group me-1"></i>Map Style</div>
+            <div class="map-style-btns">
+              <button class="ms-btn" [class.ms-active]="mapType==='osm'" (click)="changeMapType('osm')">Standard</button>
+              <button class="ms-btn" [class.ms-active]="mapType==='satellite'" (click)="changeMapType('satellite')">Satellite</button>
+              <button class="ms-btn" [class.ms-active]="mapType==='dark'" (click)="changeMapType('dark')">Dark</button>
+              <button class="ms-btn" [class.ms-active]="mapType==='terrain'" (click)="changeMapType('terrain')">Terrain</button>
+              <button class="ms-btn" [class.ms-active]="mapType==='streets'" (click)="changeMapType('streets')">HOT</button>
+            </div>
+          </div>
+
+          <!-- Section: Pinned Locations grouped -->
+          <div class="sb-section" *ngIf="pinnedLocationList.length > 0">
+            <div class="sb-label d-flex align-items-center justify-content-between">
+              <span><i class="fas fa-map-pin me-1" style="color:#f59e0b;"></i>Pinned Locations</span>
+              <span class="count-badge" style="background:#fef3c7;color:#92400e;">{{ pinnedLocationList.length }}</span>
+            </div>
+            <div class="pinned-group-list">
+              <div *ngFor="let pin of pinnedLocationList; let pi = index" class="pin-group-card" (click)="zoomToPin(pin)">
+
+                <!-- Card header: Location number + visit count badge -->
+                <div class="pgc-head">
+                  <div class="pgc-title">
+                    <i class="fas fa-map-pin" style="color:#f59e0b;font-size:11px;"></i>
+                    Location {{ pi + 1 }}
+                  </div>
+                  <span class="visit-badge">{{ pin.count }} visit{{ pin.count !== 1 ? 's' : '' }}</span>
+                </div>
+
+                <!-- Address -->
+                <div class="pgc-coords">
+                  <i class="fas fa-crosshairs" style="font-size:9px;color:#64748b;margin-right:3px;"></i>
+                  {{ pin.latitude.toFixed(4) }}, {{ pin.longitude.toFixed(4) }}
+                </div>
+                <div *ngIf="pin.address" class="pgc-address">
+                  <i class="fas fa-map-marker-alt" style="font-size:9px;color:#f59e0b;margin-right:3px;"></i>
+                  {{ pin.address }}
+                </div>
+
+                <!-- Per-visit details: time + visit_place + purpose + remark -->
+                <div class="pgc-visits">
+                  <div *ngFor="let v of pin.visits.slice(0, 4)" class="pgc-visit-row">
+
+                    <!-- Time -->
+                    <div class="pgc-visit-time">
+                      <i class="fas fa-clock" style="font-size:9px;color:#64748b;margin-right:3px;"></i>
+                      {{ v.timestamp | date:'dd MMM, hh:mm a' }}
+                    </div>
+
+                    <!-- Visit Place -->
+                    <div *ngIf="v.visit_place" class="pgc-visit-place">
+                      <i class="fas fa-building" style="font-size:9px;color:#f59e0b;margin-right:3px;"></i>
+                      <span>{{ v.visit_place }}</span>
+                    </div>
+
+                    <!-- Purpose -->
+                    <div *ngIf="v.purpose" class="pgc-visit-meta">
+                      <span class="pgc-meta-label">Purpose:</span>
+                      <span class="pgc-meta-val">{{ v.purpose }}</span>
+                    </div>
+
+                    <!-- Remark -->
+                    <div *ngIf="v.remark" class="pgc-visit-meta pgc-remark">
+                      <span class="pgc-meta-label">Remark:</span>
+                      <span class="pgc-meta-val">{{ v.remark }}</span>
+                    </div>
+
+                    <!-- Fallback if no detail fields -->
+                    <div *ngIf="!v.visit_place && !v.purpose && !v.remark" class="pgc-no-detail">
+                      No details recorded
+                    </div>
+
+                  </div>
+
+                  <!-- "+N more" footer -->
+                  <div *ngIf="pin.visits.length > 4" class="pgc-more">
+                    <i class="fas fa-ellipsis-h me-1"></i>+{{ pin.visits.length - 4 }} more visits
+                  </div>
+                </div>
+
+                <!-- Action links -->
+                <div class="pgc-actions">
+                  <a class="pgc-link" (click)="viewAddress(pin, pi); $event.stopPropagation()">
+                    <i class="fas fa-map-marker-alt me-1"></i>Get Address
+                  </a>
+                  <a class="pgc-link" (click)="zoomToPin(pin); $event.stopPropagation()">
+                    <i class="fas fa-search-plus me-1"></i>Zoom
+                  </a>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- Section: Stay Summary -->
+          <div class="sb-section" *ngIf="staySummary.length > 0">
+            <div class="sb-label">
+              <span><i class="fas fa-hourglass-half me-1" style="color:#8b5cf6;"></i>Stay Summary</span>
+              <span class="count-badge" style="background:#f3e8ff;color:#6b21a8;">{{ staySummary.length }}</span>
+            </div>
+            <div class="stay-list">
+              <div *ngFor="let s of staySummary; let si = index" class="stay-item">
+                <div class="stay-icon"><i class="fas fa-stop-circle"></i></div>
+                <div class="stay-detail">
+                  <div class="stay-dur">{{ s.durationText }}</div>
+                  <div class="stay-time">{{ s.from | date:'HH:mm' }} → {{ s.to | date:'HH:mm' }}</div>
+                  <div *ngIf="s.address" class="stay-addr">{{ s.address }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section: Visit Timeline -->
+          <div class="sb-section sb-timeline-head">
+            <div class="sb-label d-flex align-items-center justify-content-between">
+              <span><i class="fas fa-history me-1"></i>Visit Timeline</span>
+              <span class="count-badge">{{ filteredLocations.length }}</span>
+            </div>
+          </div>
+
+          <div class="timeline-list" #timelineList>
+            <ng-container *ngIf="filteredLocations.length > 0; else emptyTimeline">
+              <div
+                *ngFor="let loc of filteredLocations; let i = index; trackBy: trackByIndex"
+                class="tl-item"
+                [class.tl-pinned]="loc.location_type === 'pinned'"
+                [class.tl-active]="selectedLocation?.timestamp === loc.timestamp"
+                (click)="selectLocation(loc); scrollTimelineToItem(i)">
+
+                <div class="tl-connector">
+                  <div class="tl-dot"
+                    [class.tl-dot-start]="i === 0"
+                    [class.tl-dot-end]="i === filteredLocations.length - 1"
+                    [class.tl-dot-pin]="loc.location_type === 'pinned' && i !== 0 && i !== filteredLocations.length - 1"
+                    [class.tl-dot-normal]="loc.location_type === 'normal' && i !== 0 && i !== filteredLocations.length - 1">
+                    <span class="tl-dot-label">
+                      {{ i === 0 ? 'S' : i === filteredLocations.length - 1 ? 'E' : loc.location_type === 'pinned' ? 'P' : '' }}
+                    </span>
+                  </div>
+                  <div class="tl-line" *ngIf="i < filteredLocations.length - 1"></div>
+                </div>
+
+                <div class="tl-card">
+                  <div class="tl-card-head">
+                    <span class="tl-badge"
+                      [class.tb-start]="i == 0"
+                      [class.tb-end]="i == filteredLocations.length - 1"
+                      [class.tb-pin]="loc.location_type == 'pinned' && i != 0 && i !== filteredLocations.length - 1"
+                      [class.tb-normal]="loc.location_type == 'normal' && i != 0 && i !== filteredLocations.length - 1">
+                      {{ i == 0 ? 'Start' : i == filteredLocations.length - 1 ? 'End' : loc.location_type == 'pinned' ? 'Pinned Visit' : 'Track Point' }}
+                    </span>
+                    <span class="tl-time">{{ formatTime(loc.timestamp) }}</span>
+                  </div>
+                  <div class="tl-date">{{ formatDate(loc.timestamp) }}</div>
+                  <div class="tl-coords">
+                    <i class="fas fa-crosshairs me-1" style="font-size:9px;"></i>
+                    {{ loc.coords.latitude | number:'1.5-5' }}, {{ loc.coords.longitude | number:'1.5-5' }}
+                  </div>
+                  <div class="tl-meta">
+                    <span><i class="fas fa-bullseye me-1"></i>{{ loc.coords.accuracy | number:'1.0-0' }}m</span>
+                    <span *ngIf="loc.coords.speed > 0"><i class="fas fa-tachometer-alt me-1"></i>{{ (loc.coords.speed * 3.6) | number:'1.1-1' }} km/h</span>
+                    <span class="mode-tag" [class.fg-mode]="loc.mode == 'foreground'">{{ loc.mode }}</span>
+                  </div>
+                  <div class="tl-purpose" *ngIf="loc.location_type == 'pinned'">
+                    <!-- Visit Place -->
+                    <div *ngIf="loc.visit_place" class="tl-visit-place">
+                      <i class="fas fa-building me-1" style="color:#f59e0b;font-size:9px;"></i>
+                      <b>{{ loc.visit_place }}</b>
+                    </div>
+                    <!-- Purpose -->
+                    <div *ngIf="loc.purpose" class="tl-visit-field">
+                      <span class="tl-field-label">Purpose:</span>
+                      <span class="tl-field-val">{{ loc.purpose }}</span>
+                    </div>
+
+                    <!-- Remark -->
+                    <div *ngIf="loc.remark" class="tl-visit-field tl-remark">
+                      <span class="tl-field-label">Remark:</span>
+                      <span class="tl-field-val">{{ loc.remark }}</span>
+                    </div>
+                    <!-- Fallback -->
+                    <div *ngIf="!loc.visit_place && !loc.purpose && !loc.remark" class="tl-no-detail">
+                      <i class="fas fa-map-pin me-1"></i>Pinned — no details recorded
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+
+            <ng-template #emptyTimeline>
+              <div class="tl-empty">
+                <i class="fas fa-map-marked-alt fa-2x mb-2"></i>
+                <p>No locations to show</p>
+                <button class="btn-reset-sm" (click)="resetTrackingFilters()">Clear filters</button>
+              </div>
+            </ng-template>
+          </div>
+
+        </div><!-- /sidebar-inner -->
+      </div><!-- /sidebar -->
+
+      <!-- ────── MAP AREA ────── -->
+      <div class="map-area">
+
+        <!-- Map container -->
+        <div id="map"
+          [class.fullscreen-map]="isFullScreen"
+          [style.height]="isFullScreen ? '100vh' : 'calc(100vh - 56px)'"
+          style="width:100%;">
+        </div>
+
+        <!-- Floating detail popup -->
+        <div class="detail-popup" *ngIf="selectedLocation">
+          <button class="dp-close" (click)="clearSelection()">
+            <i class="fas fa-times"></i>
+          </button>
+          <div class="dp-header" [class.dp-header-pin]="selectedLocation.location_type === 'pinned'">
+            <div class="dp-icon">
+              <i class="fas" [class.fa-map-pin]="selectedLocation.location_type === 'pinned'" [class.fa-location-arrow]="selectedLocation.location_type !== 'pinned'"></i>
+            </div>
+            <div>
+              <div class="dp-type">{{ selectedLocation.location_type === 'pinned' ? 'Pinned Visit / Purpose' : 'Track Point' }}</div>
+              <div class="dp-datetime">{{ formatDateTime(selectedLocation.timestamp) }}</div>
+            </div>
+          </div>
+          <div class="dp-body">
+            <div class="dp-row">
+              <span class="dp-lbl">Latitude</span>
+              <span class="dp-val">{{ selectedLocation.coords.latitude | number:'1.6-6' }}</span>
+            </div>
+            <div class="dp-row">
+              <span class="dp-lbl">Longitude</span>
+              <span class="dp-val">{{ selectedLocation.coords.longitude | number:'1.6-6' }}</span>
+            </div>
+            <div class="dp-row">
+              <span class="dp-lbl">Altitude</span>
+              <span class="dp-val">{{ selectedLocation.coords.altitude | number:'1.1-1' }} m</span>
+            </div>
+            <div class="dp-row">
+              <span class="dp-lbl">Accuracy</span>
+              <span class="dp-val acc-val"
+                [class.acc-good]="selectedLocation.coords.accuracy < 30"
+                [class.acc-avg]="selectedLocation.coords.accuracy >= 30 && selectedLocation.coords.accuracy < 100"
+                [class.acc-poor]="selectedLocation.coords.accuracy >= 100">
+                {{ selectedLocation.coords.accuracy | number:'1.0-0' }} m
+                <i class="fas fa-circle ms-1" style="font-size:8px;"></i>
+              </span>
+            </div>
+            <div class="dp-row" *ngIf="selectedLocation.coords.speed > 0">
+              <span class="dp-lbl">Speed</span>
+              <span class="dp-val">{{ (selectedLocation.coords.speed * 3.6) | number:'1.1-1' }} km/h</span>
+            </div>
+            <div class="dp-row" *ngIf="selectedLocation.coords.heading > 0">
+              <span class="dp-lbl">Heading</span>
+              <span class="dp-val">{{ selectedLocation.coords.heading }}°</span>
+            </div>
+            <div class="dp-row">
+              <span class="dp-lbl">Mode</span>
+              <span class="dp-val mode-tag" [class.fg-mode]="selectedLocation.mode === 'foreground'">{{ selectedLocation.mode }}</span>
+            </div>
+            <div class="dp-row">
+              <span class="dp-lbl">Type</span>
+              <span class="dp-val" [style.color]="selectedLocation.location_type === 'pinned' ? '#f59e0b' : '#6366f1'">{{ selectedLocation.location_type }}</span>
+            </div>
+            <div class="dp-row" *ngIf="selectedLocation.location_type === 'pinned'">
+              <span class="dp-lbl">Purpose</span>
+              <span class="dp-val" style="color:#f59e0b;font-weight:600;">Visit / Purpose Point</span>
+            </div>
+          </div>
+          <div class="dp-footer">
+            <button class="dp-btn dp-btn-primary" (click)="openInMaps(selectedLocation)">
+              <i class="fas fa-directions me-1"></i>Open Maps
+            </button>
+            <button class="dp-btn" (click)="copyCoords(selectedLocation)">
+              <i class="fas fa-copy me-1"></i>Copy Coords
+            </button>
+          </div>
+        </div>
+
+        <!-- Map Legend -->
+        <div class="map-legend">
+          <div class="ml-title">Legend</div>
+          <div class="ml-row"><span class="ml-dot" style="background:#22c55e;"></span>Start</div>
+          <div class="ml-row"><span class="ml-dot" style="background:#ef4444;"></span>End</div>
+          <div class="ml-row"><span class="ml-dot" style="background:#f59e0b;"></span>Pinned / Visit</div>
+          <div class="ml-row"><span class="ml-dot" style="background:#8b5cf6;"></span>Stay Zone</div>
+          <div class="ml-row"><span class="ml-dot" style="background:#6366f1;"></span>Track Point</div>
+          <div class="ml-row">
+            <span class="ml-line" style="background:linear-gradient(90deg,#3b82f6,#60a5fa);"></span>Route
+          </div>
+        </div>
+
+        <!-- Bottom Stats Bar -->
+        <div class="bottom-stats-bar" [class.d-none]="isFullScreen && isPanelCollapsed">
+          <div class="bsb-item">
+            <i class="fas fa-map-pin bsb-icon" style="color:#f59e0b;"></i>
+            <div>
+              <div class="bsb-val">{{ pinnedLocations.length }}</div>
+              <div class="bsb-lbl">Pinned visits</div>
+            </div>
+          </div>
+          <div class="bsb-item">
+            <i class="fas fa-road bsb-icon" style="color:#3b82f6;"></i>
+            <div>
+              <div class="bsb-val">{{ (totalDistanceMeters / 1000) | number:'1.2-2' }} km</div>
+              <div class="bsb-lbl">Distance</div>
+            </div>
+          </div>
+          <div class="bsb-item">
+            <i class="fas fa-clock bsb-icon" style="color:#6366f1;"></i>
+            <div>
+              <div class="bsb-val">{{ trackingDuration }}</div>
+              <div class="bsb-lbl">Duration</div>
+            </div>
+          </div>
+          <div class="bsb-item">
+            <i class="fas fa-tachometer-alt bsb-icon" style="color:#22c55e;"></i>
+            <div>
+              <div class="bsb-val">{{ avgSpeed | number:'1.1-1' }} km/h</div>
+              <div class="bsb-lbl">Avg speed</div>
+            </div>
+          </div>
+          <div class="bsb-item">
+            <i class="fas fa-satellite bsb-icon" style="color:#8b5cf6;"></i>
+            <div>
+              <div class="bsb-val">{{ bestAccuracy | number:'1.0-0' }} m</div>
+              <div class="bsb-lbl">Best accuracy</div>
+            </div>
+          </div>
+          <div class="bsb-item">
+            <i class="fas fa-hourglass-half bsb-icon" style="color:#f59e0b;"></i>
+            <div>
+              <div class="bsb-val">{{ staySummary.length }}</div>
+              <div class="bsb-lbl">Stay zones</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /map-area -->
+    </div><!-- /tracking-body -->
+  </div><!-- /tracking-root -->
+
+</div>

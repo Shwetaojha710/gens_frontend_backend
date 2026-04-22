@@ -1,0 +1,43 @@
+<aside class="vertical-navbar" [class.collapsed]="isCollapsed">
+  <div class="navbar-header">
+    <a class="brand-wrap" routerLink="/interview/interviewer-dashboard">
+      <img
+        [src]="companyLogo"
+        alt="Quaere"
+        class="brand-logo"
+        [class.brand-logo-collapsed]="isCollapsed"
+      />
+    </a>
+
+    <button class="toggle-btn" type="button" (click)="isCollapsed = !isCollapsed">
+      <i class="ri" [ngClass]="isCollapsed ? 'ri-menu-unfold-line' : 'ri-menu-fold-line'"></i>
+    </button>
+  </div>
+
+  <nav class="menu-shell">
+    <ul class="menu-inner">
+      <ng-container *ngFor="let menu of menuItems">
+        <li class="menu-item" [class.active]="menu.active">
+          <a
+            class="menu-link"
+            [routerLink]="menu.link"
+            [queryParams]="menu.queryParams"
+            routerLinkActive="active-link"
+          >
+            <span class="menu-icon-wrap">
+              <i class="menu-icon ri" [ngClass]="menu.icon"></i>
+            </span>
+            <span class="menu-title" *ngIf="!isCollapsed">{{ menu.title }}</span>
+          </a>
+        </li>
+      </ng-container>
+    </ul>
+  </nav>
+
+  <div class="menu-footer" *ngIf="!isCollapsed">
+    <button type="button" class="logout-btn" (click)="logout()">
+      <i class="ri ri-logout-circle-r-line"></i>
+      <span>Logout</span>
+    </button>
+  </div>
+</aside>

@@ -1,0 +1,165 @@
+@import '../employee-portal-glass.css';
+
+.ep-ep-page__back {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #005fa8;
+  text-decoration: none;
+  margin-bottom: 1rem;
+}
+
+.ep-ep-page__back:hover {
+  text-decoration: underline;
+  color: #0d4f8a;
+}
+
+.ep-page-title {
+  color: #0f172a;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.ep-page-sub {
+  color: rgba(15, 23, 42, 0.62);
+  font-size: 0.9rem;
+}
+
+.ep-reports__toolbar .form-select {
+  width: 9rem;
+}
+
+.ep-reports__year {
+  width: 5.5rem;
+}
+
+.ep-reports__kpi .card-body {
+  padding: 0.85rem 0.5rem;
+}
+
+.ep-reports__kpi-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.ep-reports__kpi-value--green {
+  color: #15803d;
+}
+
+.ep-reports__kpi-value--amber {
+  color: #b45309;
+}
+
+.ep-reports__kpi-value--red {
+  color: #b91c1c;
+}
+
+.ep-reports__kpi-value--violet {
+  color: #7c3aed;
+}
+
+.ep-reports__kpi-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.ep-reports__links li {
+  margin-bottom: 0.5rem;
+}
+
+.ep-reports__links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #005fa8;
+  text-decoration: none;
+}
+
+.ep-reports__links a:hover {
+  text-decoration: underline;
+}
+
+.ep-reports__chart-card .card-header h6 {
+  color: #0f172a;
+}
+
+.ep-reports__chart-body {
+  min-height: 280px;
+}
+
+.ep-reports__chart-empty {
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: #64748b;
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 1rem;
+}
+
+.ep-reports__chart-empty .icon-base {
+  font-size: 2rem;
+  opacity: 0.45;
+}
+
+.ep-reports__insight {
+  border-left: 4px solid #cbd5e1;
+}
+
+.ep-reports__insight--positive {
+  border-left-color: #15803d;
+}
+
+.ep-reports__insight--neutral {
+  border-left-color: #005fa8;
+}
+
+.ep-reports__insight--watch {
+  border-left-color: #b45309;
+}
+
+.ep-reports__insight-title {
+  color: #0f172a;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.ep-reports__insight-body {
+  color: rgba(15, 23, 42, 0.78);
+  line-height: 1.5;
+}
+
+.ep-reports__insight-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(15, 23, 42, 0.06);
+  color: #475569;
+}
+
+.ep-reports__insight--positive .ep-reports__insight-badge {
+  background: rgba(21, 128, 61, 0.12);
+  color: #15803d;
+}
+
+.ep-reports__insight--watch .ep-reports__insight-badge {
+  background: rgba(180, 83, 9, 0.12);
+  color: #b45309;
+}
+
+.ep-reports__insight--neutral .ep-reports__insight-badge {
+  background: rgba(0, 95, 168, 0.1);
+  color: #005fa8;
+}

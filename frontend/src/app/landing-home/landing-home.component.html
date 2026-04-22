@@ -1,0 +1,184 @@
+<!-- <div class="authentication-wrapper authentication-basic container-p-y p-4 p-sm-0"
+  style="background-image: url('/assets/img/logo/abstract-background_1409-897.jpg');background-size: cover;background-repeat: no-repeat;">
+  <div class="py-6">
+    <div class="container p-md-7 p-1">
+      <div class="app-brand justify-content-center mt-5">
+        <a href="/" class="app-brand-link gap-2">
+          <img src="/assets/img/logo/logo-quaere.png" width="250">
+        </a>
+
+      </div>
+      <div class="app-brand justify-content-center mb-10 mt-5">
+        <div class="text-center">
+          <h4 style="    font-size: 32px;
+    color: #005495;
+    font-weight: 900;">
+            {{tenantDetails?.companyName}}
+          </h4>
+          <p>
+            {{tenantDetails?.companyAddress}}
+          </p>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-12">
+        <div class="col-md-12">
+          <div class="row justify-content-center g-3">
+            <div class="col">
+              <div class="card card-100 text-center" style="padding: 40px 20px;">
+                <div class="card-body">
+                  <div class="mb-4">
+                    <img src="/assets/img/logo/icomoon-free_office.svg" width="60">
+                  </div>
+                  <h5 class="card-title">Recruitment</h5>
+                  <p class="card-text">
+                    Central administration and monitoring access.
+                  </p>
+
+                  <button class="btn btn-primary waves-effect waves-light" (click)="goToOnboarding()">
+                    Go to Recruitment
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="card card-100 text-center" style="padding: 40px 20px;">
+                <div class="card-body">
+                  <div class="mb-4">
+                    <img src="/assets/img/logo/icomoon-free_office.svg" width="60">
+                  </div>
+                  <h5 class="card-title">Employee Management</h5>
+                  <p class="card-text">
+                    Central administration and monitoring access.'
+                  </p>
+
+                  <button class="btn btn-primary waves-effect waves-light" (click)="goToEmployeeManagement()">
+                    Go to Employee Management
+                  </button>
+                </div>
+              </div>
+            </div>
+
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div> -->
+
+
+<div class="authentication-wrapper authentication-basic container-p-y p-4 p-sm-0"
+  style="background-image: url('/assets/img/bg-login/bg-branch.jpg');background-size: cover;background-repeat: no-repeat;">
+  <div
+    style="border: 0px solid ;padding: 30px 30px;width: 1588px;background-image: linear-gradient(110.78deg, rgba(255, 255, 255, 0.41) 7.01%, rgba(255, 255, 255, 0.01) 106.22%), linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)), url('/assets/img/bg-login/bg-branch1.png');background-size: cover;background-position: center;border-radius: 32px;">
+    <div class="py-6">
+      <div
+        style="border: 0px solid ;padding: 30px 30px;width: 1394px;height: 650px;background-image: url('/assets/img/bg-login/bg-branch1.png');background-size: cover;background-position: center;border-radius: 32px;margin: auto;background: linear-gradient(110.78deg, rgba(255, 255, 255, 0.41) 7.01%, rgba(255, 255, 255, 0.01) 106.22%),linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));">
+        <div class="container p-md-7 p-1">
+          <div class="row mb-6">
+            <div class="app-brand justify-content-center">
+              <a href="/" class="app-brand-link gap-2 mb-2">
+                <img src="/assets/img/logo/logo-quaere.png" width="200">
+              </a>
+
+            </div>
+            <div class="app-brand justify-content-center">
+              <div class="text-center">
+                <h4 style="font-size: 32px; color: #005495; font-weight: 500;">
+                  {{tenantDetails?.companyName}}
+                </h4>
+                <p>
+                  {{tenantDetails?.companyAddress}}
+
+                </p>
+              </div>
+            </div>
+
+
+
+
+
+            <div class="row g-3 mb-8 justify-content-center">
+              <div class="col-md-12">
+                <div class="row justify-content-center g-3">
+                  <div class="col-md-3">
+                    <div class="card-wrapper">
+                      <div class="city-card">
+
+                        <div class="overlay">
+                          <h2 class="text-white text-uppercase">Recruitment</h2>
+                          <h4 class="text-white">OFFICE</h4>
+
+                          <p class="text-uppercase">
+                            Central administration and monitoring access.
+                          </p>
+
+                          <button class="btn-dashboard" (click)="goToOnboarding()" >Go To Dashboard</button>
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="card-wrapper">
+                      <div class="city-card">
+
+                        <div class="overlay">
+                          <h2 class="text-white text-uppercase">Employee Management</h2>
+                          <h4 class="text-white">OFFICE</h4>
+
+                          <p class="text-uppercase">
+                           Central administration and monitoring access.
+                          </p>
+
+                          <button class="btn-dashboard" (click)="goToEmployeeManagement()"  >Go To Dashboard</button>
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+
+
+                </div>
+              </div>
+            </div>
+
+
+            <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel"
+              aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel1">Search Branch</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="row">
+                      <div class="col-12 mt-2">
+                        <div class="input-group">
+                          <input type="text" class="form-control" placeholder="Search Branch" aria-label="Search Branch"
+                            aria-describedby="button-addon2">
+                          <button class="btn btn-outline-primary waves-effect" type="button"
+                            id="button-addon2">Search</button>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                  <div class="modal-footer">
+
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

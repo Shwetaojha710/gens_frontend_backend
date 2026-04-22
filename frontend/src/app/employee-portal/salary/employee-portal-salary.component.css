@@ -1,0 +1,185 @@
+@import '../employee-portal-glass.css';
+
+:host {
+  display: block;
+  padding-bottom: 2rem;
+}
+
+.ep-salary__hero {
+  padding: 0.25rem 0;
+}
+
+.ep-salary__eyebrow {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #005fa8;
+  margin: 0;
+}
+
+.ep-salary__toolbar {
+  border-radius: 1rem;
+  box-shadow: 0 8px 32px rgba(15, 41, 66, 0.06);
+}
+
+.ep-salary__label {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.ep-salary__spin {
+  display: inline-block;
+  animation: ep-salary-spin 0.85s linear infinite;
+}
+
+@keyframes ep-salary-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ep-salary__loading {
+  border-radius: 1rem;
+}
+
+.ep-salary__panel {
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 8px 28px rgba(15, 41, 66, 0.06);
+}
+
+.ep-salary__panel-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ep-salary__panel-head i {
+  font-size: 1.25rem;
+  opacity: 0.85;
+}
+
+.ep-salary__panel-head--earn {
+  background: linear-gradient(135deg, rgba(22, 163, 74, 0.12), rgba(255, 255, 255, 0.4));
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.ep-salary__panel-head--earn i {
+  color: #16a34a;
+}
+
+.ep-salary__panel-head--ded {
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.08), rgba(255, 255, 255, 0.4));
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.ep-salary__panel-head--ded i {
+  color: #dc2626;
+}
+
+.ep-salary__lines {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.ep-salary__line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.65rem 1.15rem;
+  border-color: rgba(226, 232, 240, 0.85);
+  font-size: 0.9rem;
+}
+
+.ep-salary__line-name {
+  color: #334155;
+}
+
+.ep-salary__line-amt {
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ep-salary__net-card {
+  border-radius: 1rem;
+  box-shadow: 0 12px 40px rgba(0, 95, 168, 0.1);
+}
+
+.ep-salary__net-highlight {
+  background: linear-gradient(145deg, #025a9d 0%, #0ea5e9 48%, #0369a1 100%);
+  color: #fff;
+}
+
+.ep-salary__net-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.92;
+  margin: 0;
+}
+
+.ep-salary__net-value {
+  font-size: clamp(1.75rem, 4vw, 2.35rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.ep-salary__net-hint {
+  opacity: 0.88;
+  max-width: 18rem;
+}
+
+.ep-salary__net-meta-wrap {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.ep-salary__meta-title {
+  color: #64748b;
+  letter-spacing: 0.06em;
+  font-size: 0.68rem;
+}
+
+.ep-salary__meta-dl {
+  font-size: 0.9rem;
+}
+
+.ep-salary__meta-dt {
+  color: #64748b;
+  font-weight: 500;
+  padding-bottom: 0.35rem;
+}
+
+.ep-salary__meta-dd {
+  color: #0f172a;
+  font-weight: 600;
+  padding-bottom: 0.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ep-salary__empty {
+  border-radius: 1rem;
+}
+
+.ep-salary__empty-icon {
+  font-size: 2.5rem;
+  color: rgba(0, 95, 168, 0.35);
+}
+
+@media (max-width: 991.98px) {
+  .ep-salary__net-highlight {
+    text-align: center;
+  }
+
+  .ep-salary__net-hint {
+    margin-left: auto;
+    margin-right: auto;
+  }
+}

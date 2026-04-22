@@ -1,0 +1,235 @@
+<div class="container-fluid ep-ep-page ep-reports">
+  <a routerLink="/employee-portal/dashboard" class="ep-ep-page__back">
+    <i class="icon-base ri ri-arrow-left-line me-1"></i> Back to dashboard
+  </a>
+
+  <header class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+    <div>
+      <h4 class="ep-page-title mb-1">Reports</h4>
+      <p class="ep-page-sub mb-0">Month snapshot: attendance, leave applications, and salary slip (if processed).</p>
+    </div>
+    <div class="d-flex gap-2 align-items-center ep-reports__toolbar">
+      <select class="form-select form-select-sm" [(ngModel)]="month" (ngModelChange)="load()">
+        <option *ngFor="let m of months" [ngValue]="m">{{ monthNames[m - 1] }}</option>
+      </select>
+      <input type="number" class="form-control form-control-sm ep-reports__year" [(ngModel)]="year" (change)="load()" />
+      <button type="button" class="btn btn-sm btn-outline-primary rounded-pill" (click)="load()" [disabled]="loading">
+        {{ loading ? 'Loading…' : 'Refresh' }}
+      </button>
+    </div>
+  </header>
+
+  <p class="small text-muted mb-3">Showing data for <strong>{{ periodLabel }}</strong>.</p>
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-4 col-lg-2">
+      <div class="card ep-glass-card border-0 ep-reports__kpi h-100">
+        <div class="card-body text-center py-3">
+          <p class="ep-reports__kpi-value mb-0">{{ attendanceSummary.total }}</p>
+          <p class="ep-reports__kpi-label mb-0">Attendance days</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+      <div class="card ep-glass-card border-0 ep-reports__kpi h-100">
+        <div class="card-body text-center py-3">
+          <p class="ep-reports__kpi-value ep-reports__kpi-value--green mb-0">{{ attendanceSummary.onTime }}</p>
+          <p class="ep-reports__kpi-label mb-0">On time</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+      <div class="card ep-glass-card border-0 ep-reports__kpi h-100">
+        <div class="card-body text-center py-3">
+          <p class="ep-reports__kpi-value ep-reports__kpi-value--amber mb-0">{{ attendanceSummary.late }}</p>
+          <p class="ep-reports__kpi-label mb-0">Late</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+      <div class="card ep-glass-card border-0 ep-reports__kpi h-100">
+        <div class="card-body text-center py-3">
+          <p class="ep-reports__kpi-value ep-reports__kpi-value--red mb-0">{{ attendanceSummary.absent }}</p>
+          <p class="ep-reports__kpi-label mb-0">Absent</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+      <div class="card ep-glass-card border-0 ep-reports__kpi h-100">
+        <div class="card-body text-center py-3">
+          <p class="ep-reports__kpi-value ep-reports__kpi-value--violet mb-0">{{ attendanceSummary.onLeave }}</p>
+          <p class="ep-reports__kpi-label mb-0">On leave</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+      <div class="card ep-glass-card border-0 ep-reports__kpi h-100">
+        <div class="card-body text-center py-3">
+          <p class="ep-reports__kpi-value mb-0">{{ leaveCount }}</p>
+          <p class="ep-reports__kpi-label mb-0">Leave apps</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="mb-4" aria-labelledby="ep-reports-graphs-heading">
+    <h5 id="ep-reports-graphs-heading" class="h6 fw-bold text-dark mb-2">Graphs</h5>
+    <p class="small text-muted mb-3">
+      Charts use this month’s portal data. Advanced ML models can replace the insight heuristics below when your organization connects analytics APIs.
+    </p>
+    <div class="row g-3">
+      <div class="col-12 col-xl-4">
+        <div class="card ep-glass-card border-0 h-100 ep-reports__chart-card">
+          <div class="card-header border-0 pb-0 bg-transparent">
+            <h6 class="mb-1 fw-bold">Attendance trend</h6>
+            <p class="small text-muted mb-0">Line chart · daily punctuality index (working days)</p>
+          </div>
+          <div class="card-body pt-2 ep-reports__chart-body">
+            <div *ngIf="loading" class="ep-reports__chart-empty">
+              <span class="spinner-border spinner-border-sm" role="status"></span>
+              <p class="mb-0">Loading…</p>
+            </div>
+            <apx-chart
+              *ngIf="!loading && attendanceTrendOptions.series?.length"
+              [series]="attendanceTrendOptions.series!"
+              [chart]="attendanceTrendOptions.chart!"
+              [stroke]="attendanceTrendOptions.stroke!"
+              [xaxis]="attendanceTrendOptions.xaxis!"
+              [yaxis]="attendanceTrendOptions.yaxis!"
+              [colors]="attendanceTrendOptions.colors!"
+              [dataLabels]="attendanceTrendOptions.dataLabels!"
+              [grid]="attendanceTrendOptions.grid!"
+              [tooltip]="attendanceTrendOptions.tooltip!"
+              [markers]="attendanceTrendOptions.markers!"
+            ></apx-chart>
+            <div *ngIf="!loading && !attendanceTrendOptions.series?.length" class="ep-reports__chart-empty">
+              <i class="icon-base ri ri-line-chart-line" aria-hidden="true"></i>
+              <p class="mb-0">No working-day points to plot for this period.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-xl-4">
+        <div class="card ep-glass-card border-0 h-100 ep-reports__chart-card">
+          <div class="card-header border-0 pb-0 bg-transparent">
+            <h6 class="mb-1 fw-bold">Salary breakdown</h6>
+            <p class="small text-muted mb-0">Pie chart · earnings &amp; deductions (when payroll is available)</p>
+          </div>
+          <div class="card-body pt-2 ep-reports__chart-body">
+            <div *ngIf="loading" class="ep-reports__chart-empty">
+              <span class="spinner-border spinner-border-sm" role="status"></span>
+              <p class="mb-0">Loading…</p>
+            </div>
+            <apx-chart
+              *ngIf="!loading && salaryPieOptions.series?.length"
+              [series]="salaryPieOptions.series!"
+              [chart]="salaryPieOptions.chart!"
+              [labels]="salaryPieOptions.labels!"
+              [colors]="salaryPieOptions.colors!"
+              [dataLabels]="salaryPieOptions.dataLabels!"
+              [legend]="salaryPieOptions.legend!"
+              [tooltip]="salaryPieOptions.tooltip!"
+            ></apx-chart>
+            <div *ngIf="!loading && !salaryPieOptions.series?.length" class="ep-reports__chart-empty">
+              <i class="icon-base ri ri-pie-chart-line" aria-hidden="true"></i>
+              <p class="mb-0">No payroll components for this month — open salary after the bill is processed.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-xl-4">
+        <div class="card ep-glass-card border-0 h-100 ep-reports__chart-card">
+          <div class="card-header border-0 pb-0 bg-transparent">
+            <h6 class="mb-1 fw-bold">Performance KPI</h6>
+            <p class="small text-muted mb-0">Bar chart · timeliness, presence &amp; stability (from attendance)</p>
+          </div>
+          <div class="card-body pt-2 ep-reports__chart-body">
+            <div *ngIf="loading" class="ep-reports__chart-empty">
+              <span class="spinner-border spinner-border-sm" role="status"></span>
+              <p class="mb-0">Loading…</p>
+            </div>
+            <apx-chart
+              *ngIf="!loading && performanceBarOptions.series?.length && attendanceSummary.total > 0"
+              [series]="performanceBarOptions.series!"
+              [chart]="performanceBarOptions.chart!"
+              [plotOptions]="performanceBarOptions.plotOptions!"
+              [dataLabels]="performanceBarOptions.dataLabels!"
+              [xaxis]="performanceBarOptions.xaxis!"
+              [yaxis]="performanceBarOptions.yaxis!"
+              [colors]="performanceBarOptions.colors!"
+              [grid]="performanceBarOptions.grid!"
+              [tooltip]="performanceBarOptions.tooltip!"
+            ></apx-chart>
+            <div *ngIf="!loading && attendanceSummary.total === 0" class="ep-reports__chart-empty">
+              <i class="icon-base ri ri-bar-chart-horizontal-line" aria-hidden="true"></i>
+              <p class="mb-0">Load attendance for this month to see KPI scores.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="mb-4" aria-labelledby="ep-reports-insights-heading">
+    <h5 id="ep-reports-insights-heading" class="h6 fw-bold text-dark mb-2">Analytics &amp; insights</h5>
+    <p class="small text-muted mb-3">
+      The following summaries are <strong>rule-based previews</strong> from your current month’s attendance and leave applications. They are not medical or legal advice; connect dedicated analytics services for production anomaly / burnout models.
+    </p>
+    <div class="row g-3">
+      <div class="col-12 col-md-6 col-xl-4" *ngFor="let card of insightCards">
+        <div class="card ep-glass-card border-0 h-100" [ngClass]="insightCardClass(card)">
+          <div class="card-body">
+            <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+              <h6 class="mb-0 fw-bold ep-reports__insight-title">{{ card.title }}</h6>
+              <span class="badge rounded-pill ep-reports__insight-badge">{{ card.badge }}</span>
+            </div>
+            <p class="small mb-0 ep-reports__insight-body">{{ card.body }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
+      <div class="card ep-glass-card border-0 h-100">
+        <div class="card-body">
+          <h5 class="h6 mb-2">Salary (this month)</h5>
+          <p class="mb-1">
+            <span class="text-muted small">Net pay</span><br />
+            <span class="fs-5 fw-bold text-primary">{{ netPay }}</span>
+          </p>
+          <p class="small text-muted mb-3" *ngIf="billStatus === 'none'">No payroll bill for this period yet.</p>
+          <a routerLink="/employee-portal/salary" class="btn btn-sm btn-outline-primary rounded-pill">Open salary slip</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card ep-glass-card border-0 h-100">
+        <div class="card-body">
+          <h5 class="h6 mb-2">Detailed views</h5>
+          <ul class="list-unstyled mb-0 ep-reports__links">
+            <li>
+              <a routerLink="/employee-portal/attendance">
+                Monthly attendance calendar
+                <i class="icon-base ri ri-arrow-right-s-line" aria-hidden="true"></i>
+              </a>
+            </li>
+            <li>
+              <a routerLink="/employee-portal/leave">
+                Leave applications &amp; balance
+                <i class="icon-base ri ri-arrow-right-s-line" aria-hidden="true"></i>
+              </a>
+            </li>
+            <li>
+              <a routerLink="/employee-portal/holidays">
+                Holiday list
+                <i class="icon-base ri ri-arrow-right-s-line" aria-hidden="true"></i>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

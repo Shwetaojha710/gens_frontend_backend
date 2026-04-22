@@ -1,0 +1,268 @@
+<div class="mt-5">
+  <div class="row mb-6" *ngIf="createFlag">
+    <div class="col-md">
+      <!-- <div class="card"> -->
+      <h5 class="card-header d-flex justify-content-between align-items-center">
+        <span>Allowance</span>
+        <button
+          type="button"
+          class="btn btn-xs btn-primary float-end"
+          (click)="back()"
+        >
+          <i class="fa-solid fa-arrow-left"></i>&nbsp;Back
+        </button>
+      </h5>
+      <!-- <hr style="margin: 0rem 0 !important" /> -->
+      <div class="card-body">
+        <div class="row g-2">
+          <div class="col-6">
+            <label for="defaultFormControlInput" class="form-label">Name</label>
+            <input
+              type="text"
+              class="form-control"
+              id="defaultFormControlInput"
+              placeholder="Enter Name"
+              [(ngModel)]="obj['name']"
+              aria-describedby="defaultFormControlHelp"
+            />
+          </div>
+
+          <div class="col-6">
+            <label for="defaultFormControlInput" class="form-label">Type</label>
+            <ng-select
+              [items]="type"
+              bindLabel="label"
+              bindValue="value"
+              [(ngModel)]="obj['type']"
+              [multiple]="false"
+              placeholder="Select Type"
+              name="Type"
+              id="select2Danger"
+              (change)="managestatus()"
+            >
+            </ng-select>
+          </div>
+
+          <div class="col-6" *ngIf="dependentStatus">
+            <label for="defaultFormControlInput" class="form-label"
+              >Dependent Name</label
+            >
+             <ng-select
+                [items]="component"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="obj['dependent']"
+                [multiple]="false"
+                placeholder="Select dependent"
+                name="dependent"
+                id="select2Danger"
+                (change)="filledAmount(obj['dependent'])"
+              >
+              </ng-select>
+            <!-- <input
+              type="text"
+              class="form-control"
+              id="defaultFormControlInput"
+              placeholder="Enter dependent"
+              [(ngModel)]="obj['dependent']"
+              aria-describedby="defaultFormControlHelp"
+            /> -->
+          </div>
+
+          <div class="col-6" *ngIf="dependentStatus">
+            <label for="defaultFormControlInput" class="form-label"
+              >Dependent Amount</label
+            >
+            <input
+              type="number"
+              class="form-control"
+              id="defaultFormControlInput"
+              placeholder="Enter Amount"
+              [(ngModel)]="obj['amount']"
+              aria-describedby="defaultFormControlHelp"
+              disabled
+            />
+          </div>
+          <div class="col-6" *ngIf="dependentStatus">
+            <label for="defaultFormControlInput" class="form-label"
+              >Type Value</label
+            >
+            <input
+              type="number"
+              class="form-control"
+              id="defaultFormControlInput"
+              placeholder="Enter Type Value"
+              [(ngModel)]="obj['typeValue']"
+              aria-describedby="defaultFormControlHelp"
+              (change)="calculateamt()"
+            />
+          </div>
+
+          <div class="col-6" *ngIf="dependentStatus">
+            <label for="defaultFormControlInput" class="form-label"
+              >Final Amount</label
+            >
+            <input
+              type="number"
+              class="form-control"
+              id="defaultFormControlInput"
+              placeholder="Final Amount"
+              [(ngModel)]="obj['finalAmount']"
+              disabled
+              aria-describedby="defaultFormControlHelp"
+            />
+          </div>
+          <div class="col-6" *ngIf="dependentStatus == false">
+            <label for="defaultFormControlInput" class="form-label"
+              >Final Amount</label
+            >
+            <input
+              type="number"
+              class="form-control"
+              id="defaultFormControlInput"
+              placeholder="Final Amount"
+              [(ngModel)]="obj['finalAmount']"
+              aria-describedby="defaultFormControlHelp"
+            />
+          </div>
+
+          <div class="col-6">
+            <label for="defaultFormControlInput" class="form-label"
+              >Start Date</label
+            >
+            <input
+              type="date"
+              class="form-control"
+              id="defaultFormControlInput"
+              placeholder="Select Start Date"
+              [(ngModel)]="obj['startDate']"
+              aria-describedby="defaultFormControlHelp"
+            />
+          </div>
+
+          <div class="col-6" *ngIf="updateFlag">
+            <label for="defaultFormControlInput" class="form-label"
+              >Status</label
+            >
+            <ng-select
+              [items]="status"
+              bindLabel="label"
+              bindValue="value"
+              [(ngModel)]="obj['status']"
+              [multiple]="false"
+              placeholder="Select Status"
+              name="status"
+              id="select2Danger"
+            >
+            </ng-select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-12 mt-2">
+            <button
+              *ngIf="createFlag && updateFlag == false"
+              type="button"
+              class="btn btn-sm btn-primary waves-effect waves-light"
+              (click)="onSubmit()"
+            >
+              Submit
+            </button>
+            <button
+              *ngIf="updateFlag == true"
+              type="button"
+              class="btn btn-sm btn-primary waves-effect waves-light"
+              (click)="updatedata()"
+            >
+              Update
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- </div> -->
+    </div>
+  </div>
+  <div class="row mb-6">
+    <div class="col-md">
+      <!-- <div class="card"> -->
+      <h5 class="card-header d-flex justify-content-between align-items-center">
+        <span>Allowance List</span>
+        <button
+          *ngIf="createFlag == false"
+          type="button"
+          class="btn btn-xs btn-primary float-end"
+          (click)="opencreate()"
+        >
+          <i class="fa-solid fa-plus"></i>&nbsp;Add
+        </button>
+      </h5>
+      <div class="table-responsive text-nowrap mt-2">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>SI.No</th>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Type Value</th>
+              <th>Dependent</th>
+              <th>Dependent Amount</th>
+              <th>startDate</th>
+              <th>Status</th>
+              <th>createdAt</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody class="table-border-bottom-0">
+            <tr *ngFor="let item of desigantionList; let i = index">
+              <th scope="row">{{ i + 1 }}</th>
+              <td>{{ item["name"] }}</td>
+              <td>
+                {{ item["type"] }}
+              </td>
+              <td>
+                {{ item["typeValue"] }}
+              </td>
+              <td>
+                {{ item["dependent"] }}
+              </td>
+              <td>
+                {{ item["finalAmount"] }}
+              </td>
+              <td>
+                {{ item["startDate"] }}
+              </td>
+
+              <td>
+                <span
+                  class="badge rounded overflow-hidden px-2"
+                  [ngClass]="getStatusClass(item['status'])"
+                >
+                  {{ item["status"] }}
+                </span>
+              </td>
+
+              <td>{{ item["createdAt"] }}</td>
+              <td>
+                <button
+                  type="button"
+                  class="btn btn-outline-success btn-sm"
+                  (click)="update(item)"
+                >
+                  <i class="fas fa-edit"></i>
+                </button>
+                &nbsp;
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-danger"
+                  (click)="delete(item.id)"
+                >
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- </div> -->
+    </div>
+  </div>
+</div>

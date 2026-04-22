@@ -1,0 +1,186 @@
+<div class="container-fluid py-4 doc-overview-page">
+
+  <!-- Header -->
+  <div class="doc-overview-header mb-4">
+    <div>
+      <h4 class="doc-overview-title mb-1">Document Generation</h4>
+      <p class="text-muted mb-0 small">Track Appointment Letter, Offer Letter, NDA &amp; Relieving Letter generation for all employees.</p>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="row g-3 mb-4">
+
+    <div class="col-6 col-md-2">
+      <div class="doc-summary-card doc-summary-card--total">
+        <div class="doc-summary-card__icon"><i class="fas fa-users"></i></div>
+        <div class="doc-summary-card__body">
+          <div class="doc-summary-card__count">{{ totalEmployees }}</div>
+          <div class="doc-summary-card__label">Total Employees</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-2">
+      <div class="doc-summary-card doc-summary-card--appointment">
+        <div class="doc-summary-card__icon"><i class="fas fa-file-signature"></i></div>
+        <div class="doc-summary-card__body">
+          <div class="doc-summary-card__count">{{ counts.appointment }}</div>
+          <div class="doc-summary-card__label">Appointment Letters</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-2">
+      <div class="doc-summary-card doc-summary-card--offer">
+        <div class="doc-summary-card__icon"><i class="fas fa-envelope-open-text"></i></div>
+        <div class="doc-summary-card__body">
+          <div class="doc-summary-card__count">{{ counts.offer }}</div>
+          <div class="doc-summary-card__label">Offer Letters</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-2">
+      <div class="doc-summary-card doc-summary-card--nda">
+        <div class="doc-summary-card__icon"><i class="fas fa-file-contract"></i></div>
+        <div class="doc-summary-card__body">
+          <div class="doc-summary-card__count">{{ counts.nda }}</div>
+          <div class="doc-summary-card__label">NDAs Generated</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-2">
+      <div class="doc-summary-card doc-summary-card--relieving">
+        <div class="doc-summary-card__icon"><i class="fas fa-file-alt"></i></div>
+        <div class="doc-summary-card__body">
+          <div class="doc-summary-card__count">{{ counts.relieving }}</div>
+          <div class="doc-summary-card__label">Relieving Letters</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Employee Table -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom d-flex align-items-center justify-content-between py-3">
+      <h6 class="mb-0 fw-semibold">Employee List</h6>
+      <span class="badge bg-primary">{{ filteredEmployees.length }} employees</span>
+    </div>
+
+    <app-search-pagination
+      [totalItems]="filteredEmployees.length"
+      [pageSize]="pageSize"
+      [currentPage]="currentPage"
+      (search)="onSearch($event)"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)">
+
+      <div *ngIf="loading" class="text-center py-5">
+        <div class="spinner-border text-primary"></div>
+        <p class="mt-2 text-muted small">Loading employees…</p>
+      </div>
+
+      <div class="table-responsive" *ngIf="!loading">
+        <table class="table table-hover align-middle mb-0 doc-table">
+          <thead class="table-light">
+            <tr>
+              <th>SI</th>
+              <th>Employee</th>
+              <th>Department</th>
+              <th>Designation</th>
+              <th class="text-center">Appointment Letter</th>
+              <th class="text-center">Offer Letter</th>
+              <th class="text-center">NDA</th>
+              <th class="text-center">Relieving Letter</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let emp of pagedEmployees; let i = index">
+              <td class="text-muted small">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="doc-avatar">{{ (emp.firstName?.[0] || '') + (emp.lastName?.[0] || '') | uppercase }}</div>
+                  <div>
+                    <div class="fw-semibold small">{{ emp.firstName }} {{ emp.lastName }}</div>
+                    <div class="text-muted" style="font-size:0.72rem">{{ emp.empCode }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="small text-muted">{{ emp.department_name || '—' }}</td>
+              <td class="small text-muted">{{ emp.designation_name || '—' }}</td>
+
+              <!-- Appointment Letter -->
+              <td class="text-center">
+                <div class="d-flex flex-column align-items-center gap-1">
+                  <button
+                    class="btn btn-sm doc-action-btn doc-action-btn--appointment"
+                    [class.doc-action-btn--done]="isGenerated(emp.id, 'appointment')"
+                    (click)="openLetter(emp, 'appointment-letter')"
+                    [title]="isGenerated(emp.id, 'appointment') ? 'Re-open · Last: ' + generatedDate(emp.id, 'appointment') : 'Open Appointment Letter'">
+                    <i class="fas" [class.fa-file-signature]="!isGenerated(emp.id, 'appointment')" [class.fa-check-circle]="isGenerated(emp.id, 'appointment')"></i>
+                    {{ isGenerated(emp.id, 'appointment') ? 'Generated' : 'Generate' }}
+                  </button>
+                  <span *ngIf="isGenerated(emp.id, 'appointment')" class="doc-gen-date">{{ generatedDate(emp.id, 'appointment') }}</span>
+                </div>
+              </td>
+
+              <!-- Offer Letter -->
+              <td class="text-center">
+                <div class="d-flex flex-column align-items-center gap-1">
+                  <button
+                    class="btn btn-sm doc-action-btn doc-action-btn--offer"
+                    [class.doc-action-btn--done]="isGenerated(emp.id, 'offer')"
+                    (click)="openLetter(emp, 'offer-letter')"
+                    [title]="isGenerated(emp.id, 'offer') ? 'Re-open · Last: ' + generatedDate(emp.id, 'offer') : 'Open Offer Letter'">
+                    <i class="fas" [class.fa-envelope-open-text]="!isGenerated(emp.id, 'offer')" [class.fa-check-circle]="isGenerated(emp.id, 'offer')"></i>
+                    {{ isGenerated(emp.id, 'offer') ? 'Generated' : 'Generate' }}
+                  </button>
+                  <span *ngIf="isGenerated(emp.id, 'offer')" class="doc-gen-date">{{ generatedDate(emp.id, 'offer') }}</span>
+                </div>
+              </td>
+
+              <!-- NDA -->
+              <td class="text-center">
+                <div class="d-flex flex-column align-items-center gap-1">
+                  <button
+                    class="btn btn-sm doc-action-btn doc-action-btn--nda"
+                    [class.doc-action-btn--done]="isGenerated(emp.id, 'nda')"
+                    (click)="openLetter(emp, 'nda')"
+                    [title]="isGenerated(emp.id, 'nda') ? 'Re-open · Last: ' + generatedDate(emp.id, 'nda') : 'Open NDA'">
+                    <i class="fas" [class.fa-file-contract]="!isGenerated(emp.id, 'nda')" [class.fa-check-circle]="isGenerated(emp.id, 'nda')"></i>
+                    {{ isGenerated(emp.id, 'nda') ? 'Generated' : 'Generate' }}
+                  </button>
+                  <span *ngIf="isGenerated(emp.id, 'nda')" class="doc-gen-date">{{ generatedDate(emp.id, 'nda') }}</span>
+                </div>
+              </td>
+
+              <!-- Relieving Letter -->
+              <td class="text-center">
+                <div class="d-flex flex-column align-items-center gap-1">
+                  <button
+                    class="btn btn-sm doc-action-btn doc-action-btn--relieving"
+                    [class.doc-action-btn--done]="isGenerated(emp.id, 'relieving')"
+                    (click)="openLetter(emp, 'releving-letter')"
+                    [title]="isGenerated(emp.id, 'relieving') ? 'Re-open · Last: ' + generatedDate(emp.id, 'relieving') : 'Open Relieving Letter'">
+                    <i class="fas" [class.fa-file-alt]="!isGenerated(emp.id, 'relieving')" [class.fa-check-circle]="isGenerated(emp.id, 'relieving')"></i>
+                    {{ isGenerated(emp.id, 'relieving') ? 'Generated' : 'Generate' }}
+                  </button>
+                  <span *ngIf="isGenerated(emp.id, 'relieving')" class="doc-gen-date">{{ generatedDate(emp.id, 'relieving') }}</span>
+                </div>
+              </td>
+
+            </tr>
+            <tr *ngIf="!loading && pagedEmployees.length === 0">
+              <td colspan="8" class="text-center text-muted py-4">No employees found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </app-search-pagination>
+  </div>
+
+</div>

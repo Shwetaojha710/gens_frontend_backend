@@ -1,0 +1,201 @@
+<div class="authentication-wrapper authentication-cover">
+  <div
+    class="authentication-inner row m-0"
+    style="
+      background-image: url('/assets/img/bg-login/Login1.png');
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+      z-index: 0;
+    "
+  >
+    <!-- Same illustration + mask as login page -->
+    <div class="d-none d-lg-flex col-lg-7 col-xl-8 align-items-center justify-content-center p-12 pb-2">
+      <img
+        src="/assets/img/bg-login/Hero.png"
+        class="auth-cover-illustration w-100"
+        alt="auth-illustration"
+      />
+      <img
+        alt="mask"
+        src="/assets/img/illustrations/auth-basic-login-mask-light.png"
+        class="authentication-image d-none d-lg-block"
+      />
+    </div>
+
+    <div
+      class="d-flex col-12 col-lg-5 col-xl-4 align-items-center justify-content-center position-relative py-sm-6 px-12 py-6"
+      style="
+        background-image: url('/assets/img/bg-login/Rectangle3.png');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+      "
+    >
+      <div
+        class="creg-glass-outer"
+        style="
+          padding: 50px 40px;
+          background: linear-gradient(
+              110.78deg,
+              rgba(255, 255, 255, 0.41) 7.01%,
+              rgba(255, 255, 255, 0.01) 106.22%
+            ),
+            linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));
+          border-radius: 8px;
+          min-height: auto;
+          z-index: 0;
+        "
+      >
+        <div
+          class="creg-glass-inner"
+          style="
+            padding: 48px 36px 40px;
+            background: linear-gradient(
+                110.78deg,
+                rgba(255, 255, 255, 0.41) 7.01%,
+                rgba(255, 255, 255, 0.01) 106.22%
+              ),
+              linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));
+            border-radius: 8px;
+            z-index: 0;
+          "
+        >
+          <div class="w-px-400 mx-auto pt-lg-0" style="z-index: 999999">
+            <div class="text-center mb-3">
+              <a routerLink="/Home" class="text-center mx-auto w-100 d-inline-block">
+                <img src="/assets/img/logo/gens-logo-color.png" alt="GENS" width="30%" />
+              </a>
+            </div>
+            <h4 class="mb-1">Create your company</h4>
+            <p class="mb-2 text-muted">Register to start using GENS HR & Payroll</p>
+
+            <div *ngIf="planId" class="alert py-2 px-3 small mb-4 text-start" role="status" [ngClass]="planSummary?.requiresPayment ? 'alert-info' : 'alert-primary'">
+              <div *ngIf="planLoading" class="mb-0">Loading plan…</div>
+              <ng-container *ngIf="!planLoading && planSummary">
+                <i class="ri ri-price-tag-3-line me-1"></i>
+                <strong>{{ planSummary.name }}</strong>
+                <span *ngIf="!planSummary.requiresPayment"> — no payment (free tier).</span>
+                <span *ngIf="planSummary.requiresPayment && planSummary.razorpayReady">
+                  — after you submit the form, Razorpay will open for recurring subscription payment.
+                </span>
+                <span *ngIf="planSummary.requiresPayment && !planSummary.razorpayReady" class="text-warning d-block mt-1">
+                  Online payment is not configured for this plan. Choose another plan or contact support.
+                </span>
+              </ng-container>
+            </div>
+
+            <form id="formCompanyReg" class="mb-4" [formGroup]="form" (ngSubmit)="register()">
+              <div class="form-floating form-floating-outline mb-3">
+                <input
+                  type="text"
+                  class="form-control"
+                  id="company_name"
+                  formControlName="tenantName"
+                  maxlength="60"
+                  [ngClass]="{ 'is-invalid': isInvalid('tenantName') }"
+                  placeholder="Company name"
+                />
+                <label for="company_name">Company name</label>
+                <div class="invalid-feedback">
+                  <span *ngIf="form.get('tenantName')?.errors?.['required']">Company name is required.</span>
+                  <span *ngIf="form.get('tenantName')?.errors?.['maxlength']">Company name cannot exceed 60 characters.</span>
+                  <span *ngIf="form.get('tenantName')?.errors?.['pattern']">Special characters are not allowed. Only letters, numbers, spaces, . - &amp; ' are permitted.</span>
+                </div>
+              </div>
+
+              <div class="form-floating form-floating-outline mb-3">
+                <input
+                  type="text"
+                  class="form-control"
+                  id="company_code"
+                  formControlName="tenantId"
+                  [ngClass]="{ 'is-invalid': isInvalid('tenantId') }"
+                  placeholder="Company code"
+                />
+                <label for="company_code">Company code</label>
+                <div class="invalid-feedback">
+                  <span *ngIf="form.get('tenantId')?.errors?.['required']">Company code is required.</span>
+                  <span *ngIf="form.get('tenantId')?.errors?.['pattern']">Only letters, numbers, - and _ are allowed. No spaces or special characters.</span>
+                </div>
+              </div>
+
+              <div class="form-floating form-floating-outline mb-3">
+                <input
+                  type="email"
+                  class="form-control"
+                  id="email"
+                  formControlName="email"
+                  [ngClass]="{ 'is-invalid': isInvalid('email') }"
+                  placeholder="Email"
+                />
+                <label for="email">Admin email</label>
+                <div class="invalid-feedback">
+                  <span *ngIf="form.get('email')?.errors?.['required']">Email is required.</span>
+                  <span *ngIf="form.get('email')?.errors?.['email'] || form.get('email')?.errors?.['pattern']">Enter a valid email address. Special characters like spaces, #, $ are not allowed.</span>
+                </div>
+              </div>
+
+              <div class="form-floating form-floating-outline mb-3 position-relative">
+                <input
+                  [type]="passwordVisible ? 'text' : 'password'"
+                  class="form-control"
+                  id="password"
+                  formControlName="password"
+                  [ngClass]="{ 'is-invalid': isInvalid('password') }"
+                  placeholder="Password"
+                />
+                <label for="password">Password</label>
+                <span
+                  class="ri creg-toggle-eye"
+                  [ngClass]="passwordVisible ? 'ri-eye-off-line' : 'ri-eye-line'"
+                  (click)="passwordVisible = !passwordVisible"
+                  role="button"
+                  tabindex="0"
+                  aria-label="Toggle password visibility"
+                ></span>
+                <div class="invalid-feedback">
+                  <span *ngIf="form.get('password')?.errors?.['required']">Password is required.</span>
+                  <span *ngIf="form.get('password')?.errors?.['minlength']">Password must be at least 8 characters.</span>
+                  <span *ngIf="form.get('password')?.errors?.['pattern'] && !form.get('password')?.errors?.['minlength']">
+                    Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (&#64;$!%*?&amp;_-#).
+                  </span>
+                </div>
+              </div>
+
+              <div class="mb-4">
+                <label class="form-label small text-muted mb-2 d-block">Company logo</label>
+                <input
+                  #fileInput
+                  class="form-control"
+                  type="file"
+                  id="formFile"
+                  accept="image/png,image/jpeg,image/jpg"
+                  (change)="onFileChange($event)"
+                />
+                <small class="text-muted d-block mt-1">PNG or JPG, max 2 MB</small>
+                <div *ngIf="previewUrl" class="mt-2 text-center">
+                  <img [src]="previewUrl" alt="Logo preview" class="creg-preview img-thumbnail" />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                class="btn btn-primary d-grid w-100"
+                [disabled]="form.invalid || planLoading || paymentOpening || (planSummary?.requiresPayment && !planSummary?.razorpayReady)"
+              >
+                <span *ngIf="!paymentOpening">{{ planSummary?.requiresPayment ? 'Continue to payment' : 'Create account' }}</span>
+                <span *ngIf="paymentOpening">Opening payment…</span>
+              </button>
+            </form>
+
+            <p class="text-center mb-0">
+              <span>Already have an account?</span>
+              <a (click)="gotoLogin()" class="link-info ms-1" style="cursor: pointer">Sign in</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

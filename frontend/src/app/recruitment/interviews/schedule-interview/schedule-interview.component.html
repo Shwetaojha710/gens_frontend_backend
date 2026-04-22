@@ -1,0 +1,78 @@
+<div class="schedule-page">
+  <section class="card" *ngIf="isLoading">
+    <div class="card-body loading-state">Loading interview plan...</div>
+  </section>
+
+  <ng-container *ngIf="!isLoading && candidate">
+    <section class="card">
+      <div class="card-body page-head">
+        <div>
+          <span class="eyebrow">Interview Scheduler</span>
+          <h2>{{ candidate.name }}</h2>
+          <p>{{ candidate.job_title }} • {{ candidate.email }} • {{ candidate.phone }}</p>
+        </div>
+        <a class="btn btn-outline-primary" routerLink="/recruitment/pipeline">Back to Pipeline</a>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-body">
+        <div class="rounds-head">
+          <div>
+            <h3>Round Plan</h3>
+            <p>The rounds below are taken from the job requirement configuration. Assign interviewer details and schedule slot for each round.</p>
+          </div>
+          <button type="button" class="btn btn-primary" (click)="saveSchedule()" [disabled]="isSaving">
+            {{ isSaving ? 'Saving...' : 'Save Schedule' }}
+          </button>
+        </div>
+
+        <div class="round-card" *ngFor="let round of interviewRounds; let i = index">
+          <div class="round-title">
+            <div>
+              <span class="round-count">Round {{ i + 1 }}</span>
+              <h4>{{ round.round_name }}</h4>
+            </div>
+            <span class="status-pill">{{ round.status || 'pending' }}</span>
+          </div>
+
+          <div class="round-grid">
+            <label>
+              <span>Interviewer Name</span>
+              <input class="form-control" type="text" [(ngModel)]="round.interviewer_name" />
+            </label>
+
+            <label>
+              <span>Interviewer Email</span>
+              <input class="form-control" type="email" [(ngModel)]="round.interviewer_email" />
+            </label>
+
+            <label>
+              <span>Mode</span>
+              <select class="form-select" [(ngModel)]="round.mode">
+                <option value="virtual">Virtual</option>
+                <option value="office">Office</option>
+                <option value="phone">Phone</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Duration</span>
+              <input class="form-control" type="number" [(ngModel)]="round.duration_minutes" />
+            </label>
+
+            <label>
+              <span>Scheduled At</span>
+              <input class="form-control" type="datetime-local" [(ngModel)]="round.scheduled_at" />
+            </label>
+
+            <label>
+              <span>Meeting Link</span>
+              <input class="form-control" type="text" [(ngModel)]="round.meeting_link" />
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+  </ng-container>
+</div>
