@@ -148,5 +148,9 @@
     .empty-full { grid-column: 1/-1; text-align: center; color: #4b5563; padding: 48px; } */
 
   
-
+.dropdown-left-1{
+  position: absolute; 
+  right: 15px;
+   transform: translate(40x, 40px);
+}
     
