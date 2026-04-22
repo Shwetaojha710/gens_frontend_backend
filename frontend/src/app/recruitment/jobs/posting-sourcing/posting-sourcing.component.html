@@ -78,7 +78,7 @@
       <div class="card h-100" >
         <div class="card-body">
           <div class="d-flex align-items-center mb-4">
-            <a href="javascript:;" class="d-flex align-items-center">
+            <a href="javascript:;" class="d-lg-flex d-sm-block d-md-block align-items-center">
               <div class="avatar me-2">
                 <img src="../../assets/img/icons/brands/react-label.png" alt="Avatar" class="rounded-circle">
               </div>
@@ -100,7 +100,7 @@
                       (click)="toggleDropdown(item?.id, $event)"
                       [attr.aria-expanded]="openDropdownId === item?.id"><i
                         class="icon-base ri ri-more-2-line icon-22px text-body-secondary"></i></button>
-                    <ul class="dropdown-menu dropdown-menu-end" [class.show]="openDropdownId === item?.id" (click)="$event.stopPropagation()">
+                    <ul class="dropdown-menu dropdown-menu-end dropdown-left-1" [class.show]="openDropdownId === item?.id" (click)="$event.stopPropagation()">
                       <li *ngIf="canPublish(item)">
                         <button type="button" class="dropdown-item waves-effect" (click)="publish(item, 'open')">
                           Publish
