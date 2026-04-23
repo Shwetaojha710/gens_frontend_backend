@@ -368,14 +368,7 @@
                       name="country" id="select2Danger" (change)="getstates($event)" disabled>
                     </ng-select>
                   </div>
-                  <div class="col-md-3">
-                    <label class="col-form-label fw-bold">State</label>
-                    <ng-select [items]="states" bindLabel="label" bindValue="value"
-                      [(ngModel)]="personalDetails['state']" [multiple]="false" placeholder="Select state" name="state"
-                      id="select2Danger" (change)="getcity($event)" disabled>
-                    </ng-select>
-                  </div>
-                  <div class="col-md-3">
+                    <div class="col-md-3">
                     <label class="col-form-label fw-bold">PIN Code</label>
                     <input type="number" class="form-control" placeholder="Enter PIN Code"
                       [(ngModel)]="personalDetails.pinCode" name="pinCode" required #pinCodeRef="ngModel" disabled />
@@ -384,11 +377,23 @@
                     </small>
                   </div>
                   <div class="col-md-3">
+                    <label class="col-form-label fw-bold">State</label>
+                        <input type="text" class="form-control" placeholder="Enter state"
+                  [(ngModel)]="personalDetails['state']" name="state"  #stateRef="ngModel" disabled="true"/>
+                    <!-- <ng-select [items]="states" bindLabel="label" bindValue="value"
+                      [(ngModel)]="personalDetails['state']" [multiple]="false" placeholder="Select state" name="state"
+                      id="select2Danger" (change)="getcity($event)" disabled>
+                    </ng-select> -->
+                  </div>
+
+                  <div class="col-md-3">
                     <label class="col-form-label fw-bold">City</label>
-                    <ng-select [items]="cities" bindLabel="label" bindValue="value"
+                     <input type="text" class="form-control" placeholder="Enter City"
+                  [(ngModel)]="personalDetails['city']" name="city"  #cityRef="ngModel"  disabled="true" />
+                    <!-- <ng-select [items]="cities" bindLabel="label" bindValue="value"
                       [(ngModel)]="personalDetails['city']" [multiple]="false" placeholder="Select City" name="city"
                       id="select2Danger" disabled>
-                    </ng-select>
+                    </ng-select> -->
                   </div>
 
                   <div class="col-md-6">

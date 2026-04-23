@@ -6,16 +6,16 @@
     <button type="button" class="btn btn-primary" (click)="saveData(); downloadDoc()">
       <i class="fa fa-download mx-2"></i> Download Word
     </button>
-    <button type="button" class="btn btn-danger" (click)="saveData(); generateServerPdf()" [disabled]="isGeneratingPdf">
+    <!-- <button type="button" class="btn btn-danger" (click)="saveData(); generateServerPdf()" [disabled]="isGeneratingPdf">
       <i class="ri ri-file-pdf-line mx-2"></i>
       <span *ngIf="isGeneratingPdf">Generating...</span>
       <span *ngIf="!isGeneratingPdf">Download PDF</span>
-    </button>
-    <button type="button" class="btn btn-dark" (click)="generateAllLettersPdf()" [disabled]="isGeneratingAllPdf">
+    </button> -->
+    <!-- <button type="button" class="btn btn-dark" (click)="generateAllLettersPdf()" [disabled]="isGeneratingAllPdf">
       <i class="ri ri-stack-line mx-2"></i>
       <span *ngIf="isGeneratingAllPdf">Generating All...</span>
       <span *ngIf="!isGeneratingAllPdf">Download All Letters</span>
-    </button>
+    </button> -->
   </div>
 </div>
 

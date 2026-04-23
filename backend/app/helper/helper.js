@@ -156,45 +156,99 @@ Helper.newDateFormat = (date) => {
 
 Helper.applySandwichRule = (leaveRecords, holidays, startDate, endDate) => {
   let updatedRecords = [...leaveRecords];
+  if (!leaveRecords.length) return updatedRecords;
 
-  // Build a Set of all leave dates for quick lookup
+  const holidaySet = new Set(holidays || []);
+  const isNonWorkingDay = (date) => {
+    const dateKey = date.format("YYYY-MM-DD");
+    return holidaySet.has(dateKey) || date.day() === 0 || date.day() === 6;
+  };
+  const getSandwichStatus = (prevLeave, nextLeave) => {
+    if (prevLeave?.status === "approved" && nextLeave?.status === "approved") {
+      return "approved";
+    }
+    if (
+      prevLeave?.status === "recommended" ||
+      nextLeave?.status === "recommended"
+    ) {
+      return "recommended";
+    }
+    return "pending";
+  };
+  const getSandwichLeaveType = (prevLeave, nextLeave) => {
+    if (prevLeave?.leaveTypeId && prevLeave.leaveTypeId === nextLeave?.leaveTypeId) {
+      return prevLeave.leaveTypeId;
+    }
+    return prevLeave?.leaveTypeId || nextLeave?.leaveTypeId || leaveRecords[0].leaveTypeId;
+  };
+
+  // Build leave date indexes for quick lookup.
   let leaveDates = new Set();
+  let leaveByDate = new Map();
   for (const leave of leaveRecords) {
     let start = moment(leave.fromDate);
-    let end = moment(leave.toDate);
-    for (let d = moment(start); d <= end; d.add(1, "days")) {
-      leaveDates.add(d.format("YYYY-MM-DD"));
+    let end = leave.toDate ? moment(leave.toDate) : moment(leave.fromDate);
+    for (let d = moment(start); d.isSameOrBefore(end); d.add(1, "days")) {
+      const dateKey = d.format("YYYY-MM-DD");
+      leaveDates.add(dateKey);
+      leaveByDate.set(dateKey, leave);
     }
   }
 
-  for (let d = moment(startDate); d <= endDate; d.add(1, "days")) {
+  for (let d = moment(startDate); d.isSameOrBefore(endDate); d.add(1, "days")) {
     const dateKey = d.format("YYYY-MM-DD");
 
     // skip if already leave
     if (leaveDates.has(dateKey)) continue;
 
     // check if this day is a weekend or a tenant holiday
-    const isHoliday = holidays.includes(dateKey) || d.day() === 0 || d.day() === 6;
-    if (!isHoliday) continue;
+    if (!isNonWorkingDay(d)) continue;
 
     // sandwich condition → leave must exist just before & just after
-    const prevDay = moment(d).subtract(1, "days").format("YYYY-MM-DD");
-    const nextDay = moment(d).add(1, "days").format("YYYY-MM-DD");
-
-    if (leaveDates.has(prevDay) && leaveDates.has(nextDay)) {
-      updatedRecords.push({
-        id: uuidv4(),
-        employeeId: leaveRecords[0].employeeId,
-        leaveTypeId: leaveRecords[0].leaveTypeId,
-        fromDate: dateKey,
-        toDate: dateKey,
-        duration_type: "full",
-        isSandwich: true,
-        status: leaveRecords[0].status,
-        tenantId: leaveRecords[0].tenantId,
-      });
-      leaveDates.add(dateKey); // mark it as leave for further checks
+    let prev = moment(d).subtract(1, "days");
+    let prevLeave = null;
+    while (prev.isSameOrAfter(startDate)) {
+      const prevKey = prev.format("YYYY-MM-DD");
+      if (leaveDates.has(prevKey)) {
+        prevLeave = leaveByDate.get(prevKey);
+        break;
+      }
+      if (!isNonWorkingDay(prev)) break;
+      prev.subtract(1, "days");
     }
+
+    let next = moment(d).add(1, "days");
+    let nextLeave = null;
+    while (next.isSameOrBefore(endDate)) {
+      const nextKey = next.format("YYYY-MM-DD");
+      if (leaveDates.has(nextKey)) {
+        nextLeave = leaveByDate.get(nextKey);
+        break;
+      }
+      if (!isNonWorkingDay(next)) break;
+      next.add(1, "days");
+    }
+
+    if (!prevLeave || !nextLeave) continue;
+
+    const sandwichLeave = {
+      id: uuidv4(),
+      employeeId: prevLeave.employeeId || nextLeave.employeeId || leaveRecords[0].employeeId,
+      leaveTypeId: getSandwichLeaveType(prevLeave, nextLeave),
+      fromDate: dateKey,
+      toDate: dateKey,
+      duration_type: "full",
+      to_duration_type: "full",
+      days: 1,
+      isSandwich: true,
+      status: getSandwichStatus(prevLeave, nextLeave),
+      tenantId: prevLeave.tenantId || nextLeave.tenantId || leaveRecords[0].tenantId,
+      branchId: prevLeave.branchId || nextLeave.branchId || leaveRecords[0].branchId,
+    };
+
+    updatedRecords.push(sandwichLeave);
+    leaveDates.add(dateKey);
+    leaveByDate.set(dateKey, sandwichLeave);
   }
 
   return updatedRecords;
@@ -353,6 +407,12 @@ const addDays = (dateStr, days) => {
 };
 
 Helper.adjustLeaveRecords = (leaveBalanceArr, leaveRecordsArr) => {
+  leaveRecordsArr.forEach((rec) => {
+    if (rec.status !== "approved") {
+      rec.leavestatus = "unpaid";
+    }
+  });
+
   leaveBalanceArr.forEach((balance) => {
     const allowed = Number(balance.remainingLeaves ?? 0);
 

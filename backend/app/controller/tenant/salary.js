@@ -1135,12 +1135,13 @@ exports.calculateAttendance = async (req, res) => {
       const perDaySalary = perMonthSalary / totalDaysInMonth;
 
       // console.clear();
-      // Approved Leaves Map
+      // Applied leaves are considered for sandwich detection; only approved
+      // leave is later treated as paid leave after balance adjustment.
       let leaveRecords = await leave_application.findAll({
         where: {
           employeeId: employeeId[i],
           branchId,
-          status: "approved",
+          status: { [Op.in]: ["pending", "recommended", "approved"] },
           [Op.or]: [
             {
               fromDate: {
@@ -1281,10 +1282,28 @@ exports.calculateAttendance = async (req, res) => {
         .filter((item) => !holidayMap[item.date]?.isRestrictedHoliday)
         .map((item) => item.date);
 
+      const shiftWeekOffDates = [];
+      for (let d = moment(startDate); d.isSameOrBefore(endDate); d.add(1, "days")) {
+        const shift = await Shift.findOne({
+          where: {
+            day_of_week: d.format("dddd"),
+            branchId,
+            status: "active",
+            shift: PersonalInfo?.shift_id,
+            tenantId,
+          },
+          raw: true,
+        });
+        if (shift?.is_week_off) {
+          shiftWeekOffDates.push(d.format("YYYY-MM-DD"));
+        }
+      }
+      const sandwichNonWorkingDays = [...new Set([...holidays, ...shiftWeekOffDates])];
+
       // Apply sandwich rule
       let applysandwitchleave = Helper.applySandwichRule(
         leaveRecords.filter((item) => !item.isRestrictedHolidayLeave),
-        holidays,
+        sandwichNonWorkingDays,
         startDate,
         endDate,
       );
@@ -1294,7 +1313,7 @@ exports.calculateAttendance = async (req, res) => {
           .filter((item) => item.isRestrictedHolidayLeave)
           .map((item) => ({
             ...item,
-            leavestatus: "approved",
+            leavestatus: item.status === "approved" ? "approved" : "unpaid",
           })),
       ];
       const leaveDateMap1 = {};
@@ -1324,7 +1343,7 @@ exports.calculateAttendance = async (req, res) => {
         .filter((item) => item.isRestrictedHolidayLeave)
         .map((item) => ({
           ...item,
-          leavestatus: "approved",
+          leavestatus: item.status === "approved" ? "approved" : "unpaid",
         }));
       leaveRecords = [
         ...Helper.adjustLeaveRecords(leavebalance, nonRestrictedLeaves),

@@ -1,0 +1,1023 @@
+// GENS HR Management System - Entity Relationship Diagram
+// Generated from Sequelize models
+
+Project GENS {
+  database_type: 'PostgreSQL'
+  Note: 'Multi-tenant HR, Payroll, Attendance, Leave, ATS platform'
+}
+
+// ─────────────────────────────────────────────
+// CORE / TENANT
+// ─────────────────────────────────────────────
+
+Table tenants {
+  id uuid [pk]
+  companyName varchar
+  companyAddress text
+  image varchar
+  companyCode varchar [unique]
+  status varchar [default: 'active', note: 'active | inactive']
+  plan varchar [default: 'basic']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table subscriptions {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  plan varchar
+  status varchar [default: 'active', note: 'active | expired | cancelled']
+  startsAt timestamp
+  endsAt timestamp
+  seats integer
+  notes text
+  metadata jsonb
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table plan_masters {
+  id uuid [pk]
+  name varchar [unique]
+  code varchar [unique]
+  price decimal
+  billingCycle varchar [note: 'monthly | yearly | one_time']
+  durationDays integer
+  maxUsers integer
+  description text
+  status varchar [default: 'active']
+  metadata jsonb
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table users {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  name varchar
+  email varchar [unique]
+  password varchar
+  role varchar [note: 'admin | hr | employee | superadmin']
+  status varchar [default: 'active']
+  token text
+  webcamtoken text
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table branches {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  name varchar
+  description text
+  latitude decimal
+  longitude decimal
+  image varchar
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+// ─────────────────────────────────────────────
+// ORGANISATION STRUCTURE
+// ─────────────────────────────────────────────
+
+Table departments {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  name varchar
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table designations {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  department uuid [ref: > departments.id]
+  name varchar
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table employment_types {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  name varchar
+  duration_type varchar [note: 'full_paid | half_paid']
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table shifts {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  shift varchar [note: 'Day | Night | Afternoon | General']
+  day_of_week varchar [note: 'Monday–Sunday']
+  startTime time
+  endTime time
+  workingHours decimal
+  is_week_off boolean [default: false]
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+// ─────────────────────────────────────────────
+// EMPLOYEE
+// ─────────────────────────────────────────────
+
+Table emp_personals {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  firstName varchar
+  lastName varchar
+  email varchar [unique]
+  mobile varchar
+  alternateMobile varchar
+  permanentAddress varchar
+  currentAddress varchar
+  dateOfBirth date
+  age integer
+  gender varchar [note: 'Male | Female | Other']
+  martialStatus varchar [note: 'Single | Married | Divorced | Separated | Widowed']
+  adhaarNo varchar
+  panNo varchar
+  fatherName varchar
+  motherName varchar
+  guarantorName varchar
+  bloodGroup varchar [note: 'A+ | A- | B+ | B- | AB+ | AB- | O+ | O-']
+  nationality varchar
+  pinCode varchar
+  state varchar
+  city varchar
+  country varchar
+  role varchar
+  emp_status varchar [default: 'pending']
+  status varchar [default: 'active']
+  joiningDate date
+  exitDate date
+  empCode varchar
+  shift_id varchar
+  designationId uuid [ref: > designations.id]
+  departmentId uuid [ref: > departments.id]
+  empType uuid [ref: > employment_types.id]
+  reportingPersonId uuid [ref: > emp_personals.id]
+  profileImage varchar
+  token text
+  deviceId varchar
+  deviceToken text
+  isLocation boolean [default: false]
+  isofflineAtt boolean [default: false]
+  isofflineAllTimeAtt boolean [default: false]
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table work_experiences {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  employeeId uuid [ref: > emp_personals.id]
+  companyName varchar
+  designation varchar
+  description text
+  from date
+  to date
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table documents {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  employeeId uuid [ref: > emp_personals.id]
+  type varchar
+  doc_type varchar
+  doc_name varchar
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table document_types {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  type varchar
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table bank_accounts {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  employeeId uuid [ref: > emp_personals.id]
+  accountHolderName varchar
+  bankName varchar
+  bankBranch varchar
+  accountNumber varchar
+  ifscCode varchar
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table letter_datas {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  employeeId uuid [ref: > emp_personals.id]
+  type varchar [note: 'nda | appointment | relieving | offer']
+  data json
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+// ─────────────────────────────────────────────
+// ATTENDANCE
+// ─────────────────────────────────────────────
+
+Table attendances {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  employeeId uuid [ref: > emp_personals.id]
+  date date
+  month integer
+  year integer
+  check_in_time varchar
+  check_out_time varchar
+  Inlatitude varchar
+  Outlongitude varchar
+  Inlongitude varchar
+  Outlatitude varchar
+  check_in_img varchar
+  check_out_img varchar
+  ip_address varchar
+  is_present boolean [default: false]
+  is_comp_off_approve boolean [default: false]
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table attendance_settings {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  lateAllowanceMin integer [default: 3]
+  graceMinutes integer [default: 15]
+  halfDayThreshold integer [default: 45]
+  halfdayToAbsentMin integer [default: 4]
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table attendance_regularizations {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  employeeId uuid [ref: > emp_personals.id]
+  attendanceDate date
+  inTimeRequested varchar
+  outTimeRequested varchar
+  reason text
+  status varchar [default: 'pending', note: 'pending | approved | rejected']
+  approverId uuid [ref: > emp_personals.id]
+  approvedAt timestamp
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table comp_offs {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  employeeId uuid [ref: > emp_personals.id]
+  attendanceId uuid [ref: > attendances.id]
+  earnedDate date
+  expiryDate date
+  totalDays decimal
+  usedDays decimal [default: 0]
+  remainingDays decimal [default: 1]
+  status varchar [default: 'active', note: 'active | expired | used']
+  approval_status varchar [default: 'approved']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table device_location_logs {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  employeeId uuid [ref: > emp_personals.id]
+  device_id varchar
+  device_os varchar [note: 'A | I | W']
+  latitude double
+  longitude double
+  altitude double
+  accuracy double
+  heading double
+  speed double
+  mode varchar [note: 'foreground | background']
+  network_mode varchar
+  tracked_at timestamp
+  address varchar
+  visit_place varchar
+  purpose varchar
+  remark varchar
+  feedback varchar
+  location_type varchar [default: 'normal']
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+// ─────────────────────────────────────────────
+// LEAVE
+// ─────────────────────────────────────────────
+
+Table leave_masters {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  leaveName varchar
+  leaveCode varchar
+  isPaid boolean [default: true]
+  allowedPerYear integer
+  carryForward boolean
+  maxCarryForward integer [default: 0]
+  enCashable boolean [default: false]
+  genderRestriction varchar [note: 'male | female | all']
+  requiresApproval boolean [default: true]
+  applyBeforeDays integer [default: 0]
+  description text
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table leave_applications {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  employeeId uuid [ref: > emp_personals.id]
+  leaveTypeId uuid [ref: > leave_masters.id]
+  compOffId uuid [ref: > comp_offs.id]
+  fromDate date
+  toDate date
+  duration_type varchar [note: 'full | first_half | second_half | short_leave']
+  to_duration_type varchar [note: 'full | first_half | second_half | short_leave']
+  days decimal
+  reason text
+  status varchar [default: 'pending', note: 'pending | recommended | approved | rejected | escalate | self_declined']
+  approverId uuid [ref: > emp_personals.id]
+  recommendedId uuid [ref: > emp_personals.id]
+  canceledId uuid [ref: > emp_personals.id]
+  appliedOn date
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table leave_balances {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  employeeId uuid [ref: > emp_personals.id]
+  leaveTypeId uuid [ref: > leave_masters.id]
+  year integer
+  month integer
+  totalAssigned decimal
+  usedLeaves decimal [default: 0]
+  carryForwarded decimal [default: 0]
+  remainingLeaves decimal [default: 0]
+  prevremainingLeaves decimal
+  prevusedLeaves decimal [default: 0]
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table holidays {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  holiday_name varchar
+  date date
+  holiday_type varchar
+  image varchar
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table holiday_types {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  name varchar
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+// ─────────────────────────────────────────────
+// PAYROLL / SALARY
+// ─────────────────────────────────────────────
+
+Table master_components {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  component_name varchar
+  value decimal
+  value_type varchar [note: 'fixed | percentage | basic_dependent | is_special']
+  amount decimal
+  dependent_component jsonb
+  component_description text
+  component_type varchar [note: 'payable | deductible | reimbursable']
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table basics {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  employeeId uuid [ref: > emp_personals.id]
+  componentId uuid [ref: > master_components.id]
+  name varchar
+  type varchar
+  dependent varchar
+  amount decimal
+  typeValue decimal
+  finalAmount decimal
+  finalCTC decimal
+  startDate date
+  endDate date
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table allowances {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  employeeId uuid [ref: > emp_personals.id]
+  componentId uuid [ref: > master_components.id]
+  name varchar
+  type varchar
+  dependent uuid
+  amount decimal
+  typeValue decimal
+  finalAmount decimal
+  startDate date
+  endDate date
+  endPeriodType varchar
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table deductions {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  employeeId uuid [ref: > emp_personals.id]
+  componentId uuid [ref: > master_components.id]
+  name varchar
+  type varchar
+  dependent uuid
+  amount decimal
+  typeValue decimal
+  finalAmount decimal
+  startDate date
+  endDate date
+  endPeriodType varchar
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table bills {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  employeeId uuid [ref: > emp_personals.id]
+  bill_id integer [unique, note: 'auto-increment sequence']
+  year integer
+  month integer
+  bill_date date
+  net_amount float
+  full_days varchar
+  absent_days varchar
+  leave_taken varchar
+  allowed_leave varchar
+  half_day varchar
+  late_attendance varchar
+  hours_worked varchar
+  bill_desc text
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table bill_infos {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  employeeId uuid [ref: > emp_personals.id]
+  bill_id integer
+  year integer
+  month integer
+  bill_date date
+  pay_component_id uuid [ref: > master_components.id]
+  pay_code varchar
+  amount varchar
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table salary_docs {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  year integer
+  month integer
+  chequeNo varchar
+  bill_date date
+  net_amount float
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table salary_orders {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  component varchar
+  order integer
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table currencies {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  name varchar
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+// ─────────────────────────────────────────────
+// REIMBURSEMENTS
+// ─────────────────────────────────────────────
+
+Table reimbursements {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  employeeId uuid [ref: > emp_personals.id]
+  fromDate date
+  toDate date
+  amount integer
+  remark text
+  status varchar [default: 'pending']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table reimbursement_files {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  reimbursementId uuid [ref: > reimbursements.id]
+  image varchar
+  doc_type varchar
+  status varchar [default: 'pending']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+// ─────────────────────────────────────────────
+// RECRUITMENT / ATS
+// ─────────────────────────────────────────────
+
+Table candidates {
+  id uuid [pk]
+  name varchar
+  email varchar [unique]
+  phone varchar
+  current_company varchar
+  skills text [note: 'stored as JSON string']
+  resume_url text
+  experience varchar
+  current_ctc varchar
+  expected_ctc varchar
+  notice_period varchar
+  cover_letter text
+  remark text
+  last_company varchar
+  current_location varchar
+  relocate varchar
+  home_town varchar
+  roles_and_responsibilities text
+  project text
+  tools text
+  offer_in_hand text
+  family_background text
+  highest_qualification varchar
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table job_requirements {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  job_id varchar
+  job_title varchar
+  slug varchar
+  emp_type uuid [ref: > employment_types.id]
+  department uuid [ref: > departments.id]
+  designation varchar
+  mode varchar
+  location varchar
+  candidate_preference varchar [note: 'male | female | both']
+  interview_round jsonb
+  qualification varchar
+  no_of_opening varchar
+  skills text [note: 'stored as JSON string']
+  experience varchar
+  budget_ctc varchar
+  notice_period varchar
+  job_description text
+  url text
+  token varchar
+  expires_days integer [default: 0]
+  expires_at timestamp
+  status varchar [default: 'draft']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table applications {
+  id uuid [pk]
+  candidate_id uuid [ref: > candidates.id]
+  job_posting_id uuid [ref: > job_requirements.id]
+  stage varchar [default: 'candidate_applied']
+  status varchar [default: 'submitted']
+  applied_at timestamp
+  ats_status varchar [default: 'queued']
+  ats_score float
+  manual_score float
+  final_score float
+  confirmation_email_sent boolean [default: false]
+  createdAt timestamp
+  updatedAt timestamp
+
+  indexes {
+    (candidate_id, job_posting_id) [unique]
+  }
+}
+
+Table candidate_ats_scores {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  application_id uuid [unique, ref: > applications.id]
+  ats_score float [default: 0]
+  manual_score float [default: 0]
+  final_score float [default: 0]
+  notes text
+  shortlisted boolean [default: false]
+  scanned_at timestamp
+  scanned_by uuid
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table round_types {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  name varchar
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table interview_rounds {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  round_name varchar
+  round_type uuid [ref: > round_types.id]
+  order_sequence integer
+  duration_minutes integer
+  is_mandatory boolean
+  status varchar [default: 'draft']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table candidate_interview_rounds {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  application_id uuid [ref: > applications.id]
+  round_id uuid [ref: > interview_rounds.id]
+  round_name varchar
+  round_type varchar
+  sequence integer [default: 1]
+  interviewer_id uuid [ref: > interview_panel_users.id]
+  interviewer_name varchar
+  interviewer_email varchar
+  scheduled_at timestamp
+  duration_minutes integer
+  mode varchar
+  meeting_link text
+  status varchar [default: 'pending', note: 'pending | scheduled | completed | cancelled']
+  feedback_submitted boolean [default: false]
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table candidate_interview_feedback {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  application_id uuid [ref: > applications.id]
+  round_id uuid [ref: > interview_rounds.id]
+  interviewer_name varchar
+  interviewer_email varchar
+  rating float [default: 0]
+  recommendation varchar [default: 'hold', note: 'selected | hold | rejected']
+  strengths text
+  concerns text
+  notes text
+  submitted_at timestamp
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table interview_panel_users {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  first_name varchar
+  last_name varchar
+  email varchar
+  mobile_no varchar
+  department uuid [ref: > departments.id]
+  designation uuid [ref: > designations.id]
+  gender varchar [note: 'male | female | other']
+  status varchar [default: 'active']
+  password varchar
+  token text
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table offer_letters {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  firstName varchar
+  lastName varchar
+  fatherName varchar
+  gender varchar [note: 'Male | Female | Other']
+  dob date
+  aadhaarNo varchar
+  mobileNo varchar
+  email varchar
+  permanentAddress text
+  designation varchar
+  department varchar
+  joiningDate date
+  offerDate date
+  refNo varchar
+  createdBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table skills {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  name varchar
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+// ─────────────────────────────────────────────
+// PREFIXES / MISC SETTINGS
+// ─────────────────────────────────────────────
+
+Table prefixes {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  name varchar
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+// ─────────────────────────────────────────────
+// AUDIT / AUTH
+// ─────────────────────────────────────────────
+
+Table logs {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  employeeId uuid [ref: > emp_personals.id]
+  actionType varchar
+  referenceId uuid
+  oldValue json
+  newValue json
+  remarks varchar
+  ipAddress varchar
+  createdBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+  deletedAt timestamp [note: 'soft delete']
+}
+
+Table otps {
+  id uuid [pk]
+  deviceId varchar
+  type varchar
+  otp bigint
+  expiry_time varchar
+  phone varchar
+  ip varchar
+  created_by uuid
+  status boolean [default: true]
+}
+
+// ─────────────────────────────────────────────
+// REFERENCE / GEO DATA
+// ─────────────────────────────────────────────
+
+Table countries {
+  id integer [pk, increment]
+  shortname varchar [unique]
+  name varchar
+  phonecode integer
+  branchId uuid
+}
+
+Table states {
+  id integer [pk, increment]
+  name varchar
+  country_id integer [ref: > countries.id]
+  branchId uuid
+}
+
+Table cities {
+  id integer [pk, increment]
+  name varchar
+  state_id integer [ref: > states.id]
+  branchId uuid
+}
+
+Table pin_code_master {
+  id varchar [pk]
+  office_name varchar
+  pin_code bigint
+  division_name varchar
+  circle_name varchar
+  taluka varchar
+  district_name varchar
+  state_name varchar
+}
+
+// ─────────────────────────────────────────────
+// LANDING PAGE
+// ─────────────────────────────────────────────
+
+Table landing_contact_submissions {
+  id uuid [pk]
+  fullName varchar
+  email varchar
+  message text
+  ipAddress varchar
+  userAgent varchar
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table landing_site_contents {
+  id uuid [pk]
+  slug varchar [unique, default: 'default']
+  payload jsonb [default: '{}']
+  createdAt timestamp
+  updatedAt timestamp
+}

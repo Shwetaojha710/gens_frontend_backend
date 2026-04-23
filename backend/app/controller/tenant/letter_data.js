@@ -18,11 +18,27 @@ const fmtDate = (dateStr) => {
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return '';
   const day = d.getDate();
-  const month = d.toLocaleString('en-US', { month: 'long' });
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const year = d.getFullYear();
   const v = day % 100;
-  const suffix = (v >= 11 && v <= 13) ? 'TH' : (['TH','ST','ND','RD','TH','TH','TH','TH','TH','TH'][day % 10]);
-  return `${day}${suffix} ${month}, ${year}`;
+  const suf = (v >= 11 && v <= 13) ? 'th' : (['th','st','nd','rd','th','th','th','th','th','th'][day % 10]);
+  return `${day}${suf} ${months[d.getMonth()]}, ${year}`;
+};
+
+// Returns pdfmake inline text array with raised superscript ordinal (e.g. 22ⁿᵈ April, 2026)
+const fmtDatePdf = (dateStr) => {
+    if (!dateStr) return [{ text: '___' }];
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return [{ text: String(dateStr) }];
+    const day = d.getDate();
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const v = day % 100;
+    const suf = (v >= 11 && v <= 13) ? 'th' : (['th','st','nd','rd','th','th','th','th','th','th'][day % 10]);
+    return [
+        { text: String(day) },
+        { text: suf, fontSize: 7, baseline: 4 },
+        { text: ` ${months[d.getMonth()]}, ${d.getFullYear()}` }
+    ];
 };
 
 exports.saveLetterData = async (req, res) => {
@@ -121,10 +137,12 @@ exports.getLetterData = async (req, res) => {
 };
 
 const getLetterheadBase64 = (type) => {
-    const imgFile = type === 'offer' ? 'Letterhead-1.png' : 'Letterhead-2.png';
+    // appointment letter has no letterhead (matches Angular frontend behavior)
+    // offer and relieving both use Letterhead-2.png
+    if (type === 'appointment') return null;
     const tryPaths = [
-        path.join(__dirname, '../../../../frontend/assets/img', imgFile),
-        path.join(__dirname, '../../../../frontend/dist/forntend/browser/assets/img', imgFile)
+        path.join(__dirname, '../../../../frontend/assets/img', 'Letterhead-2.png'),
+        path.join(__dirname, '../../../../frontend/dist/forntend/browser/assets/img', 'Letterhead-2.png')
     ];
     for (const p of tryPaths) {
         try { return `data:image/png;base64,${fs.readFileSync(p).toString('base64')}`; } catch (_) {}
@@ -169,8 +187,8 @@ const buildLetterDoc = (type, emp, data, designation, department, tenant, letter
     const fmt = (n) => Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
     if (type === 'offer') {
-        const offerDate = fmtDate(data.offerDate || data.date);
-        const joiningDate = fmtDate(emp.joiningDate || data.joiningDate);
+        const offerDateNodes = fmtDatePdf(data.offerDate || data.date);
+        const joiningDateNodes = fmtDatePdf(emp.joiningDate || data.joiningDate);
         const refNo = `Quaere/Emp/Offer/${data.refNo || ''}`;
         return {
             fileName: `offer_letter_${emp.empCode || empName.replace(/ /g, '_')}_${Date.now()}.pdf`,
@@ -178,7 +196,7 @@ const buildLetterDoc = (type, emp, data, designation, department, tenant, letter
                 content: [
                     { columns: [
                         { text: `Ref: ${refNo}`, bold: true, fontSize: 11 },
-                        { text: `Dated: ${offerDate}`, bold: true, fontSize: 11, alignment: 'right' }
+                        { text: ['Dated: ', ...offerDateNodes], bold: true, fontSize: 11, alignment: 'right' }
                     ], margin: [0, 20, 0, 20] },
                     { stack: [
                         { text: empName, bold: true, fontSize: 11 },
@@ -187,7 +205,7 @@ const buildLetterDoc = (type, emp, data, designation, department, tenant, letter
                     ], margin: [0, 0, 0, 20] },
                     { text: `Dear ${emp.firstName},`, bold: true, margin: [0, 0, 0, 10] },
                     { text: `With reference to your application and subsequent interview with us, we are pleased to offer you employment in our Company as ${designationName} in the ${data.department || ''} at our Head Office – ${companyAddress}, as per the mutually agreed terms and conditions discussed with you at the time of interview.`, fontSize: 11, margin: [0, 0, 0, 8] },
-                    { text: `You are requested to report for joining on or before ${joiningDate}.`, fontSize: 11, margin: [0, 0, 0, 8] },
+                    { text: ['You are requested to report for joining on or before ', ...joiningDateNodes, '.'], fontSize: 11, margin: [0, 0, 0, 8] },
                     { text: 'You are advised to submit the following documents at the time of joining:', fontSize: 11, margin: [0, 0, 0, 5] },
                     { ol: [
                         'Three Latest passport size color photographs.',
@@ -218,7 +236,7 @@ const buildLetterDoc = (type, emp, data, designation, department, tenant, letter
         };
     }
 
-    if (type === 'appointment') {
+    if (type == 'appointment') {
         const rawJoining = data.joiningDate || emp.joiningDate || '';
         const joiningFmt = rawJoining
             ? (function() { var d = new Date(rawJoining); return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); })()
@@ -357,34 +375,34 @@ const buildLetterDoc = (type, emp, data, designation, department, tenant, letter
         };
     }
 
-    if (type === 'relieving') {
-        const relievingDate = fmtDate(data.relievingDate);
-        const joiningDate = fmtDate(data.joiningDate || emp.joiningDate);
+    if (type == 'relieving') {
         const refNo = data.refNo || '';
         const salutation = emp.gender === 'Female' ? 'Ms.' : 'Mr.';
-        const todayDate = fmtDate(new Date().toISOString());
+        const rDateNodes = fmtDatePdf(data.relievingDate);
+        const jDateNodes = fmtDatePdf(data.joiningDate || emp.joiningDate);
+        const todayNodes = fmtDatePdf(new Date().toISOString());
         return {
             fileName: `relieving_letter_${emp.empCode || empName.replace(/ /g, '_')}_${Date.now()}.pdf`,
             doc: Object.assign({ pageSize: 'A4', pageMargins: margins }, bg, {
                 content: [
                     { columns: [
-                        { text: `Ref: Quaere/Emp/Relieving/${refNo}`, bold: true, fontSize: 11 },
-                        { text: `Dated: ${relievingDate}`, bold: true, fontSize: 11, alignment: 'right' }
-                    ], margin: [0, 0, 0, 15] },
+                        { text: `Ref: Quaere/Emp/Relieving/${refNo}`, bold: true, fontSize: 10 },
+                        { text: ['Dated: ', ...rDateNodes], bold: true, fontSize: 10, alignment: 'right' }
+                    ], margin: [0, 0, 0, 12] },
                     { stack: [
-                        { text: empName, fontSize: 11 },
-                        { text: [{ text: `${salutationPrefix} ` }, { text: emp.fatherName || '', bold: true }], fontSize: 11 },
-                        { text: emp.permanentAddress || '', fontSize: 11 }
-                    ], margin: [0, 0, 0, 20] },
-                    { text: [{ text: 'Subject: ' }, { text: 'Relieving Cum Experience Letter', bold: true, decoration: 'underline' }], fontSize: 11, margin: [0, 0, 0, 15] },
-                    { text: `Dear ${salutation} ${empName},`, bold: true, fontSize: 11, margin: [0, 0, 0, 12] },
-                    { text: `You are hereby relieved from the services of the company by the closing hours of ${relievingDate}.`, fontSize: 11, margin: [0, 0, 0, 8] },
-                    { text: `We wish to place on record that you had been under the employment from ${joiningDate} to ${relievingDate} with the current position as ${designationName || '_______________'}.`, fontSize: 11, margin: [0, 0, 0, 8] },
-                    { text: 'All the dues will be paid to you as Full & Final Settlement.', fontSize: 11, margin: [0, 0, 0, 8] },
-                    { text: 'We thank you for your contribution to the Company and wish you all success in your future endeavors.', fontSize: 11, margin: [0, 0, 0, 40] },
-                    { text: 'With warm regards,', fontSize: 11, margin: [0, 0, 0, 20] },
-                    { text: 'Human Resource Department', bold: true, fontSize: 11, margin: [0, 0, 0, 3] },
-                    { text: `Date: ${todayDate}`, fontSize: 11 }
+                        { text: empName, fontSize: 10 },
+                        { text: [{ text: `${salutationPrefix} ` }, { text: emp.fatherName || '', bold: true }], fontSize: 10 },
+                        { text: emp.permanentAddress || '', fontSize: 10 }
+                    ], margin: [0, 0, 0, 18] },
+                    { text: [{ text: 'Subject: ' }, { text: 'Relieving Cum Experience Letter', bold: true, decoration: 'underline' }], fontSize: 10, margin: [0, 0, 0, 12] },
+                    { text: `Dear ${salutation} ${empName},`, bold: true, fontSize: 10, margin: [0, 0, 0, 10] },
+                    { text: ['You are hereby relieved from the services of the company by the closing hours of ', ...rDateNodes, '.'], fontSize: 10, margin: [0, 0, 0, 7] },
+                    { text: ['We wish to place on record that you had been under the employment from ', ...jDateNodes, ' to ', ...rDateNodes, ` with the current position as ${designationName || '_______________'}.`], fontSize: 10, margin: [0, 0, 0, 7] },
+                    { text: 'All the dues will be paid to you as Full & Final Settlement.', fontSize: 10, margin: [0, 0, 0, 7] },
+                    { text: 'We thank you for your contribution to the Company and wish you all success in your future endeavors.', fontSize: 10, margin: [0, 0, 0, 35] },
+                    { text: 'With warm regards,', fontSize: 10, margin: [0, 0, 0, 18] },
+                    { text: 'Human Resource Department', bold: true, fontSize: 10, margin: [0, 0, 0, 3] },
+                    { text: ['Date: ', ...todayNodes], fontSize: 10 }
                 ],
                 defaultStyle: { font: 'Roboto' }
             })
