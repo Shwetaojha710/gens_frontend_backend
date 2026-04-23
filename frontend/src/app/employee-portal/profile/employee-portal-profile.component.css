@@ -1,8 +1,29 @@
+@import '../employee-portal-glass.css';
+
+/* Align with employee portal shell: blues, sidebar tint, teal accent, amber secondary. */
+.ep-prof {
+  --ep-prof-primary: #005fa8;
+  --ep-prof-primary-dark: #0a3d6b;
+  --ep-prof-teal: #00a884;
+  --ep-prof-amber: #d97706;
+  --ep-prof-amber-soft: #fff7e8;
+  --ep-prof-muted: #647896;
+  --ep-prof-text: #0f2942;
+  --ep-prof-sidebar-tint: #eef4ff;
+  --ep-prof-soft-purple: #e8ecff;
+  --ep-prof-green: #0d9f6e;
+}
+
+:host {
+  display: block;
+  padding-bottom: 2.5rem;
+}
+
 .ep-prof__back {
   display: inline-flex;
   align-items: center;
   font-size: 0.875rem;
-  color: #005fa8;
+  color: var(--ep-prof-primary);
   text-decoration: none;
   margin-bottom: 1rem;
 }
@@ -11,32 +32,562 @@
   text-decoration: underline;
 }
 
-.ep-prof__title {
+/* Page header — same language as dashboard hero */
+.ep-prof__page-head {
+  padding: 1.35rem 1.5rem;
+  border-radius: 1.125rem;
+  background: linear-gradient(
+    125deg,
+    rgba(255, 255, 255, 0.72) 0%,
+    rgba(0, 95, 168, 0.08) 45%,
+    rgba(255, 255, 255, 0.5) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow:
+    0 10px 40px rgba(15, 41, 66, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.ep-prof__eyebrow {
+  font-size: 0.65rem;
   font-weight: 800;
-  color: #0f2942;
-  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ep-prof-primary);
+}
+
+.ep-prof__title {
+  color: #0f172a;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-size: 1.5rem;
 }
 
 .ep-prof__sub {
-  color: #647896;
+  color: rgba(15, 23, 42, 0.62);
   font-size: 0.9rem;
-  margin-bottom: 1.25rem;
+  max-width: 40rem;
+  line-height: 1.45;
 }
 
-.ep-prof__card {
-  border-radius: 1rem;
+.ep-prof__loading {
+  max-width: 420px;
+}
+
+.ep-prof__spin {
+  color: var(--ep-prof-primary);
+}
+
+/* Left identity card */
+.ep-prof__id-card {
+  border-radius: 1.125rem !important;
+  overflow: hidden;
+}
+
+.ep-prof__id-card-body {
+  padding: 1.35rem 1.25rem 1.25rem;
+  background: linear-gradient(180deg, var(--ep-prof-sidebar-tint) 0%, rgba(255, 255, 255, 0.92) 55%, #fff 100%);
+}
+
+.ep-prof__id-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+
+.ep-prof__photo-ring {
+  flex-shrink: 0;
+  padding: 4px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, var(--ep-prof-primary), var(--ep-prof-teal));
+  box-shadow: 0 12px 36px rgba(0, 95, 168, 0.22);
+}
+
+.ep-prof__photo-inner {
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ep-prof__photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ep-prof__photo--initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--ep-prof-primary);
+  background: linear-gradient(160deg, #e8f4fc 0%, #e6faf6 100%);
+}
+
+.ep-prof__id-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.ep-prof__id-name {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--ep-prof-text);
+  letter-spacing: -0.02em;
+}
+
+.ep-prof__id-code {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--ep-prof-primary);
+  letter-spacing: 0.04em;
+}
+
+.ep-prof__id-role {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ep-prof-text);
+}
+
+.ep-prof__id-role-muted {
+  color: var(--ep-prof-muted);
+  font-weight: 500;
+}
+
+/* Primary / amber “CTA” pills — same roles as reference check-out / break, portal colours */
+.ep-prof__pill-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-bottom: 0.75rem;
+}
+
+.ep-prof__pill {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.75rem;
+  text-decoration: none;
+  font-weight: 600;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.ep-prof__pill:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(15, 41, 66, 0.12);
+}
+
+.ep-prof__pill i {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.ep-prof__pill-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  flex: 1;
+}
+
+.ep-prof__pill-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.9;
+}
+
+.ep-prof__pill-value {
+  font-size: 0.88rem;
+  font-weight: 700;
+  max-width: 100%;
+}
+
+.ep-prof__pill--primary {
+  background: linear-gradient(125deg, var(--ep-prof-primary) 0%, #0476c4 100%);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(0, 95, 168, 0.35);
+}
+
+.ep-prof__pill--primary .ep-prof__pill-label {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.ep-prof__pill--amber {
+  background: linear-gradient(125deg, #f59e0b 0%, var(--ep-prof-amber) 100%);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(217, 119, 6, 0.3);
+}
+
+.ep-prof__pill--amber .ep-prof__pill-label {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.ep-prof__id-foot strong {
+  color: var(--ep-prof-primary-dark);
+  font-weight: 700;
+}
+
+/* Stat row — reference-style KPI dots, theme colours */
+.ep-prof__stat-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.ep-prof__stat {
+  flex: 1 1 88px;
+  padding: 0.55rem 0.45rem;
+  border-radius: 0.65rem;
   background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(0, 95, 168, 0.1) !important;
-  box-shadow: 0 8px 28px rgba(15, 41, 66, 0.06);
-  max-width: 640px;
+  border: 1px solid rgba(0, 95, 168, 0.1);
+  text-align: center;
+}
+
+.ep-prof__stat-dot {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin: 0 auto 0.35rem;
+  background: #94a3b8;
+}
+
+.ep-prof__stat-dot--ok {
+  background: var(--ep-prof-green);
+  box-shadow: 0 0 0 3px rgba(13, 159, 110, 0.2);
+}
+
+.ep-prof__stat-dot--primary {
+  background: var(--ep-prof-primary);
+  box-shadow: 0 0 0 3px rgba(0, 95, 168, 0.18);
+}
+
+.ep-prof__stat-dot--teal {
+  background: var(--ep-prof-teal);
+  box-shadow: 0 0 0 3px rgba(0, 168, 132, 0.18);
+}
+
+.ep-prof__stat-label {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ep-prof-muted);
+}
+
+.ep-prof__stat-value {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--ep-prof-text);
+  line-height: 1.2;
+}
+
+/* Highlight banners — layout like reference cards; colours = portal primary + soft tint */
+.ep-prof__banner {
+  border-radius: 1rem;
+  padding: 1.15rem 1.2rem;
+  min-height: 132px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-shadow: 0 8px 28px rgba(15, 41, 66, 0.08);
+}
+
+.ep-prof__banner--primary {
+  background: linear-gradient(135deg, var(--ep-prof-primary) 0%, #064a82 48%, var(--ep-prof-teal) 160%);
+  color: #fff;
+}
+
+.ep-prof__banner--soft {
+  background: linear-gradient(145deg, var(--ep-prof-soft-purple) 0%, #f0f4ff 50%, #fafbff 100%);
+  border: 1px solid rgba(0, 95, 168, 0.12);
+  color: var(--ep-prof-text);
+}
+
+.ep-prof__banner-kicker {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.88;
+}
+
+.ep-prof__banner-kicker--dark {
+  color: var(--ep-prof-primary);
+  opacity: 1;
+}
+
+.ep-prof__banner-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.ep-prof__banner-title--dark {
+  color: var(--ep-prof-primary-dark);
+}
+
+.ep-prof__banner-body {
+  margin-top: 0.5rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  opacity: 0.95;
+}
+
+.ep-prof__banner-body--dark {
+  color: #334155;
+  opacity: 1;
+}
+
+/* Bordered “records” shell — like reference pending-approval frame */
+.ep-prof__records {
+  margin-bottom: 1.25rem;
+  padding: 1.1rem 1.1rem 1.25rem;
+  border-radius: 1rem;
+  border: 3px solid rgba(0, 95, 168, 0.28);
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+.ep-prof__records-head {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(0, 95, 168, 0.12);
+}
+
+.ep-prof__section-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--ep-prof-primary-dark);
+  margin: 0;
+}
+
+.ep-prof__section-title--sm {
+  font-size: 1rem;
+}
+
+.ep-prof__section-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: var(--ep-prof-muted);
+}
+
+.ep-prof__mini-card .card-header {
+  background: transparent !important;
+  border-bottom: none !important;
+  padding-top: 0.85rem;
+}
+
+.ep-prof__mini-head {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.ep-prof__mini-icon {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: linear-gradient(145deg, rgba(0, 95, 168, 0.12), rgba(0, 168, 132, 0.1));
+  color: var(--ep-prof-primary);
+  font-size: 1.15rem;
+}
+
+.ep-prof__mini-title {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--ep-prof-text);
 }
 
 .ep-prof__dl dt {
-  color: #647896;
+  color: var(--ep-prof-muted);
   font-weight: 500;
 }
 
 .ep-prof__dl dd {
   color: #0f172a;
   font-weight: 600;
+}
+
+.ep-prof__address-block {
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.65rem;
+  background: rgba(0, 95, 168, 0.04);
+  border: 1px solid rgba(0, 95, 168, 0.08);
+}
+
+.ep-prof__addr-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ep-prof-muted);
+}
+
+.ep-prof__addr-text {
+  font-size: 0.82rem;
+  color: var(--ep-prof-text);
+  font-weight: 500;
+  white-space: pre-wrap;
+}
+
+.ep-prof__mini-punch {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.ep-prof__mini-punch-item {
+  flex: 1 1 120px;
+  padding: 0.6rem 0.85rem;
+  border-radius: 0.65rem;
+  background: rgba(0, 168, 132, 0.07);
+  border: 1px solid rgba(0, 168, 132, 0.16);
+}
+
+.ep-prof__mini-label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ep-prof-muted);
+  margin-bottom: 0.2rem;
+}
+
+.ep-prof__mini-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ep-prof-text);
+}
+
+.ep-prof__bank-tile {
+  height: 100%;
+  padding: 0.9rem 1rem;
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 95, 168, 0.1);
+}
+
+.ep-prof__bank-title {
+  font-weight: 800;
+  font-size: 0.82rem;
+  color: var(--ep-prof-text);
+}
+
+.ep-prof__mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: 0.78rem;
+  word-break: break-all;
+}
+
+/* Quick links — reference icon grid, primary line icons */
+.ep-prof__quicklinks {
+  border-radius: 1.125rem !important;
+  padding: 1.1rem 1.15rem 1.15rem;
+}
+
+.ep-prof__quicklinks-head {
+  margin-bottom: 1rem;
+}
+
+.ep-prof__quicklinks-head .ep-prof__section-sub {
+  margin-top: 0;
+}
+
+.ep-prof__ql-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.65rem;
+}
+
+@media (min-width: 576px) {
+  .ep-prof__ql-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1200px) {
+  .ep-prof__ql-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.ep-prof__ql-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.45rem;
+  padding: 0.75rem 0.5rem;
+  border-radius: 0.85rem;
+  text-decoration: none;
+  color: var(--ep-prof-text);
+  border: 1px solid rgba(0, 95, 168, 0.1);
+  background: rgba(255, 255, 255, 0.5);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.ep-prof__ql-item:hover {
+  background: #fff;
+  border-color: rgba(0, 95, 168, 0.22);
+  transform: translateY(-2px);
+  color: var(--ep-prof-primary-dark);
+}
+
+.ep-prof__ql-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ep-prof-primary);
+  background: rgba(0, 95, 168, 0.1);
+  font-size: 1.35rem;
+}
+
+.ep-prof__ql-item:hover .ep-prof__ql-icon {
+  background: rgba(0, 95, 168, 0.16);
+  color: var(--ep-prof-primary-dark);
+}
+
+.ep-prof__ql-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+@media (min-width: 992px) {
+  .ep-prof__photo-inner {
+    width: 118px;
+    height: 118px;
+  }
+
+  .ep-prof__photo--initials {
+    font-size: 2rem;
+  }
 }

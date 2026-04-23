@@ -2,36 +2,322 @@
   <a routerLink="/employee-portal/dashboard" class="ep-prof__back">
     <i class="icon-base ri ri-arrow-left-line me-1"></i> Back to dashboard
   </a>
-  <h4 class="ep-prof__title">My profile</h4>
-  <p class="ep-prof__sub">Details from HR records (read-only).</p>
 
-  <div *ngIf="loading" class="text-muted py-4">Loading…</div>
+  <header class="ep-prof__page-head mb-4">
+    <div>
+      <p class="ep-prof__eyebrow mb-1">Employee portal</p>
+      <h4 class="ep-prof__title mb-1">My profile</h4>
+      <p class="ep-prof__sub mb-0">Your HR record — read only. Contact HR to request changes.</p>
+    </div>
+  </header>
 
-  <div *ngIf="!loading && profile" class="card ep-prof__card border-0">
-    <div class="card-body">
-      <dl class="row small mb-0 ep-prof__dl">
-        <dt class="col-sm-4">Name</dt>
-        <dd class="col-sm-8">{{ line('firstName') }} {{ line('lastName') }}</dd>
-        <dt class="col-sm-4">Employee code</dt>
-        <dd class="col-sm-8">{{ line('empCode') }}</dd>
-        <dt class="col-sm-4">Email</dt>
-        <dd class="col-sm-8">{{ line('email') }}</dd>
-        <dt class="col-sm-4">Mobile</dt>
-        <dd class="col-sm-8">{{ line('mobile') }}</dd>
-        <dt class="col-sm-4">Designation</dt>
-        <dd class="col-sm-8">{{ line('designation') }}</dd>
-        <dt class="col-sm-4">Department</dt>
-        <dd class="col-sm-8">{{ line('department') }}</dd>
-        <dt class="col-sm-4">Reporting to</dt>
-        <dd class="col-sm-8">{{ line('reportingPersonName').trim() || '—' }}</dd>
-        <dt class="col-sm-4">Joined</dt>
-        <dd class="col-sm-8">
-          <ng-container *ngIf="profile['joiningDate']">{{ $any(profile['joiningDate']) | date : 'mediumDate' }}</ng-container>
-          <ng-container *ngIf="!profile['joiningDate']">—</ng-container>
-        </dd>
-      </dl>
+  <div *ngIf="loading" class="card ep-glass-card border-0 ep-prof__loading">
+    <div class="card-body d-flex align-items-center gap-2 text-muted py-4">
+      <span class="spinner-border spinner-border-sm ep-prof__spin" role="status"></span>
+      Loading your profile…
     </div>
   </div>
+
+  <ng-container *ngIf="!loading && profile">
+    <div class="row g-4 ep-prof__layout">
+      <!-- Left: identity (reference-style column) -->
+      <div class="col-12 col-xl-4">
+        <div class="ep-prof__id-card ep-glass-card border-0 mb-3">
+          <div class="ep-prof__id-card-body">
+            <div class="ep-prof__id-top">
+              <div class="ep-prof__photo-ring">
+                <div class="ep-prof__photo-inner">
+                  <img
+                    *ngIf="!photoBroken"
+                    class="ep-prof__photo"
+                    [src]="photoSrc"
+                    [alt]="displayName"
+                    (error)="onPhotoError()"
+                  />
+                  <div *ngIf="photoBroken" class="ep-prof__photo ep-prof__photo--initials" aria-hidden="true">
+                    {{ displayInitials }}
+                  </div>
+                </div>
+              </div>
+              <div class="ep-prof__id-text">
+                <p class="ep-prof__id-name mb-1">{{ displayName }}</p>
+                <p class="ep-prof__id-code mb-0" *ngIf="line('empCode') !== '—'">{{ line('empCode') }}</p>
+                <p class="ep-prof__id-role mb-0">
+                  <span *ngIf="line('designation') !== '—'">{{ line('designation') }}</span>
+                  <span *ngIf="line('department') !== '—'" class="ep-prof__id-role-muted">
+                    <span *ngIf="line('designation') !== '—'"> · </span>{{ line('department') }}
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <div class="ep-prof__pill-row">
+              <a
+                *ngIf="line('email') !== '—'"
+                class="ep-prof__pill ep-prof__pill--primary"
+                [href]="'mailto:' + line('email')"
+              >
+                <i class="icon-base ri ri-mail-line"></i>
+                <span class="ep-prof__pill-text">
+                  <span class="ep-prof__pill-label">Email</span>
+                  <span class="ep-prof__pill-value text-truncate">{{ line('email') }}</span>
+                </span>
+              </a>
+              <a *ngIf="line('mobile') !== '—'" class="ep-prof__pill ep-prof__pill--amber" [href]="'tel:' + line('mobile')">
+                <i class="icon-base ri ri-phone-line"></i>
+                <span class="ep-prof__pill-text">
+                  <span class="ep-prof__pill-label">Mobile</span>
+                  <span class="ep-prof__pill-value">{{ line('mobile') }}</span>
+                </span>
+              </a>
+            </div>
+
+            <p class="ep-prof__id-foot small text-muted mb-3">
+              <ng-container *ngIf="reportingLine() !== '—'">Reports to <strong>{{ reportingLine() }}</strong></ng-container>
+              <ng-container *ngIf="reportingLine() !== '—' && profile['joiningDate']"> · </ng-container>
+              <ng-container *ngIf="profile['joiningDate']">
+                Joined <strong>{{ $any(profile['joiningDate']) | date : 'mediumDate' }}</strong>
+              </ng-container>
+              <ng-container *ngIf="reportingLine() === '—' && !profile['joiningDate']">—</ng-container>
+            </p>
+
+            <div class="ep-prof__stat-row">
+              <div class="ep-prof__stat">
+                <span class="ep-prof__stat-dot" [class.ep-prof__stat-dot--ok]="accountActive"></span>
+                <span class="ep-prof__stat-label">Account</span>
+                <span class="ep-prof__stat-value">{{ line('status') }}</span>
+              </div>
+              <div class="ep-prof__stat">
+                <span class="ep-prof__stat-dot ep-prof__stat-dot--primary"></span>
+                <span class="ep-prof__stat-label">Tenure</span>
+                <span class="ep-prof__stat-value">{{ tenureLabel }}</span>
+              </div>
+              <div class="ep-prof__stat">
+                <span class="ep-prof__stat-dot ep-prof__stat-dot--teal"></span>
+                <span class="ep-prof__stat-label">Type</span>
+                <span class="ep-prof__stat-value text-truncate">{{ line('empType') }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: banners + bordered records + quick links -->
+      <div class="col-12 col-xl-8">
+        <div class="row g-3 mb-3">
+          <div class="col-12 col-md-6">
+            <div class="ep-prof__banner ep-prof__banner--primary">
+              <p class="ep-prof__banner-kicker mb-1">Organisation</p>
+              <p class="ep-prof__banner-title mb-0">Work &amp; reporting</p>
+              <p class="ep-prof__banner-body mb-0">{{ organisationBlurb }}</p>
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <div class="ep-prof__banner ep-prof__banner--soft">
+              <p class="ep-prof__banner-kicker ep-prof__banner-kicker--dark mb-1">Compliance</p>
+              <p class="ep-prof__banner-title ep-prof__banner-title--dark mb-0">IDs &amp; payroll</p>
+              <p class="ep-prof__banner-body ep-prof__banner-body--dark mb-0">{{ complianceBlurb }}</p>
+            </div>
+          </div>
+        </div>
+
+        <section class="ep-prof__records" aria-labelledby="ep-prof-records-heading">
+          <div class="ep-prof__records-head">
+            <h2 id="ep-prof-records-heading" class="ep-prof__section-title">Profile records</h2>
+            <p class="ep-prof__section-sub">Everything on file for you in this portal (from HR master data).</p>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-12 col-lg-6">
+              <div class="card ep-glass-card border-0 h-100 ep-prof__mini-card">
+                <div class="card-header ep-prof__mini-head border-0">
+                  <span class="ep-prof__mini-icon" aria-hidden="true"><i class="icon-base ri ri-building-2-line"></i></span>
+                  <div>
+                    <h3 class="ep-prof__mini-title mb-0">Work &amp; contact</h3>
+                  </div>
+                </div>
+                <div class="card-body pt-0">
+                  <dl class="row ep-prof__dl small mb-0">
+                    <dt class="col-5">Alternate mobile</dt>
+                    <dd class="col-7">{{ line('alternateMobile') }}</dd>
+                    <dt class="col-5">Joined</dt>
+                    <dd class="col-7">
+                      <ng-container *ngIf="profile['joiningDate']">{{ $any(profile['joiningDate']) | date : 'mediumDate' }}</ng-container>
+                      <ng-container *ngIf="!profile['joiningDate']">—</ng-container>
+                    </dd>
+                    <dt class="col-5">Employment status</dt>
+                    <dd class="col-7">{{ line('emp_status') }}</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+              <div class="card ep-glass-card border-0 h-100 ep-prof__mini-card">
+                <div class="card-header ep-prof__mini-head border-0">
+                  <span class="ep-prof__mini-icon" aria-hidden="true"><i class="icon-base ri ri-user-heart-line"></i></span>
+                  <div>
+                    <h3 class="ep-prof__mini-title mb-0">Personal</h3>
+                  </div>
+                </div>
+                <div class="card-body pt-0">
+                  <dl class="row ep-prof__dl small mb-0">
+                    <dt class="col-5">Gender</dt>
+                    <dd class="col-7">{{ line('gender') }}</dd>
+                    <dt class="col-5">Date of birth</dt>
+                    <dd class="col-7">
+                      <ng-container *ngIf="profile['dateOfBirth']">{{ $any(profile['dateOfBirth']) | date : 'mediumDate' }}</ng-container>
+                      <ng-container *ngIf="!profile['dateOfBirth']">—</ng-container>
+                    </dd>
+                    <dt class="col-5">Age</dt>
+                    <dd class="col-7">{{ line('age') }}</dd>
+                    <dt class="col-5">Nationality</dt>
+                    <dd class="col-7">{{ line('nationality') }}</dd>
+                    <dt class="col-5">Blood group</dt>
+                    <dd class="col-7">{{ line('bloodGroup') }}</dd>
+                    <dt class="col-5">Marital status</dt>
+                    <dd class="col-7">{{ line('martialStatus') }}</dd>
+                    <dt class="col-5">Father</dt>
+                    <dd class="col-7">{{ line('fatherName') }}</dd>
+                    <dt class="col-5">Mother</dt>
+                    <dd class="col-7">{{ line('motherName') }}</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+              <div class="card ep-glass-card border-0 h-100 ep-prof__mini-card">
+                <div class="card-header ep-prof__mini-head border-0">
+                  <span class="ep-prof__mini-icon" aria-hidden="true"><i class="icon-base ri ri-map-pin-line"></i></span>
+                  <div>
+                    <h3 class="ep-prof__mini-title mb-0">Location</h3>
+                  </div>
+                </div>
+                <div class="card-body pt-0">
+                  <dl class="row ep-prof__dl small mb-0">
+                    <dt class="col-5">City</dt>
+                    <dd class="col-7">{{ line('city') }}</dd>
+                    <dt class="col-5">State</dt>
+                    <dd class="col-7">{{ line('state') }}</dd>
+                    <dt class="col-5">Country</dt>
+                    <dd class="col-7">{{ line('country') }}</dd>
+                    <dt class="col-5">PIN</dt>
+                    <dd class="col-7">{{ line('pinCode') }}</dd>
+                  </dl>
+                  <div class="ep-prof__address-block mt-2">
+                    <p class="ep-prof__addr-label mb-1">Current address</p>
+                    <p class="ep-prof__addr-text mb-0">{{ line('currentAddress') }}</p>
+                  </div>
+                  <div class="ep-prof__address-block mt-2">
+                    <p class="ep-prof__addr-label mb-1">Permanent address</p>
+                    <p class="ep-prof__addr-text mb-0">{{ line('permanentAddress') }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+              <div class="card ep-glass-card border-0 h-100 ep-prof__mini-card">
+                <div class="card-header ep-prof__mini-head border-0">
+                  <span class="ep-prof__mini-icon" aria-hidden="true"><i class="icon-base ri ri-government-line"></i></span>
+                  <div>
+                    <h3 class="ep-prof__mini-title mb-0">Government IDs</h3>
+                  </div>
+                </div>
+                <div class="card-body pt-0">
+                  <dl class="row ep-prof__dl small mb-0">
+                    <dt class="col-5">PAN</dt>
+                    <dd class="col-7 text-uppercase">{{ line('panNo') }}</dd>
+                    <dt class="col-5">Aadhaar</dt>
+                    <dd class="col-7">{{ line('adhaarNo') }}</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+              <div class="card ep-glass-card border-0 h-100 ep-prof__mini-card">
+                <div class="card-header ep-prof__mini-head border-0">
+                  <span class="ep-prof__mini-icon" aria-hidden="true"><i class="icon-base ri ri-time-line"></i></span>
+                  <div>
+                    <h3 class="ep-prof__mini-title mb-0">Attendance</h3>
+                  </div>
+                </div>
+                <div class="card-body pt-0">
+                  <dl class="row ep-prof__dl small mb-0">
+                    <dt class="col-7">Offline attendance</dt>
+                    <dd class="col-5 text-end">{{ yn('isofflineAtt') }}</dd>
+                    <dt class="col-7">Location required</dt>
+                    <dd class="col-5 text-end">{{ yn('isLocation') }}</dd>
+                    <dt class="col-7">Offline all-day</dt>
+                    <dd class="col-5 text-end">{{ yn('isofflineAllTimeAtt') }}</dd>
+                  </dl>
+                  <div class="ep-prof__mini-punch mt-2">
+                    <div class="ep-prof__mini-punch-item">
+                      <span class="ep-prof__mini-label">Check-in</span>
+                      <span class="ep-prof__mini-value">{{ line('check_in_time') }}</span>
+                    </div>
+                    <div class="ep-prof__mini-punch-item">
+                      <span class="ep-prof__mini-label">Check-out</span>
+                      <span class="ep-prof__mini-value">{{ line('check_out_time') }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12" *ngIf="bankList.length">
+              <div class="card ep-glass-card border-0 ep-prof__mini-card">
+                <div class="card-header ep-prof__mini-head border-0">
+                  <span class="ep-prof__mini-icon" aria-hidden="true"><i class="icon-base ri ri-bank-line"></i></span>
+                  <div>
+                    <h3 class="ep-prof__mini-title mb-0">Bank accounts</h3>
+                  </div>
+                </div>
+                <div class="card-body pt-0">
+                  <div class="row g-3">
+                    <div class="col-12 col-md-6" *ngFor="let b of bankList; let i = index">
+                      <div class="ep-prof__bank-tile">
+                        <p class="ep-prof__bank-title mb-2">
+                          <i class="icon-base ri ri-bank-card-line me-1"></i>Account {{ i + 1 }}
+                        </p>
+                        <dl class="row ep-prof__dl small mb-0">
+                          <dt class="col-5">Holder</dt>
+                          <dd class="col-7">{{ lineFrom(b, 'accountHolderName') }}</dd>
+                          <dt class="col-5">Bank</dt>
+                          <dd class="col-7">{{ lineFrom(b, 'bankName') }}</dd>
+                          <dt class="col-5">Branch</dt>
+                          <dd class="col-7">{{ lineFrom(b, 'bankBranch') }}</dd>
+                          <dt class="col-5">IFSC</dt>
+                          <dd class="col-7 text-uppercase">{{ lineFrom(b, 'ifscCode') }}</dd>
+                          <dt class="col-5">Account no.</dt>
+                          <dd class="col-7 ep-prof__mono">{{ lineFrom(b, 'accountNumber') }}</dd>
+                        </dl>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="ep-prof__quicklinks ep-glass-card border-0">
+          <div class="ep-prof__quicklinks-head">
+            <h3 class="ep-prof__section-title ep-prof__section-title--sm mb-1">Self-service</h3>
+            <p class="ep-prof__section-sub mb-0">Jump to common tasks (same as the sidebar).</p>
+          </div>
+          <div class="ep-prof__ql-grid">
+            <a *ngFor="let q of quickLinks" [routerLink]="q.path" class="ep-prof__ql-item">
+              <span class="ep-prof__ql-icon" aria-hidden="true"><i class="icon-base ri" [ngClass]="q.icon"></i></span>
+              <span class="ep-prof__ql-label">{{ q.label }}</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
 
   <p *ngIf="!loading && !profile" class="text-muted py-4">Could not load profile. Try again from the dashboard.</p>
 </div>
