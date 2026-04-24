@@ -520,43 +520,74 @@
   }
 }
 
+/* ─── Mobile backdrop ─── */
+.ep-mobile-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1040;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.ep-mobile-backdrop--visible {
+  display: block;
+  opacity: 1;
+}
+
+/* ─── Hamburger button ─── */
+.ep-hamburger {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 95, 168, 0.15);
+  border-radius: 0.65rem;
+  background: #fff;
+  color: #0f2942;
+  cursor: pointer;
+  font-size: 1.25rem;
+  margin-right: auto;
+  flex-shrink: 0;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ep-hamburger:hover {
+  border-color: rgba(0, 95, 168, 0.3);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+}
+
 @media (max-width: 991.98px) {
   .ep-shell {
-    flex-direction: column;
+    flex-direction: row;
   }
 
   .ep-sidebar {
-    position: relative;
-    left: auto;
-    top: auto;
-    bottom: auto;
-    width: 100% !important;
-    max-height: none;
-    z-index: 1;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-    overflow: visible;
+    position: fixed;
+    left: -280px;
+    top: 0;
+    bottom: 0;
+    width: 260px !important;
+    height: 100dvh;
+    min-height: 100dvh;
+    z-index: 1050;
+    border-right: 1px solid rgba(0, 95, 168, 0.2);
+    box-shadow: 4px 0 24px rgba(15, 23, 42, 0.18);
+    transition: left 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex-direction: column;
+    flex-wrap: nowrap;
   }
 
-  .ep-brand-row {
-    width: 100%;
-  }
-
-  .ep-sidebar-toggle {
-    display: none;
+  .ep-sidebar--mobile-open {
+    left: 0;
   }
 
   .ep-sidebar--collapsed .ep-brand {
     display: block;
-  }
-
-  .ep-sidebar--collapsed .ep-brand-row {
-    justify-content: space-between;
-    width: 100%;
-    flex: 1 1 auto;
-    min-width: 0;
   }
 
   .ep-sidebar--collapsed .ep-nav__label {
@@ -575,10 +606,9 @@
   }
 
   .ep-nav {
-    flex-direction: row;
-    flex-wrap: wrap;
-    flex: 1 1 auto;
-    overflow: visible;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    overflow-y: auto;
   }
 
   .ep-main {

@@ -2394,6 +2394,7 @@ exports.getAppLeaveTypes = async (req, res) => {
       const value = {
         value: r.id,
         label: r.leaveName,
+        leaveCode: r.leaveCode,
         allowedPerYear: r.allowedPerYear,
       };
       data.push(value);
@@ -2458,6 +2459,27 @@ exports.EmployeeLeaveList = async (req, res) => {
 
     const leaveData = await Promise.all(
       LeaveMaster.map(async (item) => {
+        const isCompOff =
+          String(item?.leaveCode || "").toLowerCase().startsWith("co") ||
+          String(item?.leaveName || "").toLowerCase().includes("comp");
+
+        if (isCompOff) {
+          const compOffRecords = await comp_off.findAll({
+            where: { tenantId, employeeId, branchId },
+            raw: true,
+          });
+          const total_leave = compOffRecords.reduce((s, r) => s + Number(r.totalDays || 0), 0);
+          const used_leave = compOffRecords.reduce((s, r) => s + Number(r.usedDays || 0), 0);
+          const available_leave = compOffRecords.reduce((s, r) => s + Number(r.remainingDays || 0), 0);
+          return {
+            name: item?.leaveName,
+            code: item?.leaveCode,
+            available_leave,
+            used_leave,
+            total_leave,
+          };
+        }
+
         const leavebal = await leave_balance.findOne({
           where: { tenantId, employeeId, leaveTypeId: item?.id, branchId },
           order: [["createdAt", "desc"]],
@@ -2466,6 +2488,7 @@ exports.EmployeeLeaveList = async (req, res) => {
           name: item?.leaveName,
           code: item?.leaveCode,
           available_leave: leavebal?.remainingLeaves ?? 0,
+          used_leave: leavebal?.usedLeaves ?? 0,
           total_leave:
             leavebal?.totalAssigned < leavebal?.remainingLeaves
               ? (leavebal?.remainingLeaves ?? 0)
@@ -2803,25 +2826,37 @@ exports.AppupdatedApplyLeaveStatus = async (req, res) => {
 
     let remainingLeaves;
     if (await existingLeave.save()) {
-      if (leaveBalances?.remainingLeaves < Number(days)) {
-        remainingLeaves = 0;
-      } else {
-        remainingLeaves = leaveBalances?.remainingLeaves - Number(days);
-        days = Number(leaveBalances?.usedLeaves) + Number(days);
+      if (status === "approved") {
+        const fromDate = new Date(existingLeave.fromDate);
+        const fromMonth = fromDate.getMonth() + 1;
+        const fromYear = fromDate.getFullYear();
+        const leaveDays = Number(existingLeave.days || 0);
+
+        const balanceRecord = await LeaveBalance.findOne({
+          where: { tenantId, branchId, leaveTypeId: existingLeave.leaveTypeId, employeeId: existingLeave.employeeId, year: fromYear, month: fromMonth },
+        });
+        if (balanceRecord) {
+          const newUsed = Number(balanceRecord.usedLeaves || 0) + leaveDays;
+          const newRemaining = Math.max(Number(balanceRecord.remainingLeaves || 0) - leaveDays, 0);
+          await LeaveBalance.update(
+            { usedLeaves: newUsed.toFixed(1), remainingLeaves: newRemaining.toFixed(1), updatedBy: req.users?.id },
+            { where: { id: balanceRecord.id } },
+          );
+        }
+
+        if (existingLeave.compOffId) {
+          const compOffRecord = await comp_off.findOne({ where: { id: existingLeave.compOffId } });
+          if (compOffRecord) {
+            const newUsed = Number(compOffRecord.usedDays || 0) + leaveDays;
+            const newRemaining = Math.max(Number(compOffRecord.remainingDays || 0) - leaveDays, 0);
+            await comp_off.update(
+              { usedDays: newUsed.toFixed(1), remainingDays: newRemaining.toFixed(1), status: newRemaining <= 0 ? "used" : "active" },
+              { where: { id: existingLeave.compOffId } },
+            );
+          }
+        }
       }
 
-      //     const updateleavebalance= await leave_balance.update({
-      //            usedLeaves:days,
-      //            remainingLeaves,
-      //            updatedBy:req.users?.id
-      //     },{
-      //    where:{
-      //        tenantId,
-      //         leaveTypeId:leaveTypeId,
-      //         employeeId,
-      //         year
-      //    }
-      //     })
       return Helper.response(
         true,
         "Leave updated successfully.",
@@ -3680,11 +3715,7 @@ exports.getAppAppliedLeaves = async (req, res) => {
       return Helper.response(false, "BranchId is required!", [], res, 400);
     }
 
-    const currentDate = new Date();
-    const currentMonth = currentDate.getMonth() + 1;
-    const currentYear = currentDate.getFullYear();
-
-    const { month = currentMonth, year = currentYear } = req.body || {};
+    const { month, year } = req.body || {};
 
     let employeeIds = [];
 
@@ -3801,15 +3832,16 @@ exports.getAppAppliedLeaves = async (req, res) => {
         FETCH LEAVES
     ===================================================== */
 
+    const andClauses = [];
+    if (month) andClauses.push(where(fn("EXTRACT", literal('MONTH FROM "fromDate"')), month));
+    if (year) andClauses.push(where(fn("EXTRACT", literal('YEAR FROM "fromDate"')), year));
+
     const leaveApplications = await leave_application.findAll({
       where: {
         tenantId,
         branchId: branchId == "All" ? { [Op.ne]: null } : branchId,
         employeeId: { [Op.in]: employeeIds },
-        [Op.and]: [
-          where(fn("EXTRACT", literal('MONTH FROM "fromDate"')), month),
-          where(fn("EXTRACT", literal('YEAR FROM "fromDate"')), year),
-        ],
+        ...(andClauses.length > 0 && { [Op.and]: andClauses }),
       },
       order: [["appliedOn", "DESC"]],
       raw: true,
@@ -3873,6 +3905,56 @@ exports.getAppAppliedLeaves = async (req, res) => {
     );
   } catch (error) {
     console.error("Error fetching leave list:", error);
+    return Helper.response(false, error.message, [], res, 500);
+  }
+};
+
+exports.getMyLeaveHistory = async (req, res) => {
+  const tenantId = req.users?.tenantId;
+  const employeeId = req.users?.id;
+  const branchId = req.users?.branchId;
+
+  if (!tenantId || !branchId || branchId === "null") {
+    return Helper.response(false, "Required fields missing", [], res, 400);
+  }
+
+  try {
+    const { leaveTypeId, month, year } = req.body || {};
+
+    const andClauses = [];
+    if (year) andClauses.push(where(fn("EXTRACT", literal('YEAR FROM "fromDate"')), year));
+    if (month) andClauses.push(where(fn("EXTRACT", literal('MONTH FROM "fromDate"')), month));
+
+    const whereClause = {
+      tenantId,
+      employeeId,
+      branchId,
+      ...(leaveTypeId && { leaveTypeId }),
+      ...(andClauses.length > 0 && { [Op.and]: andClauses }),
+    };
+
+    const leaves = await leave_application.findAll({
+      where: whereClause,
+      order: [["fromDate", "DESC"]],
+      raw: true,
+    });
+
+    const leaveTypes = await leaveMaster.findAll({
+      where: { tenantId },
+      attributes: ["id", "leaveName", "leaveCode"],
+      raw: true,
+    });
+    const ltMap = Object.fromEntries(leaveTypes.map((l) => [l.id, l]));
+
+    const data = leaves.map((l) => ({
+      ...l,
+      leaveName: ltMap[l.leaveTypeId]?.leaveName ?? null,
+      leaveCode: ltMap[l.leaveTypeId]?.leaveCode ?? null,
+    }));
+
+    return Helper.response(true, "Leave history fetched", data, res, 200);
+  } catch (error) {
+    console.error("Error fetching leave history:", error);
     return Helper.response(false, error.message, [], res, 500);
   }
 };
@@ -4852,10 +4934,12 @@ exports.CompoffData=async(req,res)=>{
 
     const data=await comp_off.findAll({
       where:{
-        employeeId,tenantId,branchId
+        employeeId,tenantId,branchId,
+        status: "active",
+        remainingDays: { [require('sequelize').Op.gt]: 0 },
       },
       raw:true,
-      attributes:["earnedDate","id","branchId","employeeId","tenantId"]
+      attributes:["earnedDate","id","branchId","employeeId","tenantId","remainingDays","totalDays","status"]
     })
     
     if(data.length==0){

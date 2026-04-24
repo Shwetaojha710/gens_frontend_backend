@@ -1,5 +1,11 @@
 <header class="top-header">
   <div class="top-header-inner">
+
+    <!-- Mobile hamburger — visible only on mobile (<992px) -->
+    <button type="button" class="hamburger-btn d-lg-none" (click)="mobileMenu.toggle()" aria-label="Open menu">
+      <i class="ri ri-menu-line"></i>
+    </button>
+
     <div class="header-search-shell">
       <button type="button" class="search-icon-btn" aria-label="Search">
         <i class="ri ri-search-line"></i>

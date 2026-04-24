@@ -534,8 +534,8 @@ export class EmployeePortalDashboardComponent implements OnInit {
     });
 
     const t = new Date();
-    const month = t.getMonth() + 1;
-    const year = t.getFullYear();
+    const month:any = t.getMonth() + 1;
+    const year:any = t.getFullYear();
 
     this.api.getAppliedLeaves(month, year).subscribe({
       next: (res) => {

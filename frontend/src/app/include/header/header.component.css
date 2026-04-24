@@ -16,6 +16,25 @@
   min-width: 0;
 }
 
+/* ─── Mobile hamburger ─── */
+.hamburger-btn {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: rgba(255, 255, 255, 0.72);
+  color: #2f5f93;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(60, 90, 140, 0.12);
+  flex-shrink: 0;
+}
+
+.hamburger-btn i {
+  font-size: 22px;
+}
+
 .header-search-shell {
   flex: 1 1 auto;
   min-width: 0;

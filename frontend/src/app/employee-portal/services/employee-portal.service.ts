@@ -49,6 +49,7 @@ export class EmployeePortalService {
       mobile,
       tenantId,
       otp,
+      source: 'web',
     });
   }
 
@@ -80,11 +81,19 @@ export class EmployeePortalService {
     );
   }
 
-  getLeaveTypes(): Observable<{ value: string; label: string }[]> {
+  getLeaveTypes(): Observable<{ value: string; label: string; leaveCode?: string }[]> {
     return this.unwrap(
-      this.http.post<{ status: unknown; data: { value: string; label: string }[] }>(
+      this.http.post<{ status: unknown; data: { value: string; label: string; leaveCode?: string }[] }>(
         `${this.base}get-app-leave-type-dd`,
         {},
+      ),
+    );
+  }
+
+  getCompOffList(): Observable<{ id: string; earnedDate: string; remainingDays: number }[]> {
+    return this.unwrap(
+      this.http.get<{ status: unknown; data: { id: string; earnedDate: string; remainingDays: number }[] }>(
+        `${this.base}comp-off-list`,
       ),
     );
   }
@@ -97,6 +106,7 @@ export class EmployeePortalService {
     reason: string;
     duration_type?: string;
     to_duration_type?: string;
+    compOffId?: string | null;
   }): Observable<unknown> {
     return this.unwrap(
       this.http.post<{ status: unknown; data: unknown }>(`${this.base}apply-leaves`, {
@@ -107,8 +117,21 @@ export class EmployeePortalService {
     );
   }
 
-  getAppliedLeaves(month: number, year: number, branchId?: string): Observable<Record<string, unknown>> {
-    const body: Record<string, unknown> = { month, year };
+  getMyLeaveHistory(filters: { leaveTypeId?: string; month?: number; year?: number }): Observable<unknown[]> {
+    return this.http
+      .post<{ status: unknown; message?: string; data: unknown[] }>(`${this.base}get-my-leave-history`, filters)
+      .pipe(
+        map((res) => {
+          if (res.status === true && Array.isArray(res.data)) return res.data;
+          return [];
+        }),
+      );
+  }
+
+  getAppliedLeaves(month: string, year: string, branchId?: string): Observable<Record<string, unknown>> {
+    const body: Record<string, unknown> = {};
+    if (month) body['month'] = Number(month);
+    if (year) body['year'] = Number(year);
     if (branchId) body['branchId'] = branchId;
     return this.http.post<Record<string, unknown>>(`${this.base}get-applied-leave-list`, body);
   }

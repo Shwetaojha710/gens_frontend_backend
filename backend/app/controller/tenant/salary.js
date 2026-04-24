@@ -21,6 +21,7 @@ const Departments = require("../../models/department");
 const bankAccnt = require("../../models/bankAccnt");
 const leaveMaster = require("../../models/leaveMaster");
 const HolidayType = require("../../models/HolidayType");
+const comp_off = require("../../models/comp_off");
 const { literal } = require("sequelize");
 const dayMap = {
   Sunday: 0,
@@ -1284,11 +1285,14 @@ exports.calculateAttendance = async (req, res) => {
 
       const shiftWeekOffDates = [];
       for (let d = moment(startDate); d.isSameOrBefore(endDate); d.add(1, "days")) {
+
+        console.log(d.format("dddd"));
+        
         const shift = await Shift.findOne({
           where: {
             day_of_week: d.format("dddd"),
             branchId,
-            status: "active",
+            // status: "active",
             shift: PersonalInfo?.shift_id,
             tenantId,
           },
@@ -1345,8 +1349,40 @@ exports.calculateAttendance = async (req, res) => {
           ...item,
           leavestatus: item.status === "approved" ? "approved" : "unpaid",
         }));
+
+      // Comp-off leaves use comp_off balance, not regular leave_balance
+      const compOffLeaveIds = nonRestrictedLeaves
+        .filter((r) => r.compOffId)
+        .map((r) => r.compOffId);
+      const compOffRecords = compOffLeaveIds.length
+        ? await comp_off.findAll({
+            where: { id: { [Op.in]: compOffLeaveIds } },
+            raw: true,
+          })
+        : [];
+      const compOffMap = Object.fromEntries(
+        compOffRecords.map((r) => [r.id, r]),
+      );
+      const compOffLeaves = nonRestrictedLeaves
+        .filter((r) => r.compOffId)
+        .map((r) => {
+          const compOffRecord = compOffMap[r.compOffId];
+          const isValid =
+            compOffRecord &&
+            (compOffRecord.status === "used" ||
+              compOffRecord.status === "active");
+          return {
+            ...r,
+            leavestatus:
+              r.status === "approved" && isValid ? "approved" : "unpaid",
+            isCompOff: true,
+          };
+        });
+      const normalLeaves = nonRestrictedLeaves.filter((r) => !r.compOffId);
+
       leaveRecords = [
-        ...Helper.adjustLeaveRecords(leavebalance, nonRestrictedLeaves),
+        ...Helper.adjustLeaveRecords(leavebalance, normalLeaves),
+        ...compOffLeaves,
         ...restrictedHolidayLeaves,
       ];
 
@@ -1369,6 +1405,8 @@ exports.calculateAttendance = async (req, res) => {
             duration_type: leave.duration_type || "full", // full, first_half, second_half
             leavestatus: leave.leavestatus,
             isRestrictedHolidayLeave: !!leave.isRestrictedHolidayLeave,
+            isSandwich: !!leave.isSandwich,
+            isCompOff: !!leave.isCompOff,
           };
         }
       }
@@ -1416,7 +1454,13 @@ exports.calculateAttendance = async (req, res) => {
           continue;
         }
         if (!shift || shift.is_week_off) {
-          fullDays++;
+          const sandwichLeave = leaveDateMap[dayStr];
+          if (sandwichLeave?.isSandwich && sandwichLeave?.leavestatus === "unpaid") {
+            absentdaysArr.push({ date: dayStr, reason: "Sandwich leave unpaid" });
+            absentDays++;
+          } else {
+            fullDays++;
+          }
           continue;
         }
         const getMonthlyAttendance = await attendance.findAll({
@@ -1475,7 +1519,14 @@ exports.calculateAttendance = async (req, res) => {
           ) {
             fullDays++;
           } else if (leaveType?.leavestatus == "approved") {
-            fullDays++;
+            if (
+              leaveType?.duration_type == "first_half" ||
+              leaveType?.duration_type == "second_half"
+            ) {
+              halfDays++;
+            } else {
+              fullDays++;
+            }
           } else if (
             leaveType?.duration_type == "full" &&
             leaveType?.leavestatus == "unpaid"
@@ -1484,7 +1535,6 @@ exports.calculateAttendance = async (req, res) => {
               date: dayStr,
               reason: "Leave Not Available",
             });
-            // fullDays++;
             absentDays++;
           } else if (
             leaveType?.duration_type == "first_half" ||
@@ -2491,7 +2541,7 @@ exports.generateSalary = async (req, res) => {
       const leaveUsageMap = {};
 
       (emp.applysandwitchleave || []).forEach((lv) => {
-        if (lv.status == "approved") {
+        if (lv.status == "approved" && !lv.compOffId) {
           if (!leaveUsageMap[lv.leaveTypeId]) leaveUsageMap[lv.leaveTypeId] = 0;
           leaveUsageMap[lv.leaveTypeId] += Number(lv.days || 0);
         }
@@ -2514,6 +2564,72 @@ exports.generateSalary = async (req, res) => {
             {
               usedLeaves: newUsed.toFixed(1),
               remainingLeaves: 0,
+            },
+            {
+              where: {
+                employeeId: emp.employeeId,
+                tenantId,
+                branchId,
+                year: emp.year,
+                month: emp.month,
+                leaveTypeId,
+              },
+              transaction: t,
+            },
+          );
+        }
+      }
+
+      // --- Deduct comp-off balance for approved comp-off leaves ---
+      const compOffUsageMap = {};
+      (emp.applysandwitchleave || []).forEach((lv) => {
+        if (lv.status === "approved" && lv.compOffId) {
+          if (!compOffUsageMap[lv.compOffId]) compOffUsageMap[lv.compOffId] = 0;
+          compOffUsageMap[lv.compOffId] += Number(lv.days || 0);
+        }
+      });
+
+      for (const compOffId of Object.keys(compOffUsageMap)) {
+        const daysUsed = compOffUsageMap[compOffId];
+        const record = await comp_off.findOne({
+          where: { id: compOffId, employeeId: emp.employeeId, tenantId },
+          transaction: t,
+        });
+        if (record) {
+          const newUsed = Number(record.usedDays || 0) + daysUsed;
+          const newRemaining = Math.max(Number(record.remainingDays || 0) - daysUsed, 0);
+          await comp_off.update(
+            {
+              usedDays: newUsed.toFixed(1),
+              remainingDays: newRemaining.toFixed(1),
+              status: newRemaining <= 0 ? "used" : "active",
+            },
+            { where: { id: compOffId }, transaction: t },
+          );
+        }
+      }
+
+      // --- Also update leave_balance for comp-off leave type ---
+      const compOffLeaveTypeUsage = {};
+      (emp.applysandwitchleave || []).forEach((lv) => {
+        if (lv.status === "approved" && lv.compOffId && lv.leaveTypeId) {
+          if (!compOffLeaveTypeUsage[lv.leaveTypeId]) compOffLeaveTypeUsage[lv.leaveTypeId] = 0;
+          compOffLeaveTypeUsage[lv.leaveTypeId] += Number(lv.days || 0);
+        }
+      });
+
+      for (const leaveTypeId of Object.keys(compOffLeaveTypeUsage)) {
+        const daysUsed = compOffLeaveTypeUsage[leaveTypeId];
+        const balance = (emp.leavebalance || []).find((l) => l.leaveTypeId === leaveTypeId);
+        if (balance) {
+          const prevUsed = Number(balance.usedLeaves || 0);
+          const prevRemaining = Number(balance.remainingLeaves || 0);
+          const newUsed = prevUsed + daysUsed;
+          const newRemaining = Math.max(prevRemaining - daysUsed, 0);
+          await leave_balance.update(
+            {
+              usedLeaves: newUsed.toFixed(1),
+              remainingLeaves: newRemaining.toFixed(1),
             },
             {
               where: {

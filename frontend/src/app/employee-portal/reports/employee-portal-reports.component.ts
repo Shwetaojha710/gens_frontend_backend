@@ -75,8 +75,8 @@ export interface ReportInsightCard {
   styleUrl: './employee-portal-reports.component.css',
 })
 export class EmployeePortalReportsComponent implements OnInit {
-  month = new Date().getMonth() + 1;
-  year = new Date().getFullYear();
+  month :any = new Date().getMonth() + 1;
+  year:any = new Date().getFullYear();
   loading = false;
 
   attendanceRows: Record<string, unknown>[] = [];

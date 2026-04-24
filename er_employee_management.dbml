@@ -1,124 +1,35 @@
-// GENS HR Management System - Entity Relationship Diagram
-// Generated from Sequelize models
+// GENS HR Management System — Employee Management Module
+// Covers: org structure, employees, attendance, leave, payroll, reimbursements
 
-Project GENS {
+Project GENS_EmployeeManagement {
   database_type: 'PostgreSQL'
-  Note: 'Multi-tenant HR, Payroll, Attendance, Leave, ATS platform'
+  Note: 'Employee Management module — org structure, attendance, leave, payroll, reimbursements'
 }
 
 // ─────────────────────────────────────────────
-// CORE / TENANT
+// SHARED REFERENCES (owned by Super Admin)
 // ─────────────────────────────────────────────
 
 Table tenants {
   id uuid [pk]
   companyName varchar
-  companyAddress text
-  image varchar
   companyCode varchar [unique]
-  status varchar [default: 'active', note: 'active | inactive']
-  plan varchar [default: 'basic']
-  createdBy uuid
-  updatedBy uuid
-  createdAt timestamp
-  updatedAt timestamp
-}
-
-Table subscriptions {
-  id uuid [pk]
-  tenantId uuid [ref: > tenants.id]
-  plan varchar
-  status varchar [default: 'active', note: 'active | expired | cancelled']
-  startsAt timestamp
-  endsAt timestamp
-  seats integer
-  notes text
-  metadata jsonb
-  createdBy uuid
-  updatedBy uuid
-  createdAt timestamp
-  updatedAt timestamp
-}
-
-Table plan_masters {
-  id uuid [pk]
-  name varchar [unique]
-  code varchar [unique]
-  price decimal
-  billingCycle varchar [note: 'monthly | yearly | one_time']
-  durationDays integer
-  maxUsers integer
-  description text
   status varchar [default: 'active']
-  metadata jsonb
-  createdBy uuid
-  updatedBy uuid
-  createdAt timestamp
-  updatedAt timestamp
-}
-
-Table platform_modules {
-  id uuid [pk]
-  name varchar
-  code varchar [unique, note: 'superadmin | attendance_employee_management | recruitment_tracking']
-  description text
-  displayOrder integer
-  status varchar [default: 'active']
-  createdBy uuid
-  updatedBy uuid
-  createdAt timestamp
-  updatedAt timestamp
-}
-
-Table tenant_module_access {
-  id uuid [pk]
-  tenantId uuid [ref: > tenants.id]
-  moduleId uuid [ref: > platform_modules.id]
-  planId uuid [ref: > plan_masters.id]
-  isEnabled boolean [default: true]
-  startsAt timestamp
-  endsAt timestamp
-  settings jsonb [default: '{}']
-  createdBy uuid
-  updatedBy uuid
   createdAt timestamp
   updatedAt timestamp
 
-  indexes {
-    (tenantId, moduleId) [unique]
-  }
-}
-
-Table users {
-  id uuid [pk]
-  tenantId uuid [ref: > tenants.id]
-  branchId uuid [ref: > branches.id]
-  name varchar
-  email varchar [unique]
-  password varchar
-  role varchar [note: 'admin | hr | employee | superadmin']
-  status varchar [default: 'active']
-  token text
-  webcamtoken text
-  createdBy uuid
-  updatedBy uuid
-  createdAt timestamp
-  updatedAt timestamp
+  Note: 'Shared — owned by Super Admin module'
 }
 
 Table branches {
   id uuid [pk]
   tenantId uuid [ref: > tenants.id]
   name varchar
-  description text
-  latitude decimal
-  longitude decimal
-  image varchar
   status varchar [default: 'active']
-  createdBy uuid
-  updatedBy uuid
   createdAt timestamp
   updatedAt timestamp
+
+  Note: 'Shared — owned by Super Admin module'
 }
 
 // ─────────────────────────────────────────────
@@ -180,8 +91,20 @@ Table shifts {
   updatedAt timestamp
 }
 
+Table prefixes {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  name varchar
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
 // ─────────────────────────────────────────────
-// EMPLOYEE
+// EMPLOYEE PROFILE
 // ─────────────────────────────────────────────
 
 Table emp_personals {
@@ -251,6 +174,18 @@ Table work_experiences {
   updatedAt timestamp
 }
 
+Table document_types {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  type varchar
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
 Table documents {
   id uuid [pk]
   tenantId uuid [ref: > tenants.id]
@@ -259,18 +194,6 @@ Table documents {
   type varchar
   doc_type varchar
   doc_name varchar
-  status varchar [default: 'active']
-  createdBy uuid
-  updatedBy uuid
-  createdAt timestamp
-  updatedAt timestamp
-}
-
-Table document_types {
-  id uuid [pk]
-  tenantId uuid [ref: > tenants.id]
-  branchId uuid [ref: > branches.id]
-  type varchar
   status varchar [default: 'active']
   createdBy uuid
   updatedBy uuid
@@ -323,9 +246,9 @@ Table attendances {
   check_in_time varchar
   check_out_time varchar
   Inlatitude varchar
-  Outlongitude varchar
   Inlongitude varchar
   Outlatitude varchar
+  Outlongitude varchar
   check_in_img varchar
   check_out_img varchar
   ip_address varchar
@@ -415,84 +338,8 @@ Table device_location_logs {
 }
 
 // ─────────────────────────────────────────────
-// TRACKING
-// ─────────────────────────────────────────────
-
-// ---------------------------------------------
-// TRACKING DETAILS
-// ---------------------------------------------
-
-Table tracking_sessions {
-  id uuid [pk]
-  tenantId uuid [ref: > tenants.id]
-  branchId uuid [ref: > branches.id]
-  employeeId uuid [ref: > emp_personals.id]
-  attendanceId uuid [ref: > attendances.id]
-  startedAt timestamp
-  endedAt timestamp
-  startLatitude double
-  startLongitude double
-  endLatitude double
-  endLongitude double
-  totalDistanceKm decimal
-  totalDurationMin integer
-  trackingMode varchar [default: 'field', note: 'field | attendance | recruitment | manual']
-  status varchar [default: 'active', note: 'active | paused | completed | cancelled']
-  deviceId varchar
-  batteryStart integer
-  batteryEnd integer
-  createdBy uuid
-  updatedBy uuid
-  createdAt timestamp
-  updatedAt timestamp
-}
-
-Table tracking_points {
-  id uuid [pk]
-  tenantId uuid [ref: > tenants.id]
-  branchId uuid [ref: > branches.id]
-  sessionId uuid [ref: > tracking_sessions.id]
-  employeeId uuid [ref: > emp_personals.id]
-  latitude double
-  longitude double
-  altitude double
-  accuracy double
-  speed double
-  heading double
-  address text
-  capturedAt timestamp
-  source varchar [default: 'mobile', note: 'mobile | web | device']
-  networkMode varchar
-  batteryLevel integer
-  isMockLocation boolean [default: false]
-  createdAt timestamp
-  updatedAt timestamp
-}
-
-Table tracking_task_updates {
-  id uuid [pk]
-  tenantId uuid [ref: > tenants.id]
-  branchId uuid [ref: > branches.id]
-  sessionId uuid [ref: > tracking_sessions.id]
-  employeeId uuid [ref: > emp_personals.id]
-  applicationId uuid [ref: > applications.id]
-  title varchar
-  updateType varchar [note: 'visit | call | interview | follow_up | note']
-  description text
-  visitPlace varchar
-  latitude double
-  longitude double
-  status varchar [default: 'open', note: 'open | in_progress | completed | cancelled']
-  capturedAt timestamp
-  createdBy uuid
-  updatedBy uuid
-  createdAt timestamp
-  updatedAt timestamp
-}
-
-// ---------------------------------------------
 // LEAVE
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 
 Table leave_masters {
   id uuid [pk]
@@ -760,6 +607,78 @@ Table currencies {
 }
 
 // ─────────────────────────────────────────────
+// FIELD TRACKING
+// ─────────────────────────────────────────────
+
+Table tracking_sessions {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  employeeId uuid [ref: > emp_personals.id]
+  attendanceId uuid [ref: > attendances.id]
+  startedAt timestamp
+  endedAt timestamp
+  startLatitude double
+  startLongitude double
+  endLatitude double
+  endLongitude double
+  totalDistanceKm decimal
+  totalDurationMin integer
+  trackingMode varchar [default: 'field', note: 'field | attendance | recruitment | manual']
+  status varchar [default: 'active', note: 'active | paused | completed | cancelled']
+  deviceId varchar
+  batteryStart integer
+  batteryEnd integer
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table tracking_points {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  sessionId uuid [ref: > tracking_sessions.id]
+  employeeId uuid [ref: > emp_personals.id]
+  latitude double
+  longitude double
+  altitude double
+  accuracy double
+  speed double
+  heading double
+  address text
+  capturedAt timestamp
+  source varchar [default: 'mobile', note: 'mobile | web | device']
+  networkMode varchar
+  batteryLevel integer
+  isMockLocation boolean [default: false]
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table tracking_task_updates {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  sessionId uuid [ref: > tracking_sessions.id]
+  employeeId uuid [ref: > emp_personals.id]
+  applicationId uuid [note: 'cross-ref to recruitment.applications']
+  title varchar
+  updateType varchar [note: 'visit | call | interview | follow_up | note']
+  description text
+  visitPlace varchar
+  latitude double
+  longitude double
+  status varchar [default: 'open', note: 'open | in_progress | completed | cancelled']
+  capturedAt timestamp
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+// ─────────────────────────────────────────────
 // REIMBURSEMENTS
 // ─────────────────────────────────────────────
 
@@ -794,381 +713,48 @@ Table reimbursement_files {
 }
 
 // ─────────────────────────────────────────────
-// RECRUITMENT / ATS
+// TABLE GROUPS
 // ─────────────────────────────────────────────
 
-Table candidates {
-  id uuid [pk]
-  name varchar
-  email varchar [unique]
-  phone varchar
-  current_company varchar
-  skills text [note: 'stored as JSON string']
-  resume_url text
-  experience varchar
-  current_ctc varchar
-  expected_ctc varchar
-  notice_period varchar
-  cover_letter text
-  remark text
-  last_company varchar
-  current_location varchar
-  relocate varchar
-  home_town varchar
-  roles_and_responsibilities text
-  project text
-  tools text
-  offer_in_hand text
-  family_background text
-  highest_qualification varchar
-  createdAt timestamp
-  updatedAt timestamp
-}
-
-Table job_requirements {
-  id uuid [pk]
-  tenantId uuid [ref: > tenants.id]
-  branchId uuid [ref: > branches.id]
-  job_id varchar
-  job_title varchar
-  slug varchar
-  emp_type uuid [ref: > employment_types.id]
-  department uuid [ref: > departments.id]
-  designation varchar
-  mode varchar
-  location varchar
-  candidate_preference varchar [note: 'male | female | both']
-  interview_round jsonb
-  qualification varchar
-  no_of_opening varchar
-  skills text [note: 'stored as JSON string']
-  experience varchar
-  budget_ctc varchar
-  notice_period varchar
-  job_description text
-  url text
-  token varchar
-  expires_days integer [default: 0]
-  expires_at timestamp
-  status varchar [default: 'draft']
-  createdBy uuid
-  updatedBy uuid
-  createdAt timestamp
-  updatedAt timestamp
-}
-
-Table applications {
-  id uuid [pk]
-  candidate_id uuid [ref: > candidates.id]
-  job_posting_id uuid [ref: > job_requirements.id]
-  stage varchar [default: 'candidate_applied']
-  status varchar [default: 'submitted']
-  applied_at timestamp
-  ats_status varchar [default: 'queued']
-  ats_score float
-  manual_score float
-  final_score float
-  confirmation_email_sent boolean [default: false]
-  createdAt timestamp
-  updatedAt timestamp
-
-  indexes {
-    (candidate_id, job_posting_id) [unique]
-  }
-}
-
-Table candidate_ats_scores {
-  id uuid [pk]
-  tenantId uuid [ref: > tenants.id]
-  branchId uuid [ref: > branches.id]
-  application_id uuid [unique, ref: > applications.id]
-  ats_score float [default: 0]
-  manual_score float [default: 0]
-  final_score float [default: 0]
-  notes text
-  shortlisted boolean [default: false]
-  scanned_at timestamp
-  scanned_by uuid
-  createdBy uuid
-  updatedBy uuid
-  createdAt timestamp
-  updatedAt timestamp
-}
-
-Table round_types {
-  id uuid [pk]
-  tenantId uuid [ref: > tenants.id]
-  branchId uuid [ref: > branches.id]
-  name varchar
-  status varchar [default: 'active']
-  createdBy uuid
-  updatedBy uuid
-  createdAt timestamp
-  updatedAt timestamp
-}
-
-Table interview_rounds {
-  id uuid [pk]
-  tenantId uuid [ref: > tenants.id]
-  branchId uuid [ref: > branches.id]
-  round_name varchar
-  round_type uuid [ref: > round_types.id]
-  order_sequence integer
-  duration_minutes integer
-  is_mandatory boolean
-  status varchar [default: 'draft']
-  createdBy uuid
-  updatedBy uuid
-  createdAt timestamp
-  updatedAt timestamp
-}
-
-Table candidate_interview_rounds {
-  id uuid [pk]
-  tenantId uuid [ref: > tenants.id]
-  branchId uuid [ref: > branches.id]
-  application_id uuid [ref: > applications.id]
-  round_id uuid [ref: > interview_rounds.id]
-  round_name varchar
-  round_type varchar
-  sequence integer [default: 1]
-  interviewer_id uuid [ref: > interview_panel_users.id]
-  interviewer_name varchar
-  interviewer_email varchar
-  scheduled_at timestamp
-  duration_minutes integer
-  mode varchar
-  meeting_link text
-  status varchar [default: 'pending', note: 'pending | scheduled | completed | cancelled']
-  feedback_submitted boolean [default: false]
-  createdBy uuid
-  updatedBy uuid
-  createdAt timestamp
-  updatedAt timestamp
-}
-
-Table candidate_interview_feedback {
-  id uuid [pk]
-  tenantId uuid [ref: > tenants.id]
-  branchId uuid [ref: > branches.id]
-  application_id uuid [ref: > applications.id]
-  round_id uuid [ref: > interview_rounds.id]
-  interviewer_name varchar
-  interviewer_email varchar
-  rating float [default: 0]
-  recommendation varchar [default: 'hold', note: 'selected | hold | rejected']
-  strengths text
-  concerns text
-  notes text
-  submitted_at timestamp
-  createdBy uuid
-  updatedBy uuid
-  createdAt timestamp
-  updatedAt timestamp
-}
-
-Table interview_panel_users {
-  id uuid [pk]
-  tenantId uuid [ref: > tenants.id]
-  branchId uuid [ref: > branches.id]
-  first_name varchar
-  last_name varchar
-  email varchar
-  mobile_no varchar
-  department uuid [ref: > departments.id]
-  designation uuid [ref: > designations.id]
-  gender varchar [note: 'male | female | other']
-  status varchar [default: 'active']
-  password varchar
-  token text
-  createdBy uuid
-  updatedBy uuid
-  createdAt timestamp
-  updatedAt timestamp
-}
-
-Table offer_letters {
-  id uuid [pk]
-  tenantId uuid [ref: > tenants.id]
-  branchId uuid [ref: > branches.id]
-  firstName varchar
-  lastName varchar
-  fatherName varchar
-  gender varchar [note: 'Male | Female | Other']
-  dob date
-  aadhaarNo varchar
-  mobileNo varchar
-  email varchar
-  permanentAddress text
-  designation varchar
-  department varchar
-  headOffice varchar
-  joiningDate date
-  offerDate date
-  refNo varchar
-  pdfUrl text
-  pdfFileName varchar
-  pdfGeneratedAt timestamp
-  createdBy uuid shiv sir
-  createdAt timestamp
-  updatedAt timestamp
-}
-
-Table skills {
-  id uuid [pk]
-  tenantId uuid [ref: > tenants.id]
-  branchId uuid [ref: > branches.id]
-  name varchar
-  createdBy uuid
-  updatedBy uuid
-  createdAt timestamp
-  updatedAt timestamp
-}
-
-// ─────────────────────────────────────────────
-// PREFIXES / MISC SETTINGS
-// ─────────────────────────────────────────────
-
-Table prefixes {
-  id uuid [pk]
-  tenantId uuid [ref: > tenants.id]
-  branchId uuid [ref: > branches.id]
-  name varchar
-  status varchar [default: 'active']
-  createdBy uuid
-  updatedBy uuid
-  createdAt timestamp
-  updatedAt timestamp
-}
-
-// ─────────────────────────────────────────────
-// AUDIT / AUTH
-// ─────────────────────────────────────────────
-
-Table logs {
-  id uuid [pk]
-  tenantId uuid [ref: > tenants.id]
-  branchId uuid [ref: > branches.id]
-  employeeId uuid [ref: > emp_personals.id]
-  actionType varchar
-  referenceId uuid
-  oldValue json
-  newValue json
-  remarks varchar
-  ipAddress varchar
-  createdBy uuid
-  createdAt timestamp
-  updatedAt timestamp
-  deletedAt timestamp [note: 'soft delete']
-}
-
-Table otps {
-  id uuid [pk]
-  deviceId varchar
-  type varchar
-  otp bigint
-  expiry_time varchar
-  phone varchar
-  ip varchar
-  created_by uuid
-  status boolean [default: true]
-}
-
-// ─────────────────────────────────────────────
-// REFERENCE / GEO DATA
-// ─────────────────────────────────────────────
-
-Table countries {
-  id integer [pk, increment]
-  shortname varchar [unique]
-  name varchar
-  phonecode integer
-  branchId uuid
-}
-
-Table states {
-  id integer [pk, increment]
-  name varchar
-  country_id integer [ref: > countries.id]
-  branchId uuid
-}
-
-Table cities {
-  id integer [pk, increment]
-  name varchar
-  state_id integer [ref: > states.id]
-  branchId uuid
-}
-
-Table pin_code_master {
-  id varchar [pk]
-  office_name varchar
-  pin_code bigint
-  division_name varchar
-  circle_name varchar
-  taluka varchar
-  district_name varchar
-  state_name varchar
-}
-
-// ─────────────────────────────────────────────
-// LANDING PAGE
-// ─────────────────────────────────────────────
-
-Table landing_contact_submissions {
-  id uuid [pk]
-  fullName varchar
-  email varchar
-  message text
-  ipAddress varchar
-  userAgent varchar
-  createdAt timestamp
-  updatedAt timestamp
-}
-
-Table landing_site_contents {
-  id uuid [pk]
-  slug varchar [unique, default: 'default']
-  payload jsonb [default: '{}']
-  createdAt timestamp
-  updatedAt timestamp
-}
-
-TableGroup superadmin_model {
+TableGroup shared_infrastructure {
   tenants
-  subscriptions
-  plan_masters
-  platform_modules
-  tenant_module_access
-  users
   branches
-  landing_contact_submissions
-  landing_site_contents
-  logs
-  otps
 }
 
-TableGroup attendance_employee_management_model {
+TableGroup org_structure {
   departments
   designations
   employment_types
   shifts
+  prefixes
+}
+
+TableGroup employee_profile {
   emp_personals
   work_experiences
-  documents
   document_types
+  documents
   bank_accounts
   letter_datas
+}
+
+TableGroup attendance_tracking {
   attendances
   attendance_settings
   attendance_regularizations
   comp_offs
   device_location_logs
+}
+
+TableGroup leave_management {
   leave_masters
   leave_applications
   leave_balances
   holidays
   holiday_types
+}
+
+TableGroup payroll {
   master_components
   basics
   allowances
@@ -1178,23 +764,15 @@ TableGroup attendance_employee_management_model {
   salary_docs
   salary_orders
   currencies
-  reimbursements
-  reimbursement_files
 }
 
-TableGroup recruitment_tracking_model {
-  candidates
-  job_requirements
-  applications
-  candidate_ats_scores
-  round_types
-  interview_rounds
-  candidate_interview_rounds
-  candidate_interview_feedback
-  interview_panel_users
-  offer_letters
-  skills
+TableGroup field_tracking {
   tracking_sessions
   tracking_points
   tracking_task_updates
+}
+
+TableGroup reimbursement {
+  reimbursements
+  reimbursement_files
 }

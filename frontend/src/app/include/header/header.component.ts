@@ -7,6 +7,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { RouterModule } from '@angular/router';
+import { MobileMenuService } from '../../services/mobile-menu.service';
+
 @Component({
   selector: 'app-header',
   standalone: true,
@@ -16,9 +18,16 @@ import { RouterModule } from '@angular/router';
 })
 export class HeaderComponent {
   notyf: Notyf = new Notyf();
-  tenantDetails:any={}
-  baseurl:any
-  constructor(private auth: AuthService, private router: Router, private eRef: ElementRef, public masterService: MasterService) {
+  tenantDetails: any = {}
+  baseurl: any
+
+  constructor(
+    private auth: AuthService,
+    private router: Router,
+    private eRef: ElementRef,
+    public masterService: MasterService,
+    public mobileMenu: MobileMenuService
+  ) {
     this.getBranchDD()
       this.baseurl = this.masterService.getBaseUrl();
     this.obj.branchId = localStorage.getItem('branchId') || '';

@@ -1,19 +1,27 @@
 <div class="ep-shell">
-  <aside class="ep-sidebar" [class.ep-sidebar--collapsed]="sidebarCollapsed">
+  <!-- Mobile backdrop -->
+  <div class="ep-mobile-backdrop" [class.ep-mobile-backdrop--visible]="sidebarMobileOpen" (click)="closeMobileSidebar()"></div>
+
+  <aside class="ep-sidebar" [class.ep-sidebar--collapsed]="sidebarCollapsed" [class.ep-sidebar--mobile-open]="sidebarMobileOpen">
     <div class="ep-brand-row">
       <div class="ep-brand">
         <span class="ep-brand__title">Employee</span>
         <span class="ep-brand__sub">Self‑service portal</span>
       </div>
+      <!-- Desktop collapse toggle -->
       <button
         type="button"
-        class="ep-sidebar-toggle"
+        class="ep-sidebar-toggle d-none d-lg-flex"
         (click)="toggleSidebar()"
         [attr.aria-expanded]="!sidebarCollapsed"
         aria-controls="ep-nav"
         [attr.aria-label]="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
       >
         <i class="icon-base ri" [class.ri-menu-fold-line]="!sidebarCollapsed" [class.ri-menu-unfold-line]="sidebarCollapsed"></i>
+      </button>
+      <!-- Mobile close button -->
+      <button type="button" class="ep-sidebar-toggle d-lg-none" (click)="closeMobileSidebar()" aria-label="Close menu">
+        <i class="icon-base ri ri-close-line"></i>
       </button>
     </div>
     <nav id="ep-nav" class="ep-nav">
@@ -58,6 +66,10 @@
   <div class="ep-main">
     <header class="ep-topbar">
       <div class="ep-topbar__inner">
+        <!-- Hamburger — mobile only -->
+        <button type="button" class="ep-hamburger d-lg-none" (click)="openMobileSidebar()" aria-label="Open menu">
+          <i class="icon-base ri ri-menu-line"></i>
+        </button>
         <div #notifMenuRef class="ep-topbar__notif-wrap">
           <button
             type="button"

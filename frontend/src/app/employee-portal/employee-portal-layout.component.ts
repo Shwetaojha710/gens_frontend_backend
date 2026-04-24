@@ -1,6 +1,7 @@
-import { Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { EmployeePortalService } from './services/employee-portal.service';
 
 @Component({
@@ -10,13 +11,16 @@ import { EmployeePortalService } from './services/employee-portal.service';
   templateUrl: './employee-portal-layout.component.html',
   styleUrl: './employee-portal-layout.component.css',
 })
-export class EmployeePortalLayoutComponent implements OnInit {
+export class EmployeePortalLayoutComponent implements OnInit, OnDestroy {
   @ViewChild('userMenuRef') userMenuRef?: ElementRef<HTMLElement>;
   @ViewChild('notifMenuRef') notifMenuRef?: ElementRef<HTMLElement>;
 
   userName = '';
   sidebarCollapsed = false;
+  sidebarMobileOpen = false;
   userMenuOpen = false;
+
+  private routerSub = new Subscription();
 
   /** Notification bell */
   notifMenuOpen = false;
@@ -41,6 +45,16 @@ export class EmployeePortalLayoutComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadNotificationSummary();
+    this.routerSub = this.router.events.subscribe(event => {
+      if (event instanceof NavigationEnd && window.innerWidth < 992) {
+        this.closeMobileSidebar();
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.routerSub.unsubscribe();
+    document.body.style.overflow = '';
   }
 
   private loadNotificationSummary(): void {
@@ -112,6 +126,16 @@ export class EmployeePortalLayoutComponent implements OnInit {
 
   closeNotifMenu(): void {
     this.notifMenuOpen = false;
+  }
+
+  openMobileSidebar(): void {
+    this.sidebarMobileOpen = true;
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeMobileSidebar(): void {
+    this.sidebarMobileOpen = false;
+    document.body.style.overflow = '';
   }
 
   toggleSidebar(): void {

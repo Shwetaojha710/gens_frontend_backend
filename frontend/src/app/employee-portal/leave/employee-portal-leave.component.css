@@ -241,21 +241,16 @@
 }
 
 .ep-leave-toolbar__year {
-  width: 3.75rem;
+  min-width: 90px;
   font-weight: 600;
   border-radius: 0.5rem;
-  text-align: center;
 }
 
-/* hide browser number-input spinner arrows */
-.ep-leave-toolbar__year::-webkit-outer-spin-button,
-.ep-leave-toolbar__year::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.ep-leave-toolbar__year[type='number'] {
-  -moz-appearance: textfield;
+.ep-leave-toolbar__type {
+  min-width: 110px;
+  max-width: 140px;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
 }
 
 .ep-leave-toolbar__refresh {
@@ -729,4 +724,240 @@
 .ep-leave-empty__hint {
   max-width: 18rem;
   line-height: 1.45;
+}
+
+/* —— Leave balance KPI cards (same style as ep-att__kpi) —— */
+.ep-leave__kpi {
+  height: 100%;
+  padding: 1rem 1rem 1.1rem;
+  border-radius: 1rem;
+  background: #e3edf7;
+  border: 1px solid rgba(0, 95, 168, 0.14);
+  box-shadow: 0 6px 24px rgba(15, 41, 66, 0.06);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.ep-leave__kpi:hover {
+  border-color: rgba(0, 95, 168, 0.22);
+  box-shadow: 0 10px 32px rgba(15, 41, 66, 0.09);
+}
+
+.ep-leave__kpi-icon {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.65rem;
+  font-size: 1.15rem;
+}
+
+.ep-leave__kpi-icon--primary { background: rgba(0, 95, 168, 0.1);    color: #005fa8; }
+.ep-leave__kpi-icon--success { background: rgba(22, 163, 74, 0.12);  color: #15803d; }
+.ep-leave__kpi-icon--warning { background: rgba(217, 119, 6, 0.12);  color: #b45309; }
+.ep-leave__kpi-icon--danger  { background: rgba(220, 38, 38, 0.1);   color: #b91c1c; }
+.ep-leave__kpi-icon--slate   { background: rgba(100, 116, 139, 0.12);color: #475569; }
+.ep-leave__kpi-icon--violet  { background: rgba(124, 58, 237, 0.1);  color: #6d28d9; }
+
+.ep-leave__kpi-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f2942;
+  line-height: 1.1;
+  margin-bottom: 0.2rem;
+  letter-spacing: -0.02em;
+}
+
+.ep-leave__kpi-sub {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-bottom: 0.15rem;
+}
+
+.ep-leave__kpi-used {
+  font-size: 0.75rem;
+  color: #e05252;
+  margin-bottom: 0.15rem;
+}
+
+/* —— Leave History Lookup Card —— */
+.ep-leave-history-card {
+  border-radius: 0.9rem;
+}
+
+.ep-leave-history-heading {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f2942;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0;
+}
+
+.ep-leave-history-heading__icon {
+  color: #005fa8;
+}
+
+.ep-leave-history-heading__hint {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #94a3b8;
+}
+
+.ep-leave-history-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.ep-leave-history-filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 140px;
+}
+
+.ep-leave-history-filter-item--year {
+  min-width: 90px;
+  max-width: 110px;
+}
+
+.ep-leave-history-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ep-leave-history-search-btn {
+  align-self: flex-end;
+  padding-left: 1.1rem;
+  padding-right: 1.1rem;
+}
+
+.ep-leave-history-empty {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  padding: 1rem 0;
+}
+
+.ep-leave-history-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: #475569;
+  padding-top: 0.25rem;
+  border-top: 1px solid rgba(15,23,42,0.07);
+}
+
+.ep-leave-history-pagesize {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ep-leave-history-summary__count {
+  font-weight: 700;
+  color: #0f2942;
+}
+
+.ep-leave-history-summary__days {
+  color: #005fa8;
+  font-weight: 600;
+}
+
+.ep-leave-history-table-wrap {
+  overflow-x: auto;
+  margin-top: 0.5rem;
+}
+
+.ep-leave-history-table {
+  font-size: 0.82rem;
+  min-width: 560px;
+}
+
+.ep-leave-history-table thead th {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  border-bottom: 2px solid rgba(15,23,42,0.08);
+  white-space: nowrap;
+}
+
+.ep-leave-history-type {
+  font-weight: 600;
+  color: #005fa8;
+}
+
+.ep-leave-history-reason {
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #64748b;
+}
+
+.ep-leave__kpi-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.35;
+  /* font-weight:900; */
+}
+
+/* —— Comp-off earned date list —— */
+.ep-compoff-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.ep-compoff-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border: 1.5px solid rgba(15, 23, 42, 0.12);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  background: #fff;
+}
+
+.ep-compoff-item:hover {
+  border-color: var(--ep-accent, #4f46e5);
+  background: rgba(79, 70, 229, 0.04);
+}
+
+.ep-compoff-item--selected {
+  border-color: var(--ep-accent, #4f46e5);
+  background: rgba(79, 70, 229, 0.08);
+}
+
+.ep-compoff-date {
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.ep-compoff-bal {
+  font-size: 0.75rem;
+  color: #6b7280;
+  background: rgba(15, 23, 42, 0.06);
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
 }

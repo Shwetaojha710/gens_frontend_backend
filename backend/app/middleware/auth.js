@@ -179,7 +179,10 @@ const AppAdmin = async (req, res, next) => {
       return Helper.response(false, "User not found", {}, res, 200);
     }
 
-    if (user.token !== token) {
+    const tokenMatchesMobile = user.token === token;
+    const tokenMatchesWeb = user.webToken === token;
+
+    if (!tokenMatchesMobile && !tokenMatchesWeb) {
       return Helper.response(
         "expired",
         "Token Expired due to another login, Login Again!",
@@ -189,20 +192,16 @@ const AppAdmin = async (req, res, next) => {
       );
     }
 
-    // const allowedRoles = ["admin", "hr", "superadmin", "employee"];
-    // if (!allowedRoles.includes(user.role)) {
-    //   return Helper.response(false, "Unauthorized role", {}, res, 200);
-    // }
-
     req.users = {
       id: user.id,
       name: `${user?.firstName} ${user?.lastName}`,
-      token: user?.token,
-      reportingPersonId:user?.reportingPersonId,
+      token: tokenMatchesWeb ? user?.webToken : user?.token,
+      reportingPersonId: user?.reportingPersonId,
       shift_id: user?.shift_id,
-      tenantId: user?.tenantId ??0,
-      branchId: user?.branchId??0 ,
-      role:user?.role
+      tenantId: user?.tenantId ?? 0,
+      branchId: user?.branchId ?? 0,
+      role: user?.role,
+      loginSource: tokenMatchesWeb ? "web" : "mobile",
     };
 
     next();

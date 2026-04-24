@@ -169,6 +169,10 @@ const empPersonal = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    webToken: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
     deviceId: {
       type: DataTypes.STRING,
       allowNull: true,

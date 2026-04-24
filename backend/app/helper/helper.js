@@ -161,15 +161,15 @@ Helper.applySandwichRule = (leaveRecords, holidays, startDate, endDate) => {
   const holidaySet = new Set(holidays || []);
   const isNonWorkingDay = (date) => {
     const dateKey = date.format("YYYY-MM-DD");
-    return holidaySet.has(dateKey) || date.day() === 0 || date.day() === 6;
+    return holidaySet.has(dateKey) || date.day() == 0 || date.day() == 6;
   };
   const getSandwichStatus = (prevLeave, nextLeave) => {
-    if (prevLeave?.status === "approved" && nextLeave?.status === "approved") {
+    if (prevLeave?.status == "approved" || nextLeave?.status == "approved") {
       return "approved";
     }
     if (
-      prevLeave?.status === "recommended" ||
-      nextLeave?.status === "recommended"
+      prevLeave?.status == "recommended" ||
+      nextLeave?.status == "recommended"
     ) {
       return "recommended";
     }

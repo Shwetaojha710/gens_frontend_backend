@@ -59,6 +59,10 @@ const OfferLetter = sequelize.define("offer_letter", {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  headOffice: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
   joiningDate: {
     type: DataTypes.DATEONLY,
     allowNull: false,
@@ -71,14 +75,26 @@ const OfferLetter = sequelize.define("offer_letter", {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  pdfUrl: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  pdfFileName: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  pdfGeneratedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
   createdBy: {
     type: DataTypes.UUID,
     allowNull: true,
   },
 });
 
-// OfferLetter.sync({ alter: true })
-//   .then(() => console.log("offer_letter model synced successfully"))
-//   .catch((error) => console.error("Error syncing offer_letter model:", error));
+OfferLetter.sync({ alter: true })
+  .then(() => console.log("offer_letter model synced successfully"))
+  .catch((error) => console.error("Error syncing offer_letter model:", error));
 
 module.exports = OfferLetter;

@@ -138,9 +138,16 @@ exports.verifyEmployeePortalOtp = async (req, res) => {
       return Helper.response(false, "Employee not found", [], res, 200);
     }
 
+    const source = req.body?.source;
+    const isWeb = source === "web";
+
     const token = jwt.sign({ id: usersData.id }, process.env.SECRET_KEY);
     const userInfo = await empPersonal.findByPk(usersData.id);
-    userInfo.token = token;
+    if (isWeb) {
+      userInfo.webToken = token;
+    } else {
+      userInfo.token = token;
+    }
     await userInfo.save();
 
     let usersDataValue = await empPersonal.findByPk(usersData.id, { raw: true });

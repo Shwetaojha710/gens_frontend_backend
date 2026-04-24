@@ -989,25 +989,37 @@ exports.updatedApplyLeaveStatus = async (req, res) => {
 
     let remainingLeaves;
     if (await existingLeave.save()) {
-      if (leaveBalances?.remainingLeaves < Number(days)) {
-        remainingLeaves = 0;
-      } else {
-        remainingLeaves = leaveBalances?.remainingLeaves - Number(days);
-        days = Number(leaveBalances?.usedLeaves) + Number(days);
+      if (status === "approved") {
+        const fromDate = new Date(existingLeave.fromDate);
+        const fromMonth = fromDate.getMonth() + 1;
+        const fromYear = fromDate.getFullYear();
+        const leaveDays = Number(existingLeave.days || 0);
+
+        const balanceRecord = await leave_balance.findOne({
+          where: { tenantId, branchId, leaveTypeId: existingLeave.leaveTypeId, employeeId: existingLeave.employeeId, year: fromYear, month: fromMonth },
+        });
+        if (balanceRecord) {
+          const newUsed = Number(balanceRecord.usedLeaves || 0) + leaveDays;
+          const newRemaining = Math.max(Number(balanceRecord.remainingLeaves || 0) - leaveDays, 0);
+          await leave_balance.update(
+            { usedLeaves: newUsed.toFixed(1), remainingLeaves: newRemaining.toFixed(1), updatedBy: req.users?.id },
+            { where: { id: balanceRecord.id } },
+          );
+        }
+
+        if (existingLeave.compOffId) {
+          const compOffRecord = await comp_off.findOne({ where: { id: existingLeave.compOffId } });
+          if (compOffRecord) {
+            const newUsed = Number(compOffRecord.usedDays || 0) + leaveDays;
+            const newRemaining = Math.max(Number(compOffRecord.remainingDays || 0) - leaveDays, 0);
+            await comp_off.update(
+              { usedDays: newUsed.toFixed(1), remainingDays: newRemaining.toFixed(1), status: newRemaining <= 0 ? "used" : "active" },
+              { where: { id: existingLeave.compOffId } },
+            );
+          }
+        }
       }
 
-      //     const updateleavebalance= await leave_balance.update({
-      //            usedLeaves:days,
-      //            remainingLeaves,
-      //            updatedBy:req.users?.id
-      //     },{
-      //    where:{
-      //        tenantId,
-      //         leaveTypeId:leaveTypeId,
-      //         employeeId,
-      //         year
-      //    }
-      //     })
       return Helper.response(
         true,
         "Leave updated successfully.",
