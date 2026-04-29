@@ -39,6 +39,36 @@ type EpBarOptions = Partial<{
   grid: ApexGrid;
 }>;
 
+interface TeamMember {
+  employeeId: string;
+  employee_name: string;
+  status: string;
+  checkIn: string | null;
+  checkOut: string | null;
+  designation: string | null;
+  department: string | null;
+  branchName: string | null;
+  profileImage: string | null;
+}
+
+interface TeamDeptGroup {
+  departmentName: string;
+  members: TeamMember[];
+  presentCount: number;
+  absentCount: number;
+  leaveCount: number;
+}
+
+interface TeamBranchGroup {
+  branchName: string;
+  departments: TeamDeptGroup[];
+  total: number;
+  presentCount: number;
+  absentCount: number;
+  leaveCount: number;
+  lateCount: number;
+}
+
 const STATUS_BUCKET_COLORS: Record<string, string> = {
   'On time': '#16a34a',
   Late: '#ca8a04',
@@ -176,19 +206,303 @@ export class EmployeePortalDashboardComponent implements OnInit {
   /** Per leave type from get-emp-leave-list */
   leaveBalancesLoading = false;
   leaveBalances: Record<string, unknown>[] = [];
+  /** Team attendance (manager / director / teamLeader) */
+  teamAttendanceLoading = false;
+  teamAttendanceRaw: Record<string, unknown>[] = [];
+  teamBranchGroups: TeamBranchGroup[] = [];
+  teamBranchFilter = 'All';
+  expandedTeamBranches: Set<string> = new Set();
+  teamDetailPanel: { title: string; members: TeamMember[] } | null = null;
+  leavesActionLoading: Set<string> = new Set();
+  teamReimbursements: Record<string, unknown>[] = [];
+  teamReimbLoading = false;
+  reimbActionLoading: Set<string> = new Set();
+  userRole = '';
+  userBranchId = '';
 
   constructor(private api: EmployeePortalService) {}
 
   ngOnInit(): void {
     try {
-      const u = JSON.parse(localStorage.getItem('empPortalUser') || '{}') as { id?: string };
+      const u = JSON.parse(localStorage.getItem('empPortalUser') || '{}') as {
+        id?: string;
+        role?: string;
+        branchId?: string;
+      };
       this.myEmployeeId = u.id != null ? String(u.id) : '';
+      this.userRole = u.role != null ? String(u.role).toLowerCase().trim() : '';
+      this.userBranchId = u.branchId != null ? String(u.branchId) : '';
     } catch {
       this.myEmployeeId = '';
     }
     this.refresh();
-    console.log(this.chartsLoading,this.latePolicyVisible,">>>>>");
+    if (this.showTeamAttendance) {
+      this.loadTeamAttendance();
+    }
+    if (this.showManagerActions) {
+      this.loadTeamReimbursements();
+    }
+    console.log(this.chartsLoading, this.latePolicyVisible, '>>>>>');
+  }
 
+  get showTeamAttendance(): boolean {
+    return ['manager', 'director', 'teamleader'].includes(this.userRole);
+  }
+
+  get isBranchView(): boolean {
+    return this.userRole === 'manager' || this.userRole === 'director';
+  }
+
+  get teamBranchNames(): string[] {
+    return ['All', ...new Set(this.teamAttendanceRaw.map((r) => String(r['branchName'] || 'Unknown')))];
+  }
+
+  loadTeamAttendance(): void {
+    this.teamAttendanceLoading = true;
+    // manager/director always fetch all branches up front; filter client-side on pill click
+    const filter = this.isBranchView ? 'All' : undefined;
+    this.api.getTeamsAttendance(filter).subscribe({
+      next: (rows) => {
+        this.teamAttendanceRaw = rows;
+        this.teamBranchGroups = this.buildBranchGroups(rows);
+        this.teamAttendanceLoading = false;
+        if (this.teamBranchGroups.length > 0) {
+          this.expandedTeamBranches.add(this.teamBranchGroups[0].branchName);
+        }
+      },
+      error: () => {
+        this.teamAttendanceRaw = [];
+        this.teamBranchGroups = [];
+        this.teamAttendanceLoading = false;
+      },
+    });
+  }
+
+  onTeamBranchFilterChange(branchName: string): void {
+    this.teamBranchFilter = branchName;
+    this.expandedTeamBranches.clear();
+    const filtered =
+      branchName === 'All'
+        ? this.teamAttendanceRaw
+        : this.teamAttendanceRaw.filter((r) => String(r['branchName'] || 'Unknown') === branchName);
+    this.teamBranchGroups = this.buildBranchGroups(filtered);
+    if (this.teamBranchGroups.length > 0) {
+      this.expandedTeamBranches.add(this.teamBranchGroups[0].branchName);
+    }
+  }
+
+  private buildBranchGroups(rows: Record<string, unknown>[]): TeamBranchGroup[] {
+    const branchMap = new Map<string, TeamMember[]>();
+    for (const r of rows) {
+      const bn = String(r['branchName'] || 'Unknown');
+      if (!branchMap.has(bn)) branchMap.set(bn, []);
+      branchMap.get(bn)!.push(r as unknown as TeamMember);
+    }
+    return Array.from(branchMap.entries()).map(([branchName, members]) => {
+      const deptMap = new Map<string, TeamMember[]>();
+      for (const m of members) {
+        const dn = m.department || 'Unknown';
+        if (!deptMap.has(dn)) deptMap.set(dn, []);
+        deptMap.get(dn)!.push(m);
+      }
+      const departments: TeamDeptGroup[] = Array.from(deptMap.entries()).map(([departmentName, dm]) => ({
+        departmentName,
+        members: dm,
+        presentCount: dm.filter((x) => this.isPresent(x.status)).length,
+        absentCount: dm.filter((x) => x.status === 'Absent').length,
+        leaveCount: dm.filter((x) => x.status.toLowerCase().includes('leave')).length,
+      }));
+      const total = members.length;
+      const presentCount = members.filter((x) => this.isPresent(x.status)).length;
+      const absentCount = members.filter((x) => x.status === 'Absent').length;
+      const leaveCount = members.filter((x) => x.status.toLowerCase().includes('leave')).length;
+      const lateCount = members.filter((x) => x.status.toLowerCase().startsWith('late')).length;
+      return { branchName, departments, total, presentCount, absentCount, leaveCount, lateCount };
+    });
+  }
+
+  private isPresent(status: string): boolean {
+    const s = status.toLowerCase();
+    return s === 'on time' || s.startsWith('late');
+  }
+
+  toggleTeamBranch(name: string): void {
+    if (this.expandedTeamBranches.has(name)) {
+      this.expandedTeamBranches.delete(name);
+    } else {
+      this.expandedTeamBranches.add(name);
+    }
+  }
+
+  isTeamBranchExpanded(name: string): boolean {
+    return this.expandedTeamBranches.has(name);
+  }
+
+  showLeaveDetail(bg: TeamBranchGroup, event: Event): void {
+    event.stopPropagation();
+    const members = bg.departments.flatMap((d) => d.members).filter((m) => m.status.toLowerCase().includes('leave'));
+    this.teamDetailPanel = { title: `On Leave · ${bg.branchName}`, members };
+  }
+
+  showAbsentDetail(bg: TeamBranchGroup, event: Event): void {
+    event.stopPropagation();
+    const members = bg.departments.flatMap((d) => d.members).filter((m) => m.status === 'Absent');
+    this.teamDetailPanel = { title: `Absent · ${bg.branchName}`, members };
+  }
+
+  showLateDetail(bg: TeamBranchGroup, event: Event): void {
+    event.stopPropagation();
+    const members = bg.departments.flatMap((d) => d.members).filter((m) => m.status.toLowerCase().startsWith('late'));
+    this.teamDetailPanel = { title: `Late · ${bg.branchName}`, members };
+  }
+
+  closeTeamDetail(): void {
+    this.teamDetailPanel = null;
+  }
+
+  get showManagerActions(): boolean {
+    return this.userRole === 'manager' || this.userRole === 'director';
+  }
+
+  isLeaveActionable(row: unknown): boolean {
+    const r = row as Record<string, unknown>;
+    const s = String(r['status'] ?? '').toLowerCase().trim();
+    return s === 'pending' || s === 'recommended';
+  }
+
+  isLeaveActionLoading(row: unknown): boolean {
+    const r = row as Record<string, unknown>;
+    return this.leavesActionLoading.has(String(r['id'] ?? ''));
+  }
+
+  approveTeamLeave(row: unknown): void {
+    const r = row as Record<string, unknown>;
+    const id = String(r['id'] ?? '');
+    if (!id || this.leavesActionLoading.has(id)) return;
+    this.leavesActionLoading.add(id);
+    this.api.approveLeave(id).subscribe({
+      next: () => {
+        this.leavesActionLoading.delete(id);
+        r['status'] = 'approved';
+        this.notyf.success('Leave approved');
+      },
+      error: (err: Error) => {
+        this.leavesActionLoading.delete(id);
+        this.notyf.error(err.message || 'Could not approve leave');
+      },
+    });
+  }
+
+  rejectTeamLeave(row: unknown): void {
+    const r = row as Record<string, unknown>;
+    const id = String(r['id'] ?? '');
+    if (!id || this.leavesActionLoading.has(id)) return;
+    this.leavesActionLoading.add(id);
+    this.api.declineLeave(id).subscribe({
+      next: () => {
+        this.leavesActionLoading.delete(id);
+        r['status'] = 'rejected';
+        this.notyf.success('Leave rejected');
+      },
+      error: (err: Error) => {
+        this.leavesActionLoading.delete(id);
+        this.notyf.error(err.message || 'Could not reject leave');
+      },
+    });
+  }
+
+  loadTeamReimbursements(): void {
+    this.teamReimbLoading = true;
+    this.api.getTeamReimbursements().subscribe({
+      next: (rows) => {
+        this.teamReimbursements = rows;
+        this.teamReimbLoading = false;
+      },
+      error: () => {
+        this.teamReimbursements = [];
+        this.teamReimbLoading = false;
+      },
+    });
+  }
+
+  isReimbActionable(row: unknown): boolean {
+    const r = row as Record<string, unknown>;
+    const s = String(r['status'] ?? '').toLowerCase().trim();
+    return s === 'pending';
+  }
+
+  isReimbActionLoading(row: unknown): boolean {
+    const r = row as Record<string, unknown>;
+    return this.reimbActionLoading.has(String(r['id'] ?? ''));
+  }
+
+  reimbStatusPillClass(status: unknown): string {
+    const s = String(status ?? '').toLowerCase().trim();
+    if (s === 'approved') return 'ep-dash-status ep-dash-status--ok';
+    if (s === 'rejected') return 'ep-dash-status ep-dash-status--bad';
+    return 'ep-dash-status ep-dash-status--warn';
+  }
+
+  approveTeamReimb(row: unknown): void {
+    const r = row as Record<string, unknown>;
+    const id = String(r['id'] ?? '');
+    if (!id || this.reimbActionLoading.has(id)) return;
+    this.reimbActionLoading.add(id);
+    this.api.updateAppReimbursementStatus(id, 'approved').subscribe({
+      next: () => {
+        this.reimbActionLoading.delete(id);
+        r['status'] = 'approved';
+        this.notyf.success('Reimbursement approved');
+      },
+      error: (err: Error) => {
+        this.reimbActionLoading.delete(id);
+        this.notyf.error(err.message || 'Could not approve reimbursement');
+      },
+    });
+  }
+
+  rejectTeamReimb(row: unknown): void {
+    const r = row as Record<string, unknown>;
+    const id = String(r['id'] ?? '');
+    if (!id || this.reimbActionLoading.has(id)) return;
+    this.reimbActionLoading.add(id);
+    this.api.updateAppReimbursementStatus(id, 'rejected').subscribe({
+      next: () => {
+        this.reimbActionLoading.delete(id);
+        r['status'] = 'rejected';
+        this.notyf.success('Reimbursement rejected');
+      },
+      error: (err: Error) => {
+        this.reimbActionLoading.delete(id);
+        this.notyf.error(err.message || 'Could not reject reimbursement');
+      },
+    });
+  }
+
+  teamMemberStatusClass(status: string): string {
+    const s = (status || '').toLowerCase();
+    if (s === 'on time') return 'ep-dash-status ep-dash-status--ok';
+    if (s.startsWith('late')) return 'ep-dash-status ep-dash-status--warn';
+    if (s.includes('leave')) return 'ep-dash-status ep-dash-status--neutral';
+    if (s === 'holiday') return 'ep-dash-status ep-dash-status--muted';
+    return 'ep-dash-status ep-dash-status--bad';
+  }
+
+  teamMemberInitials(name: string): string {
+    const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return 'TM';
+  }
+
+  get teamPresentMembers(): TeamMember[] {
+    const all = this.teamBranchGroups.flatMap((b) => b.departments.flatMap((d) => d.members));
+    return all.filter((m) => this.isPresent(m.status)).slice(0, 8);
+  }
+
+  get teamAbsentLeaveMembers(): TeamMember[] {
+    const all = this.teamBranchGroups.flatMap((b) => b.departments.flatMap((d) => d.members));
+    return all.filter((m) => !this.isPresent(m.status)).slice(0, 8);
   }
 
   get greeting(): string {
@@ -541,7 +855,8 @@ export class EmployeePortalDashboardComponent implements OnInit {
       next: (res) => {
         const data = res['data'];
         let rows = res['status'] === true && Array.isArray(data) ? data : [];
-        if (this.myEmployeeId) {
+        // manager/director see all team leaves; others see only own
+        if (this.myEmployeeId && !this.showManagerActions) {
           rows = rows.filter(
             (r) => String((r as Record<string, unknown>)['employeeId']) === this.myEmployeeId,
           );

@@ -294,6 +294,30 @@ export class EmployeePortalService {
       );
   }
 
+  /** Team reimbursements — manager/director sees all branch records. */
+  getTeamReimbursements(): Observable<Record<string, unknown>[]> {
+    return this.http
+      .get<{ status: unknown; data?: Record<string, unknown>[] }>(`${this.base}team-reimbursements`)
+      .pipe(
+        map((res) => {
+          if (res.status === true && Array.isArray(res.data)) return res.data;
+          return [];
+        }),
+      );
+  }
+
+  /** Approve or reject a reimbursement by id. */
+  updateAppReimbursementStatus(id: string, status: 'approved' | 'rejected'): Observable<unknown> {
+    return this.http
+      .post<{ status: boolean; message?: string }>(`${this.base}update-app-reimbursement-status`, { id, status })
+      .pipe(
+        map((res) => {
+          if (!res.status) throw new Error(res.message || 'Could not update reimbursement');
+          return res;
+        }),
+      );
+  }
+
   /**
    * Leave / attendance notifications (same payload as mobile app feed).
    * May return status false when empty — handle in the caller.
@@ -319,5 +343,24 @@ export class EmployeePortalService {
 
   getAppLetterPdfs(): Observable<any> {
     return this.http.post<any>(`${this.base}get-app-letter-pdfs`, {});
+  }
+
+  /**
+   * Today's team attendance.
+   * manager/director: all branch employees (filter by branchId or 'All').
+   * teamLeader: direct reports only.
+   */
+  getTeamsAttendance(branchId?: string): Observable<Record<string, unknown>[]> {
+    const url = branchId
+      ? `${this.base}team-attendances?branchId=${encodeURIComponent(branchId)}`
+      : `${this.base}team-attendances`;
+    return this.http.get<{ status: unknown; message?: string; data: unknown }>(url).pipe(
+      map((res) => {
+        if (res.status === true && Array.isArray(res.data)) {
+          return res.data as Record<string, unknown>[];
+        }
+        return [];
+      }),
+    );
   }
 }

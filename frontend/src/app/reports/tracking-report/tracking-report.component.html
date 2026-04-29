@@ -247,6 +247,9 @@
                               <th>Visit Place</th>
                               <th>Purpose</th>
                               <th>Remark</th>
+                              <th>Client Name</th>
+                              <th>Client Phone</th>
+                              <th>Doc</th>
                               <th>Address</th>
                               <th>Coordinates</th>
                               <th>Action</th>
@@ -266,6 +269,12 @@
                               </td>
                               <td class="purpose-text">{{ v.purpose || '—' }}</td>
                               <td class="remark-text">{{ v.remark || '—' }}</td>
+                              <td>{{ v.client_name || '—' }}</td>
+                              <td>{{ v.client_phone_no || '—' }}</td>
+                              <td>
+                                <a *ngIf="v.doc; else noDoc" [href]="baseurl + v.doc" target="_blank" class="btn-view-addr">View Doc</a>
+                                <ng-template #noDoc><span class="nil">—</span></ng-template>
+                              </td>
                               <td class="address-text">{{ v.address || '—' }}</td>
                               <td class="coord-text">
                                 {{ v.latitude | number:'1.5-5' }},

@@ -4,6 +4,124 @@
   display: block;
 }
 
+/* ── Leave request card (team upcoming — manager/director) ── */
+.ep-dash-leave-req {
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: rgba(255, 255, 255, 0.75);
+  margin-bottom: 0.45rem;
+  transition: box-shadow 0.15s, background 0.15s;
+}
+
+.ep-dash-leave-req:last-child { margin-bottom: 0; }
+
+.ep-dash-leave-req:hover {
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 2px 10px rgba(15, 41, 66, 0.07);
+}
+
+/* Single horizontal row: left | centre | right */
+.ep-dash-leave-req__row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* LEFT: avatar + name/dates — grows to fill remaining space */
+.ep-dash-leave-req__left {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* CENTRE: status badge — fixed width, truly centred */
+.ep-dash-leave-req__centre {
+  flex: 0 0 90px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* RIGHT: icon buttons — fixed width, right-aligned */
+.ep-dash-leave-req__right {
+  flex: 0 0 64px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.3rem;
+}
+
+.ep-dash-leave-req__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  overflow: hidden;
+}
+
+.ep-dash-leave-req__name {
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Icon-only circular action buttons */
+.ep-dash-icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, transform 0.1s, box-shadow 0.15s;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.ep-dash-icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ep-dash-icon-btn:not(:disabled):active {
+  transform: scale(0.9);
+}
+
+.ep-dash-icon-btn--approve {
+  background: #dcfce7;
+  color: #15803d;
+  border-color: #86efac;
+}
+
+.ep-dash-icon-btn--approve:not(:disabled):hover {
+  background: #16a34a;
+  color: #fff;
+  border-color: #16a34a;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.35);
+}
+
+.ep-dash-icon-btn--reject {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+.ep-dash-icon-btn--reject:not(:disabled):hover {
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
+}
+
 .ep-dash--home {
   scroll-margin-top: 0.5rem;
   padding-bottom: 2rem;
@@ -1304,3 +1422,4 @@
   background: rgba(220, 38, 38, 0.12);
   color: #b91c1c;
 }
+

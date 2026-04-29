@@ -167,11 +167,11 @@ export class ReimbursementComponent {
   }
 
   getStatusClass(status: any): string {
-    switch (status) {
-      case 'active': return 'badge-outline-success';
-      case 'inactive': return 'badge-outline-danger';
-      case 'completed': return 'bg-light-success';
-      default: return 'bg-light-secondary';
+    switch ((status || '').toLowerCase()) {
+      case 'approved': return 'badge-outline-success';
+      case 'rejected': return 'badge-outline-danger';
+      case 'pending': return 'badge-outline-warning';
+      default: return 'badge-outline-secondary';
     }
   }
   isExcel(mimeType: string): boolean {

@@ -533,23 +533,32 @@ exports.upcomingLeave = async (req, res) => {
       return Helper.response(false, "No Data Found", [], res, 200);
     }
 
-    // 👇 Add approver & leave type info
+    // 👇 Add employee name, approver & leave type info
     const data = await Promise.all(
       leaveData.map(async (item) => {
-        const approver = await empPersonal.findOne({
-          where: { branchId, id: item.approverId },
-          attributes: ["firstName", "lastName"],
-          raw: true,
-        });
-
-        const leaveType = await leaveMaster.findOne({
-          where: { branchId, id: item.leaveTypeId },
-          attributes: ["leaveName"],
-          raw: true,
-        });
+        const [employee, approver, leaveType] = await Promise.all([
+          empPersonal.findOne({
+            where: { id: item.employeeId },
+            attributes: ["firstName", "lastName"],
+            raw: true,
+          }),
+          empPersonal.findOne({
+            where: { branchId, id: item.approverId },
+            attributes: ["firstName", "lastName"],
+            raw: true,
+          }),
+          leaveMaster.findOne({
+            where: { branchId, id: item.leaveTypeId },
+            attributes: ["leaveName"],
+            raw: true,
+          }),
+        ]);
 
         return {
           ...item,
+          employeeName: employee
+            ? `${employee.firstName} ${employee.lastName}`.trim()
+            : null,
           approvedBy: approver
             ? `${approver.firstName} ${approver.lastName}`
             : null,
@@ -2223,6 +2232,7 @@ exports.EmployeeDetails = async (req, res) => {
         "adhaarNo",
         "martialStatus",
         "gender",
+        "role",
         "isofflineAtt",
         "isLocation",
         "isofflineAllTimeAtt",
@@ -3769,8 +3779,9 @@ exports.getAppAppliedLeaves = async (req, res) => {
       );
 
       employeeIds = [...new Set([...directIds, ...subordinateIds])];
-    } else if (role === "manager") {
+    } else if (role == "manager") {
       let directReportees;
+      branchId = req.body.branchId ? req.body.branchId : branchId;
       if (branchId == "All") {
         directReportees = await empPersonal.findAll({
           where: {
@@ -4918,6 +4929,80 @@ exports.reimbursementList = async (req, res) => {
     return Helper.response(false, error.message, [], res, 500);
   }
 };
+
+/** Team reimbursements — for manager / director: all branch records; others: own only. */
+exports.getTeamReimbursements = async (req, res) => {
+  try {
+    const tenantId = req.users?.tenantId;
+    const employeeId = req.users?.id;
+    const branchId = req.users?.branchId;
+    const role = (req.users?.role || '').toLowerCase();
+
+    if (!branchId || branchId === 'null') {
+      return Helper.response(false, 'branchId is required!', {}, res, 200);
+    }
+    if (!tenantId) {
+      return Helper.response(false, 'User Not Found', [], res, 404);
+    }
+
+    const isTeamRole = role === 'manager' || role === 'director' || role === 'teamleader';
+    const where = isTeamRole
+      ? { tenantId, branchId }
+      : { tenantId, branchId, employeeId };
+
+    const rows = await reimbursement.findAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      raw: true,
+    });
+
+    const data = await Promise.all(
+      rows.map(async (item) => {
+        const emp = await empPersonal.findOne({
+          where: { id: item.employeeId, tenantId },
+          attributes: ['firstName', 'lastName'],
+          raw: true,
+        });
+        return {
+          ...item,
+          employee_name: emp ? `${emp.firstName} ${emp.lastName}` : '—',
+        };
+      }),
+    );
+
+    return Helper.response(true, 'Team Reimbursements Found', data, res, 200);
+  } catch (error) {
+    console.error('getTeamReimbursements error:', error);
+    return Helper.response(false, error.message, [], res, 500);
+  }
+};
+
+/** Approve or reject a reimbursement (manager / director via app token). */
+exports.updateAppReimbursementStatus = async (req, res) => {
+  try {
+    const { id, status } = req.body;
+    const tenantId = req.users?.tenantId;
+    const approverId = req.users?.id;
+    const branchId = req.users?.branchId;
+
+    if (!id || !['approved', 'rejected'].includes(status)) {
+      return Helper.response(false, "id and valid status (approved/rejected) are required", null, res, 400);
+    }
+
+    const record = await reimbursement.findOne({ where: { id, tenantId, branchId } });
+    if (!record) {
+      return Helper.response(false, 'Reimbursement not found', null, res, 404);
+    }
+
+    await record.update({ status, updatedBy: approverId, updatedAt: new Date() });
+
+    return Helper.response(true, `Reimbursement ${status} successfully`, record, res, 200);
+  } catch (error) {
+    console.error('updateAppReimbursementStatus error:', error);
+    return Helper.response(false, error.message, null, res, 500);
+  }
+};
+
 const comp_off=require('../../models/comp_off')
 
 exports.CompoffData=async(req,res)=>{

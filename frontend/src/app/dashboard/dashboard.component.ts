@@ -68,7 +68,13 @@ export class DashboardComponent {
   anniversaries: any[] = [];
   attendanceChart: any = null;
   attendanceByDepartment: any[] = [];
+  teamwiseAttendance: any[] = [];
+  teamwiseDate: string = '';
+  teamwiseIsMultiBranch: boolean = false;
+  selectedTeamBranch: string = 'All';
+  expandedDepartments: Set<string> = new Set();
   baseurl: any;
+  userRole: string = '';
   Event: any = [];
   selectedEmployeeTableRange = 'This Week';
   selectedAttendanceChartRange = 'This Week';
@@ -89,8 +95,21 @@ export class DashboardComponent {
 
   ngOnInit(): void {
     this.baseurl = this.masterService.getBaseUrl();
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    this.userRole = user?.role || '';
     this.resetDashboardState();
     this.loadDashboard();
+    if (this.isManagerRole) {
+      this.loadTeamwiseAttendance();
+    }
+  }
+
+  get isManagerRole(): boolean {
+    return ['admin', 'hr', 'superadmin', 'manager', 'director'].includes(this.userRole);
+  }
+
+  get isManagerDirectorRole(): boolean {
+    return this.userRole === 'manager' || this.userRole === 'director';
   }
 
   resetDashboardState() {
@@ -107,6 +126,66 @@ export class DashboardComponent {
     this.anniversaries = [];
     this.attendanceChart = null;
     this.attendanceByDepartment = [];
+    this.teamwiseAttendance = [];
+    this.teamwiseIsMultiBranch = false;
+    this.selectedTeamBranch = 'All';
+  }
+
+  loadTeamwiseAttendance(date?: string) {
+    const branchId = this.isManagerDirectorRole ? this.selectedTeamBranch : undefined;
+    this.dashboardService.getTeamwiseAttendance(date, branchId).subscribe({
+      next: (res: any) => {
+        if (res.status === true) {
+          this.teamwiseAttendance = res.data?.teamData || [];
+          this.teamwiseDate = res.data?.date || '';
+          this.teamwiseIsMultiBranch = res.data?.isMultiBranch || false;
+        }
+      },
+      error: () => {}
+    });
+  }
+
+  setTeamBranch(branchId: string) {
+    this.selectedTeamBranch = branchId;
+    this.expandedDepartments.clear();
+    this.loadTeamwiseAttendance();
+  }
+
+  get teamwiseBranches(): string[] {
+    if (!this.teamwiseIsMultiBranch) return [];
+    return [...new Set(this.teamwiseAttendance.map((d: any) => d.branchName).filter(Boolean))];
+  }
+
+  get teamBranchItems(): { id: string; name: string }[] {
+    return [{ id: 'All', name: 'All Branches' }, ...(this.branchList || [])];
+  }
+
+  getDeptsByBranch(branchName: string): any[] {
+    return this.teamwiseAttendance.filter((d: any) => d.branchName === branchName);
+  }
+
+  toggleDepartment(deptId: string) {
+    if (this.expandedDepartments.has(deptId)) {
+      this.expandedDepartments.delete(deptId);
+    } else {
+      this.expandedDepartments.add(deptId);
+    }
+  }
+
+  isDepartmentExpanded(deptId: string): boolean {
+    return this.expandedDepartments.has(deptId);
+  }
+
+  getMemberStatusClass(status: string): string {
+    if (status === 'Present') return 'text-success';
+    if (status === 'On Leave') return 'text-warning';
+    return 'text-danger';
+  }
+
+  getMemberStatusBadge(status: string): string {
+    if (status === 'Present') return 'bg-label-success';
+    if (status === 'On Leave') return 'bg-label-warning';
+    return 'bg-label-danger';
   }
 
   loadDashboard() {

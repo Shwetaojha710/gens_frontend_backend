@@ -22,6 +22,13 @@ baseUrl=environment.apiUrl
   getAttendanceByDepartment(range: string = 'This Week'): Observable<any> {
     return this.http.post(`${this.baseUrl}dashboard-attendance-by-department`, { range });
   }
+
+  getTeamwiseAttendance(date?: string, branchId?: string): Observable<any> {
+    const body: any = {};
+    if (date) body['date'] = date;
+    if (branchId) body['branchId'] = branchId;
+    return this.http.post(`${this.baseUrl}team-wise-attendance`, body);
+  }
   //    getDashboardData(): Observable<any> {
   //   return this.http.post(`http://192.168.23.17:3002/api/dashboard`, {});
   // }

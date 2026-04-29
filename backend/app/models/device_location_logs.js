@@ -106,6 +106,19 @@ const DeviceLocationLog = sequelize.define(
       allowNull: true,
       defaultValue: "normal",
     },
+    client_name: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    client_phone_no: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    doc: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+
   },
   {
     tableName: "device_location_logs",

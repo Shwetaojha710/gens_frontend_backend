@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const { CompoffData } = require('../controller/tenant/appApi');
-const { getDashboardData, todayAttendance, getAttendanceChart, getAttendanceByDepartment } = require('../controller/tenant/dashboard');
+const { getDashboardData, todayAttendance, getAttendanceChart, getAttendanceByDepartment, getTeamwiseAttendance } = require('../controller/tenant/dashboard');
 const {createEmploymentType, getEmploymentTypes, editEmploymentType, deleteEmploymentType, getEmpDD,deleteHolidayType,editHolidayType,getHolidayTypes,createHolidayType,getHolidayTypeDD, createSalaryOrder, deleteSalaryOrder, editSalaryOrder, getSalaryOrder} = require('../controller/tenant/employmentType');
 const { activeLocation, getStateDistrict } = require('../controller/tenant/empPersonal');
 const { getLocationHistory, getActiveLocationEmp, getempLocationHistory, getappActiveLocationEmp, getliveLocationHistory, getVisitReport, getVisitPlace } = require('../controller/tenant/tracking');
@@ -22,6 +22,7 @@ router.post('/dashboard',Admin, getDashboardData);
 router.post('/dashboard-attendance-chart', Admin, getAttendanceChart);
 router.post('/dashboard-attendance-by-department', Admin, getAttendanceByDepartment);
 router.post('/today-attendance',Admin, todayAttendance);
+router.post('/team-wise-attendance', Admin, getTeamwiseAttendance);
 
 
 router.post('/createSalaryOrder', Admin, createSalaryOrder);

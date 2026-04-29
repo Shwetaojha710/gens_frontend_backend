@@ -10,6 +10,7 @@ const Designation = require("../../models/designation.js");
 const DeviceLocationLog = require("../../models/device_location_logs.js");
 const Shift = require("../../models/shift");
 const AttendanceSetting = require("../../models/attendanceSetting");
+const Branch = require("../../models/branch.js");
 const { Op, Sequelize } = require("sequelize");
 const moment = require("moment");
 
@@ -748,6 +749,130 @@ exports.getAttendanceByDepartment = async (req, res) => {
     const range = req.body?.range || "This Week";
     const baseData = await getDashboardBaseData(context.tenantId, context.branchId, range);
     return Helper.response(true, "Attendance by department data found successfully", buildDepartmentAttendanceData(baseData), res, 200);
+  } catch (error) {
+    return Helper.response(false, error?.message, {}, res, 500);
+  }
+};
+
+exports.getTeamwiseAttendance = async (req, res) => {
+  try {
+    const context = getRequestContext(req);
+    if (context.error) {
+      return Helper.response(false, context.error, {}, res, context.statusCode);
+    }
+
+    const { tenantId, branchId } = context;
+    const role = req.users?.role;
+    const date = req.body?.date || moment().format("YYYY-MM-DD");
+    const requestedBranchId = req.body?.branchId;
+
+    const isMultiBranch =
+      requestedBranchId === "All" ||
+      (requestedBranchId == null && (role === "manager" || role === "director"));
+
+    let branchIds;
+    let branchMap = {};
+
+    if (isMultiBranch) {
+      const allBranches = await Branch.findAll({
+        where: { tenantId, status: "active" },
+        attributes: ["id", "name"],
+        raw: true,
+        order: [["name", "ASC"]],
+      });
+      branchIds = allBranches.map((b) => b.id);
+      branchMap = Object.fromEntries(allBranches.map((b) => [b.id, b.name]));
+    } else {
+      branchIds = [requestedBranchId || branchId];
+    }
+
+    const [departments, employees, attendanceRows, todayLeaves] = await Promise.all([
+      Department.findAll({
+        where: { tenantId, branchId: { [Op.in]: branchIds }, status: "active" },
+        attributes: ["id", "name", "branchId"],
+        raw: true,
+        order: [["name", "ASC"]],
+      }),
+      empPersonal.findAll({
+        where: { tenantId, branchId: { [Op.in]: branchIds }, status: "active" },
+        attributes: ["id", "firstName", "lastName", "empCode", "departmentId", "designationId", "profileImage", "gender", "branchId"],
+        raw: true,
+      }),
+      attendance.findAll({
+        where: { tenantId, branchId: { [Op.in]: branchIds }, date },
+        attributes: ["employeeId", "check_in_time", "check_out_time", "is_present"],
+        raw: true,
+      }),
+      leaveApplication.findAll({
+        where: {
+          tenantId,
+          branchId: { [Op.in]: branchIds },
+          fromDate: { [Op.lte]: date },
+          toDate: { [Op.gte]: date },
+          status: { [Op.in]: ["pending", "approved"] },
+        },
+        attributes: ["employeeId"],
+        raw: true,
+      }),
+    ]);
+
+    const designationIds = [...new Set(employees.map((e) => e.designationId).filter(Boolean))];
+    const designations = designationIds.length
+      ? await Designation.findAll({
+          where: { id: designationIds },
+          attributes: ["id", "name"],
+          raw: true,
+        })
+      : [];
+
+    const designationMap = Object.fromEntries(designations.map((d) => [d.id, d.name]));
+    const attendanceMap = Object.fromEntries(attendanceRows.map((a) => [a.employeeId, a]));
+    const onLeaveIds = new Set(todayLeaves.map((l) => l.employeeId));
+
+    const teamData = departments.map((dept, index) => {
+      const deptEmployees = employees.filter((e) => e.departmentId === dept.id);
+      const memberList = deptEmployees.map((emp) => {
+        const att = attendanceMap[emp.id];
+        let status = "Absent";
+        if (onLeaveIds.has(emp.id)) {
+          status = "On Leave";
+        } else if (att?.is_present || att?.check_in_time) {
+          status = "Present";
+        }
+        return {
+          id: emp.id,
+          name: `${emp.firstName} ${emp.lastName}`.trim(),
+          empCode: emp.empCode || "N/A",
+          designation: designationMap[emp.designationId] || "N/A",
+          profileImage: emp.profileImage ? `${process.env.BASE_URL}${emp.profileImage}` : null,
+          gender: emp.gender || "N/A",
+          status,
+          checkIn: att?.check_in_time ? String(att.check_in_time).split(" ").pop() : null,
+          checkOut: att?.check_out_time ? String(att.check_out_time).split(" ").pop() : null,
+        };
+      });
+
+      const presentCount = memberList.filter((m) => m.status === "Present").length;
+      const onLeaveCount = memberList.filter((m) => m.status === "On Leave").length;
+      const absentCount = memberList.filter((m) => m.status === "Absent").length;
+      const total = memberList.length;
+
+      return {
+        departmentId: dept.id,
+        departmentName: dept.name,
+        branchId: dept.branchId,
+        branchName: isMultiBranch ? (branchMap[dept.branchId] || "Unknown Branch") : null,
+        color: DEPARTMENT_COLORS[index % DEPARTMENT_COLORS.length],
+        total,
+        presentCount,
+        onLeaveCount,
+        absentCount,
+        presentPercent: total ? Number(((presentCount / total) * 100).toFixed(0)) : 0,
+        members: memberList,
+      };
+    });
+
+    return Helper.response(true, "Team-wise attendance fetched successfully", { date, teamData, isMultiBranch }, res, 200);
   } catch (error) {
     return Helper.response(false, error?.message, {}, res, 500);
   }

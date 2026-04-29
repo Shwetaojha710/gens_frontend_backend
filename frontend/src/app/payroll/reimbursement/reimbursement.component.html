@@ -9,7 +9,7 @@
           </button>
         </h5>
 
-     
+
         <div class="card-body">
           <div class="row g-2">
             <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
@@ -178,20 +178,17 @@
 
                 </td>
                 <td>
-
-                  <button type="button" class="btn btn-sm btn-outline-success" *ngIf="item.status=='pending'"
-                    (click)="statuschange(item,'approved')">
-                    <i class="fas fa-edit"></i>
-                  </button>
-                  &nbsp;
-                  <button *ngIf="item.status=='pending'" type="button" class="btn btn-sm btn-outline-danger"
-                    (click)="statuschange(item,'rejected')">
-                    <i class="fas fa-trash-alt"></i>
-                  </button>
-
-                  <!-- <button type="button" class="badge bg-label-danger" (click)="delete(item)">
-                    <i class="fas fa-trash-alt"></i>
-                  </button> -->
+                  <ng-container *ngIf="item.status=='pending'">
+                    <button type="button" class="reimb-icon-btn--approve"
+                      (click)="statuschange(item,'approved')" title="Approve">
+                      <i class="ri ri-check-line"></i>
+                    </button>
+                    &nbsp;
+                    <button type="button" class=" reimb-icon-btn--reject"
+                      (click)="statuschange(item,'rejected')" title="Reject">
+                      <i class="ri ri-close-line"></i>
+                    </button>
+                  </ng-container>
                 </td>
               </tr>
             </tbody>

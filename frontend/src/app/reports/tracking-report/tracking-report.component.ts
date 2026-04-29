@@ -390,19 +390,23 @@ export class TrackingReportComponent implements OnInit {
     const exportData: any[] = [];
 
     this.originalList.forEach((employee: any) => {
-      const places = this.getUniquePlaces(employee.visits).join(' | ');
-      const purposes = this.getUniquePurposes(employee.visits).join(' | ');
-      const remarks = this.getUniqueRemarks(employee.visits).join(' | ');
-
-      exportData.push({
-        'Employee Name': this.getEmployeeName(employee.emp_name),
-        'Employee Code': this.getEmployeeCode(employee.emp_name),
-        'Visit Date': employee.visit_date,
-        'Total Visits': employee.total_visits,
-        'Total Duration': employee.total_duration,
-        'Visit Place(s)': places,
-        'Purpose(s)': purposes,
-        'Remark(s)': remarks
+      (employee.visits || []).forEach((v: any, idx: number) => {
+        exportData.push({
+          'Employee Name': this.getEmployeeName(employee.emp_name),
+          'Employee Code': this.getEmployeeCode(employee.emp_name),
+          'Visit Date': employee.visit_date,
+          'Visit #': idx + 1,
+          'Visit Place': v.visit_place || '',
+          'Purpose': v.purpose || '',
+          'Remark': v.remark || '',
+          'Client Name': v.client_name || '',
+          'Client Phone': v.client_phone_no || '',
+          'Doc': v.doc ? this.baseurl + v.doc : '',
+          'Address': v.address || '',
+          'Duration': v.duration || '',
+          'Total Visits': employee.total_visits,
+          'Total Duration': employee.total_duration
+        });
       });
     });
 

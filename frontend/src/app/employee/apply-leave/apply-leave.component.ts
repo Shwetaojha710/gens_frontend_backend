@@ -333,6 +333,16 @@ export class ApplyLeaveComponent {
     });
 
   }
+  getStatusClass(status: string): string {
+    switch ((status || '').toLowerCase()) {
+      case 'approved': return 'badge-outline-success';
+      case 'rejected': return 'badge-outline-danger';
+      case 'pending': return 'badge-outline-warning';
+      case 'recommended': return 'badge-outline-info';
+      default: return 'badge-outline-secondary';
+    }
+  }
+
   statuschange(item: any, status: any) {
     if (status == 'rejected') {
       Swal.fire({

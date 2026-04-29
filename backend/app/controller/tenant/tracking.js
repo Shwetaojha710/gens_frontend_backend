@@ -552,6 +552,9 @@ exports.PinnedtrackLocation = async (req, res) => {
       purpose,
       visit_place,
       network_mode,
+      client_name,
+      client_phone_no,
+      doc,
     } = req.body;
     const tenantId = req?.users?.tenantId || null;
     const branchId = req?.users?.branchId || null;
@@ -576,6 +579,12 @@ exports.PinnedtrackLocation = async (req, res) => {
     }
     console.log(req.body, "body data");
 
+    // Resolve uploaded document path: prefer a multipart file over the body string
+    const uploadedFile = Array.isArray(req.files) && req.files.length > 0
+      ? req.files.find((f) => f.fieldname == 'doc') || req.files[0]
+      : null;
+    const docPath = uploadedFile ? uploadedFile.path : (doc || null);
+
     const existingLog = await DeviceLocationLog.findOne({
       where: {
         device_id: Deviceid,
@@ -592,6 +601,9 @@ exports.PinnedtrackLocation = async (req, res) => {
         heading: coords.heading || null,
         speed: coords.speed || null,
         mode: mode || null,
+        client_name: client_name || null,
+        client_phone_no: client_phone_no || null,
+        doc: docPath,
         tracked_at: new Date(timestamp),
       },
       order: [["tracked_at", "DESC"]],
@@ -635,6 +647,9 @@ exports.PinnedtrackLocation = async (req, res) => {
         mode: mode || "foreground",
         tracked_at: new Date(timestamp),
         address: address?.full_address ?? null,
+        doc: docPath,
+        client_name: client_name || null,
+        client_phone_no: client_phone_no || null,
       });
     }
 
@@ -1279,9 +1294,12 @@ exports.listVistData = async (req, res) => {
   }
 };
 
+
 exports.updateTrackRemark = async (req, res) => {
   try {
-    const { id, remark } = req.body;
+    const { id, remark ,   client_name,
+      client_phone_no
+      } = req.body;
 
     if (!id) {
       return Helper.response(false, "Id is required", {}, res, 400);
@@ -1300,8 +1318,17 @@ exports.updateTrackRemark = async (req, res) => {
     }
 
     let updatePayload = {};
-
+    console.log(req.files,"req.filesreq.files");
+    
+  // Resolve uploaded document path: prefer a multipart file over the body string
+    const uploadedFile = Array.isArray(req.files) && req.files.length > 0
+      ? req.files.find((f) => f.fieldname == 'doc') || req.files[0]
+      : null;
+    const docPath = uploadedFile ? uploadedFile.filename : (doc || null);
     if (remark !== undefined) updatePayload.remark = remark;
+      updatePayload.client_name=client_name || null,
+      updatePayload.client_phone_no= client_phone_no || null,
+      updatePayload.doc= docPath
     // if (feedback !== undefined) updatePayload.feedback = feedback;
 
     await DeviceLocationLog.update(updatePayload, {
@@ -1324,6 +1351,51 @@ exports.updateTrackRemark = async (req, res) => {
     return Helper.response(false, error?.message, {}, res, 500);
   }
 };
+// exports.updateTrackRemark = async (req, res) => {
+//   try {
+//     const { id, remark ,client_name,client_phone_no} = req.body;
+
+//     if (!id) {
+//       return Helper.response(false, "Id is required", {}, res, 400);
+//     }
+
+//     if (!remark) {
+//       return Helper.response(false, "Remark is required", {}, res, 400);
+//     }
+
+//     const existsData = await DeviceLocationLog.findOne({
+//       where: { id },
+//     });
+
+//     if (!existsData) {
+//       return Helper.response(false, "No Data Found", {}, res, 404);
+//     }
+
+//     let updatePayload = {};
+
+//     if (remark !== undefined) updatePayload.remark = remark;
+//     // if (feedback !== undefined) updatePayload.feedback = feedback;
+
+//     await DeviceLocationLog.update(updatePayload, {
+//       where: { id },
+//     });
+
+//     const updatedData = await DeviceLocationLog.findOne({
+//       where: { id },
+//     });
+
+//     return Helper.response(
+//       true,
+//       "Data Updated Successfully",
+//       updatedData,
+//       res,
+//       200,
+//     );
+//   } catch (error) {
+//     console.log(error);
+//     return Helper.response(false, error?.message, {}, res, 500);
+//   }
+// };
 
 // const {  Sequelize } = require("sequelize");
 // const DeviceLocationLog = require("../models/deviceLocationLog");
@@ -1377,6 +1449,9 @@ exports.getVisitReport = async (req, res) => {
         "purpose",
         "remark",
         "address",
+        "doc",
+        "client_name",
+        "client_phone_no",
       ],
       where: whereCondition,
       order: [["tracked_at", "asc"]],
@@ -1408,6 +1483,9 @@ exports.getVisitReport = async (req, res) => {
         purpose: loc.purpose,
         remark: loc.remark,
         address: loc.address,
+        doc: loc.doc,
+        client_name: loc.client_name,
+        client_phone_no: loc.client_phone_no,
       });
     });
 
@@ -1446,6 +1524,9 @@ exports.getVisitReport = async (req, res) => {
             address: pings[segStart].address,
             purpose: pings[segStart].purpose,
             remark: pings[segStart].remark,
+            doc: pings[segStart].doc,
+            client_name: pings[segStart].client_name,
+            client_phone_no: pings[segStart].client_phone_no,
             date: arrivalTime,
             durationSeconds: (departureTime - arrivalTime) / 1000,
           });
@@ -1465,6 +1546,9 @@ exports.getVisitReport = async (req, res) => {
           latitude: v.latitude,
           longitude: v.longitude,
           address: v.address,
+          doc: v.doc,
+          client_name: v.client_name,
+          client_phone_no: v.client_phone_no,
           duration: Helper.formatDuration(v.durationSeconds),
         })),
         totalDurationSeconds: visitSegments.reduce(

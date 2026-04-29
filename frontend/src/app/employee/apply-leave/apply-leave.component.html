@@ -262,25 +262,25 @@
                   <td>{{ item["days"] }}</td>
                   <td>{{ item["duration_type_name"] }}</td>
                   <td>{{ item["reason"] }}</td>
-                  <td>{{ item["status"] }}</td>
+                  <td>
+                    <span class="badge" [ngClass]="getStatusClass(item['status'])">{{ item["status"] }}</span>
+                  </td>
 
                   <td>{{ item["createdAt"] | date: 'short'  }}</td>
 
                 <td>
-                  <button type="button" class="btn btn-sm btn-outline-success" *ngIf="!['approved','rejected','self_declined'].includes(item.status)"
-                    (click)="statuschange(item,'approved')">
-                    <i class="fas fa-check"></i>
-                  </button>
-                  &nbsp;
-                 <button
-  *ngIf="['pending','recommended'].includes(item.status)"
-  type="button"
-  class="btn btn-sm btn-outline-danger"
-  (click)="statuschange(item,'rejected')">
-
-  <i class="fa-solid fa-xmark"></i>
-
-</button>
+                  <ng-container *ngIf="!['approved','rejected','self_declined'].includes(item.status)">
+                    <button type="button" class="leave-icon-btn leave-icon-btn--approve"
+                      (click)="statuschange(item,'approved')" title="Approve">
+                      <i class="ri ri-check-line"></i>
+                    </button>
+                    &nbsp;
+                    <button *ngIf="['pending','recommended'].includes(item.status)" type="button"
+                      class="leave-icon-btn leave-icon-btn--reject"
+                      (click)="statuschange(item,'rejected')" title="Reject">
+                      <i class="ri ri-close-line"></i>
+                    </button>
+                  </ng-container>
                 </td>
               </tr>
             </tbody>

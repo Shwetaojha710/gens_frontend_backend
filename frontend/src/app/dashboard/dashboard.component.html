@@ -510,6 +510,193 @@
       </div>
     </div>
   </div>
+
+  <!-- Team-wise Attendance: visible for admin / hr / superadmin (director & manager roles) -->
+  <div class="row g-3 mt-1" *ngIf="isManagerRole">
+    <div class="col-12">
+      <div class="card dashboard-glass-card">
+        <div class="card-header border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div>
+            <h5 class="mb-0">Team-wise Attendance</h5>
+            <small class="text-muted">{{ teamwiseDate | date:'dd MMM yyyy' }}</small>
+          </div>
+          <div class="d-flex gap-2 align-items-center flex-wrap">
+            <!-- Branch filter: visible only for manager / director -->
+            <ng-select *ngIf="isManagerDirectorRole"
+              [items]="teamBranchItems"
+              bindLabel="name"
+              bindValue="id"
+              [(ngModel)]="selectedTeamBranch"
+              (ngModelChange)="setTeamBranch($event)"
+              [clearable]="false"
+              style="min-width: 160px; font-size: 13px;">
+            </ng-select>
+            <span class="badge bg-label-success px-3">Present</span>
+            <span class="badge bg-label-warning px-3">On Leave</span>
+            <span class="badge bg-label-danger px-3">Absent</span>
+          </div>
+        </div>
+        <div class="card-body pt-0">
+          <div *ngIf="teamwiseAttendance.length === 0" class="text-center py-4 text-muted">
+            <i class="ri ri-team-line fs-2 d-block mb-2"></i>
+            No team data available
+          </div>
+
+          <!-- Multi-branch view (manager / director): grouped by branch -->
+          <ng-container *ngIf="teamwiseIsMultiBranch">
+            <ng-container *ngFor="let branchName of teamwiseBranches">
+              <div class="d-flex align-items-center gap-2 mt-3 mb-2 px-1">
+                <i class="ri ri-building-line text-primary"></i>
+                <span class="fw-bold text-primary">{{ branchName }}</span>
+              </div>
+              <div class="accordion">
+                <div class="accordion-item border mb-2 rounded" *ngFor="let dept of getDeptsByBranch(branchName)">
+                  <div class="accordion-header d-flex align-items-center px-3 py-2"
+                    style="cursor:pointer; background: #f8f9fa; border-radius: 8px;"
+                    (click)="toggleDepartment(dept.departmentId)">
+                    <div class="d-flex align-items-center flex-grow-1 gap-3">
+                      <span class="avatar avatar-sm rounded" [style.background]="dept.color">
+                        <i class="ri ri-team-line text-white"></i>
+                      </span>
+                      <div>
+                        <span class="fw-semibold">{{ dept.departmentName }}</span>
+                        <span class="text-muted ms-2 small">({{ dept.total }} members)</span>
+                      </div>
+                    </div>
+                    <div class="d-flex gap-3 align-items-center me-3">
+                      <span class="text-success small fw-medium">
+                        <i class="ri ri-user-star-line me-1"></i>{{ dept.presentCount }} Present
+                      </span>
+                      <span class="text-warning small fw-medium">
+                        <i class="ri ri-time-line me-1"></i>{{ dept.onLeaveCount }} On Leave
+                      </span>
+                      <span class="text-danger small fw-medium">
+                        <i class="ri ri-user-unfollow-line me-1"></i>{{ dept.absentCount }} Absent
+                      </span>
+                      <div class="progress" style="width:80px; height:6px;">
+                        <div class="progress-bar bg-success" [style.width]="dept.presentPercent + '%'"></div>
+                      </div>
+                      <span class="text-muted small">{{ dept.presentPercent }}%</span>
+                    </div>
+                    <i class="ri" [ngClass]="isDepartmentExpanded(dept.departmentId) ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
+                  </div>
+                  <div *ngIf="isDepartmentExpanded(dept.departmentId)" class="px-3 pb-3 pt-2">
+                    <div class="table-responsive">
+                      <table class="table table-sm table-hover mb-0">
+                        <thead>
+                          <tr class="text-muted small">
+                            <th>Employee</th>
+                            <th>Code</th>
+                            <th>Designation</th>
+                            <th>Check-In</th>
+                            <th>Check-Out</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr *ngFor="let member of dept.members">
+                            <td>
+                              <div class="d-flex align-items-center gap-2">
+                                <img [src]="member.profileImage || (member.gender === 'Male' ? 'assets/img/avatars/5.png' : 'assets/img/avatars/4.png')"
+                                  class="rounded-circle" width="28" height="28" alt=""
+                                  (error)="onImageError($event, member, 'avatar')">
+                                <span class="fw-medium">{{ member.name }}</span>
+                              </div>
+                            </td>
+                            <td class="text-muted small">{{ member.empCode }}</td>
+                            <td class="text-muted small">{{ member.designation }}</td>
+                            <td class="small">{{ member.checkIn || '—' }}</td>
+                            <td class="small">{{ member.checkOut || '—' }}</td>
+                            <td>
+                              <span class="badge rounded-pill small" [ngClass]="getMemberStatusBadge(member.status)">
+                                {{ member.status }}
+                              </span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+          </ng-container>
+
+          <!-- Single-branch view (admin / hr / superadmin) -->
+          <div class="accordion" id="teamwiseAccordion" *ngIf="!teamwiseIsMultiBranch">
+            <div class="accordion-item border mb-2 rounded" *ngFor="let dept of teamwiseAttendance">
+              <div class="accordion-header d-flex align-items-center px-3 py-2"
+                style="cursor:pointer; background: #f8f9fa; border-radius: 8px;"
+                (click)="toggleDepartment(dept.departmentId)">
+                <div class="d-flex align-items-center flex-grow-1 gap-3">
+                  <span class="avatar avatar-sm rounded" [style.background]="dept.color">
+                    <i class="ri ri-team-line text-white"></i>
+                  </span>
+                  <div>
+                    <span class="fw-semibold">{{ dept.departmentName }}</span>
+                    <span class="text-muted ms-2 small">({{ dept.total }} members)</span>
+                  </div>
+                </div>
+                <div class="d-flex gap-3 align-items-center me-3">
+                  <span class="text-success small fw-medium">
+                    <i class="ri ri-user-star-line me-1"></i>{{ dept.presentCount }} Present
+                  </span>
+                  <span class="text-warning small fw-medium">
+                    <i class="ri ri-time-line me-1"></i>{{ dept.onLeaveCount }} On Leave
+                  </span>
+                  <span class="text-danger small fw-medium">
+                    <i class="ri ri-user-unfollow-line me-1"></i>{{ dept.absentCount }} Absent
+                  </span>
+                  <div class="progress" style="width:80px; height:6px;">
+                    <div class="progress-bar bg-success" [style.width]="dept.presentPercent + '%'"></div>
+                  </div>
+                  <span class="text-muted small">{{ dept.presentPercent }}%</span>
+                </div>
+                <i class="ri" [ngClass]="isDepartmentExpanded(dept.departmentId) ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
+              </div>
+              <div *ngIf="isDepartmentExpanded(dept.departmentId)" class="px-3 pb-3 pt-2">
+                <div class="table-responsive">
+                  <table class="table table-sm table-hover mb-0">
+                    <thead>
+                      <tr class="text-muted small">
+                        <th>Employee</th>
+                        <th>Code</th>
+                        <th>Designation</th>
+                        <th>Check-In</th>
+                        <th>Check-Out</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let member of dept.members">
+                        <td>
+                          <div class="d-flex align-items-center gap-2">
+                            <img [src]="member.profileImage || (member.gender === 'Male' ? 'assets/img/avatars/5.png' : 'assets/img/avatars/4.png')"
+                              class="rounded-circle" width="28" height="28" alt=""
+                              (error)="onImageError($event, member, 'avatar')">
+                            <span class="fw-medium">{{ member.name }}</span>
+                          </div>
+                        </td>
+                        <td class="text-muted small">{{ member.empCode }}</td>
+                        <td class="text-muted small">{{ member.designation }}</td>
+                        <td class="small">{{ member.checkIn || '—' }}</td>
+                        <td class="small">{{ member.checkOut || '—' }}</td>
+                        <td>
+                          <span class="badge rounded-pill small" [ngClass]="getMemberStatusBadge(member.status)">
+                            {{ member.status }}
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <footer class="content-footer footer bg-footer-theme mt-5"
