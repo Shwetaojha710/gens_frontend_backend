@@ -31,8 +31,8 @@
     <!-- EMPLOYEE ADDRESS -->
     <div class="address-block">
       <div><b>{{ salutation }} {{ employeeFullName }}</b></div>
-      <div>{{ fatherPrefix }} <b>{{ personalDetails.fatherName || '_______________' }}</b></div>
-      <div>{{ personalDetails.presentAddress || personalDetails.address || '_______________' }}</div>
+      <div>{{ fatherPrefix }} <b>{{ personalDetails.fatherName }}</b></div>
+      <div style="white-space: pre-line;">{{ personalDetails.permanentAddress }}</div>
       @if (personalDetails.city || personalDetails.state) {
         <div>
           {{ personalDetails.city }}@if (personalDetails.city && personalDetails.state) { <span>, </span> }{{ personalDetails.state }}

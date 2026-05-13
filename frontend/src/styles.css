@@ -8,9 +8,15 @@
 
 :root,
 [data-bs-theme=light] {
+  --bs-success: #198754;
 
---bs-success: #198754;
-
+  /* App theme — overridden dynamically by ThemeService */
+  --app-primary: #0d5f9d;
+  --app-primary-subtle: rgba(13, 95, 157, 0.12);
+  --app-nav-active-bg: #0d5f9d;
+  --app-sidebar-bg: linear-gradient(180deg, rgba(221, 234, 255, 0.96) 0%, rgba(214, 227, 250, 0.92) 48%, rgba(231, 237, 250, 0.96) 100%);
+  --app-page-bg: linear-gradient(to top, #fff1eb 0%, #d1e8f3 100%);
+  --app-hero-bg: linear-gradient(89.79deg, #209af7 0.92%, #025a9d 99.82%);
 }
 
 
@@ -105,7 +111,7 @@ table.table {
   overflow: hidden;
   position: relative;
   color: #fff;
-  background: linear-gradient(89.79deg, #209af7 0.92%, #025a9d 99.82%) !important;
+  background: var(--app-hero-bg, linear-gradient(89.79deg, #209af7 0.92%, #025a9d 99.82%)) !important;
   box-shadow: 0 14px 40px rgba(2, 90, 157, 0.28);
 }
 

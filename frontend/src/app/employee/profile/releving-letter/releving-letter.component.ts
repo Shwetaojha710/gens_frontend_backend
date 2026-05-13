@@ -61,7 +61,7 @@ export class RelevingLetterComponent {
 
   get salutation(): string {
     const gender = (this.personalDetails.gender || '').toLowerCase();
-    return gender === 'female' ? 'Ms.' : 'Mr.';
+    return gender == 'female' ? 'Ms.' : 'Mr.';
   }
 
   get employeeFullName(): string {
@@ -70,18 +70,18 @@ export class RelevingLetterComponent {
 
   get fatherPrefix(): string {
     const gender = (this.personalDetails.gender || '').toLowerCase();
-    return gender === 'female' ? 'D/O' : 'S/O';
+    return gender == 'female' ? 'D/O' : 'S/O';
   }
 
   get relievingData(): any {
     return {
-      name: this.employeeFullName,
+      name:`${this.salutation} ${this.employeeFullName}`,
       fatherName: this.personalDetails.fatherName || '',
       address: this.personalDetails.address || '',
       subject: 'Relieving Cum Experience Letter',
-      greeting: `Dear ${this.salutation} ${this.employeeFullName},`,
-      body1: `You are hereby relieved from the services of the company by the closing hours of ${this.formatDate(this.relievingDate)}.`,
-      body2: `We wish to place on record that you had been under the employment from ${this.formatDate(this.joiningDate)} to ${this.formatDate(this.relievingDate)}  2026 with the current position as ${this.personalDetails.designation || '_______________'}.`,
+      greeting: `Dear ${this.personalDetails.firstName || 'Employee'},`,
+      body1: `You are hereby relieved from the services of the company by the closing hours of <b> ${this.formatDate(this.relievingDate)}</b>.We wish to place on record that you had been under the employment from <b>${this.formatDate(this.joiningDate)}</b> to <b> ${this.formatDate(this.relievingDate)}</b> with the current position as '${this.personalDetails.designation || '_______________'}'.`,
+      // body2: ``,
       body3: `<br>All the dues will be paid to you as Full & Final Settlement.`,
       body4: `<br>We thank you for your contribution to the Company and wish you all success in your future endeavors.`,
       closing: `With warm regards,\n\n\n\n\n <b>Human Resource Department</b> \nDate: ${this.formatDate(new Date().toISOString())}`
@@ -114,7 +114,7 @@ export class RelevingLetterComponent {
 
       const relievingData = {
         ...this.relievingData,
-        closing: `With warm regards<br/><br/><br/><b>Human Resource Department</b><br/>Date: ${this.formatDate(new Date().toISOString())}`
+        closing: `With warm regards<br/><br/><br/><b>Human Resource Department</b><br/>Date: ${new Date().toLocaleDateString('en-GB')}`
       };
       const relievingDate = this.relievingDate ? this.formatDate(this.relievingDate) : new Date().toLocaleDateString('en-GB');
       const joiningDate = this.joiningDate ? this.formatDate(this.joiningDate) : new Date().toLocaleDateString('en-GB');
@@ -131,8 +131,8 @@ export class RelevingLetterComponent {
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-  font-family: "Times New Roman", serif;
-  font-size: 13.5px;
+  font-family: "Calibri", sans-serif;
+  font-size: 14px;
   color: #000;
 }
 
@@ -140,9 +140,9 @@ body {
 .page {
   width: 21cm;
   min-height: 29.7cm;
-  padding: 100px 60px 0px 60px;
+  padding: 100px 60px 60px 60px;
   position: relative;
-
+  margin-top:20px;
   background-image: url('${bgImage}');
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -160,10 +160,7 @@ body {
   line-height: 1.8;
 }
 
-.body-para {
 
-  line-height: 1.8;
-}
 
 .regards {
   margin-top: 60px;
@@ -171,7 +168,7 @@ body {
 }
 
 .subject-line {
-  margin: 30px 0 20px 0;
+  margin: 30px 0 30px 0;
 }
 
 .salutation-line {
@@ -196,15 +193,15 @@ body {
 
 <div class="page">
 
-  <div class="ref-date-row">
+  <div class="ref-date-row" style="margin-top: 40px;">
     <div class="ref-left"><b>Ref: Quaere/Emp/Relieving/${refNo}</b></div>
     <div class="dated-right"><b>Dated: ${relievingDate}</b></div>
   </div>
 
-  <div class="address-block">
-    ${relievingData.name}<br/>
-    D/O <b>${relievingData.fatherName}</b><br/>
-    ${relievingData.address.replace(/\\n/g, '<br/>')}
+  <div class="address-block" style="margin-top: 40px;">
+ <b>${relievingData.name} </b> <br/>
+    <b> D/O ${relievingData.fatherName}</b> <br/>
+     <b>  ${(this.personalDetails.permanentAddress || '').replace(/\n/g, '<br/>')}</b><br/>
   </div>
 
   <div class="subject-line">
@@ -219,9 +216,7 @@ body {
     ${relievingData.body1}
   </div>
 
-  <div class="body-para">
-    ${relievingData.body2}
-  </div>
+
 
   <div class="body-para">
     ${relievingData.body3}
@@ -276,12 +271,21 @@ body {
     });
 
     const images = element.getElementsByTagName('img');
-    const promises: Promise<void>[] = [];
+    const imgPromises: Promise<void>[] = [];
     for (let img of images) {
-      promises.push(this.convertImageToBase64(img));
+      imgPromises.push(this.convertImageToBase64(img));
     }
 
-    Promise.all(promises).then(() => {
+    const letterheadPromise = fetch('/assets/img/Letterhead-2.png')
+      .then(r => r.blob())
+      .then(blob => new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      }));
+
+    Promise.all([Promise.all(imgPromises), letterheadPromise]).then(([, bgBase64]) => {
       const html = `
         <html xmlns:o='urn:schemas-microsoft-com:office:office'
               xmlns:w='urn:schemas-microsoft-com:office:word'
@@ -290,10 +294,33 @@ body {
             <meta charset='utf-8'>
             <title>Relieving Letter</title>
             <style>
-              body { font-family: "Times New Roman", serif; font-size: 13px; color: #000; }
+              body { font-family: "Calibri", sans-serif; font-size: 13px; color: #000; margin: 0; padding: 0; }
+              @page WordSection1 {
+                mso-header-margin: 0cm;
+                mso-footer-margin: 0cm;
+                mso-header: h1;
+              }
+              div.WordSection1 { page: WordSection1; }
             </style>
+            <!--[if gte mso 9]>
+            <xml>
+              <w:WordDocument>
+                <w:View>Normal</w:View>
+                <w:Zoom>100</w:Zoom>
+              </w:WordDocument>
+            </xml>
+            <![endif]-->
           </head>
-          <body>${cloned.innerHTML}</body>
+          <body>
+            <div class="WordSection1">
+              <div id="letterhead-header" style="position:relative; width:100%; margin:0; padding:0;">
+                <img src="${bgBase64}" style="width:100%; display:block;" />
+              </div>
+              <div style="padding: 20px 60px 60px 60px; margin-top: -40px;">
+                ${cloned.innerHTML}
+              </div>
+            </div>
+          </body>
         </html>
       `;
       const blob = new Blob(['\ufeff', html], { type: 'application/msword' });

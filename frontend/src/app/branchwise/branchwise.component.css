@@ -437,3 +437,354 @@ body {
         inset-inline-end: 9.5rem;
     }
 }
+
+/* ── Branchwise Settings Drawer ─────────────────── */
+
+.bw-settings-fab {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 1100;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  border: none;
+  background: #0d5f9d;
+  color: #fff;
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(13, 95, 157, 0.45);
+  transition: background 0.2s, transform 0.15s;
+}
+
+.bw-settings-fab:hover {
+  background: #0a4d82;
+  transform: scale(1.08);
+}
+
+.bw-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 1200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s ease;
+}
+
+.bw-drawer-overlay--open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.bw-settings-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 340px;
+  max-width: 95vw;
+  background: #fff;
+  z-index: 1300;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+}
+
+.bw-settings-drawer--open {
+  transform: translateX(0);
+}
+
+.bw-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.25rem 1rem;
+  background: linear-gradient(135deg, #0d5f9d 0%, #209af7 100%);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.bw-drawer-eyebrow {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.8;
+  margin: 0 0 0.15rem;
+}
+
+.bw-drawer-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.bw-drawer-close,
+.bw-drawer-close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: #fff;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.bw-drawer-close:hover,
+.bw-drawer-close-btn:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.bw-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+}
+
+.bw-section-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+  margin-bottom: 0.6rem;
+}
+
+/* Module checkboxes */
+.bw-module-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.bw-module-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.75rem;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  user-select: none;
+}
+
+.bw-module-item:has(input:checked) {
+  border-color: #0d5f9d;
+  background: #eef5fb;
+}
+
+.bw-module-item input[type="checkbox"] {
+  accent-color: #0d5f9d;
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.bw-module-icon {
+  font-size: 1.05rem;
+  color: #0d5f9d;
+  flex-shrink: 0;
+}
+
+.bw-module-name,
+.bw-module-text {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.bw-section {
+  /* grouping helper — no specific styles needed */
+}
+
+.bw-mini-label {
+  font-size: 0.68rem;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+/* Color rows */
+.bw-color-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.bw-color-row:last-of-type {
+  border-bottom: none;
+}
+
+.bw-color-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.bw-color-label {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.bw-color-hint {
+  font-size: 0.72rem;
+  color: #9ca3af;
+}
+
+.bw-color-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.bw-color-swatch {
+  width: 2.2rem;
+  height: 2.2rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0;
+  background: none;
+}
+
+.bw-hex-field {
+  width: 5.5rem;
+  font-size: 0.78rem;
+  font-family: monospace;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 0.28rem 0.4rem;
+  color: #374151;
+  outline: none;
+}
+
+.bw-hex-field:focus {
+  border-color: #0d5f9d;
+}
+
+/* Mini live preview */
+.bw-preview-wrap {
+  display: flex;
+  border-radius: 10px;
+  overflow: hidden;
+  height: 80px;
+  border: 1.5px solid #e5e7eb;
+  margin-top: 0.5rem;
+}
+
+.bw-preview-sidebar {
+  width: 52px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+}
+
+.bw-preview-nav-active {
+  border-radius: 5px;
+  padding: 3px 5px;
+  font-size: 0.52rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.bw-preview-nav-item {
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-size: 0.5rem;
+  color: rgba(255,255,255,0.6);
+}
+
+.bw-preview-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  gap: 5px;
+}
+
+.bw-preview-topbar {
+  height: 14px;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.07);
+}
+
+.bw-preview-card {
+  flex: 1;
+  border-radius: 6px;
+  background: rgba(0,0,0,0.05);
+}
+
+.bw-preview-hero {
+  height: 22px;
+  border-radius: 5px;
+}
+
+.bw-preview-btn {
+  width: 36px;
+  height: 10px;
+  border-radius: 4px;
+  opacity: 0.85;
+}
+
+/* Footer */
+.bw-drawer-footer {
+  display: flex;
+  gap: 0.65rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid #f3f4f6;
+  flex-shrink: 0;
+}
+
+.bw-btn-save {
+  flex: 1;
+  padding: 0.55rem 0;
+  background: linear-gradient(135deg, #0d5f9d, #209af7);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.bw-btn-save:hover {
+  opacity: 0.9;
+}
+
+.bw-btn-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.bw-btn-reset {
+  padding: 0.55rem 0.9rem;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.bw-btn-reset:hover {
+  background: #e5e7eb;
+}

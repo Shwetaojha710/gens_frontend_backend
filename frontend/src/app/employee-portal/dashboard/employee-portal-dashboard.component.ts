@@ -338,6 +338,12 @@ export class EmployeePortalDashboardComponent implements OnInit {
     return this.expandedTeamBranches.has(name);
   }
 
+  showPresentDetail(bg: TeamBranchGroup, event: Event): void {
+    event.stopPropagation();
+    const members = bg.departments.flatMap((d) => d.members).filter((m) => this.isPresent(m.status));
+    this.teamDetailPanel = { title: `Present · ${bg.branchName}`, members };
+  }
+
   showLeaveDetail(bg: TeamBranchGroup, event: Event): void {
     event.stopPropagation();
     const members = bg.departments.flatMap((d) => d.members).filter((m) => m.status.toLowerCase().includes('leave'));

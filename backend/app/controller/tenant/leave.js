@@ -859,7 +859,7 @@ exports.getAppliedLeaves = async (req, res) => {
   try {
     let whereClause = { tenantId, branchId };
 
-    let { emp_id, leave_type_id, year, month, status } = req.body;
+    let { emp_id, leave_type_id, year, month, status, todayActive, emergencyOnly } = req.body;
 
     if (emp_id != "All" && emp_id) {
       whereClause.employeeId = emp_id;
@@ -868,29 +868,42 @@ exports.getAppliedLeaves = async (req, res) => {
     if (leave_type_id) {
       whereClause.leaveTypeId = leave_type_id;
     }
-    if (!year) {
-      year = new Date().getFullYear();
-    }
-    if (!month) {
-      month = new Date().getMonth() + 1;
-    }
-    //  Year & Month filter using fromDate
-    if (year && month) {
-      whereClause[Op.and] = [
-        where(fn("EXTRACT", literal('YEAR FROM "fromDate"')), year),
-        where(fn("EXTRACT", literal('MONTH FROM "fromDate"')), month),
-      ];
+
+    if (todayActive) {
+      // Show only leaves that span today (fromDate <= today <= toDate), pending or approved
+      const today = moment().format("YYYY-MM-DD");
+      whereClause.fromDate = { [Op.lte]: today };
+      whereClause.toDate = { [Op.gte]: today };
+      whereClause.status = { [Op.in]: ["pending", "approved"] };
+    } else {
+      if (!year) {
+        year = new Date().getFullYear();
+      }
+      if (!month) {
+        month = new Date().getMonth() + 1;
+      }
+      //  Year & Month filter using fromDate
+      if (year && month) {
+        whereClause[Op.and] = [
+          where(fn("EXTRACT", literal('YEAR FROM "fromDate"')), year),
+          where(fn("EXTRACT", literal('MONTH FROM "fromDate"')), month),
+        ];
+      }
+      if (status) {
+        whereClause.status = status;
+      }
     }
 
-    if (status) {
-      whereClause.status = status;
-    }
-
-    const appliedLeaves = await leave_application.findAll({
+    let appliedLeaves = await leave_application.findAll({
       where: whereClause,
       order: [["appliedOn", "DESC"]],
       raw: true,
     });
+
+    if (emergencyOnly) {
+      const keywords = /urgent|emergency|serious|medical|health/i;
+      appliedLeaves = appliedLeaves.filter((l) => keywords.test(String(l.reason || "")));
+    }
 
     if (!appliedLeaves.length) {
       return Helper.response(false, "No applied leaves found", [], res, 404);
@@ -987,39 +1000,7 @@ exports.updatedApplyLeaveStatus = async (req, res) => {
 
     // }
 
-    let remainingLeaves;
     if (await existingLeave.save()) {
-      if (status === "approved") {
-        const fromDate = new Date(existingLeave.fromDate);
-        const fromMonth = fromDate.getMonth() + 1;
-        const fromYear = fromDate.getFullYear();
-        const leaveDays = Number(existingLeave.days || 0);
-
-        const balanceRecord = await leave_balance.findOne({
-          where: { tenantId, branchId, leaveTypeId: existingLeave.leaveTypeId, employeeId: existingLeave.employeeId, year: fromYear, month: fromMonth },
-        });
-        if (balanceRecord) {
-          const newUsed = Number(balanceRecord.usedLeaves || 0) + leaveDays;
-          const newRemaining = Math.max(Number(balanceRecord.remainingLeaves || 0) - leaveDays, 0);
-          await leave_balance.update(
-            { usedLeaves: newUsed.toFixed(1), remainingLeaves: newRemaining.toFixed(1), updatedBy: req.users?.id },
-            { where: { id: balanceRecord.id } },
-          );
-        }
-
-        if (existingLeave.compOffId) {
-          const compOffRecord = await comp_off.findOne({ where: { id: existingLeave.compOffId } });
-          if (compOffRecord) {
-            const newUsed = Number(compOffRecord.usedDays || 0) + leaveDays;
-            const newRemaining = Math.max(Number(compOffRecord.remainingDays || 0) - leaveDays, 0);
-            await comp_off.update(
-              { usedDays: newUsed.toFixed(1), remainingDays: newRemaining.toFixed(1), status: newRemaining <= 0 ? "used" : "active" },
-              { where: { id: existingLeave.compOffId } },
-            );
-          }
-        }
-      }
-
       return Helper.response(
         true,
         "Leave updated successfully.",

@@ -1697,7 +1697,13 @@ exports.TeamsAttendance = async (req, res) => {
       status: "active",
     };
 
-    if (role !== "manager" && role !== "director") {
+    if (role === "director") {
+      // Director sees all employees across fetched branches — no hierarchy filter
+    } else if (role === "manager") {
+      const branchFilter = req.query.branchId === "All" ? "All" : userBranchId;
+      const subordinateIds = await Helper.getAllSubordinates(reportingPersonId, branchFilter, tenantId);
+      employeeWhere.id = { [Op.in]: [...subordinateIds, reportingPersonId] };
+    } else {
       employeeWhere.reportingPersonId = reportingPersonId;
     }
 
@@ -2335,7 +2341,7 @@ exports.EmployeeDetails = async (req, res) => {
       empPersonal.findOne({
         where: {
           id: employee?.reportingPersonId,
-          branchId,
+          // branchId,
         },
       }),
     ]);
@@ -2631,13 +2637,16 @@ exports.AppapplyForLeave = async (req, res) => {
   const {
     employeeId,
     leaveTypeId,
-    compOffId,
     fromDate,
     toDate,
     reason,
     duration_type = "full", // from duration type
     to_duration_type = "full", // to duration type
   } = req.body;
+
+  // compOffId array aa sakta hai frontend se, string mein convert karo
+  const rawCompOffId = req.body.compOffId;
+  const compOffId = Array.isArray(rawCompOffId) ? rawCompOffId[0] : rawCompOffId ?? null;
 
   const tenantId = req.users && req.users.tenantId;
   const createdBy = req.users && req.users.id;
@@ -2671,6 +2680,40 @@ exports.AppapplyForLeave = async (req, res) => {
         days -= 0.5;
       }
     }
+    // =============================================
+    // COMP-OFF VALIDATION (only when compOffId sent)
+    // =============================================
+    if (compOffId) {
+      const compOffRecord = await comp_off.findOne({
+        where: { id: compOffId, employeeId, tenantId, branchId },
+      });
+
+      if (!compOffRecord) {
+        return Helper.response(false, "Comp-off record not found", {}, res, 200);
+      }
+      if (compOffRecord.approval_status !== "approved") {
+        return Helper.response(false, "Comp-off is not approved yet", {}, res, 200);
+      }
+      if (compOffRecord.status === "used") {
+        return Helper.response(false, "Comp-off is already fully used", {}, res, 200);
+      }
+      // if (compOffRecord.status === "expired") {
+        // return Helper.response(false, "Comp-off has expired", {}, res, 200);
+      // }
+      // if (compOffRecord.expiryDate && moment().isAfter(moment(compOffRecord.expiryDate), "day")) {
+      //   return Helper.response(false, "Comp-off has expired", {}, res, 200);
+      // }
+      if (Number(compOffRecord.remainingDays) < days) {
+        return Helper.response(
+          false,
+          `Insufficient comp-off balance. Available: ${compOffRecord.remainingDays} day(s), Requested: ${days} day(s)`,
+          {},
+          res,
+          200,
+        );
+      }
+    }
+
     const existsLeave = await leave_application.findOne({
       where: {
         employeeId,
@@ -2682,10 +2725,8 @@ exports.AppapplyForLeave = async (req, res) => {
         days,
         branchId,
         tenantId,
-        status:{
-        [Op.ne]: 'self_declined'
-        }
-
+        status: { [Op.ne]: "self_declined" },
+        ...(compOffId ? { compOffId } : {}),
       },
     });
     if (existsLeave) {
@@ -2702,10 +2743,27 @@ exports.AppapplyForLeave = async (req, res) => {
       days,
       reason,
       tenantId,
-      compOffId:compOffId??null,
+      compOffId: compOffId ?? null,
       branchId,
       createdBy,
     });
+
+    // =============================================
+    // UPDATE COMP-OFF BALANCE after leave applied
+    // =============================================
+    if (compOffId) {
+      const compOffRecord = await comp_off.findOne({ where: { id: compOffId } });
+      const newUsed = Number(compOffRecord.usedDays) + days;
+      const newRemaining = Number(compOffRecord.remainingDays) - days;
+      await comp_off.update(
+        {
+          usedDays: newUsed,
+          remainingDays: newRemaining,
+          status: newRemaining <= 0 ? "used" : "active",
+        },
+        { where: { id: compOffId } },
+      );
+    }
 
     return Helper.response(
       true,
@@ -4930,7 +4988,7 @@ exports.reimbursementList = async (req, res) => {
   }
 };
 
-/** Team reimbursements — for manager / director: all branch records; others: own only. */
+/** Team reimbursements — manager/director/teamleader/Senior Accountant: all branch records; others: own only. */
 exports.getTeamReimbursements = async (req, res) => {
   try {
     const tenantId = req.users?.tenantId;
@@ -4945,7 +5003,15 @@ exports.getTeamReimbursements = async (req, res) => {
       return Helper.response(false, 'User Not Found', [], res, 404);
     }
 
-    const isTeamRole = role === 'manager' || role === 'director' || role === 'teamleader';
+    // Check if the employee holds a "Senior Accountant" designation
+    let isSeniorAccountant = false;
+    const empInfo = await empPersonal.findByPk(employeeId, { attributes: ['designationId'], raw: true });
+    if (empInfo?.designationId) {
+      const desig = await Designation.findByPk(empInfo.designationId, { attributes: ['name'], raw: true });
+      isSeniorAccountant = (desig?.name || '').toLowerCase().trim() === 'senior accountant';
+    }
+
+    const isTeamRole = role === 'manager' || role === 'director' || role === 'teamleader' || isSeniorAccountant;
     const where = isTeamRole
       ? { tenantId, branchId }
       : { tenantId, branchId, employeeId };
@@ -4963,9 +5029,15 @@ exports.getTeamReimbursements = async (req, res) => {
           attributes: ['firstName', 'lastName'],
           raw: true,
         });
+        const files = await ReimbursementFile.findAll({
+          where: { reimbursementId: item.id, tenantId, branchId },
+          attributes: ['id', 'image', 'doc_type'],
+          raw: true,
+        });
         return {
           ...item,
           employee_name: emp ? `${emp.firstName} ${emp.lastName}` : '—',
+          files,
         };
       }),
     );

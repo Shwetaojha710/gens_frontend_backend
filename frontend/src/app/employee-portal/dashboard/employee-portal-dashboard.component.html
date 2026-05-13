@@ -584,7 +584,10 @@
                       <span class="ep-dash-upcoming-card__name d-block text-truncate">{{ bg.branchName }}</span>
                       <span class="ep-dash__muted small">
                         {{ bg.total }} members &nbsp;·&nbsp;
-                        <span class="text-success fw-medium">{{ bg.presentCount }} present</span>
+                        <span class="text-success fw-medium"
+                          style="cursor:pointer; text-decoration:underline dotted;"
+                          (click)="showPresentDetail(bg, $event)"
+                          title="Click to see who is present">{{ bg.presentCount }} present</span>
                         <ng-container *ngIf="bg.lateCount > 0"> &nbsp;·&nbsp;
                           <span style="color:#b45309; cursor:pointer; text-decoration:underline dotted;" class="fw-medium"
                             (click)="showLateDetail(bg, $event)" title="Click to see who is late">

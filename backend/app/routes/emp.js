@@ -11,7 +11,8 @@ router.post('/getEmpTypes', Admin, getEmploymentTypes);
 router.post('/editEmpType', Admin, editEmploymentType); 
 router.post('/deleteEmpType', Admin, deleteEmploymentType); 
 router.post('/getEmpTypeDD',Admin, getEmpDD);
-router.get('/getVisitPlaceDD',Admin, getVisitPlace);
+router.post('/getVisitPlaceDD',Admin, getVisitPlace);
+router.get('/getAppVisitPlaceDD',AppAdmin, getVisitPlace);
 
 router.post('/createHolidayType', Admin, createHolidayType);
 router.post('/getHolidayTypes', Admin, getHolidayTypes);

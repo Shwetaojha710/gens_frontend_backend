@@ -260,6 +260,26 @@
                 name="country" id="select2Danger">
               </ng-select>
             </div>
+
+            <!-- Contractual toggle -->
+            <div class="col-md-3 d-flex flex-column justify-content-end">
+              <label class="col-form-label fw-bold mb-1">Contractual Employee</label>
+              <div class="form-check form-switch mt-1">
+                <input class="form-check-input" type="checkbox" id="isContractualSwitch"
+                  [(ngModel)]="personalDetails['isContractual']" name="isContractual" />
+                <label class="form-check-label" for="isContractualSwitch">
+                  {{ personalDetails['isContractual'] ? 'Yes — hourly based' : 'No' }}
+                </label>
+              </div>
+            </div>
+
+            <!-- Hourly rate — shown only when contractual -->
+            <div class="col-md-3" *ngIf="personalDetails['isContractual']">
+              <label class="col-form-label fw-bold">Hourly Rate (₹) <span style="color:red">*</span></label>
+              <input type="number" class="form-control" placeholder="Enter hourly rate"
+                [(ngModel)]="personalDetails['hourlyRate']" name="hourlyRate" min="0" step="0.01" />
+            </div>
+
             <div class="col-md-3">
               <label class="col-form-label fw-bold">Role
                 <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->

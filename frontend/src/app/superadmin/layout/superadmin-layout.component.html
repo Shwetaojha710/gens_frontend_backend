@@ -57,6 +57,11 @@
         <div class="sa-topbar-title">{{ pageTitle }}</div>
       </div>
       <div class="sa-topbar-actions">
+        <!-- Palette button -->
+        <button type="button" class="sa-palette-btn" (click)="openSASettings()" title="Panel Colors">
+          <i class="ri ri-palette-line"></i>
+        </button>
+
         <div class="sa-profile" [class.sa-profile--open]="profileMenuOpen">
           <button
             type="button"
@@ -91,3 +96,87 @@
   <div class="sa-nav-backdrop" (click)="closeSidebar()" role="presentation" tabindex="-1"></div>
 </div>
 
+<!-- ── SA drawer overlay ──────────────────────────── -->
+<div class="sa-drawer-overlay" [class.sa-drawer-overlay--open]="saSettingsOpen" (click)="closeSASettings()"></div>
+
+<!-- ── SA settings drawer ─────────────────────────── -->
+<div class="sa-settings-drawer" [class.sa-settings-drawer--open]="saSettingsOpen">
+
+  <div class="sa-drawer-head">
+    <div>
+      <p class="sa-drawer-eyebrow">SuperAdmin</p>
+      <h6 class="sa-drawer-title">Panel Colors</h6>
+    </div>
+    <button class="sa-drawer-close-btn" (click)="closeSASettings()">
+      <i class="ri ri-close-line"></i>
+    </button>
+  </div>
+
+  <div class="sa-drawer-body">
+
+    <p class="sa-drawer-section-label">Colors</p>
+
+    <!-- Sidebar bg -->
+    <div class="sa-color-row">
+      <div class="sa-color-info">
+        <span class="sa-color-label">Sidebar Background</span>
+        <span class="sa-color-hint">Left navigation panel</span>
+      </div>
+      <div class="sa-color-controls">
+        <input type="color" class="sa-color-swatch" [(ngModel)]="saColors.sidebarBg" (input)="previewSAColors()" />
+        <input type="text" class="sa-hex-field" [(ngModel)]="saColors.sidebarBg" (change)="previewSAColors()" maxlength="7" />
+      </div>
+    </div>
+
+    <!-- Shell/content bg -->
+    <div class="sa-color-row">
+      <div class="sa-color-info">
+        <span class="sa-color-label">Content Background</span>
+        <span class="sa-color-hint">Main content area</span>
+      </div>
+      <div class="sa-color-controls">
+        <input type="color" class="sa-color-swatch" [(ngModel)]="saColors.shellBg" (input)="previewSAColors()" />
+        <input type="text" class="sa-hex-field" [(ngModel)]="saColors.shellBg" (change)="previewSAColors()" maxlength="7" />
+      </div>
+    </div>
+
+    <!-- Accent / active nav -->
+    <div class="sa-color-row">
+      <div class="sa-color-info">
+        <span class="sa-color-label">Accent Color</span>
+        <span class="sa-color-hint">Active nav item highlight</span>
+      </div>
+      <div class="sa-color-controls">
+        <input type="color" class="sa-color-swatch" [(ngModel)]="saColors.accentColor" (input)="previewSAColors()" />
+        <input type="text" class="sa-hex-field" [(ngModel)]="saColors.accentColor" (change)="previewSAColors()" maxlength="7" />
+      </div>
+    </div>
+
+    <!-- Mini preview -->
+    <p class="sa-drawer-section-label mt-4">Preview</p>
+    <div class="sa-preview-wrap">
+      <div class="sa-preview-sidebar" [style.background]="saColors.sidebarBg">
+        <div class="sa-preview-nav-active" [style.background]="saColors.accentColor + '30'" [style.border]="'1px solid ' + saColors.accentColor + '60'">Dashboard</div>
+        <div class="sa-preview-nav-item">Companies</div>
+        <div class="sa-preview-nav-item">Plans</div>
+      </div>
+      <div class="sa-preview-content" [style.background]="saColors.shellBg">
+        <div class="sa-preview-topbar"></div>
+        <div class="sa-preview-card"></div>
+      </div>
+    </div>
+
+    <p class="small text-muted mt-3 mb-0">
+      <i class="fas fa-info-circle me-1"></i>Colors saved to this browser. Live preview updates as you pick.
+    </p>
+  </div>
+
+  <div class="sa-drawer-footer">
+    <button class="sa-btn-save" (click)="saveSASettings()">
+      <i class="ri ri-save-line me-1"></i>Save Colors
+    </button>
+    <button class="sa-btn-reset" (click)="resetSASettings()">
+      <i class="ri ri-refresh-line me-1"></i>Reset
+    </button>
+  </div>
+</div>

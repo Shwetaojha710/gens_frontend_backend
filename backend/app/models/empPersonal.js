@@ -196,6 +196,15 @@ const empPersonal = sequelize.define(
       allowNull: true,
       defaultValue: false,
     },
+    isContractual: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: false,
+    },
+    hourlyRate: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+    },
   },
 
   {

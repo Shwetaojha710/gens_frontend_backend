@@ -12,7 +12,7 @@
               <label for="defaultFormControlInput" class="form-label">Select Employee</label>
               <ng-select [items]="EmpList" bindLabel="label" bindValue="value" [(ngModel)]="obj['emp_id']"
                 [multiple]="false" placeholder="Select Employee" name="state" id="select2Danger" required
-                #enCashableRef="ngModel">
+                #enCashableRef="ngModel"(change)="loadVisitPlaceDD()">
               </ng-select>
             </div>
 
@@ -272,7 +272,14 @@
                               <td>{{ v.client_name || '—' }}</td>
                               <td>{{ v.client_phone_no || '—' }}</td>
                               <td>
-                                <a *ngIf="v.doc; else noDoc" [href]="baseurl + v.doc" target="_blank" class="btn-view-addr">View Doc</a>
+                                <ng-container *ngIf="getDocList(v.doc).length > 0; else noDoc">
+                                  <a *ngFor="let d of getDocList(v.doc); let di = index"
+                                     [href]="baseurl + d" target="_blank"
+                                     class="btn-view-addr"
+                                     style="display:block; margin-bottom:2px;">
+                                    Doc {{ getDocList(v.doc).length > 1 ? (di + 1) : '' }}
+                                  </a>
+                                </ng-container>
                                 <ng-template #noDoc><span class="nil">—</span></ng-template>
                               </td>
                               <td class="address-text">{{ v.address || '—' }}</td>

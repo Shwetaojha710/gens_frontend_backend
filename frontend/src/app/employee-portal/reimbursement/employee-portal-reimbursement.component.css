@@ -64,3 +64,24 @@
   background: rgba(239, 68, 68, 0.12);
   color: #b91c1c;
 }
+
+.ep-reim-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ep-reim-reason-cell {
+  max-width: 160px;
+}
+
+.ep-reim-reason-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.ep-reim-action-cell {
+  white-space: nowrap;
+}

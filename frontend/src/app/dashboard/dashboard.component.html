@@ -43,7 +43,7 @@
 
         <div class="card-body d-flex justify-content-between flex-wrap gap-4">
           <div class="d-flex align-items-center gap-3" routerLink="/layout/attendance/date-wise-attendance"
-            routerLinkActive="true" style="cursor: pointer" [queryParams]="{ fromDashboard: true }">
+            routerLinkActive="true" style="cursor: pointer" [queryParams]="{ fromDashboard: true, status: 'present' }">
             <div class="avatar">
               <div class="avatar-initial bg-label-success rounded">
                 <i class="icon-base ri ri-user-star-line icon-24px"></i>
@@ -61,6 +61,21 @@
             </div>
           </div>
 
+          <div class="d-flex align-items-center gap-3" routerLink="/layout/attendance/date-wise-attendance"
+            routerLinkActive="true" style="cursor: pointer" [queryParams]="{ fromDashboard: true, status: 'absent' }">
+            <div class="avatar">
+              <div class="avatar-initial bg-label-danger rounded">
+                <i class="icon-base ri ri-user-unfollow-line icon-24px"></i>
+              </div>
+            </div>
+            <div class="card-info">
+              <div class="d-flex align-items-center text-danger">
+                <h5 class="mb-0">{{ attendanceChart?.absentCount || '0' }}</h5>
+              </div>
+              <p class="mb-0">Absent Today</p>
+            </div>
+          </div>
+
           <div class="d-flex align-items-center gap-3" routerLink="/layout/employee/apply-leave" routerLinkActive="true"
             style="cursor: pointer" [queryParams]="{ fromDashboard: true }">
             <div class="avatar">
@@ -68,12 +83,12 @@
                 <i class="icon-base ri ri-pie-chart-2-line icon-24px"></i>
               </div>
             </div>
-            <div class="card-info">
+            <div class="card-info" routerLink="/layout/employee/apply-leave" routerLinkActive="true"
+              style="cursor: pointer" [queryParams]="{ fromDashboard: true }">
               <div class="d-flex align-items-center text-warning">
                 <h5 class="mb-0">{{ attendanceChart?.todayLeaveCount || '0' }}</h5>
                 <div class="d-flex align-items-center text-warning mx-1">
-                  <p class="mb-0 fw-medium">{{ getAttendanceBreakdown('On Leave') }} {{ getAttendanceTrendLabel('On
-                    Leave') }}</p>
+                  <p class="mb-0 fw-medium">{{ getAttendanceBreakdown('On Leave') }} {{ getAttendanceTrendLabel('OnLeave') }}</p>
                 </div>
               </div>
               <p class="mb-0">On Leave</p>
@@ -87,7 +102,7 @@
               </div>
             </div>
             <div class="card-info" routerLink="/layout/employee/apply-leave" routerLinkActive="true"
-              style="cursor: pointer" [queryParams]="{ fromDashboard: true }">
+              style="cursor: pointer" [queryParams]="{ fromDashboard: true, emergencyOnly: true }">
               <div class="d-flex align-items-center text-danger">
                 <h5 class="mb-0">{{ attendanceChart?.emergencyCount || '0' }}</h5>
                 <div class="d-flex align-items-center text-danger mx-1">

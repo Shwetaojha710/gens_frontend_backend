@@ -8,6 +8,94 @@
     <p class="ep-page-sub mb-0">Submit claims with bills or receipts. HR will review pending requests.</p>
   </header>
 
+  <!-- Team Reimbursements — visible to manager / director / Senior Accountant -->
+  <div *ngIf="isApprover" class="card ep-glass-card border-0 mb-4">
+    <div class="card-body">
+      <p class="ep-dash-section__eyebrow mb-1">Team claims</p>
+      <h5 class="h6 mb-3">Reimbursement Approvals</h5>
+
+      <!-- Loading spinner -->
+      <div *ngIf="loadingTeam" class="py-4 text-center">
+        <div class="spinner-border text-primary" role="status" style="width:1.5rem;height:1.5rem;">
+          <span class="visually-hidden">Loading</span>
+        </div>
+      </div>
+
+      <!-- Empty state -->
+      <div *ngIf="!loadingTeam && teamList.length === 0" class="py-4 text-center text-muted small">
+        <i class="fas fa-inbox me-2"></i>No reimbursement claims from the team yet.
+      </div>
+
+      <!-- Table -->
+      <div class="ep-reim-table-wrap" *ngIf="!loadingTeam && teamList.length > 0">
+        <table class="table table-sm table-hover align-middle mb-0 ep-reim__table">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>From</th>
+              <th>To</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Remark</th>
+              <th>Files</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of teamList">
+              <td class="fw-semibold">{{ row['employee_name'] || '—' }}</td>
+              <td class="text-nowrap">{{ formatDate(row['fromDate']) }}</td>
+              <td class="text-nowrap">{{ formatDate(row['toDate']) }}</td>
+              <td class="text-nowrap">{{ row['amount'] ?? '—' }}</td>
+              <td>
+                <span [class]="statusClass(row['status'])">{{ row['status'] || '—' }}</span>
+              </td>
+              <td class="ep-reim-reason-cell">
+                <span class="ep-reim-reason-text" [title]="row['remark']?.toString() || ''">
+                  {{ row['remark'] || '—' }}
+                </span>
+              </td>
+              <td>
+                <ng-container *ngFor="let f of fileList(row); let i = index">
+                  <a *ngIf="f.image" [href]="imageUrl(f.image)" target="_blank" rel="noopener" class="d-inline-block small me-1">
+                    {{ fileList(row).length > 1 ? 'File ' + (i + 1) : 'Open' }}
+                  </a>
+                </ng-container>
+                <span *ngIf="fileList(row).length === 0" class="text-muted small">—</span>
+              </td>
+              <td class="ep-reim-action-cell">
+                <div *ngIf="row['status'] === 'pending'" class="d-flex gap-1">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-success"
+                    [disabled]="updatingId === row['id']"
+                    (click)="approveOrReject(row['id']?.toString() ?? '', 'approved')"
+                    title="Approve"
+                  >
+                    <i class="fas fa-check" *ngIf="updatingId !== row['id']"></i>
+                    <i class="fas fa-circle-notch fa-spin" *ngIf="updatingId === row['id']"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    [disabled]="updatingId === row['id']"
+                    (click)="approveOrReject(row['id']?.toString() ?? '', 'rejected')"
+                    title="Reject"
+                  >
+                    <i class="fas fa-times" *ngIf="updatingId !== row['id']"></i>
+                    <i class="fas fa-circle-notch fa-spin" *ngIf="updatingId === row['id']"></i>
+                  </button>
+                </div>
+                <span *ngIf="row['status'] !== 'pending'" class="text-muted small">—</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Individual claim form + own history (all users) -->
   <div class="row g-4">
     <div class="col-lg-5">
       <div class="card ep-glass-card border-0 h-100">
@@ -56,7 +144,8 @@
               </p>
             </div>
             <button type="submit" class="btn btn-primary rounded-pill px-4" [disabled]="submitting">
-              {{ submitting ? 'Submitting…' : 'Submit claim' }}
+              <span *ngIf="!submitting"><i class="fas fa-paper-plane me-2"></i>Submit claim</span>
+              <span *ngIf="submitting"><i class="fas fa-circle-notch fa-spin me-2"></i>Submitting…</span>
             </button>
           </form>
         </div>
@@ -67,10 +156,19 @@
         <div class="card-body">
           <p class="ep-dash-section__eyebrow mb-1">Your claims</p>
           <h5 class="h6 mb-3">History</h5>
-          <div *ngIf="loadingList" class="text-muted py-4 text-center">Loading…</div>
-          <div *ngIf="!loadingList && list.length == 0" class="text-muted py-4 text-center">No reimbursement claims yet.</div>
-          <div class="table-responsive" *ngIf="!loadingList && list.length > 0">
-            <table class="table table-sm align-middle mb-0 ep-reim__table">
+
+          <div *ngIf="loadingList" class="py-4 text-center">
+            <div class="spinner-border text-primary" role="status" style="width:1.5rem;height:1.5rem;">
+              <span class="visually-hidden">Loading</span>
+            </div>
+          </div>
+
+          <div *ngIf="!loadingList && list.length === 0" class="py-4 text-center text-muted small">
+            <i class="fas fa-inbox me-2"></i>No reimbursement claims yet.
+          </div>
+
+          <div class="ep-reim-table-wrap" *ngIf="!loadingList && list.length > 0">
+            <table class="table table-sm table-hover align-middle mb-0 ep-reim__table">
               <thead>
                 <tr>
                   <th>From</th>
@@ -83,13 +181,17 @@
               </thead>
               <tbody>
                 <tr *ngFor="let row of list">
-                  <td>{{ formatDate(row['fromDate']) }}</td>
-                  <td>{{ formatDate(row['toDate']) }}</td>
+                  <td class="text-nowrap">{{ formatDate(row['fromDate']) }}</td>
+                  <td class="text-nowrap">{{ formatDate(row['toDate']) }}</td>
                   <td>{{ row['amount'] ?? '—' }}</td>
                   <td>
                     <span [class]="statusClass(row['status'])">{{ row['status'] || '—' }}</span>
                   </td>
-                  <td class="small text-break">{{ row['remark'] || '—' }}</td>
+                  <td class="ep-reim-reason-cell">
+                    <span class="ep-reim-reason-text" [title]="row['remark']?.toString() || ''">
+                      {{ row['remark'] || '—' }}
+                    </span>
+                  </td>
                   <td>
                     <ng-container *ngFor="let f of fileList(row); let i = index">
                       <a *ngIf="f.image" [href]="imageUrl(f.image)" target="_blank" rel="noopener" class="d-inline-block small me-1">

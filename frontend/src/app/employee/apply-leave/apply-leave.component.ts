@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule, FormGroup, FormBuilder, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { Notyf } from 'notyf';
 import Swal from 'sweetalert2';
@@ -38,11 +38,14 @@ export class ApplyLeaveComponent {
   EmployeeList = [];
   editingId: number | null = null;
   minDate: any
+  fromDashboard = false;
+  emergencyOnly = false;
   constructor(
     private fb: FormBuilder,
     private master: MasterService,
     public statusService: StatusService,
     private router: Router,
+    private route: ActivatedRoute,
     public messagingService: MessagingService
   ) {
     this.EmployeeForm = this.fb.group({
@@ -52,6 +55,14 @@ export class ApplyLeaveComponent {
     const today = new Date();
     this.minDate = today.toISOString().split('T')[0]; // today
     this.notyf = new Notyf();
+    this.fromDashboard = this.route.snapshot.queryParamMap.get('fromDashboard') === 'true';
+    this.emergencyOnly = this.route.snapshot.queryParamMap.get('emergencyOnly') === 'true';
+    if (this.fromDashboard) {
+      this.obj['todayActive'] = true;
+    }
+    if (this.emergencyOnly) {
+      this.obj['emergencyOnly'] = true;
+    }
   }
   // This will return either today (for "from date") or selected fromDate (for "to date")
   getToDateMin(): string {

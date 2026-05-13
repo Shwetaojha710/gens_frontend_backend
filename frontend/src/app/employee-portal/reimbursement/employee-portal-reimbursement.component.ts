@@ -18,9 +18,13 @@ export class EmployeePortalReimbursementComponent implements OnInit {
 
   form: FormGroup;
   list: Record<string, unknown>[] = [];
+  teamList: Record<string, unknown>[] = [];
   selectedFiles: File[] = [];
   loadingList = false;
+  loadingTeam = false;
   submitting = false;
+  updatingId: string | null = null;
+  isApprover = false;
 
   private notyf = new Notyf();
 
@@ -35,10 +39,29 @@ export class EmployeePortalReimbursementComponent implements OnInit {
       amount: ['', [Validators.required, Validators.min(0.01)]],
       remark: ['', [Validators.required, Validators.minLength(2)]],
     });
+
+    try {
+      const raw = localStorage.getItem('empPortalUser');
+      if (raw) {
+        const u = JSON.parse(raw) as { role?: string; designation?: string };
+        const role = (u.role || '').toLowerCase();
+        const designation = (u.designation || '').toLowerCase().trim();
+        this.isApprover =
+          role === 'manager' ||
+          role === 'director' ||
+          role === 'teamleader' ||
+          designation === 'senior accountant';
+      }
+    } catch {
+      this.isApprover = false;
+    }
   }
 
   ngOnInit(): void {
     this.loadList();
+    if (this.isApprover) {
+      this.loadTeamList();
+    }
   }
 
   get minToDate(): string {
@@ -69,6 +92,35 @@ export class EmployeePortalReimbursementComponent implements OnInit {
       error: () => {
         this.list = [];
         this.loadingList = false;
+      },
+    });
+  }
+
+  loadTeamList(): void {
+    this.loadingTeam = true;
+    this.api.getTeamReimbursements().subscribe({
+      next: (rows) => {
+        this.teamList = rows;
+        this.loadingTeam = false;
+      },
+      error: () => {
+        this.teamList = [];
+        this.loadingTeam = false;
+      },
+    });
+  }
+
+  approveOrReject(id: string, status: 'approved' | 'rejected'): void {
+    this.updatingId = id;
+    this.api.updateAppReimbursementStatus(id, status).subscribe({
+      next: () => {
+        this.updatingId = null;
+        this.notyf.success(`Reimbursement ${status}.`);
+        this.loadTeamList();
+      },
+      error: (e: Error) => {
+        this.updatingId = null;
+        this.notyf.error(e.message || 'Action failed.');
       },
     });
   }
@@ -107,6 +159,7 @@ export class EmployeePortalReimbursementComponent implements OnInit {
         this.form.reset({ fromDate: t, toDate: t, amount: '', remark: '' });
         this.clearFiles();
         this.loadList();
+        if (this.isApprover) this.loadTeamList();
       },
       error: (e: Error) => {
         this.submitting = false;
@@ -138,7 +191,6 @@ export class EmployeePortalReimbursementComponent implements OnInit {
   imageUrl(path: string): string {
     if (!path) return '';
     if (path.startsWith('http://') || path.startsWith('https://')) return path;
-    // Strip trailing /api/ (or /api) to get the server root, then join with the path
     const serverRoot = environment.apiUrl.replace(/\/api\/?$/, '');
     return `${serverRoot}/${path.replace(/^\//, '')}`;
   }

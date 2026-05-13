@@ -5,6 +5,7 @@ import { filter } from 'rxjs/operators';
 import { DashboardService } from '../services/dashboard.service';
 import { MasterService } from '../services/master.service';
 import { LocationsService } from '../services/locations.service';
+import { ThemeService, BrandColors, BRAND_DEFAULTS, APPLY_TO_DEFAULTS, ApplyToModules } from '../services/theme.service';
 import { Notyf } from 'notyf';
 import { ChartOptions } from '../dashboard/dashboard.component';
 import { CommonModule } from '@angular/common';
@@ -56,6 +57,13 @@ export class BranchwiseComponent implements OnInit, OnDestroy {
   imagePreview: string | null = null;
   addBranchLoading = false;
 
+  // Settings drawer state
+  settingsOpen = false;
+  settingsLoaded = false;
+  saving = false;
+  colors: Omit<Required<BrandColors>, 'applyTo'> = { ...BRAND_DEFAULTS };
+  applyTo: ApplyToModules = { ...APPLY_TO_DEFAULTS };
+
   // Edit branch modal state
   editBranch: any = {};
   editBranchId: string | null = null;
@@ -67,7 +75,8 @@ export class BranchwiseComponent implements OnInit, OnDestroy {
     private dashboardService: DashboardService,
     private router: Router,
     public masterService: MasterService,
-    private locationService: LocationsService
+    private locationService: LocationsService,
+    private theme: ThemeService,
   ) {
     this.baseurl = this.masterService.getBaseUrl();
     this.getBranchDD()
@@ -316,6 +325,59 @@ createFlag = false;
 
   gotoback(){
     this.router.navigate(['landing-home']);
+  }
+
+  // ── Settings drawer ────────────────────────────────
+
+  openSettings(): void {
+    this.settingsOpen = true;
+    if (!this.settingsLoaded) this.loadSettings();
+  }
+
+  closeSettings(): void { this.settingsOpen = false; }
+
+  loadSettings(): void {
+    const cached = this.theme.getCached();
+    if (cached) {
+      this.colors = { ...BRAND_DEFAULTS, ...cached };
+      this.applyTo = { ...APPLY_TO_DEFAULTS, ...(cached.applyTo || {}) };
+    }
+    this.masterService.getBrandColors().subscribe({
+      next: (res: any) => {
+        if (res?.status && res.data && Object.keys(res.data).length > 0) {
+          this.colors = { ...BRAND_DEFAULTS, ...res.data };
+          this.applyTo = { ...APPLY_TO_DEFAULTS, ...(res.data.applyTo || {}) };
+        }
+        this.settingsLoaded = true;
+      },
+      error: () => { this.settingsLoaded = true; },
+    });
+  }
+
+  previewColors(): void { this.theme.applyColors(this.colors); }
+
+  saveSettings(): void {
+    this.saving = true;
+    const payload: BrandColors = { ...this.colors, applyTo: this.applyTo };
+    this.masterService.saveBrandColors(payload).subscribe({
+      next: () => {
+        this.saving = false;
+        this.theme.saveToCache(payload);
+        this.theme.applyColors(this.colors);
+        this.notyf.success('Brand colors saved successfully.');
+      },
+      error: () => {
+        this.saving = false;
+        this.notyf.error('Save failed. Please ensure you are logged in as admin.');
+      },
+    });
+  }
+
+  resetSettings(): void {
+    this.colors = { ...BRAND_DEFAULTS };
+    this.applyTo = { ...APPLY_TO_DEFAULTS };
+    this.theme.applyColors(this.colors);
+    this.notyf.success('Colors reset to defaults.');
   }
 
   get maxSliderIndex(): number {

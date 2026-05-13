@@ -115,7 +115,7 @@ const DeviceLocationLog = sequelize.define(
       allowNull: true,
     },
     doc: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: true,
     },
 
@@ -126,11 +126,11 @@ const DeviceLocationLog = sequelize.define(
   },
 );
 
-// DeviceLocationLog.sync({ alter: true }).then(() => {
-//     console.log('DeviceLocationLog model synced successfully');
-// }).catch((error) => {
-//     console.error('Error syncing DeviceLocationLog model:', error);
-// });
+DeviceLocationLog.sync({ alter: true }).then(() => {
+    console.log('DeviceLocationLog model synced successfully');
+}).catch((error) => {
+    console.error('Error syncing DeviceLocationLog model:', error);
+});
 
 module.exports = DeviceLocationLog;
 //

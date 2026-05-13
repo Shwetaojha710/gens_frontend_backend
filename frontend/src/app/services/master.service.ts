@@ -306,7 +306,24 @@ export class MasterService {
   deleteBranch(data: any): Observable<any> {
     return this.http.post(`${this.baseUrl}deleteBranch`, data);
   }
-  //    getAttendanceSetting(): Observable<any> {
-  //     return this.http.post(`${this.baseUrl}get-attendance-setting`, {});
-  //   }
+
+  getContractualEmployees(): Observable<any> {
+    return this.http.get(`${this.baseUrl}contractual-employees`);
+  }
+
+  getContractualAttendanceList(body: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}contractual-attendance-list`, body);
+  }
+
+  approveContractualDay(body: { approvalId: string; status: string; remark?: string }): Observable<any> {
+    return this.http.post(`${this.baseUrl}contractual-approve`, body);
+  }
+
+  getBrandColors(): Observable<any> {
+    return this.http.post(`${this.baseUrl}get-brand-colors`, {});
+  }
+
+  saveBrandColors(colors: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}save-brand-colors`, colors);
+  }
 }

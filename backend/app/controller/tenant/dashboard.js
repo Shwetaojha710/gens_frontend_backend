@@ -472,10 +472,16 @@ const buildDepartmentAttendanceData = (baseData) => {
 };
 
 const buildDashboardStats = (baseData, trackingList) => {
-  const { totalEmployees, activeEmployees, todayPresentCount, monthlyAttendance } = baseData;
+  const { totalEmployees, activeEmployees, monthlyAttendance, todayLeaves, todayAttendanceRows } = baseData;
   const metrics = getAttendanceMetrics(baseData);
   const today = moment();
   const workingDaysInMonth = Helper.getWorkingDays(today.year(), today.month() + 1);
+
+  // Exclude on-leave employees from the present count so the two buckets don't overlap
+  const onLeaveTodayIds = new Set((todayLeaves || []).map((l) => l.employeeId));
+  const todayPresentCount = (todayAttendanceRows || []).filter(
+    (r) => !onLeaveTodayIds.has(r.employeeId),
+  ).length;
 
   let monthlyAttendanceOverview = 0;
   if (monthlyAttendance.length) {
@@ -496,7 +502,7 @@ const buildDashboardStats = (baseData, trackingList) => {
   return [
     {
       title: "Total Employees",
-      value: String(totalEmployees),
+      value: String(activeEmployees),
       change: `+${activeEmployeePercent}%`,
       changeLabel: "active",
       changeDirection: "up",

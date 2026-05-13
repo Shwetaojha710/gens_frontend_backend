@@ -703,6 +703,9 @@ stats:any
     }
     else if(type=="attendanceAllTime"){
      obj['isofflineAllTimeAtt'] = !obj['isofflineAllTimeAtt']
+     if(obj['isofflineAllTimeAtt']){
+        obj['isofflineAtt'] =true
+     }
     }
     else {
       obj['isLocation'] = !obj['isLocation']

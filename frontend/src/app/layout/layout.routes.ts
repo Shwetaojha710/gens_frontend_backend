@@ -124,6 +124,13 @@ export const layoutRoutes: Routes = [
           import('../attendance/add-comoff/add-comoff.component').then((m) => m.AddComoffComponent),
       },
       {
+        path: 'attendance/contractual-approval',
+        loadComponent: () =>
+          import('../attendance/contractual-approval/contractual-approval.component').then(
+            (m) => m.ContractualApprovalComponent,
+          ),
+      },
+      {
         path: 'attendance/salary-master',
         loadComponent: () =>
           import('../attendance/salary-master/salary-master.component').then((m) => m.SalaryMasterComponent),
@@ -137,6 +144,11 @@ export const layoutRoutes: Routes = [
         path: 'payroll/generated-salary',
         loadComponent: () =>
           import('../payroll/generated-salary/generated-salary.component').then((m) => m.GeneratedSalaryComponent),
+      },
+      {
+        path: 'payroll/deduction-summary',
+        loadComponent: () =>
+          import('../payroll/salary-deduction-summary/salary-deduction-summary.component').then((m) => m.SalaryDeductionSummaryComponent),
       },
       {
         path: 'payroll/reimbursement',
@@ -224,6 +236,11 @@ export const layoutRoutes: Routes = [
       {
         path: 'master/prefix',
         loadComponent: () => import('../master/preffix/preffix.component').then((m) => m.PreffixComponent),
+      },
+      {
+        path: 'master/brand-colors',
+        loadComponent: () =>
+          import('../master/brand-colors/brand-colors.component').then((m) => m.BrandColorsComponent),
       },
     ],
   },

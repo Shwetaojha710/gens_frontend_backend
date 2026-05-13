@@ -118,7 +118,8 @@ export class TrackingReportComponent implements OnInit {
 
   loadVisitPlaceDD(): void {
     this.PlaceDD = [];
-    this.locationService.VisitPlaceDD().subscribe({
+    this.obj['visit_place'] = null; // Reset selected place when employee changes
+    this.locationService.VisitPlaceDD(this.obj).subscribe({
       next: (response: any) => {
         if (response?.status === true) {
           this.PlaceDD = response.data;
@@ -454,6 +455,17 @@ export class TrackingReportComponent implements OnInit {
 
   getMin(a: number, b: number): number {
     return Math.min(a, b);
+  }
+
+  /** Parse doc field — handles null, plain string, or JSON array string */
+  getDocList(doc: string | null): string[] {
+    if (!doc) return [];
+    try {
+      const parsed = JSON.parse(doc);
+      return Array.isArray(parsed) ? parsed : [doc];
+    } catch {
+      return [doc];
+    }
   }
 
   // ── Duration Utilities ────────────────────────────────────────────────────

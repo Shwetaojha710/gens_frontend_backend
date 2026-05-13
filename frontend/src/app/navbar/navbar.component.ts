@@ -120,7 +120,8 @@ export class NavbarComponent implements OnInit, OnDestroy {
         { title: 'Upload Attendance',       icon: 'ri-upload-cloud-line',     link: '/layout/attendance/upload-attendance' },
         { title: 'Regularize',              icon: 'ri-upload-cloud-line',     link: '/layout/attendance/regularize' },
         { title: 'Weekend Employee List',   icon: 'ri-upload-cloud-line',     link: '/layout/attendance/weekend-emp-list' },
-        { title: 'Add Comp Off',            icon: 'ri-upload-cloud-line',     link: '/layout/attendance/add-comp-off' }
+        { title: 'Add Comp Off',            icon: 'ri-upload-cloud-line',     link: '/layout/attendance/add-comp-off' },
+        { title: 'Contractual Approval',    icon: 'ri-checkbox-circle-line',  link: '/layout/attendance/contractual-approval' }
       ]
     },
     {
@@ -129,6 +130,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
       children: [
         { title: 'Generate Salary',       icon: 'ri-money-rupee-circle-line', link: '/layout/payroll/full-time' },
         { title: 'Generated Salary List', icon: 'ri-suitcase-line',           link: '/layout/payroll/generated-salary' },
+        { title: 'Deduction Summary',     icon: 'ri-subtract-line',           link: '/layout/payroll/deduction-summary' },
         { title: 'Reimbursement',         icon: 'ri-refund-line',             link: '/layout/payroll/reimbursement' },
       ]
     },
@@ -163,6 +165,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
         { title: 'Attendance Master', icon: 'ri-calendar-line',     link: '/layout/attendance/salary-master' },
         { title: 'Currency',          icon: 'ri-copper-coin-line',  link: '/layout/master/currency' },
         { title: 'Company Prefix',    icon: 'ri-info-card-line',    link: '/layout/master/prefix' },
+        { title: 'Brand & Colors',    icon: 'ri-palette-line',      link: '/layout/master/brand-colors' },
       ]
     },
   ];

@@ -92,6 +92,7 @@ export class DateWiseAttendanceComponent {
   editingId: number | null = null;
   minDate: any
   fromDashboard: any = 'false'
+  dashboardStatusFilter: string = '';
   constructor(
     private master: MasterService,
     private attendanceService: AttendanceService,
@@ -101,6 +102,7 @@ export class DateWiseAttendanceComponent {
   ) {
     // Check if we came from the dashboard, e.g., via a query param
     this.fromDashboard = this.route.snapshot.queryParamMap.get('fromDashboard');
+    this.dashboardStatusFilter = this.route.snapshot.queryParamMap.get('status') || '';
     const today1 = new Date();
     if (this.fromDashboard == 'true') {
       this.obj['emp_id'] = 'All';
@@ -212,6 +214,16 @@ export class DateWiseAttendanceComponent {
           status: statusMap[item.status] || item.status
 
         }));
+
+        // When navigating from dashboard with a status filter, keep only matching rows
+        if (this.fromDashboard === 'true' && this.dashboardStatusFilter) {
+          const filterMap: Record<string, string> = { present: 'P', absent: 'A', leave: 'L' };
+          const target = filterMap[this.dashboardStatusFilter.toLowerCase()];
+          if (target) {
+            this.AttendanceMasterList = this.AttendanceMasterList.filter((item: any) => item.status === target);
+          }
+        }
+
         this.originalList = this.AttendanceMasterList
         this.generateDayList(this.obj['startDate'], this.obj['endDate']);
         this.updateDisplayedList();

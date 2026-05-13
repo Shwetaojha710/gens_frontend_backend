@@ -1250,12 +1250,14 @@ exports.getappActiveLocationEmp = async (req, res) => {
 
 exports.listVistData = async (req, res) => {
   try {
-    let { date, visit_place, with_remark } = req.body;
+    let { date, visit_place, with_remark ,endDate} = req.body;
 
     let filterDate = date ? new Date(date) : new Date();
 
     const startOfDay = new Date(filterDate.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(filterDate.setHours(23, 59, 59, 999));
+    const endOfDay = endDate
+      ? new Date(new Date(endDate).setHours(23, 59, 59, 999))
+      : new Date(new Date(filterDate).setHours(23, 59, 59, 999));
 
     let whereCondition = {
       tracked_at: {
@@ -1318,17 +1320,20 @@ exports.updateTrackRemark = async (req, res) => {
     }
 
     let updatePayload = {};
-    console.log(req.files,"req.filesreq.files");
-    
-  // Resolve uploaded document path: prefer a multipart file over the body string
-    const uploadedFile = Array.isArray(req.files) && req.files.length > 0
-      ? req.files.find((f) => f.fieldname == 'doc') || req.files[0]
-      : null;
-    const docPath = uploadedFile ? uploadedFile.filename : (doc || null);
+
+    // Collect all uploaded files; merge with any existing docs if no new files sent
+    let docValue = existsData.doc || null;
+    if (Array.isArray(req.files) && req.files.length > 0) {
+      const newFilenames = req.files.map((f) => f.filename);
+      let existing = [];
+      try { existing = JSON.parse(existsData.doc || '[]'); } catch { existing = existsData.doc ? [existsData.doc] : []; }
+      docValue = JSON.stringify([...existing, ...newFilenames]);
+    }
+
     if (remark !== undefined) updatePayload.remark = remark;
-      updatePayload.client_name=client_name || null,
-      updatePayload.client_phone_no= client_phone_no || null,
-      updatePayload.doc= docPath
+      updatePayload.client_name = client_name || null;
+      updatePayload.client_phone_no = client_phone_no || null;
+      updatePayload.doc = docValue;
     // if (feedback !== undefined) updatePayload.feedback = feedback;
 
     await DeviceLocationLog.update(updatePayload, {
@@ -1605,19 +1610,26 @@ exports.getVisitPlace = async (req, res) => {
   try {
     const branchId = req?.users?.branchId;
     console.log("Branch ID:", branchId);
+   
     if (!branchId || branchId == "null") {
       return Helper.response(false, "Branch Id is required", {}, res, 400);
     }
+    
     const tenantId = req?.users?.tenantId;
-    const data = await DeviceLocationLog.findAll({
-      where: {
-        location_type: "pinned",
-        branchId,tenantId,
-        visit_place: {
-          [Op.ne]: null,
-        },
-       
+    let employeeId = req?.body?.emp_id;
+    let whereCondition = {
+      location_type: "pinned",
+      branchId,
+      visit_place: {
+        [Op.ne]: null,
       },
+    };
+    if (employeeId && employeeId !== 'All') {
+      whereCondition.employeeId = employeeId;
+    }
+    
+    const data = await DeviceLocationLog.findAll({
+      where:whereCondition,
       attributes: ["visit_place"],
       group: ["visit_place"],
       raw: true,

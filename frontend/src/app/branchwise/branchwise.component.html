@@ -1,3 +1,144 @@
+<!-- ─── Floating palette button ─── -->
+<button class="bw-settings-fab" (click)="openSettings()" title="Brand & Colors">
+  <i class="ri ri-palette-line"></i>
+</button>
+
+<!-- ─── Drawer overlay ─── -->
+<div class="bw-drawer-overlay" [class.bw-drawer-overlay--open]="settingsOpen" (click)="closeSettings()"></div>
+
+<!-- ─── Settings drawer ─── -->
+<div class="bw-settings-drawer" [class.bw-settings-drawer--open]="settingsOpen">
+  <div class="bw-drawer-head">
+    <div>
+      <p class="bw-drawer-eyebrow">Appearance</p>
+      <h6 class="bw-drawer-title">Brand &amp; Colors</h6>
+    </div>
+    <button class="bw-drawer-close" (click)="closeSettings()">
+      <i class="ri ri-close-line"></i>
+    </button>
+  </div>
+
+  <div class="bw-drawer-body">
+    <!-- Apply to modules -->
+    <div class="bw-section mb-4">
+      <p class="bw-section-label">Apply colors to</p>
+      <div class="bw-module-list">
+        <label class="bw-module-item">
+          <input type="checkbox" [(ngModel)]="applyTo.hrAdmin" />
+          <span class="bw-module-icon"><i class="ri ri-briefcase-4-line"></i></span>
+          <span class="bw-module-text">Employee Management</span>
+        </label>
+        <label class="bw-module-item">
+          <input type="checkbox" [(ngModel)]="applyTo.recruitment" />
+          <span class="bw-module-icon"><i class="ri ri-group-line"></i></span>
+          <span class="bw-module-text">Recruitment</span>
+        </label>
+        <label class="bw-module-item">
+          <input type="checkbox" [(ngModel)]="applyTo.employeePortal" />
+          <span class="bw-module-icon"><i class="ri ri-user-smile-line"></i></span>
+          <span class="bw-module-text">Employee Portal</span>
+        </label>
+      </div>
+    </div>
+
+    <div style="height:1px;background:#e8edf3;"></div>
+
+    <!-- Color pickers -->
+    <div class="bw-section mt-4">
+      <p class="bw-section-label">Colors</p>
+
+      <div class="bw-color-row">
+        <div class="bw-color-info">
+          <span class="bw-color-label">Primary Color</span>
+          <span class="bw-color-hint">Buttons &amp; active nav</span>
+        </div>
+        <div class="bw-color-controls">
+          <input type="color" class="bw-color-swatch" [(ngModel)]="colors.primaryColor" (input)="previewColors()" />
+          <input type="text" class="bw-hex-field" [(ngModel)]="colors.primaryColor" (change)="previewColors()" maxlength="7" />
+        </div>
+      </div>
+
+      <div class="bw-color-row">
+        <div class="bw-color-info">
+          <span class="bw-color-label">Sidebar</span>
+          <span class="bw-color-hint">Navigation background</span>
+        </div>
+        <div class="bw-color-controls">
+          <input type="color" class="bw-color-swatch" [(ngModel)]="colors.sidebarColor" (input)="previewColors()" />
+          <input type="text" class="bw-hex-field" [(ngModel)]="colors.sidebarColor" (change)="previewColors()" maxlength="7" />
+        </div>
+      </div>
+
+      <div class="bw-color-row">
+        <div class="bw-color-info">
+          <span class="bw-color-label">Page Background</span>
+          <span class="bw-color-hint">Top &amp; bottom gradient</span>
+        </div>
+        <div class="bw-color-controls" style="gap:0.5rem;">
+          <div style="display:flex;align-items:center;gap:4px;">
+            <input type="color" class="bw-color-swatch" [(ngModel)]="colors.pageBgEnd" (input)="previewColors()" />
+            <span class="bw-mini-label">Top</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <input type="color" class="bw-color-swatch" [(ngModel)]="colors.pageBgStart" (input)="previewColors()" />
+            <span class="bw-mini-label">Bottom</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bw-color-row">
+        <div class="bw-color-info">
+          <span class="bw-color-label">Hero Banner</span>
+          <span class="bw-color-hint">Dashboard banner gradient</span>
+        </div>
+        <div class="bw-color-controls" style="gap:0.5rem;">
+          <div style="display:flex;align-items:center;gap:4px;">
+            <input type="color" class="bw-color-swatch" [(ngModel)]="colors.heroBgStart" (input)="previewColors()" />
+            <span class="bw-mini-label">Left</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <input type="color" class="bw-color-swatch" [(ngModel)]="colors.heroBgEnd" (input)="previewColors()" />
+            <span class="bw-mini-label">Right</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mini preview -->
+    <div class="bw-section mt-4">
+      <p class="bw-section-label">Preview</p>
+      <div class="bw-preview-wrap">
+        <div class="bw-preview-sidebar"
+          [style.background]="'linear-gradient(180deg,' + colors.sidebarColor + 'f5 0%,' + colors.sidebarColor + 'eb 100%)'">
+          <div class="bw-preview-nav-active" [style.background]="colors.primaryColor">Dashboard</div>
+          <div class="bw-preview-nav-item">Employees</div>
+          <div class="bw-preview-nav-item">Attendance</div>
+        </div>
+        <div class="bw-preview-content"
+          [style.background]="'linear-gradient(to top,' + colors.pageBgStart + ' 0%,' + colors.pageBgEnd + ' 100%)'">
+          <div class="bw-preview-hero"
+            [style.background]="'linear-gradient(90deg,' + colors.heroBgStart + ' 0%,' + colors.heroBgEnd + ' 100%)'">
+          </div>
+          <div class="bw-preview-btn" [style.background]="colors.primaryColor"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bw-drawer-footer">
+    <button class="bw-btn-save" [disabled]="saving" (click)="saveSettings()">
+      <i class="fas fa-circle-notch fa-spin me-1" *ngIf="saving"></i>
+      <i class="ri ri-save-line me-1" *ngIf="!saving"></i>
+      {{ saving ? 'Saving…' : 'Save Colors' }}
+    </button>
+    <button class="bw-btn-reset" (click)="resetSettings()">
+      <i class="ri ri-refresh-line me-1"></i>Reset
+    </button>
+  </div>
+</div>
+
+
+<!-- ─── Main branchwise page ─── -->
 <div class="authentication-wrapper authentication-basic container-p-y p-4 p-sm-0"
   style="background-image: url('/assets/img/bg-login/bg-branch.jpg');background-size: cover;background-repeat: no-repeat;">
   <div class="bg-1">

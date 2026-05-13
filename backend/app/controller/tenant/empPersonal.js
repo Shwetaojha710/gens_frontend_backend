@@ -375,6 +375,7 @@ exports.createEmp = async (req, res) => {
       shift_id,
       branchId,
       guarantorName,
+      emp_status:'approved',
       deviceId: Helper.getIpAddress(req),
     });
 
@@ -710,7 +711,9 @@ exports.updateEmp = async (req, res) => {
     role,
     guarantorName,
     type,
-    emp_status
+    emp_status,
+    isContractual,
+    hourlyRate
   } = req.body;
 
   // const image = req.file ? req.file.filename : null;
@@ -880,6 +883,8 @@ exports.updateEmp = async (req, res) => {
     updateData.updatedBy = req.users && req.users.id;
     updateData.deviceId = Helper.getIpAddress(req);
     updateData.role = role;
+    if (isContractual !== undefined) updateData.isContractual = isContractual;
+    if (hourlyRate !== undefined) updateData.hourlyRate = hourlyRate;
 
     await existingEmp.update(updateData);
     if (

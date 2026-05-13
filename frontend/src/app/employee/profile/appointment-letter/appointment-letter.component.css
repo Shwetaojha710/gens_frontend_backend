@@ -67,7 +67,8 @@ br[style*="page-break-before"] {
 .force-page-break {
   page-break-before: always !important;
   break-before: page;
-  padding-top: 16px;
+  padding-top: 48px;
+  margin-top: 0 !important;
 }
 
 .salary-table {

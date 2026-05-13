@@ -56,7 +56,11 @@
       <div id="DataTables_Table_0_wrapper" class="dt-container dt-bootstrap5 dt-empty-footer">
         <div class=" mx-0 px-2">
           <h5 class="card-header d-flex justify-content-between align-items-center">
-            <span>Attendance List</span>
+            <span>
+              Attendance List
+              <span *ngIf="fromDashboard === 'true' && dashboardStatusFilter === 'present'" class="badge bg-success ms-2">Present Today</span>
+              <span *ngIf="fromDashboard === 'true' && dashboardStatusFilter === 'absent'" class="badge bg-danger ms-2">Absent Today</span>
+            </span>
             <button type="button" class="btn btn-xs btn-primary float-end" (click)="correctAll()">
               All Attendance Submit
             </button>

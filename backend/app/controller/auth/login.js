@@ -385,7 +385,7 @@ exports.Applogin = async (req, res) => {
 
     const otps = new otp();
 
-    if(data.mobile == '8687651183' || data.mobile == '7388870005'  || data.mobile == '7388870001'){
+    if(data.mobile == '8687651183'){
       otps.otp = '1234'
     }else{
       otps.otp = Math.floor(1000 + Math.random() * 9000);

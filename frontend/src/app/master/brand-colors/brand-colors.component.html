@@ -1,0 +1,163 @@
+<div class="container-fluid py-4">
+
+  <!-- Hero header -->
+  <div class="sa-hero card mb-4">
+    <div class="card-body py-4 px-4">
+      <p class="sa-hero-kicker">Settings</p>
+      <div class="sa-hero-title">Brand &amp; Colors</div>
+      <div class="sa-hero-subtitle">Customize sidebar, background, buttons, and banner colors. Choose which modules inherit these colors.</div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status" style="width:2rem;height:2rem;">
+      <span class="visually-hidden">Loading…</span>
+    </div>
+  </div>
+
+  <div *ngIf="!loading" class="row g-4">
+
+    <!-- Left: pickers + modules -->
+    <div class="col-lg-7">
+
+      <!-- Apply to modules card -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h6 class="fw-bold mb-3" style="color:#1e3a5f;">Apply colors to modules</h6>
+          <div class="row g-2">
+            <div class="col-sm-4">
+              <label class="bc-module-card">
+                <input type="checkbox" [(ngModel)]="applyTo.hrAdmin" />
+                <i class="ri ri-briefcase-4-line"></i>
+                <span>Employee Management</span>
+              </label>
+            </div>
+            <div class="col-sm-4">
+              <label class="bc-module-card">
+                <input type="checkbox" [(ngModel)]="applyTo.recruitment" />
+                <i class="ri ri-group-line"></i>
+                <span>Recruitment</span>
+              </label>
+            </div>
+            <div class="col-sm-4">
+              <label class="bc-module-card">
+                <input type="checkbox" [(ngModel)]="applyTo.employeePortal" />
+                <i class="ri ri-user-smile-line"></i>
+                <span>Employee Portal</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Color pickers card -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h6 class="fw-bold mb-4" style="color:#1e3a5f;">Color Settings</h6>
+
+          <div class="bc-setting-row mb-4">
+            <div class="bc-label-wrap">
+              <span class="bc-label">Primary Color</span>
+              <span class="bc-hint">Buttons, active nav item, links</span>
+            </div>
+            <div class="bc-picker-wrap">
+              <input type="color" class="bc-color-input" [(ngModel)]="colors.primaryColor" (input)="preview()" />
+              <input type="text" class="bc-hex-input form-control form-control-sm" [(ngModel)]="colors.primaryColor" (change)="preview()" maxlength="7" />
+            </div>
+          </div>
+
+          <div class="bc-setting-row mb-4">
+            <div class="bc-label-wrap">
+              <span class="bc-label">Sidebar Background</span>
+              <span class="bc-hint">Left navigation panel background</span>
+            </div>
+            <div class="bc-picker-wrap">
+              <input type="color" class="bc-color-input" [(ngModel)]="colors.sidebarColor" (input)="preview()" />
+              <input type="text" class="bc-hex-input form-control form-control-sm" [(ngModel)]="colors.sidebarColor" (change)="preview()" maxlength="7" />
+            </div>
+          </div>
+
+          <div class="bc-setting-row mb-4">
+            <div class="bc-label-wrap">
+              <span class="bc-label">Page Background</span>
+              <span class="bc-hint">Main content area gradient (top → bottom)</span>
+            </div>
+            <div class="bc-picker-wrap gap-2">
+              <div class="d-flex align-items-center gap-1">
+                <input type="color" class="bc-color-input" [(ngModel)]="colors.pageBgEnd" (input)="preview()" />
+                <small class="text-muted">Top</small>
+              </div>
+              <div class="d-flex align-items-center gap-1">
+                <input type="color" class="bc-color-input" [(ngModel)]="colors.pageBgStart" (input)="preview()" />
+                <small class="text-muted">Bottom</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="bc-setting-row mb-4">
+            <div class="bc-label-wrap">
+              <span class="bc-label">Hero Banner</span>
+              <span class="bc-hint">Dashboard banner card gradient</span>
+            </div>
+            <div class="bc-picker-wrap gap-2">
+              <div class="d-flex align-items-center gap-1">
+                <input type="color" class="bc-color-input" [(ngModel)]="colors.heroBgStart" (input)="preview()" />
+                <small class="text-muted">Left</small>
+              </div>
+              <div class="d-flex align-items-center gap-1">
+                <input type="color" class="bc-color-input" [(ngModel)]="colors.heroBgEnd" (input)="preview()" />
+                <small class="text-muted">Right</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 mt-4 pt-3 border-top">
+            <button class="btn btn-primary px-4" [disabled]="saving" (click)="save()">
+              <span *ngIf="!saving"><i class="ri ri-save-line me-2"></i>Save Colors</span>
+              <span *ngIf="saving"><i class="fas fa-circle-notch fa-spin me-2"></i>Saving…</span>
+            </button>
+            <button class="btn btn-outline-secondary" (click)="reset()">
+              <i class="ri ri-refresh-line me-1"></i>Reset to Defaults
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: live preview -->
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h6 class="fw-bold mb-3" style="color:#1e3a5f;">Live Preview</h6>
+
+          <div class="bc-preview-sidebar mb-3" [style.background]="'linear-gradient(180deg,' + colors.sidebarColor + 'f5 0%,' + colors.sidebarColor + 'eb 100%)'">
+            <div class="bc-preview-nav-item bc-preview-nav-active" [style.background]="colors.primaryColor">
+              <span class="bc-preview-dot"></span> Dashboard
+            </div>
+            <div class="bc-preview-nav-item">
+              <span class="bc-preview-dot"></span> Employees
+            </div>
+            <div class="bc-preview-nav-item">
+              <span class="bc-preview-dot"></span> Attendance
+            </div>
+          </div>
+
+          <div class="bc-preview-page mb-3" [style.background]="'linear-gradient(to top,' + colors.pageBgStart + ' 0%,' + colors.pageBgEnd + ' 100%)'">
+            <div class="bc-preview-hero" [style.background]="'linear-gradient(90deg,' + colors.heroBgStart + ' 0%,' + colors.heroBgEnd + ' 100%)'">
+              <span style="color:#fff;font-size:0.7rem;font-weight:600;">Dashboard Banner</span>
+            </div>
+            <div class="bc-preview-card mt-2">
+              <div class="bc-preview-btn" [style.background]="colors.primaryColor"></div>
+              <div class="bc-preview-line"></div>
+              <div class="bc-preview-line bc-preview-line--short"></div>
+            </div>
+          </div>
+
+          <p class="small text-muted mb-0"><i class="fas fa-info-circle me-1"></i>Changes apply live as you pick colors. Click Save to persist.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
