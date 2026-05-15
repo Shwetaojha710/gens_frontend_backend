@@ -1,0 +1,2293 @@
+{
+  "info": {
+    "name": "GENS API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://192.168.23.17:3002/api" },
+    { "key": "token", "value": "" },
+    { "key": "branchId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Web Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/login", "host": ["{{baseUrl}}"], "path": ["login"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password123\"\n}" }
+          }
+        },
+        {
+          "name": "App Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/app-login", "host": ["{{baseUrl}}"], "path": ["app-login"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"emp@example.com\",\n  \"password\": \"password123\",\n  \"loginSource\": \"web\"\n}" }
+          }
+        },
+        {
+          "name": "Update Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/update-password", "host": ["{{baseUrl}}"], "path": ["update-password"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"newpassword123\",\n  \"tenantId\": \"tenant-uuid\"\n}" }
+          }
+        },
+        {
+          "name": "Check Token",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/check-token", "host": ["{{baseUrl}}"], "path": ["check-token"] }
+          }
+        },
+        {
+          "name": "Send OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/send-otp", "host": ["{{baseUrl}}"], "path": ["send-otp"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"interviewer@example.com\"\n}" }
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/verify-otp", "host": ["{{baseUrl}}"], "path": ["verify-otp"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"user@example.com\",\n  \"otp\": \"123456\"\n}" }
+          }
+        },
+        {
+          "name": "Verify OTP Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/verify-otp-login", "host": ["{{baseUrl}}"], "path": ["verify-otp-login"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"user@example.com\",\n  \"otp\": \"123456\"\n}" }
+          }
+        },
+        {
+          "name": "AI Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/AIlogin", "host": ["{{baseUrl}}"], "path": ["AIlogin"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password123\"\n}" }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/logout", "host": ["{{baseUrl}}"], "path": ["logout"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "App Logout",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/app-logout", "host": ["{{baseUrl}}"], "path": ["app-logout"] }
+          }
+        },
+        {
+          "name": "Company Register",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/company-register", "host": ["{{baseUrl}}"], "path": ["company-register"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "companyName", "value": "My Company", "type": "text" },
+                { "key": "email", "value": "admin@company.com", "type": "text" },
+                { "key": "password", "value": "password123", "type": "text" },
+                { "key": "phone", "value": "9876543210", "type": "text" },
+                { "key": "image", "type": "file", "src": "" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Public",
+      "item": [
+        {
+          "name": "Landing Page",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/public/landing", "host": ["{{baseUrl}}"], "path": ["public", "landing"] }
+          }
+        },
+        {
+          "name": "Contact Form",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/public/contact", "host": ["{{baseUrl}}"], "path": ["public", "contact"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"message\": \"Hello, I want to know more about your product.\"\n}" }
+          }
+        },
+        {
+          "name": "Get Plan",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/public/plan/:planId", "host": ["{{baseUrl}}"], "path": ["public", "plan", ":planId"], "variable": [{ "key": "planId", "value": "plan-uuid" }] }
+          }
+        },
+        {
+          "name": "Get State District",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/get-state-district", "host": ["{{baseUrl}}"], "path": ["get-state-district"] },
+            "body": { "mode": "raw", "raw": "{\n  \"stateId\": 1\n}" }
+          }
+        },
+        {
+          "name": "Get Country DD (Public)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/getCountryDD", "host": ["{{baseUrl}}"], "path": ["getCountryDD"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Employee Portal",
+      "item": [
+        {
+          "name": "Send OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/employee-portal/send-otp", "host": ["{{baseUrl}}"], "path": ["employee-portal", "send-otp"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"emp@example.com\"\n}" }
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/employee-portal/verify-otp", "host": ["{{baseUrl}}"], "path": ["employee-portal", "verify-otp"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"emp@example.com\",\n  \"otp\": \"123456\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Employee Management",
+      "item": [
+        {
+          "name": "Create Employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/createEmp", "host": ["{{baseUrl}}"], "path": ["createEmp"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "firstName", "value": "John", "type": "text" },
+                { "key": "lastName", "value": "Doe", "type": "text" },
+                { "key": "email", "value": "john.doe@company.com", "type": "text" },
+                { "key": "phone", "value": "9876543210", "type": "text" },
+                { "key": "departmentId", "value": "dept-uuid", "type": "text" },
+                { "key": "designationId", "value": "desig-uuid", "type": "text" },
+                { "key": "joiningDate", "value": "2024-01-01", "type": "text" },
+                { "key": "image", "type": "file", "src": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/getEmp", "host": ["{{baseUrl}}"], "path": ["getEmp"] },
+            "body": { "mode": "raw", "raw": "{\n  \"empId\": \"emp-uuid\"\n}" }
+          }
+        },
+        {
+          "name": "Get Employee List",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/get-emp-list", "host": ["{{baseUrl}}"], "path": ["get-emp-list"] },
+            "body": { "mode": "raw", "raw": "{\n  \"page\": 1,\n  \"limit\": 10,\n  \"search\": \"\"\n}" }
+          }
+        },
+        {
+          "name": "Update Employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/updateEmp", "host": ["{{baseUrl}}"], "path": ["updateEmp"] },
+            "body": { "mode": "raw", "raw": "{\n  \"empId\": \"emp-uuid\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"phone\": \"9876543210\"\n}" }
+          }
+        },
+        {
+          "name": "Delete Employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/deleteEmp", "host": ["{{baseUrl}}"], "path": ["deleteEmp"] },
+            "body": { "mode": "raw", "raw": "{\n  \"empId\": \"emp-uuid\"\n}" }
+          }
+        },
+        {
+          "name": "Upload Profile Image",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/uploadImage", "host": ["{{baseUrl}}"], "path": ["uploadImage"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "empId", "value": "emp-uuid", "type": "text" },
+                { "key": "image", "type": "file", "src": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Check Tenant",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/check-tenant", "host": ["{{baseUrl}}"], "path": ["check-tenant"] },
+            "body": { "mode": "raw", "raw": "{\n  \"tenantId\": \"tenant-uuid\"\n}" }
+          }
+        },
+        {
+          "name": "App Employee List",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/app-emp-list", "host": ["{{baseUrl}}"], "path": ["app-emp-list"] },
+            "body": { "mode": "raw", "raw": "{\n  \"page\": 1,\n  \"limit\": 10\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attendance",
+      "item": [
+        {
+          "name": "Create Attendance Setting",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/attendance-setting", "host": ["{{baseUrl}}"], "path": ["attendance-setting"] },
+            "body": { "mode": "raw", "raw": "{\n  \"lateAllowanceMin\": 5,\n  \"graceMinutes\": 10,\n  \"lateToHalfdayMin\": 240,\n  \"halfdayToAbsentMin\": 480\n}" }
+          }
+        },
+        {
+          "name": "Get Attendance Setting",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/get-attendance-setting", "host": ["{{baseUrl}}"], "path": ["get-attendance-setting"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "Update Attendance Setting",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/update-attendance-setting", "host": ["{{baseUrl}}"], "path": ["update-attendance-setting"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"setting-uuid\",\n  \"lateAllowanceMin\": 10,\n  \"graceMinutes\": 15\n}" }
+          }
+        },
+        {
+          "name": "Get Employee Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/get-emp-attendance", "host": ["{{baseUrl}}"], "path": ["get-emp-attendance"] },
+            "body": { "mode": "raw", "raw": "{\n  \"empId\": \"emp-uuid\",\n  \"month\": 1,\n  \"year\": 2024\n}" }
+          }
+        },
+        {
+          "name": "Get Late Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/get-late-attendance", "host": ["{{baseUrl}}"], "path": ["get-late-attendance"] },
+            "body": { "mode": "raw", "raw": "{\n  \"month\": 1,\n  \"year\": 2024\n}" }
+          }
+        },
+        {
+          "name": "Get Date-wise Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/get-date-wise-attendance", "host": ["{{baseUrl}}"], "path": ["get-date-wise-attendance"] },
+            "body": { "mode": "raw", "raw": "{\n  \"date\": \"2024-01-15\"\n}" }
+          }
+        },
+        {
+          "name": "Add Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/add-attendance", "host": ["{{baseUrl}}"], "path": ["add-attendance"] },
+            "body": { "mode": "raw", "raw": "{\n  \"empId\": \"emp-uuid\",\n  \"date\": \"2024-01-15\",\n  \"checkIn\": \"09:00\",\n  \"checkOut\": \"18:00\",\n  \"status\": \"present\"\n}" }
+          }
+        },
+        {
+          "name": "Upload Attendance (Bulk)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/upload-attendance", "host": ["{{baseUrl}}"], "path": ["upload-attendance"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload Leave (Bulk)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/upload-leave", "host": ["{{baseUrl}}"], "path": ["upload-leave"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/update-attendance", "host": ["{{baseUrl}}"], "path": ["update-attendance"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"attendance-uuid\",\n  \"checkIn\": \"09:30\",\n  \"checkOut\": \"18:30\",\n  \"status\": \"present\"\n}" }
+          }
+        },
+        {
+          "name": "Delete Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/delete-attendance", "host": ["{{baseUrl}}"], "path": ["delete-attendance"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"attendance-uuid\"\n}" }
+          }
+        },
+        {
+          "name": "Download Attendance Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/download", "host": ["{{baseUrl}}"], "path": ["download"] },
+            "body": { "mode": "raw", "raw": "{\n  \"month\": 1,\n  \"year\": 2024\n}" }
+          }
+        },
+        {
+          "name": "Add Holiday",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/add-holiday", "host": ["{{baseUrl}}"], "path": ["add-holiday"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "Diwali", "type": "text" },
+                { "key": "date", "value": "2024-11-01", "type": "text" },
+                { "key": "holidayTypeId", "value": "type-uuid", "type": "text" },
+                { "key": "image", "type": "file", "src": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Holiday List",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/get-holidayList", "host": ["{{baseUrl}}"], "path": ["get-holidayList"] },
+            "body": { "mode": "raw", "raw": "{\n  \"year\": 2024\n}" }
+          }
+        },
+        {
+          "name": "Delete Holiday",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/delete-holiday", "host": ["{{baseUrl}}"], "path": ["delete-holiday"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"holiday-uuid\"\n}" }
+          }
+        },
+        {
+          "name": "Add Reimbursement",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/add-reimbursement", "host": ["{{baseUrl}}"], "path": ["add-reimbursement"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "empId", "value": "emp-uuid", "type": "text" },
+                { "key": "amount", "value": "5000", "type": "text" },
+                { "key": "description", "value": "Travel expenses", "type": "text" },
+                { "key": "date", "value": "2024-01-15", "type": "text" },
+                { "key": "images", "type": "file", "src": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Fetch Reimbursement",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/fetchReimbursement", "host": ["{{baseUrl}}"], "path": ["fetchReimbursement"] },
+            "body": { "mode": "raw", "raw": "{\n  \"empId\": \"emp-uuid\",\n  \"month\": 1,\n  \"year\": 2024\n}" }
+          }
+        },
+        {
+          "name": "Update Reimbursement Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/update-reimbursement-status", "host": ["{{baseUrl}}"], "path": ["update-reimbursement-status"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"reimbursement-uuid\",\n  \"status\": \"approved\"\n}" }
+          }
+        },
+        {
+          "name": "Delete Reimbursement",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/delete-reimbursement", "host": ["{{baseUrl}}"], "path": ["delete-reimbursement"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"reimbursement-uuid\"\n}" }
+          }
+        },
+        {
+          "name": "Create Manual Comp-Off",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/create-manually-comp-off", "host": ["{{baseUrl}}"], "path": ["create-manually-comp-off"] },
+            "body": { "mode": "raw", "raw": "{\n  \"empId\": \"emp-uuid\",\n  \"date\": \"2024-01-20\",\n  \"reason\": \"Worked on weekend\"\n}" }
+          }
+        },
+        {
+          "name": "List Comp-Off",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/list-manually-comp-off", "host": ["{{baseUrl}}"], "path": ["list-manually-comp-off"] },
+            "body": { "mode": "raw", "raw": "{\n  \"empId\": \"emp-uuid\"\n}" }
+          }
+        },
+        {
+          "name": "Contractual Attendance List",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/contractual-attendance-list", "host": ["{{baseUrl}}"], "path": ["contractual-attendance-list"] },
+            "body": { "mode": "raw", "raw": "{\n  \"month\": 1,\n  \"year\": 2024\n}" }
+          }
+        },
+        {
+          "name": "Get Contractual Employees",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/contractual-employees", "host": ["{{baseUrl}}"], "path": ["contractual-employees"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Leave Management",
+      "item": [
+        {
+          "name": "Create Leave Type",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/create-leave", "host": ["{{baseUrl}}"], "path": ["create-leave"] },
+            "body": { "mode": "raw", "raw": "{\n  \"leaveName\": \"Sick Leave\",\n  \"leaveCode\": \"SL\",\n  \"isPaid\": true,\n  \"allowedPerYear\": 12,\n  \"carryForward\": true,\n  \"enCashable\": true,\n  \"maxCarryForward\": 5,\n  \"requiresApproval\": true,\n  \"applyBeforeDays\": 2\n}" }
+          }
+        },
+        {
+          "name": "Get Leave Types",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/get-leaves", "host": ["{{baseUrl}}"], "path": ["get-leaves"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "Update Leave Type",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/update-leaves", "host": ["{{baseUrl}}"], "path": ["update-leaves"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"leave-type-uuid\",\n  \"leaveName\": \"Sick Leave\",\n  \"allowedPerYear\": 15\n}" }
+          }
+        },
+        {
+          "name": "Delete Leave Type",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/delete-leaves", "host": ["{{baseUrl}}"], "path": ["delete-leaves"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"leave-type-uuid\"\n}" }
+          }
+        },
+        {
+          "name": "Assign Leave",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/assign-leave", "host": ["{{baseUrl}}"], "path": ["assign-leave"] },
+            "body": { "mode": "raw", "raw": "{\n  \"empId\": \"emp-uuid\",\n  \"leaveTypeId\": \"leave-type-uuid\",\n  \"balance\": 12\n}" }
+          }
+        },
+        {
+          "name": "Get Leave Type Dropdown",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/get-leave-type-dd", "host": ["{{baseUrl}}"], "path": ["get-leave-type-dd"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "Get Leave by Employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/get-leave-by-emp", "host": ["{{baseUrl}}"], "path": ["get-leave-by-emp"] },
+            "body": { "mode": "raw", "raw": "{\n  \"empId\": \"emp-uuid\"\n}" }
+          }
+        },
+        {
+          "name": "Apply Leave",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/apply-leave", "host": ["{{baseUrl}}"], "path": ["apply-leave"] },
+            "body": { "mode": "raw", "raw": "{\n  \"empId\": \"emp-uuid\",\n  \"leaveTypeId\": \"leave-type-uuid\",\n  \"fromDate\": \"2024-01-20\",\n  \"toDate\": \"2024-01-22\",\n  \"reason\": \"Personal work\"\n}" }
+          }
+        },
+        {
+          "name": "Update Leave Application Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/update-apply-leave-status", "host": ["{{baseUrl}}"], "path": ["update-apply-leave-status"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"leave-application-uuid\",\n  \"status\": \"approved\"\n}" }
+          }
+        },
+        {
+          "name": "Get Applied Leaves",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/get-applied-leaves", "host": ["{{baseUrl}}"], "path": ["get-applied-leaves"] },
+            "body": { "mode": "raw", "raw": "{\n  \"month\": 1,\n  \"year\": 2024\n}" }
+          }
+        },
+        {
+          "name": "Generate Comp-Off Leave",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/generate-comp-off-leave", "host": ["{{baseUrl}}"], "path": ["generate-comp-off-leave"] },
+            "body": { "mode": "raw", "raw": "{\n  \"empId\": \"emp-uuid\",\n  \"date\": \"2024-01-20\"\n}" }
+          }
+        },
+        {
+          "name": "Approve Comp-Off Leave",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/approve-comp-off-leave", "host": ["{{baseUrl}}"], "path": ["approve-comp-off-leave"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"comp-off-uuid\",\n  \"status\": \"approved\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Salary",
+      "item": [
+        {
+          "name": "Calculate Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/calculate-attendance", "host": ["{{baseUrl}}"], "path": ["calculate-attendance"] },
+            "body": { "mode": "raw", "raw": "{\n  \"month\": 1,\n  \"year\": 2024\n}" }
+          }
+        },
+        {
+          "name": "Setup Salary",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/setup-salary", "host": ["{{baseUrl}}"], "path": ["setup-salary"] },
+            "body": { "mode": "raw", "raw": "{\n  \"empId\": \"emp-uuid\",\n  \"basicSalary\": 30000,\n  \"components\": []\n}" }
+          }
+        },
+        {
+          "name": "Generate Salary",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/generate-Salary", "host": ["{{baseUrl}}"], "path": ["generate-Salary"] },
+            "body": { "mode": "raw", "raw": "{\n  \"month\": 1,\n  \"year\": 2024\n}" }
+          }
+        },
+        {
+          "name": "Get Generated Salary List",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/generate-Salary-list", "host": ["{{baseUrl}}"], "path": ["generate-Salary-list"] },
+            "body": { "mode": "raw", "raw": "{\n  \"month\": 1,\n  \"year\": 2024\n}" }
+          }
+        },
+        {
+          "name": "Revert Salary",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/revert-Salary", "host": ["{{baseUrl}}"], "path": ["revert-Salary"] },
+            "body": { "mode": "raw", "raw": "{\n  \"month\": 1,\n  \"year\": 2024\n}" }
+          }
+        },
+        {
+          "name": "Get Bill Details",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/getBillDetails", "host": ["{{baseUrl}}"], "path": ["getBillDetails"] },
+            "body": { "mode": "raw", "raw": "{\n  \"empId\": \"emp-uuid\",\n  \"month\": 1,\n  \"year\": 2024\n}" }
+          }
+        },
+        {
+          "name": "Submit Salary Document",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/SubmitSalaryDoc", "host": ["{{baseUrl}}"], "path": ["SubmitSalaryDoc"] },
+            "body": { "mode": "raw", "raw": "{\n  \"month\": 1,\n  \"year\": 2024\n}" }
+          }
+        },
+        {
+          "name": "Get Active Salary Component",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/get-active-salary-component", "host": ["{{baseUrl}}"], "path": ["get-active-salary-component"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Department & Branch",
+      "item": [
+        {
+          "name": "Create Department",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/createDepartment", "host": ["{{baseUrl}}"], "path": ["createDepartment"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Engineering\",\n  \"code\": \"ENG\"\n}" }
+          }
+        },
+        {
+          "name": "Get Departments",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/getDepartments", "host": ["{{baseUrl}}"], "path": ["getDepartments"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "Update Department",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/updateDepartment", "host": ["{{baseUrl}}"], "path": ["updateDepartment"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"dept-uuid\",\n  \"name\": \"Engineering Updated\"\n}" }
+          }
+        },
+        {
+          "name": "Delete Department",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/deleteDepartment", "host": ["{{baseUrl}}"], "path": ["deleteDepartment"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"dept-uuid\"\n}" }
+          }
+        },
+        {
+          "name": "Department Dropdown",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/department-dd", "host": ["{{baseUrl}}"], "path": ["department-dd"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "Create Branch",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/createBranch", "host": ["{{baseUrl}}"], "path": ["createBranch"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "Mumbai Branch", "type": "text" },
+                { "key": "address", "value": "123 MG Road, Mumbai", "type": "text" },
+                { "key": "image", "type": "file", "src": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Branches",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/getBranch", "host": ["{{baseUrl}}"], "path": ["getBranch"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "Delete Branch",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/deleteBranch", "host": ["{{baseUrl}}"], "path": ["deleteBranch"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"branch-uuid\"\n}" }
+          }
+        },
+        {
+          "name": "Branch Dropdown",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/branch-dd", "host": ["{{baseUrl}}"], "path": ["branch-dd"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Designation",
+      "item": [
+        {
+          "name": "Create Designation",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/createDesignation", "host": ["{{baseUrl}}"], "path": ["createDesignation"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Software Engineer\",\n  \"departmentId\": \"dept-uuid\"\n}" }
+          }
+        },
+        {
+          "name": "Get Designations",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/getDesignations", "host": ["{{baseUrl}}"], "path": ["getDesignations"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "Update Designation",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/updateDesignation", "host": ["{{baseUrl}}"], "path": ["updateDesignation"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"desig-uuid\",\n  \"name\": \"Senior Software Engineer\"\n}" }
+          }
+        },
+        {
+          "name": "Delete Designation",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/deleteDesignation", "host": ["{{baseUrl}}"], "path": ["deleteDesignation"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"desig-uuid\"\n}" }
+          }
+        },
+        {
+          "name": "Designation Dropdown",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/designation-dd", "host": ["{{baseUrl}}"], "path": ["designation-dd"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Shift",
+      "item": [
+        {
+          "name": "Create Shift",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/createShift", "host": ["{{baseUrl}}"], "path": ["createShift"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Morning Shift\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"18:00\",\n  \"workingDays\": [1, 2, 3, 4, 5]\n}" }
+          }
+        },
+        {
+          "name": "Get Shifts",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/getShift", "host": ["{{baseUrl}}"], "path": ["getShift"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "Update Shift",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/updateShift", "host": ["{{baseUrl}}"], "path": ["updateShift"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"shift-uuid\",\n  \"name\": \"Morning Shift Updated\",\n  \"startTime\": \"08:30\"\n}" }
+          }
+        },
+        {
+          "name": "Delete Shift",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/deleteShift", "host": ["{{baseUrl}}"], "path": ["deleteShift"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"shift-uuid\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Allowance & Deduction",
+      "item": [
+        {
+          "name": "Create Allowance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/createAllowance", "host": ["{{baseUrl}}"], "path": ["createAllowance"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"HRA\",\n  \"percentage\": 40,\n  \"isFixed\": false\n}" }
+          }
+        },
+        {
+          "name": "Get Allowances",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/getAllowance", "host": ["{{baseUrl}}"], "path": ["getAllowance"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "Update Allowance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/updateAllowance", "host": ["{{baseUrl}}"], "path": ["updateAllowance"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"allowance-uuid\",\n  \"name\": \"HRA Updated\",\n  \"percentage\": 45\n}" }
+          }
+        },
+        {
+          "name": "Delete Allowance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/deleteAllowance", "host": ["{{baseUrl}}"], "path": ["deleteAllowance"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"allowance-uuid\"\n}" }
+          }
+        },
+        {
+          "name": "Create Deduction",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/create-deduction-master", "host": ["{{baseUrl}}"], "path": ["create-deduction-master"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"PF\",\n  \"percentage\": 12,\n  \"isFixed\": false\n}" }
+          }
+        },
+        {
+          "name": "Get Deductions",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/get-deduction-master", "host": ["{{baseUrl}}"], "path": ["get-deduction-master"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "Update Deduction",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/update-deduction-master", "host": ["{{baseUrl}}"], "path": ["update-deduction-master"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"deduction-uuid\",\n  \"percentage\": 13\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bank Account",
+      "item": [
+        {
+          "name": "Create Bank Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/createBank", "host": ["{{baseUrl}}"], "path": ["createBank"] },
+            "body": { "mode": "raw", "raw": "{\n  \"empId\": \"emp-uuid\",\n  \"bankName\": \"HDFC Bank\",\n  \"accountNumber\": \"1234567890\",\n  \"ifscCode\": \"HDFC0001234\",\n  \"accountHolderName\": \"John Doe\"\n}" }
+          }
+        },
+        {
+          "name": "Get Bank Accounts",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/getBank", "host": ["{{baseUrl}}"], "path": ["getBank"] },
+            "body": { "mode": "raw", "raw": "{\n  \"empId\": \"emp-uuid\"\n}" }
+          }
+        },
+        {
+          "name": "Update Bank Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/updateBank", "host": ["{{baseUrl}}"], "path": ["updateBank"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"bank-uuid\",\n  \"accountNumber\": \"0987654321\"\n}" }
+          }
+        },
+        {
+          "name": "Delete Bank Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/deleteBank", "host": ["{{baseUrl}}"], "path": ["deleteBank"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"bank-uuid\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Document Management",
+      "item": [
+        {
+          "name": "Create Document Type",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/createDocumentType", "host": ["{{baseUrl}}"], "path": ["createDocumentType"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Aadhaar Card\",\n  \"code\": \"AADHAAR\"\n}" }
+          }
+        },
+        {
+          "name": "Get Document Types",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/getDocumentType", "host": ["{{baseUrl}}"], "path": ["getDocumentType"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "Create Document",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/createDocument", "host": ["{{baseUrl}}"], "path": ["createDocument"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "empId", "value": "emp-uuid", "type": "text" },
+                { "key": "documentTypeId", "value": "doc-type-uuid", "type": "text" },
+                { "key": "documentNumber", "value": "1234-5678-9012", "type": "text" },
+                { "key": "file", "type": "file", "src": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Documents",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/getDocument", "host": ["{{baseUrl}}"], "path": ["getDocument"] },
+            "body": { "mode": "raw", "raw": "{\n  \"empId\": \"emp-uuid\"\n}" }
+          }
+        },
+        {
+          "name": "Delete Document",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/deleteDocument", "host": ["{{baseUrl}}"], "path": ["deleteDocument"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"doc-uuid\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard & Master",
+      "item": [
+        {
+          "name": "Dashboard",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/dashboard", "host": ["{{baseUrl}}"], "path": ["dashboard"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "Dashboard Attendance Chart",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/dashboard-attendance-chart", "host": ["{{baseUrl}}"], "path": ["dashboard-attendance-chart"] },
+            "body": { "mode": "raw", "raw": "{\n  \"month\": 1,\n  \"year\": 2024\n}" }
+          }
+        },
+        {
+          "name": "Today Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/today-attendance", "host": ["{{baseUrl}}"], "path": ["today-attendance"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "Create Master Component",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/create-component", "host": ["{{baseUrl}}"], "path": ["create-component"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Basic\",\n  \"type\": \"earning\",\n  \"isActive\": true\n}" }
+          }
+        },
+        {
+          "name": "Get Components",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/get-component", "host": ["{{baseUrl}}"], "path": ["get-component"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "Get Brand Colors",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/get-brand-colors", "host": ["{{baseUrl}}"], "path": ["get-brand-colors"] },
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "Save Brand Colors",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/save-brand-colors", "host": ["{{baseUrl}}"], "path": ["save-brand-colors"] },
+            "body": { "mode": "raw", "raw": "{\n  \"primaryColor\": \"#2563EB\",\n  \"secondaryColor\": \"#1E40AF\"\n}" }
+          }
+        },
+        {
+          "name": "Track Location History",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/track-location-history", "host": ["{{baseUrl}}"], "path": ["track-location-history"] },
+            "body": { "mode": "raw", "raw": "{\n  \"empId\": \"emp-uuid\",\n  \"date\": \"2024-01-15\"\n}" }
+          }
+        },
+        {
+          "name": "Active Location Employees",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/active-location-emp", "host": ["{{baseUrl}}"], "path": ["active-location-emp"] }
+          }
+        },
+        {
+          "name": "Visit Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/visit-report", "host": ["{{baseUrl}}"], "path": ["visit-report"] },
+            "body": { "mode": "raw", "raw": "{\n  \"empId\": \"emp-uuid\",\n  \"fromDate\": \"2024-01-01\",\n  \"toDate\": \"2024-01-31\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Letter & Work Experience",
+      "item": [
+        {
+          "name": "Save Letter Data",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/save-letter-data", "host": ["{{baseUrl}}"], "path": ["save-letter-data"] },
+            "body": { "mode": "raw", "raw": "{\n  \"letterType\": \"offer\",\n  \"content\": \"<p>Dear {{name}}, ...</p>\"\n}" }
+          }
+        },
+        {
+          "name": "Get Letter Data",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/get-letter-data", "host": ["{{baseUrl}}"], "path": ["get-letter-data"] },
+            "body": { "mode": "raw", "raw": "{\n  \"letterType\": \"offer\"\n}" }
+          }
+        },
+        {
+          "name": "Generate Letter PDF",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/generate-letter-pdf", "host": ["{{baseUrl}}"], "path": ["generate-letter-pdf"] },
+            "body": { "mode": "raw", "raw": "{\n  \"empId\": \"emp-uuid\",\n  \"letterType\": \"offer\"\n}" }
+          }
+        },
+        {
+          "name": "Create Work Experience",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/createWorkExp", "host": ["{{baseUrl}}"], "path": ["createWorkExp"] },
+            "body": { "mode": "raw", "raw": "{\n  \"empId\": \"emp-uuid\",\n  \"companyName\": \"Previous Corp\",\n  \"designation\": \"Developer\",\n  \"fromDate\": \"2020-01-01\",\n  \"toDate\": \"2022-12-31\"\n}" }
+          }
+        },
+        {
+          "name": "Get Work Experience",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/getWorkExp", "host": ["{{baseUrl}}"], "path": ["getWorkExp"] },
+            "body": { "mode": "raw", "raw": "{\n  \"empId\": \"emp-uuid\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Recruitment",
+      "item": [
+        {
+          "name": "Jobs",
+          "item": [
+            {
+              "name": "Create Job Requirement",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "branchId", "value": "{{branchId}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": { "raw": "{{baseUrl}}/createJobRequirement", "host": ["{{baseUrl}}"], "path": ["createJobRequirement"] },
+                "body": { "mode": "raw", "raw": "{\n  \"title\": \"Senior Developer\",\n  \"departmentId\": \"dept-uuid\",\n  \"designationId\": \"desig-uuid\",\n  \"openings\": 2,\n  \"experience\": 3,\n  \"skills\": [\"Node.js\", \"React\"],\n  \"description\": \"We are looking for...\"\n}" }
+              }
+            },
+            {
+              "name": "Get Job Requirements",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "branchId", "value": "{{branchId}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": { "raw": "{{baseUrl}}/getJobRequirements", "host": ["{{baseUrl}}"], "path": ["getJobRequirements"] },
+                "body": { "mode": "raw", "raw": "{\n  \"page\": 1,\n  \"limit\": 10\n}" }
+              }
+            },
+            {
+              "name": "Update Job Requirement",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "branchId", "value": "{{branchId}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": { "raw": "{{baseUrl}}/updateJobRequirement", "host": ["{{baseUrl}}"], "path": ["updateJobRequirement"] },
+                "body": { "mode": "raw", "raw": "{\n  \"id\": \"job-uuid\",\n  \"openings\": 3\n}" }
+              }
+            },
+            {
+              "name": "Delete Job Requirement",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "branchId", "value": "{{branchId}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": { "raw": "{{baseUrl}}/deleteJobRequirement", "host": ["{{baseUrl}}"], "path": ["deleteJobRequirement"] },
+                "body": { "mode": "raw", "raw": "{\n  \"id\": \"job-uuid\"\n}" }
+              }
+            },
+            {
+              "name": "Publish Job",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "branchId", "value": "{{branchId}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": { "raw": "{{baseUrl}}/publishJob", "host": ["{{baseUrl}}"], "path": ["publishJob"] },
+                "body": { "mode": "raw", "raw": "{\n  \"id\": \"job-uuid\",\n  \"isPublished\": true\n}" }
+              }
+            },
+            {
+              "name": "Save Offer Letter",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "branchId", "value": "{{branchId}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": { "raw": "{{baseUrl}}/save-offer-letter", "host": ["{{baseUrl}}"], "path": ["save-offer-letter"] },
+                "body": { "mode": "raw", "raw": "{\n  \"candidateId\": \"candidate-uuid\",\n  \"salary\": 600000,\n  \"joiningDate\": \"2024-02-01\"\n}" }
+              }
+            },
+            {
+              "name": "Generate Offer Letter PDF",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "branchId", "value": "{{branchId}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": { "raw": "{{baseUrl}}/generate-offer-letter-pdf", "host": ["{{baseUrl}}"], "path": ["generate-offer-letter-pdf"] },
+                "body": { "mode": "raw", "raw": "{\n  \"offerId\": \"offer-uuid\"\n}" }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Candidates",
+          "item": [
+            {
+              "name": "Public Job Posting",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/public-job-posting", "host": ["{{baseUrl}}"], "path": ["public-job-posting"] },
+                "body": { "mode": "raw", "raw": "{\n  \"jobId\": \"job-uuid\"\n}" }
+              }
+            },
+            {
+              "name": "Submit Application",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": { "raw": "{{baseUrl}}/submit-application", "host": ["{{baseUrl}}"], "path": ["submit-application"] },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    { "key": "full_name", "value": "Jane Smith", "type": "text" },
+                    { "key": "email", "value": "jane@example.com", "type": "text" },
+                    { "key": "phone", "value": "9876543210", "type": "text" },
+                    { "key": "experience", "value": "5", "type": "text" },
+                    { "key": "current_ctc", "value": "500000", "type": "text" },
+                    { "key": "notice_period", "value": "30", "type": "text" },
+                    { "key": "job_posting_id", "value": "job-uuid", "type": "text" },
+                    { "key": "resume", "type": "file", "src": "" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "List Applications",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "branchId", "value": "{{branchId}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": { "raw": "{{baseUrl}}/list-applications", "host": ["{{baseUrl}}"], "path": ["list-applications"] },
+                "body": { "mode": "raw", "raw": "{\n  \"jobId\": \"job-uuid\",\n  \"page\": 1,\n  \"limit\": 10\n}" }
+              }
+            },
+            {
+              "name": "Admin Pipeline",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "branchId", "value": "{{branchId}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": { "raw": "{{baseUrl}}/admin-pipeline", "host": ["{{baseUrl}}"], "path": ["admin-pipeline"] },
+                "body": { "mode": "raw", "raw": "{\n  \"jobId\": \"job-uuid\"\n}" }
+              }
+            },
+            {
+              "name": "Application Detail",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "branchId", "value": "{{branchId}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": { "raw": "{{baseUrl}}/application-detail", "host": ["{{baseUrl}}"], "path": ["application-detail"] },
+                "body": { "mode": "raw", "raw": "{\n  \"applicationId\": \"application-uuid\"\n}" }
+              }
+            },
+            {
+              "name": "Update Stage",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "branchId", "value": "{{branchId}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": { "raw": "{{baseUrl}}/update-stage", "host": ["{{baseUrl}}"], "path": ["update-stage"] },
+                "body": { "mode": "raw", "raw": "{\n  \"applicationId\": \"application-uuid\",\n  \"stage\": \"interview\"\n}" }
+              }
+            },
+            {
+              "name": "Check Duplicate Application",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/check-duplicate-application", "host": ["{{baseUrl}}"], "path": ["check-duplicate-application"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"jane@example.com\",\n  \"jobId\": \"job-uuid\"\n}" }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Interviews",
+          "item": [
+            {
+              "name": "Create Interview Round",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "branchId", "value": "{{branchId}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": { "raw": "{{baseUrl}}/createInterviewRound", "host": ["{{baseUrl}}"], "path": ["createInterviewRound"] },
+                "body": { "mode": "raw", "raw": "{\n  \"jobId\": \"job-uuid\",\n  \"name\": \"Technical Round\",\n  \"roundTypeId\": \"round-type-uuid\",\n  \"order\": 1\n}" }
+              }
+            },
+            {
+              "name": "List Interview Rounds",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "branchId", "value": "{{branchId}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": { "raw": "{{baseUrl}}/listInterviewRounds", "host": ["{{baseUrl}}"], "path": ["listInterviewRounds"] },
+                "body": { "mode": "raw", "raw": "{\n  \"jobId\": \"job-uuid\"\n}" }
+              }
+            },
+            {
+              "name": "Save Interview Schedule",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "branchId", "value": "{{branchId}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": { "raw": "{{baseUrl}}/save-interview-schedule", "host": ["{{baseUrl}}"], "path": ["save-interview-schedule"] },
+                "body": { "mode": "raw", "raw": "{\n  \"applicationId\": \"application-uuid\",\n  \"roundId\": \"round-uuid\",\n  \"scheduledAt\": \"2024-01-20T10:00:00\",\n  \"mode\": \"online\",\n  \"link\": \"https://meet.google.com/xxx\"\n}" }
+              }
+            },
+            {
+              "name": "Create Interview Panel User",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "branchId", "value": "{{branchId}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": { "raw": "{{baseUrl}}/createInterviewPanelUser", "host": ["{{baseUrl}}"], "path": ["createInterviewPanelUser"] },
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"Interviewer Name\",\n  \"email\": \"interviewer@company.com\",\n  \"phone\": \"9876543210\"\n}" }
+              }
+            },
+            {
+              "name": "List Interview Panel Users",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "branchId", "value": "{{branchId}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": { "raw": "{{baseUrl}}/listInterviewPanelUsers", "host": ["{{baseUrl}}"], "path": ["listInterviewPanelUsers"] },
+                "body": { "mode": "raw", "raw": "{}" }
+              }
+            },
+            {
+              "name": "Panel User Login",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/panel-user-login", "host": ["{{baseUrl}}"], "path": ["panel-user-login"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"interviewer@company.com\",\n  \"otp\": \"123456\"\n}" }
+              }
+            },
+            {
+              "name": "Get My Interviews (Panel)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": { "raw": "{{baseUrl}}/get-my-interviews", "host": ["{{baseUrl}}"], "path": ["get-my-interviews"] },
+                "body": { "mode": "raw", "raw": "{}" }
+              }
+            },
+            {
+              "name": "Panel Save Feedback",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": { "raw": "{{baseUrl}}/panel-save-feedback", "host": ["{{baseUrl}}"], "path": ["panel-save-feedback"] },
+                "body": { "mode": "raw", "raw": "{\n  \"scheduleId\": \"schedule-uuid\",\n  \"rating\": 4,\n  \"feedback\": \"Good candidate\",\n  \"recommendation\": \"hire\"\n}" }
+              }
+            },
+            {
+              "name": "Send Interview Mail",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "branchId", "value": "{{branchId}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": { "raw": "{{baseUrl}}/send-interview-mail", "host": ["{{baseUrl}}"], "path": ["send-interview-mail"] },
+                "body": { "mode": "raw", "raw": "{\n  \"scheduleId\": \"schedule-uuid\"\n}" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Mobile App (AppAdmin)",
+      "item": [
+        {
+          "name": "Get Employee Details",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/get-Emp-Details", "host": ["{{baseUrl}}"], "path": ["get-Emp-Details"] }
+          }
+        },
+        {
+          "name": "Get Daily Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/get-daily-attendance", "host": ["{{baseUrl}}"], "path": ["get-daily-attendance"] },
+            "body": { "mode": "raw", "raw": "{\n  \"date\": \"2024-01-15\"\n}" }
+          }
+        },
+        {
+          "name": "Get Monthly Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/get-monthly-attendance", "host": ["{{baseUrl}}"], "path": ["get-monthly-attendance"] },
+            "body": { "mode": "raw", "raw": "{\n  \"month\": 1,\n  \"year\": 2024\n}" }
+          }
+        },
+        {
+          "name": "Mark Attendance",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/mark-attendance", "host": ["{{baseUrl}}"], "path": ["mark-attendance"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "type", "value": "checkin", "type": "text" },
+                { "key": "latitude", "value": "19.0760", "type": "text" },
+                { "key": "longitude", "value": "72.8777", "type": "text" },
+                { "key": "image", "type": "file", "src": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Apply Leave (App)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/apply-leaves", "host": ["{{baseUrl}}"], "path": ["apply-leaves"] },
+            "body": { "mode": "raw", "raw": "{\n  \"leaveTypeId\": \"leave-type-uuid\",\n  \"fromDate\": \"2024-01-20\",\n  \"toDate\": \"2024-01-22\",\n  \"reason\": \"Personal work\"\n}" }
+          }
+        },
+        {
+          "name": "Get Applied Leave List (App)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/get-applied-leave-list", "host": ["{{baseUrl}}"], "path": ["get-applied-leave-list"] },
+            "body": { "mode": "raw", "raw": "{\n  \"month\": 1,\n  \"year\": 2024\n}" }
+          }
+        },
+        {
+          "name": "Get App Holiday List",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/get-app-holidayList", "host": ["{{baseUrl}}"], "path": ["get-app-holidayList"] }
+          }
+        },
+        {
+          "name": "Create Regularization",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/create-regularization", "host": ["{{baseUrl}}"], "path": ["create-regularization"] },
+            "body": { "mode": "raw", "raw": "{\n  \"date\": \"2024-01-15\",\n  \"checkIn\": \"09:00\",\n  \"checkOut\": \"18:00\",\n  \"reason\": \"Forgot to mark attendance\"\n}" }
+          }
+        },
+        {
+          "name": "Regularization List (App)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/regularization-list", "host": ["{{baseUrl}}"], "path": ["regularization-list"] },
+            "body": { "mode": "raw", "raw": "{\n  \"month\": 1,\n  \"year\": 2024\n}" }
+          }
+        },
+        {
+          "name": "Pending Regularize List (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/pending-regularize-list", "host": ["{{baseUrl}}"], "path": ["pending-regularize-list"] },
+            "body": { "mode": "raw", "raw": "{\n  \"month\": 1,\n  \"year\": 2024\n}" }
+          }
+        },
+        {
+          "name": "Update Regularization Status (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "branchId", "value": "{{branchId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/update-status", "host": ["{{baseUrl}}"], "path": ["update-status"] },
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"regularization-uuid\",\n  \"status\": \"approved\"\n}" }
+          }
+        },
+        {
+          "name": "Track Location",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/track-location", "host": ["{{baseUrl}}"], "path": ["track-location"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "latitude", "value": "19.0760", "type": "text" },
+                { "key": "longitude", "value": "72.8777", "type": "text" },
+                { "key": "address", "value": "123 MG Road, Mumbai", "type": "text" },
+                { "key": "image", "type": "file", "src": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Notifications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/notification", "host": ["{{baseUrl}}"], "path": ["notification"] }
+          }
+        },
+        {
+          "name": "Add App Reimbursement",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/add-app-reimbursement", "host": ["{{baseUrl}}"], "path": ["add-app-reimbursement"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "amount", "value": "500", "type": "text" },
+                { "key": "description", "value": "Cab fare", "type": "text" },
+                { "key": "date", "value": "2024-01-15", "type": "text" },
+                { "key": "images", "type": "file", "src": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reimbursement List (App)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/reimbursement-list", "host": ["{{baseUrl}}"], "path": ["reimbursement-list"] }
+          }
+        },
+        {
+          "name": "Team Reimbursements",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/team-reimbursements", "host": ["{{baseUrl}}"], "path": ["team-reimbursements"] },
+            "body": { "mode": "raw", "raw": "{\n  \"month\": 1,\n  \"year\": 2024\n}" }
+          }
+        },
+        {
+          "name": "Get App Bill Details",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/get-app-bill-details", "host": ["{{baseUrl}}"], "path": ["get-app-bill-details"] },
+            "body": { "mode": "raw", "raw": "{\n  \"month\": 1,\n  \"year\": 2024\n}" }
+          }
+        },
+        {
+          "name": "Get Employee Letter Docs",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/get-emp-letter-docs", "host": ["{{baseUrl}}"], "path": ["get-emp-letter-docs"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SuperAdmin",
+      "item": [
+        {
+          "name": "SuperAdmin Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/superadmin/login", "host": ["{{baseUrl}}"], "path": ["superadmin", "login"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"superadmin@example.com\",\n  \"password\": \"password123\"\n}" }
+          }
+        },
+        {
+          "name": "Get Stats",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/superadmin/stats", "host": ["{{baseUrl}}"], "path": ["superadmin", "stats"] }
+          }
+        },
+        {
+          "name": "Get Plans",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/superadmin/plans", "host": ["{{baseUrl}}"], "path": ["superadmin", "plans"] }
+          }
+        },
+        {
+          "name": "Create Plan",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/superadmin/plans", "host": ["{{baseUrl}}"], "path": ["superadmin", "plans"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Starter Plan\",\n  \"price\": 999,\n  \"maxEmployees\": 50,\n  \"features\": []\n}" }
+          }
+        },
+        {
+          "name": "Update Plan",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/superadmin/plans/:planId", "host": ["{{baseUrl}}"], "path": ["superadmin", "plans", ":planId"], "variable": [{ "key": "planId", "value": "plan-uuid" }] },
+            "body": { "mode": "raw", "raw": "{\n  \"price\": 1199\n}" }
+          }
+        },
+        {
+          "name": "Toggle Plan Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/superadmin/plans/:planId/status", "host": ["{{baseUrl}}"], "path": ["superadmin", "plans", ":planId", "status"], "variable": [{ "key": "planId", "value": "plan-uuid" }] },
+            "body": { "mode": "raw", "raw": "{\n  \"isActive\": true\n}" }
+          }
+        },
+        {
+          "name": "List Tenants",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/superadmin/tenants", "host": ["{{baseUrl}}"], "path": ["superadmin", "tenants"] }
+          }
+        },
+        {
+          "name": "Update Tenant Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/superadmin/tenants/:tenantId/status", "host": ["{{baseUrl}}"], "path": ["superadmin", "tenants", ":tenantId", "status"], "variable": [{ "key": "tenantId", "value": "tenant-uuid" }] },
+            "body": { "mode": "raw", "raw": "{\n  \"isActive\": true\n}" }
+          }
+        },
+        {
+          "name": "Upsert Subscription",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/superadmin/tenants/:tenantId/subscription", "host": ["{{baseUrl}}"], "path": ["superadmin", "tenants", ":tenantId", "subscription"], "variable": [{ "key": "tenantId", "value": "tenant-uuid" }] },
+            "body": { "mode": "raw", "raw": "{\n  \"planId\": \"plan-uuid\",\n  \"startDate\": \"2024-01-01\",\n  \"endDate\": \"2024-12-31\"\n}" }
+          }
+        },
+        {
+          "name": "Get Company Snapshot",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/superadmin/tenants/:tenantId/company-snapshot", "host": ["{{baseUrl}}"], "path": ["superadmin", "tenants", ":tenantId", "company-snapshot"], "variable": [{ "key": "tenantId", "value": "tenant-uuid" }] }
+          }
+        },
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/superadmin/users", "host": ["{{baseUrl}}"], "path": ["superadmin", "users"] }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/superadmin/users/:userId", "host": ["{{baseUrl}}"], "path": ["superadmin", "users", ":userId"], "variable": [{ "key": "userId", "value": "user-uuid" }] },
+            "body": { "mode": "raw", "raw": "{\n  \"isActive\": true\n}" }
+          }
+        },
+        {
+          "name": "Get Analytics",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/superadmin/analytics", "host": ["{{baseUrl}}"], "path": ["superadmin", "analytics"] }
+          }
+        },
+        {
+          "name": "Get Landing Content",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/superadmin/landing-content", "host": ["{{baseUrl}}"], "path": ["superadmin", "landing-content"] }
+          }
+        },
+        {
+          "name": "Save Landing Content",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/superadmin/landing-content", "host": ["{{baseUrl}}"], "path": ["superadmin", "landing-content"] },
+            "body": { "mode": "raw", "raw": "{\n  \"heroTitle\": \"Best HRMS\",\n  \"heroSubtitle\": \"Manage your workforce\"\n}" }
+          }
+        },
+        {
+          "name": "Get Contact Messages",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/superadmin/contact-messages", "host": ["{{baseUrl}}"], "path": ["superadmin", "contact-messages"] }
+          }
+        }
+      ]
+    }
+  ]
+}

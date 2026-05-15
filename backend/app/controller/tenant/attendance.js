@@ -3215,18 +3215,21 @@ exports.getReimbursement = async (req, res) => {
       return Helper.response(false, "Tenant Is not found", {}, res, 200);
     }
     const branchId = req.users && req.users.branchId;
+    const statusFilter = req.body?.status || null;
 
     if (!branchId || branchId == "null") {
       return Helper.response(false, "branchId is required!", {}, res, 200);
     }
 
+    const whereClause = { tenantId: req.users?.tenantId, branchId };
+    if (statusFilter && statusFilter !== 'all') {
+      whereClause.status = statusFilter;
+    }
+
     const ReimbursementData = await Reimbursement.findAll({
       raw: true,
       nest: true,
-      where: {
-        tenantId: req.users?.tenantId,
-        branchId,
-      },
+      where: whereClause,
     });
 
     const data = await Promise.all(

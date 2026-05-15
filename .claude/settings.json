@@ -3,7 +3,10 @@
     "allow": [
       "Bash(dir /b /ad)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Lakshya\\\\Documents\\\\GitHub\\\\gens_frontend_backend\" -Directory)",
-      "Bash(Select-Object Name)"
+      "Bash(Select-Object Name)",
+      "Bash(findstr -i \"employee-portal\\\\|portal\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Lakshya\\\\Documents\\\\GitHub\\\\gens_frontend_backend\\\\backend\" -Force)",
+      "Bash(Select-Object Name, FullName)"
     ]
   }
 }

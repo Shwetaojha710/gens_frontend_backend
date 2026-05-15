@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs/internal/Observable';
+import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 
@@ -99,8 +99,10 @@ baseUrl=environment.apiUrl
    addReimbursement(obj: any): Observable<any> {
     return this.http.post(`${this.baseUrl}add-reimbursement`, obj);
   }
-   fetchReimbursementList(): Observable<any> {
-    return this.http.post(`${this.baseUrl}fetchReimbursement`, {});
+  fetchReimbursementList(status?: string): Observable<any> {
+    const body: Record<string, string> = {};
+    if (status && status !== 'all') body['status'] = status;
+    return this.http.post(`${this.baseUrl}fetchReimbursement`, body);
   }
     updateReimbursement(obj: any): Observable<any> {
     return this.http.post(`${this.baseUrl}update-reimbursement`, obj);

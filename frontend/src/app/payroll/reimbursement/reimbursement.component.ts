@@ -171,6 +171,7 @@ export class ReimbursementComponent {
       case 'approved': return 'badge-outline-success';
       case 'rejected': return 'badge-outline-danger';
       case 'pending': return 'badge-outline-warning';
+      case 'recommended': return 'badge-outline-info';
       default: return 'badge-outline-secondary';
     }
   }
@@ -237,14 +238,28 @@ export class ReimbursementComponent {
 
   fileType: any;
   originalList: any = []
+  statusFilter: string = 'all';
+
+  readonly statusOptions = [
+    { value: 'all', label: 'All' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'recommended', label: 'Recommended' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'rejected', label: 'Rejected' },
+  ];
+
+  setStatusFilter(status: string) {
+    this.statusFilter = status;
+    this.fetchReimbursement();
+  }
+
   async fetchReimbursement() {
     this.ReimbursementList = [];
     this.originalList = [];
 
-    this.payroll.fetchReimbursementList().subscribe({
+    this.payroll.fetchReimbursementList(this.statusFilter).subscribe({
       next: (data) => {
         if (data['status'] === true) {
-          // Map the reimbursement list and fix the image URL path
           this.ReimbursementList = data.data.map((item: any) => ({
             ...item,
             files: item.files.map((f: any) => ({
@@ -252,8 +267,6 @@ export class ReimbursementComponent {
               image: `${this.baseurl}${f.image}`
             }))
           }));
-
-
           this.originalList = [...this.ReimbursementList];
         } else {
           this.notyf.error(data['message']);

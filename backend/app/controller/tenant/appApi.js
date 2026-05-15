@@ -3253,7 +3253,7 @@ exports.PrintBill = async (req, res) => {
                 italics: true,
               },
               {
-                text: Helper.convertNumberToWords(netSalary).toUpperCase(),
+                text: Helper.convertNumberToWords(Math.floor(netSalary)).toUpperCase(),
                 alignment: "right",
                 bold: true,
                 italics: true,
@@ -3340,7 +3340,8 @@ exports.PrintBill = async (req, res) => {
                     `${employee?.firstName} ${employee?.lastName}` || "NA"
                   }`,
                 },
-                { text: `Department : ${employee.department || "NA"}` },
+                 { text: "" },
+                // { text: `Department : ${employee.department || "NA"}` },
               ],
               [
                 { text: `Employee Code : ${employee.empCode || "NA"}` },
@@ -4988,13 +4989,16 @@ exports.reimbursementList = async (req, res) => {
   }
 };
 
-/** Team reimbursements — manager/director/teamleader/Senior Accountant: all branch records; others: own only. */
+/** Team reimbursements — manager/director/teamleader/Senior Accountant: all branch records; others: own only.
+ *  Accepts optional body param `status` (e.g. "pending", "recommended", "approved", "rejected") for filtering.
+ */
 exports.getTeamReimbursements = async (req, res) => {
   try {
     const tenantId = req.users?.tenantId;
     const employeeId = req.users?.id;
     const branchId = req.users?.branchId;
     const role = (req.users?.role || '').toLowerCase();
+    const statusFilter = req.body?.status || req.query?.status || null;
 
     if (!branchId || branchId === 'null') {
       return Helper.response(false, 'branchId is required!', {}, res, 200);
@@ -5015,6 +5019,10 @@ exports.getTeamReimbursements = async (req, res) => {
     const where = isTeamRole
       ? { tenantId, branchId }
       : { tenantId, branchId, employeeId };
+
+    if (statusFilter && statusFilter !== 'all') {
+      where.status = statusFilter;
+    }
 
     const rows = await reimbursement.findAll({
       where,
@@ -5049,21 +5057,52 @@ exports.getTeamReimbursements = async (req, res) => {
   }
 };
 
-/** Approve or reject a reimbursement (manager / director via app token). */
+/** Update reimbursement status with role-based restrictions.
+ *  Senior Accountant  → can only set status to "recommended"
+ *  Manager / Director → can set status to "approved" or "rejected"
+ */
 exports.updateAppReimbursementStatus = async (req, res) => {
   try {
     const { id, status } = req.body;
     const tenantId = req.users?.tenantId;
     const approverId = req.users?.id;
     const branchId = req.users?.branchId;
+    const role = (req.users?.role || '').toLowerCase();
 
-    if (!id || !['approved', 'rejected'].includes(status)) {
-      return Helper.response(false, "id and valid status (approved/rejected) are required", null, res, 400);
+    const validStatuses = ['approved', 'rejected', 'recommended'];
+    if (!id || !validStatuses.includes(status)) {
+      return Helper.response(false, "id and valid status (approved/rejected/recommended) are required", null, res, 400);
+    }
+
+    // Determine if caller is Senior Accountant
+    let isSeniorAccountant = false;
+    const empInfo = await empPersonal.findByPk(approverId, { attributes: ['designationId'], raw: true });
+    if (empInfo?.designationId) {
+      const desig = await Designation.findByPk(empInfo.designationId, { attributes: ['name'], raw: true });
+      isSeniorAccountant = (desig?.name || '').toLowerCase().trim() === 'senior accountant';
+    }
+
+    const isManagerOrDirector = role === 'manager' || role === 'director' || role === 'teamleader';
+
+    // Role-based permission check
+    if (isSeniorAccountant && status !== 'recommended') {
+      return Helper.response(false, 'Senior Accountant can only recommend reimbursements', null, res, 403);
+    }
+    if (!isSeniorAccountant && !isManagerOrDirector) {
+      return Helper.response(false, 'You do not have permission to update reimbursement status', null, res, 403);
+    }
+    if (isManagerOrDirector && status === 'recommended') {
+      return Helper.response(false, 'Manager/Director cannot set status to recommended', null, res, 403);
     }
 
     const record = await reimbursement.findOne({ where: { id, tenantId, branchId } });
     if (!record) {
       return Helper.response(false, 'Reimbursement not found', null, res, 404);
+    }
+
+    // Senior Accountant can only recommend pending records
+    if (isSeniorAccountant && record.status !== 'pending') {
+      return Helper.response(false, 'Only pending reimbursements can be recommended', null, res, 400);
     }
 
     await record.update({ status, updatedBy: approverId, updatedAt: new Date() });

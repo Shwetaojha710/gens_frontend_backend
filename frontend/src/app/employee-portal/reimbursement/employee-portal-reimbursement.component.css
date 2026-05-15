@@ -65,6 +65,43 @@
   color: #b91c1c;
 }
 
+.ep-reim-status--recommended {
+  background: rgba(99, 102, 241, 0.12);
+  color: #4338ca;
+}
+
+/* ── Filter tabs ── */
+.ep-reim-filter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.ep-reim-filter-btn {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.28rem 0.75rem;
+  border-radius: 999px;
+  border: 1.5px solid rgba(0, 95, 168, 0.25);
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, border-color 0.18s;
+  white-space: nowrap;
+}
+
+.ep-reim-filter-btn:hover {
+  background: rgba(0, 95, 168, 0.07);
+  border-color: #005fa8;
+  color: #005fa8;
+}
+
+.ep-reim-filter-btn.active {
+  background: #005fa8;
+  border-color: #005fa8;
+  color: #fff;
+}
+
 .ep-reim-table-wrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;

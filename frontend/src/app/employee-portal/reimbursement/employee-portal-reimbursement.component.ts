@@ -24,7 +24,36 @@ export class EmployeePortalReimbursementComponent implements OnInit {
   loadingTeam = false;
   submitting = false;
   updatingId: string | null = null;
-  isApprover = false;
+
+  // Role flags
+  isSeniorAccountant = false;
+  isManagerOrDirector = false;
+  get isApprover(): boolean { return this.isSeniorAccountant || this.isManagerOrDirector; }
+
+  // Status filters
+  teamStatusFilter = 'all';
+  myStatusFilter = 'all';
+
+  readonly teamStatuses = [
+    { value: 'all', label: 'All' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'recommended', label: 'Recommended' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'rejected', label: 'Rejected' },
+  ];
+
+  readonly myStatuses = [
+    { value: 'all', label: 'All' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'recommended', label: 'Recommended' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'rejected', label: 'Rejected' },
+  ];
+
+  get filteredList(): Record<string, unknown>[] {
+    if (this.myStatusFilter === 'all') return this.list;
+    return this.list.filter(r => String(r['status'] ?? '').toLowerCase() === this.myStatusFilter);
+  }
 
   private notyf = new Notyf();
 
@@ -46,14 +75,12 @@ export class EmployeePortalReimbursementComponent implements OnInit {
         const u = JSON.parse(raw) as { role?: string; designation?: string };
         const role = (u.role || '').toLowerCase();
         const designation = (u.designation || '').toLowerCase().trim();
-        this.isApprover =
-          role === 'manager' ||
-          role === 'director' ||
-          role === 'teamleader' ||
-          designation === 'senior accountant';
+        this.isSeniorAccountant = designation === 'senior accountant';
+        this.isManagerOrDirector = role === 'manager' || role === 'director' || role === 'teamleader';
       }
     } catch {
-      this.isApprover = false;
+      this.isSeniorAccountant = false;
+      this.isManagerOrDirector = false;
     }
   }
 
@@ -98,7 +125,7 @@ export class EmployeePortalReimbursementComponent implements OnInit {
 
   loadTeamList(): void {
     this.loadingTeam = true;
-    this.api.getTeamReimbursements().subscribe({
+    this.api.getTeamReimbursements(this.teamStatusFilter).subscribe({
       next: (rows) => {
         this.teamList = rows;
         this.loadingTeam = false;
@@ -106,6 +133,26 @@ export class EmployeePortalReimbursementComponent implements OnInit {
       error: () => {
         this.teamList = [];
         this.loadingTeam = false;
+      },
+    });
+  }
+
+  setTeamFilter(status: string): void {
+    this.teamStatusFilter = status;
+    this.loadTeamList();
+  }
+
+  recommend(id: string): void {
+    this.updatingId = id;
+    this.api.updateAppReimbursementStatus(id, 'recommended').subscribe({
+      next: () => {
+        this.updatingId = null;
+        this.notyf.success('Reimbursement recommended.');
+        this.loadTeamList();
+      },
+      error: (e: Error) => {
+        this.updatingId = null;
+        this.notyf.error(e.message || 'Action failed.');
       },
     });
   }
@@ -172,6 +219,7 @@ export class EmployeePortalReimbursementComponent implements OnInit {
     const x = String(s ?? '').toLowerCase();
     if (x === 'approved' || x === 'paid') return 'ep-reim-status ep-reim-status--ok';
     if (x === 'rejected') return 'ep-reim-status ep-reim-status--bad';
+    if (x === 'recommended') return 'ep-reim-status ep-reim-status--recommended';
     return 'ep-reim-status ep-reim-status--warn';
   }
 

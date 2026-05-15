@@ -31,8 +31,8 @@ import { RelevingLetterComponent } from '../profile/releving-letter/releving-let
 @Component({
   selector: 'app-add',
   standalone: true,
-  imports: [CommonModule, FormsModule, AssignLeaveComponent, NgSelectModule, RouterModule, NdaComponent,QualificationComponent, ExperienceComponent,
-     BankDetailsComponent,RelevingLetterComponent, BasicComponent, AllowancesComponent, TotalSalaryComponentComponent, DeductionsComponent, AssignLeaveComponent,OfferLetterComponent,ServiceAgreementComponent,AppointmentLetterComponent],
+  imports: [CommonModule, FormsModule, AssignLeaveComponent, NgSelectModule, RouterModule, NdaComponent, QualificationComponent, ExperienceComponent,
+    BankDetailsComponent, RelevingLetterComponent, BasicComponent, AllowancesComponent, TotalSalaryComponentComponent, DeductionsComponent, OfferLetterComponent, ServiceAgreementComponent, AppointmentLetterComponent],
   templateUrl: './add.component.html',
   styleUrls: ['./add.component.css']
 })

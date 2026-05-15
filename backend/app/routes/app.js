@@ -52,7 +52,7 @@ router.post('/mark-attendance',AppAdmin,upload.any(),markattendance );
 
 router.post('/add-app-reimbursement',AppAdmin, excel_pdf_upload.array('images'),addAppReimbursement)
 router.get('/reimbursement-list',AppAdmin,reimbursementList)
-router.get('/team-reimbursements',AppAdmin,getTeamReimbursements)
+router.post('/team-reimbursements',AppAdmin,getTeamReimbursements)
 router.post('/update-app-reimbursement-status',AppAdmin,updateAppReimbursementStatus)
 router.post('/update-app-emp',AppAdmin,updateAppEmp)
 router.get('/get-emp-letter-docs', AppAdmin, getEmpLetterDocs)

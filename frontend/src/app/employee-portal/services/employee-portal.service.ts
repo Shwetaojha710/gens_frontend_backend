@@ -294,10 +294,12 @@ export class EmployeePortalService {
       );
   }
 
-  /** Team reimbursements — manager/director sees all branch records. */
-  getTeamReimbursements(): Observable<Record<string, unknown>[]> {
+  /** Team reimbursements — manager/director/Senior Accountant sees all branch records. Optional status filter. */
+  getTeamReimbursements(statusFilter?: string): Observable<Record<string, unknown>[]> {
+    const body: Record<string, string> = {};
+    if (statusFilter && statusFilter !== 'all') body['status'] = statusFilter;
     return this.http
-      .get<{ status: unknown; data?: Record<string, unknown>[] }>(`${this.base}team-reimbursements`)
+      .post<{ status: unknown; data?: Record<string, unknown>[] }>(`${this.base}team-reimbursements`, body)
       .pipe(
         map((res) => {
           if (res.status === true && Array.isArray(res.data)) return res.data;
@@ -306,8 +308,8 @@ export class EmployeePortalService {
       );
   }
 
-  /** Approve or reject a reimbursement by id. */
-  updateAppReimbursementStatus(id: string, status: 'approved' | 'rejected'): Observable<unknown> {
+  /** Update reimbursement status — recommend (SA), approve/reject (manager/director). */
+  updateAppReimbursementStatus(id: string, status: 'approved' | 'rejected' | 'recommended'): Observable<unknown> {
     return this.http
       .post<{ status: boolean; message?: string }>(`${this.base}update-app-reimbursement-status`, { id, status })
       .pipe(

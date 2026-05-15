@@ -144,6 +144,13 @@ export class ThemeService {
       if (cached) this.applyColors(JSON.parse(cached) as BrandColors);
     } catch {}
 
+    // Only fetch from API when an admin session exists.
+    // Without a token the Admin middleware returns { status: 'expired' },
+    // which the interceptor treats as a session expiry and redirects to /login —
+    // breaking pages like /employee-portal/login that have no admin token.
+    const adminToken = localStorage.getItem('token');
+    if (!adminToken) return;
+
     this.http.post<{ status: boolean; data: BrandColors }>(`${this.baseUrl}get-brand-colors`, {}).subscribe({
       next: (res) => {
         if (res?.status && res.data && Object.keys(res.data).length > 0) {
