@@ -6,6 +6,8 @@ import { DashboardService } from '../services/dashboard.service';
 import { MasterService } from '../services/master.service';
 import { LocationsService } from '../services/locations.service';
 import { ThemeService, BrandColors, BRAND_DEFAULTS, APPLY_TO_DEFAULTS, ApplyToModules } from '../services/theme.service';
+import { PermissionService, DEFAULT_PERMISSIONS, PermissionSection } from '../services/permission.service';
+import { UserPermissionService, TenantUser } from '../master/user-permission/user-permission.service';
 import { Notyf } from 'notyf';
 import { ChartOptions } from '../dashboard/dashboard.component';
 import { CommonModule } from '@angular/common';
@@ -71,12 +73,64 @@ export class BranchwiseComponent implements OnInit, OnDestroy {
   editImagePreview: string | null = null;
   editBranchLoading = false;
 
+  // Copy master data modal state
+  copyMaster: { sourceBranchId: string | null; targetBranchId: string | null } = { sourceBranchId: null, targetBranchId: null };
+  copyMasterLoading = false;
+  copyMasterResult: any = null;
+
+  // ── Module Permission Drawer ───────────────────────────────────────────────
+  permDrawerOpen = false;
+  permUsers: TenantUser[] = [];
+  permFilteredUsers: TenantUser[] = [];
+  permSearchQuery = '';
+  permSelectedUser: TenantUser | null = null;
+  permModules: {
+    key: string; label: string; icon: string;
+    enabled: boolean; expanded: boolean;
+    children: { key: string; label: string; enabled: boolean; }[];
+  }[] = [];
+  permLoadingUsers = false;
+  permLoadingModules = false;
+  permSaving = false;
+  permHasCustom = false;
+  isAdmin = false;
+  permView: 'portals' | 'detail' = 'portals';
+  permActivePortal: any | null = null;
+  private permCurrentSections: PermissionSection[] = [];
+
+  // 3 portals matching the landing-home cards
+  private readonly PORTAL_GROUPS = [
+    {
+      key: 'recruitment',
+      label: 'Recruitment',
+      icon: 'ri-briefcase-line',
+      bgImg: '/assets/img/bg-login/555.jpg',
+      sectionKeys: ['recruitment', 'rec-analysis', 'rec-candidates', 'rec-interview', 'rec-master'],
+    },
+    {
+      key: 'emp-management',
+      label: 'Employee Management',
+      icon: 'ri-layout-2-line',
+      bgImg: '/assets/img/bg-login/emp_img111.png',
+      sectionKeys: ['dashboard', 'emp-mgmt', 'attendance', 'payroll', 'reports', 'master', 'setting'],
+    },
+    {
+      key: 'location-tracking',
+      label: 'Location Tracking',
+      icon: 'ri-map-pin-2-line',
+      bgImg: '/assets/img/bg-login/location_tracking.png',
+      sectionKeys: ['tracking'],
+    },
+  ];
+
   constructor(
     private dashboardService: DashboardService,
     private router: Router,
     public masterService: MasterService,
     private locationService: LocationsService,
     private theme: ThemeService,
+    private permSvc: PermissionService,
+    private userPermSvc: UserPermissionService,
   ) {
     this.baseurl = this.masterService.getBaseUrl();
     this.getBranchDD()
@@ -91,6 +145,12 @@ export class BranchwiseComponent implements OnInit, OnDestroy {
       localStorage.clear();
       this.router.navigateByUrl('/login', { replaceUrl: true });
     });
+
+    // Show module permission FAB only for admin / superadmin
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      this.isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+    } catch { this.isAdmin = false; }
   }
 
   ngOnDestroy(): void {
@@ -394,6 +454,265 @@ createFlag = false;
 
   nextSlide(): void {
     if (this.sliderIndex < this.maxSliderIndex) this.sliderIndex++;
+  }
+
+  // ── Module Permission Drawer methods ──────────────────────────────────────
+
+  openPermDrawer(): void {
+    this.permDrawerOpen = true;
+    if (!this.permUsers.length) this.loadPermUsers();
+  }
+
+  closePermDrawer(): void {
+    this.permDrawerOpen = false;
+    this.permSelectedUser = null;
+    this.permModules = [];
+    this.permView = 'portals';
+    this.permActivePortal = null;
+  }
+
+  get permPortals(): any[] {
+    return this.PORTAL_GROUPS.map(pg => ({
+      ...pg,
+      sections: this.permModules.filter(m => pg.sectionKeys.includes(m.key)),
+    }));
+  }
+
+  openPortalDetail(portal: any): void {
+    if (portal.sections.length === 0) return;
+    this.permActivePortal = portal;
+    this.permView = 'detail';
+  }
+
+  backToPortals(): void {
+    this.permActivePortal = null;
+    this.permView = 'portals';
+  }
+
+  portalStatus(portal: any): 'full' | 'partial' | 'none' {
+    if (portal.sections.length === 0) return 'none';
+    const all: boolean[] = [];
+    for (const s of portal.sections) {
+      all.push(s.enabled);
+      s.children.forEach((c: any) => all.push(c.enabled));
+    }
+    const enabled = all.filter(x => x).length;
+    if (enabled === 0) return 'none';
+    if (enabled === all.length) return 'full';
+    return 'partial';
+  }
+
+  portalTotalMenus(portal: any): number {
+    let n = 0;
+    for (const s of portal.sections) {
+      n += s.children.length > 0 ? s.children.length : 1;
+    }
+    return n;
+  }
+
+  togglePortalAll(portal: any): void {
+    const allOn = portal.sections.every((s: any) => s.enabled);
+    const newState = !allOn;
+    portal.sections.forEach((s: any) => {
+      s.enabled = newState;
+      s.children.forEach((c: any) => c.enabled = newState);
+    });
+  }
+
+  isPortalAllOn(portal: any): boolean {
+    return portal.sections.length > 0 &&
+      portal.sections.every((s: any) => s.enabled);
+  }
+
+  loadPermUsers(): void {
+    this.permLoadingUsers = true;
+    this.userPermSvc.getTenantUsers().subscribe({
+      next: (res: any) => {
+        this.permUsers = res?.data || [];
+        this.permFilteredUsers = [...this.permUsers];
+        this.permLoadingUsers = false;
+      },
+      error: () => { this.permLoadingUsers = false; }
+    });
+  }
+
+  searchPermUsers(): void {
+    const q = this.permSearchQuery.toLowerCase().trim();
+    this.permFilteredUsers = q
+      ? this.permUsers.filter(u =>
+          u.name.toLowerCase().includes(q) ||
+          u.email.toLowerCase().includes(q)
+        )
+      : [...this.permUsers];
+  }
+
+  selectPermUser(user: TenantUser): void {
+    this.permSelectedUser = user;
+    this.permLoadingModules = true;
+    this.permModules = [];
+    this.permView = 'portals';
+    this.permActivePortal = null;
+
+    this.userPermSvc.getUserPermission(user.id).subscribe({
+      next: (res: any) => {
+        const custom: PermissionSection[] | null = res?.data || null;
+        if (custom && custom.length > 0) {
+          this.permCurrentSections = this.permSvc.mergeWithDefaults(custom);
+          this.permHasCustom = true;
+        } else {
+          this.permCurrentSections = JSON.parse(JSON.stringify(this.permSvc.load()));
+          this.permHasCustom = false;
+        }
+        this.buildPermModules(user.role);
+        this.permView = 'portals';
+        this.permActivePortal = null;
+        this.permLoadingModules = false;
+      },
+      error: () => {
+        this.permCurrentSections = JSON.parse(JSON.stringify(this.permSvc.load()));
+        this.permHasCustom = false;
+        this.buildPermModules(user.role);
+        this.permView = 'portals';
+        this.permActivePortal = null;
+        this.permLoadingModules = false;
+      }
+    });
+  }
+
+  private buildPermModules(userRole: string): void {
+    this.permModules = DEFAULT_PERMISSIONS.map(def => {
+      const section = this.permCurrentSections.find(s => s.key === def.key);
+      const sectionEnabled = section
+        ? (section.roles as string[]).includes(userRole)
+        : false;
+
+      return {
+        key: def.key,
+        label: def.label,
+        icon: def.icon,
+        enabled: sectionEnabled,
+        expanded: true,
+        children: (def.children || []).map(child => {
+          const savedChild = section?.children?.find(c => c.key === child.key);
+          const childEnabled = savedChild
+            ? (savedChild.roles as string[]).includes(userRole)
+            : sectionEnabled;
+          return { key: child.key, label: child.label, enabled: childEnabled };
+        }),
+      };
+    });
+  }
+
+  togglePermModule(mod: any): void {
+    mod.enabled = !mod.enabled;
+    // Sync all children with the parent state
+    mod.children.forEach((c: any) => c.enabled = mod.enabled);
+  }
+
+  togglePermChild(mod: any, child: any): void {
+    child.enabled = !child.enabled;
+    // If a child is turned ON, parent must also be ON
+    if (child.enabled && !mod.enabled) mod.enabled = true;
+    // If ALL children are turned OFF, turn parent OFF too
+    if (mod.children.length > 0 && mod.children.every((c: any) => !c.enabled)) {
+      mod.enabled = false;
+    }
+  }
+
+  saveModulePermissions(): void {
+    if (!this.permSelectedUser) return;
+    this.permSaving = true;
+    const userRole = this.permSelectedUser.role;
+
+    // Build full PermissionSection[] preserving other roles, toggling this user's role
+    const newSections: PermissionSection[] = DEFAULT_PERMISSIONS.map(def => {
+      const mod = this.permModules.find(m => m.key === def.key)!;
+      const existing = this.permCurrentSections.find(s => s.key === def.key);
+
+      // Section-level roles: keep others, add/remove this user's role
+      const otherRoles = ((existing?.roles || def.roles) as string[]).filter(r => r !== userRole);
+      const sectionRoles = mod.enabled ? [...otherRoles, userRole] : otherRoles;
+
+      const children = (def.children || []).map(child => {
+        const modChild = mod.children.find(c => c.key === child.key);
+        const existingChild = existing?.children?.find(c => c.key === child.key);
+        const otherChildRoles = ((existingChild?.roles || child.roles) as string[]).filter(r => r !== userRole);
+        const childEnabled = modChild ? modChild.enabled : mod.enabled;
+        const childRoles = childEnabled ? [...otherChildRoles, userRole] : otherChildRoles;
+        return { key: child.key, label: child.label, roles: childRoles as any };
+      });
+
+      return {
+        key: def.key, label: def.label, icon: def.icon,
+        roles: sectionRoles as any,
+        ...(children.length > 0 ? { children } : {}),
+      };
+    });
+
+    this.userPermSvc.saveUserPermission(this.permSelectedUser.id, newSections).subscribe({
+      next: () => {
+        this.permSaving = false;
+        this.permHasCustom = true;
+        this.notyf.success(`Access saved for ${this.permSelectedUser!.name}. They must re-login to apply changes.`);
+      },
+      error: () => {
+        this.permSaving = false;
+        this.notyf.error('Failed to save module access');
+      }
+    });
+  }
+
+  getPermInitial(name: string): string {
+    return name ? name.charAt(0).toUpperCase() : '?';
+  }
+
+  getPermRoleColor(role: string): string {
+    const map: Record<string, string> = {
+      admin: '#6366f1', superadmin: '#8b5cf6',
+      hr: '#0ea5e9', manager: '#f59e0b',
+      director: '#10b981', recruiter: '#f97316',
+      employee: '#64748b',
+    };
+    return map[role] || '#64748b';
+  }
+
+  openCopyMasterModal(): void {
+    this.copyMaster = { sourceBranchId: null, targetBranchId: null };
+    this.copyMasterResult = null;
+    this.copyMasterLoading = false;
+  }
+
+  submitCopyMasterData(): void {
+    if (!this.copyMaster.sourceBranchId || !this.copyMaster.targetBranchId) {
+      this.notyf.error('Please select both source and target branches.');
+      return;
+    }
+    if (this.copyMaster.sourceBranchId === this.copyMaster.targetBranchId) {
+      this.notyf.error('Source and target branches must be different.');
+      return;
+    }
+    this.copyMasterLoading = true;
+    this.copyMasterResult = null;
+    this.masterService.copyBranchMasterData({
+      sourceBranchId: this.copyMaster.sourceBranchId,
+      targetBranchId: this.copyMaster.targetBranchId,
+    }).subscribe({
+      next: (res: any) => {
+        this.copyMasterLoading = false;
+        if (res.status === true) {
+          this.copyMasterResult = res.data;
+          this.notyf.success(res.message || 'Master data copied successfully');
+        } else if (res.status === 'expired') {
+          this.router.navigate(['login']);
+        } else {
+          this.notyf.error(res.message || 'Something went wrong');
+        }
+      },
+      error: (err: any) => {
+        this.copyMasterLoading = false;
+        this.notyf.error(err?.error?.message || err?.message || 'Something went wrong');
+      }
+    });
   }
 
 }

@@ -573,7 +573,7 @@ const mapEmployees = (employees, designations) => {
     role: designationMap[employee.designationId] || "N/A",
     badge: designationMap[employee.designationId] || "N/A",
     badgeColor: BADGE_COLORS[index % BADGE_COLORS.length],
-    profileImage: employee.profileImage ? `${process.env.BASE_URL}${employee.profileImage}` : null,
+    profileImage: employee.profileImage ? `${process.env.IMG_BASE_URL}/${employee.profileImage}` : null,
     joiningDate: employee.joiningDate ? Helper.newDateFormat(employee.joiningDate) : "NA",
   }));
 };
@@ -647,7 +647,7 @@ const mapCelebrations = (employees, designations, key, today) => {
       ...employee,
       badgeColor: BADGE_COLORS[index % BADGE_COLORS.length],
       designationName: designationMap[employee.designationId] || "No Designation",
-      profileImage: employee.profileImage ? `${process.env.BASE_URL}${employee.profileImage}` : null,
+      profileImage: employee.profileImage ? `${process.env.IMG_BASE_URL}/${employee.profileImage}` : null,
     }));
 };
 
@@ -850,7 +850,7 @@ exports.getTeamwiseAttendance = async (req, res) => {
           name: `${emp.firstName} ${emp.lastName}`.trim(),
           empCode: emp.empCode || "N/A",
           designation: designationMap[emp.designationId] || "N/A",
-          profileImage: emp.profileImage ? `${process.env.BASE_URL}${emp.profileImage}` : null,
+          profileImage: emp.profileImage ? `${process.env.IMG_BASE_URL}/${emp.profileImage}` : null,
           gender: emp.gender || "N/A",
           status,
           checkIn: att?.check_in_time ? String(att.check_in_time).split(" ").pop() : null,

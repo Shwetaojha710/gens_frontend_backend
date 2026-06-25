@@ -30,6 +30,20 @@ export const routes: Routes = [
       import('./superadmin/login/superadmin-login.component').then((m) => m.SuperadminLoginComponent),
   },
   {
+    path: 'superadmin/forgot-password',
+    loadComponent: () =>
+      import('./superadmin/forgot-password/superadmin-forgot-password.component').then(
+        (m) => m.SuperadminForgotPasswordComponent,
+      ),
+  },
+  {
+    path: 'superadmin/reset-password',
+    loadComponent: () =>
+      import('./superadmin/reset-password/superadmin-reset-password.component').then(
+        (m) => m.SuperadminResetPasswordComponent,
+      ),
+  },
+  {
     path: 'superadmin',
     canActivate: [SuperadminGuard],
     loadChildren: () => import('./superadmin/superadmin.routes').then((m) => m.superadminRoutes),
@@ -39,6 +53,11 @@ export const routes: Routes = [
     path: 'privacy-policy',
     loadComponent: () =>
       import('./privacy-policy/privacy-policy.component').then((m) => m.PrivacyPolicyComponent),
+  },
+  {
+    path: 'delete-account',
+    loadComponent: () =>
+      import('./delete-account/delete-account.component').then((m) => m.DeleteAccountComponent),
   },
   {
     path: 'branchwise',

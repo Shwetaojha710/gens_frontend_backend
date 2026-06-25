@@ -80,6 +80,7 @@
           *ngIf="!sub.children"
           class="menu-link"
           [routerLink]="sub.link"
+          [queryParams]="sub.queryParams || {}"
           routerLinkActive="active-link"
         >
           <span class="menu-icon-wrap">

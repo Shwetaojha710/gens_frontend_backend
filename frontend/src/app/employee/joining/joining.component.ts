@@ -285,7 +285,6 @@ stats:any
      if (
       !this.validateField(this.personalDetails.firstName, 'First Name') ||
       !this.validateField(this.personalDetails.lastName, 'Last Name') ||
-      !this.validateField(this.personalDetails.email, 'Email') ||
       !this.validateField(this.personalDetails.mobile, 'Mobile Number') ||
       // !this.validateField(this.personalDetails.adhaarNo, 'Aadhaar Number') ||
       !this.validateField(this.personalDetails.dateOfBirth, 'Date of Birth')

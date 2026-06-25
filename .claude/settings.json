@@ -6,7 +6,15 @@
       "Bash(Select-Object Name)",
       "Bash(findstr -i \"employee-portal\\\\|portal\")",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Lakshya\\\\Documents\\\\GitHub\\\\gens_frontend_backend\\\\backend\" -Force)",
-      "Bash(Select-Object Name, FullName)"
+      "Bash(Select-Object Name, FullName)",
+      "Bash(New-Item -ItemType Directory -Force \"c:/Users/Lakshya/Documents/GitHub/gens_frontend_backend/frontend/src/app/master/role-permission\")",
+      "Bash(Out-Null)",
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\Lakshya\\\\Documents\\\\GitHub\\\\gens_frontend_backend\\\\frontend\\\\src\\\\app\\\\master\\\\role-permission\")",
+      "Bash(dir /s /b)",
+      "Bash(grep -E \"\\\\.js$\")",
+      "Bash(dir \"c:\\\\Users\\\\Lakshya\\\\Documents\\\\GitHub\\\\gens_frontend_backend\\\\frontend\" /b)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\Lakshya\\\\Documents\\\\GitHub\\\\gens_frontend_backend\\\\backend\" -Depth 3 | Where-Object { $_.PSIsContainer } | Select-Object FullName)",
+      "Bash(findstr -i \"nom\\\\|account\\\\|detail\")"
     ]
   }
 }

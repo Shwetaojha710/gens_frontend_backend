@@ -1,15 +1,16 @@
 .page {
   width: 794px;
   min-height: 1123px;
-  /* margin: auto; */
   padding: 120px 60px 150px;
   font-family: "Times New Roman", serif;
-  /* font-size: 13px; */
   color: #000;
-  background: #fff url('/assets/img/Letterhead-2.png') no-repeat top center / 100% 100%;
+  background-color: #fff;
+  background-repeat: no-repeat;
+  background-position: top center;
+  background-size: 100% 100%;
   position: relative;
-      border: 1px solid #ececce;
-    margin: auto;
+  border: 1px solid #ececce;
+  margin: auto;
 }
 
 .logo-row {

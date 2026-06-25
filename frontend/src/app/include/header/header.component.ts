@@ -8,6 +8,7 @@ import { FormsModule } from '@angular/forms';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { RouterModule } from '@angular/router';
 import { MobileMenuService } from '../../services/mobile-menu.service';
+import { PermissionService } from '../../services/permission.service';
 
 @Component({
   selector: 'app-header',
@@ -26,7 +27,8 @@ export class HeaderComponent {
     private router: Router,
     private eRef: ElementRef,
     public masterService: MasterService,
-    public mobileMenu: MobileMenuService
+    public mobileMenu: MobileMenuService,
+    private permSvc: PermissionService
   ) {
     this.getBranchDD()
       this.baseurl = this.masterService.getBaseUrl();
@@ -119,7 +121,17 @@ export class HeaderComponent {
   }
 
   get showLocationButton(): boolean {
+    // Hide on recruitment and employee pages
     const currentUrl = this.router.url;
-    return !currentUrl.startsWith('/recruitment') && !currentUrl.startsWith('/layout/employee');
+    if (currentUrl.startsWith('/recruitment') || currentUrl.startsWith('/layout/employee')) {
+      return false;
+    }
+    // Also hide if user doesn't have tracking permission
+    try {
+      const role = JSON.parse(localStorage.getItem('user') || '{}')?.role || 'hr';
+      return this.permSvc.can('tracking', role);
+    } catch {
+      return false;
+    }
   }
 }

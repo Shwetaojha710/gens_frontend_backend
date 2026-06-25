@@ -1,27 +1,29 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Notyf } from 'notyf';
 import { EmployeeService } from '../../../services/employee.service';
+import { MasterService } from '../../../services/master.service';
 @Component({
   selector: 'app-releving-letter',
   imports: [CommonModule, FormsModule, DatePipe],
   templateUrl: './releving-letter.component.html',
   styleUrl: './releving-letter.component.css'
 })
-export class RelevingLetterComponent {
+export class RelevingLetterComponent implements OnInit {
   personalDetails: any = {};
   tenant: any = {};
   notyf: Notyf;
   isDownload = false;
+  tenantLetterheadUrl: string = '/assets/img/Letterhead-2.png';
 
   relievingDate: string = '';
   joiningDate: string = '';
   refNo: string = '';
   todayDate: string = '';
 
-  constructor(private router: Router, private employeeService: EmployeeService) {
+  constructor(private router: Router, private employeeService: EmployeeService, private masterService: MasterService) {
     this.notyf = new Notyf();
     this.personalDetails = JSON.parse(localStorage.getItem('employeeId') || '{}');
     this.tenant = JSON.parse(localStorage.getItem('tenant') || '{}');
@@ -36,6 +38,15 @@ export class RelevingLetterComponent {
     this.refNo = this.personalDetails.relRefNo || `${year}/${seq}`;
 
     this.loadData();
+  }
+
+  ngOnInit(): void {
+    this.masterService.getLetterhead().subscribe({
+      next: (res: any) => {
+        if (res?.data?.url) this.tenantLetterheadUrl = res.data.url;
+      },
+      error: () => {}
+    });
   }
 
   loadData(): void {
@@ -98,19 +109,9 @@ export class RelevingLetterComponent {
   }
 
   printDoc() {
-    const logoBase64Promise = this.getBase64FromSrc('/assets/img/logo/logo-quaere.png');
-    const cmmiBase64Promise = this.getBase64FromSrc('/assets/img/logo/Picture1.jpg');
-    const updescoBase64Promise = this.getBase64FromSrc('/assets/img/logo/Picture2.png');
+    const bgBase64Promise = this.getBase64FromSrc(this.tenantLetterheadUrl).catch(() => '');
 
-    // 🔥 ADD THIS (BACKGROUND IMAGE)
-    const bgBase64Promise = this.getBase64FromSrc('/assets/img/Letterhead-2.png');
-
-    Promise.all([
-      logoBase64Promise,
-      cmmiBase64Promise,
-      updescoBase64Promise,
-      bgBase64Promise
-    ]).then(([logo, cmmi, updesco, bgImage]) => {
+    Promise.all([bgBase64Promise]).then(([bgImage]) => {
 
       const relievingData = {
         ...this.relievingData,
@@ -132,48 +133,49 @@ export class RelevingLetterComponent {
 
 body {
   font-family: "Calibri", sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   color: #000;
 }
 
-/* 🔥 BACKGROUND FIX */
 .page {
   width: 21cm;
-  min-height: 29.7cm;
-  padding: 100px 60px 60px 60px;
+  height: 29.7cm;
+  padding: 130px 60px 120px 60px;
   position: relative;
-  margin-top:20px;
+  overflow: hidden;
   background-image: url('${bgImage}');
   background-repeat: no-repeat;
   background-size: 100% 100%;
 }
 
-/* CONTENT */
 .ref-date-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .address-block {
-  margin: 20px 0;
-  line-height: 1.8;
+  margin: 12px 0;
+  line-height: 1.6;
 }
 
-
-
 .regards {
-  margin-top: 60px;
+  margin-top: 30px;
   line-height: 1.6;
 }
 
 .subject-line {
-  margin: 30px 0 30px 0;
+  margin: 14px 0;
 }
 
 .salutation-line {
-  margin: 20px 0;
+  margin: 12px 0;
   font-weight: bold;
+}
+
+.body-para {
+  margin-bottom: 8px;
+  line-height: 1.5;
 }
 
 @media print {
@@ -183,6 +185,7 @@ body {
   }
 
   @page {
+    size: A4 portrait;
     margin: 0;
   }
 }
@@ -193,12 +196,12 @@ body {
 
 <div class="page">
 
-  <div class="ref-date-row" style="margin-top: 40px;">
+  <div class="ref-date-row">
     <div class="ref-left"><b>Ref: Quaere/Emp/Relieving/${refNo}</b></div>
     <div class="dated-right"><b>Dated: ${relievingDate}</b></div>
   </div>
 
-  <div class="address-block" style="margin-top: 40px;">
+  <div class="address-block">
  <b>${relievingData.name} </b> <br/>
     <b> D/O ${relievingData.fatherName}</b> <br/>
      <b>  ${(this.personalDetails.permanentAddress || '').replace(/\n/g, '<br/>')}</b><br/>
@@ -247,8 +250,11 @@ body {
   }
 
   getBase64FromSrc(src: string): Promise<string> {
-    return fetch(src)
-      .then(r => r.blob())
+    return fetch(src, { mode: 'cors' })
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.blob();
+      })
       .then(blob => new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
@@ -276,7 +282,7 @@ body {
       imgPromises.push(this.convertImageToBase64(img));
     }
 
-    const letterheadPromise = fetch('/assets/img/Letterhead-2.png')
+    const letterheadPromise = fetch(this.tenantLetterheadUrl)
       .then(r => r.blob())
       .then(blob => new Promise<string>((resolve, reject) => {
         const reader = new FileReader();

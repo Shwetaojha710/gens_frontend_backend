@@ -231,7 +231,7 @@ export class EmployeePortalService {
   }
 
   logout(): Observable<unknown> {
-    return this.http.get(`${this.base}app-logout`, { responseType: 'text' });
+    return this.http.post(`${this.base}app-logout`, { source: 'web' }, { responseType: 'text' });
   }
 
   /** Submit attendance regularization (API uses token for employee). */
@@ -345,6 +345,20 @@ export class EmployeePortalService {
 
   getAppLetterPdfs(): Observable<any> {
     return this.http.post<any>(`${this.base}get-app-letter-pdfs`, {});
+  }
+
+  /** All active branches for the current tenant (used for branch filter pills). */
+  getTenantBranches(): Observable<{ id: string; name: string }[]> {
+    return this.http
+      .post<{ status: unknown; data: { id: string; name: string }[] }>(
+        `${this.base}app-branch-dd`,
+        {},
+      )
+      .pipe(
+        map((res) =>
+          res.status === true && Array.isArray(res.data) ? res.data : [],
+        ),
+      );
   }
 
   /**

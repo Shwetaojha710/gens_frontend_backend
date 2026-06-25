@@ -170,6 +170,10 @@ export class MasterService {
   getemployeeList(): Observable<any> {
     return this.http.post(`${this.baseUrl}get-emp-list`, {});
   }
+  /** Same endpoint but includes inactive employees — used only by Generated Salary page. */
+  getEmployeeListAll(): Observable<any> {
+    return this.http.post(`${this.baseUrl}get-emp-list`, { includeInactive: true });
+  }
   getAttendanceYear(): Observable<any> {
     return this.http.post(`${this.baseUrl}get-attendance-year`, {});
   }
@@ -307,6 +311,10 @@ export class MasterService {
     return this.http.post(`${this.baseUrl}deleteBranch`, data);
   }
 
+  copyBranchMasterData(data: { sourceBranchId: string; targetBranchId: string }): Observable<any> {
+    return this.http.post(`${this.baseUrl}copy-branch-master-data`, data);
+  }
+
   getContractualEmployees(): Observable<any> {
     return this.http.get(`${this.baseUrl}contractual-employees`);
   }
@@ -325,5 +333,15 @@ export class MasterService {
 
   saveBrandColors(colors: any): Observable<any> {
     return this.http.post(`${this.baseUrl}save-brand-colors`, colors);
+  }
+
+  getLetterhead(): Observable<any> {
+    return this.http.post(`${this.baseUrl}get-letterhead`, {});
+  }
+
+  uploadLetterhead(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('letterhead', file);
+    return this.http.post(`${this.baseUrl}upload-letterhead`, formData);
   }
 }

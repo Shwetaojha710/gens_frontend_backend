@@ -4,6 +4,7 @@ const Helper = require("../../helper/helper");
 const CryptoJS = require("crypto-js");
 const Tenant = require("../../models/tenant");
 const jwt = require("jsonwebtoken");
+const { fetchUserPermissionsForLogin } = require("../tenant/userPermission");
 const currency = require("../../models/currency");
 require("dotenv").config();
 const otp = require("../../models/otp");
@@ -174,11 +175,15 @@ exports.login = async (req, res) => {
          tenantId: tenant.id,
       },
       raw:true
-    })
+    });
+
+    // Fetch user-specific custom sidebar permissions (null = use role defaults)
+    const customPermissions = await fetchUserPermissionsForLogin(user.id, tenant.id);
+
     return Helper.response(
       true,
       "You have Logged In Successfully!",
-      { baseUrl, token, user, PORT, webcamtoken, currencyList,tenant,branch },
+      { baseUrl, token, user, PORT, webcamtoken, currencyList, tenant, branch, customPermissions },
       res,
       200
     );
@@ -386,7 +391,7 @@ exports.Applogin = async (req, res) => {
     const otps = new otp();
 
     if(data.mobile == '8687651183'){
-      otps.otp = '1234'
+      otps.otp = '6669'
     }else{
       otps.otp = Math.floor(1000 + Math.random() * 9000);
     }
@@ -498,22 +503,23 @@ exports.verifyOtp = async (req, res) => {
         200
       );
     }
-    if (!req.body.deviceToken) {
-      return Helper.response(
-        "failed",
-        "Device Token Is Required",
-        {},
-        res,
-        200
-      );
-    }
+    // if (!req.body.deviceToken) {
+    //   return Helper.response(
+    //     "failed",
+    //     "Device Token Is Required",
+    //     {},
+    //     res,
+    //     200
+    //   );
+    // }
 
     const user = await otp.findOne({
       where: {
-        phone: data.mobile, // Ensure 'data' exists before accessing 'mobile'
-        otp: data.otp, // Prevent potential 'undefined' errors
+        phone: data.mobile,
+        otp: data.otp,
         status: true,
       },
+      order: [["createdAt", "DESC"]],
     });
 
     if (!user) {
@@ -663,6 +669,8 @@ exports.Applogout = async (req, res) => {
     return Helper.response(false, "User ID is required.", [], res, 400);
   }
 
+  const { source=null } = req.body;
+
   try {
     const user = await empPersonal.findOne({
       where: {
@@ -674,8 +682,13 @@ exports.Applogout = async (req, res) => {
       return Helper.response(false, "User not found.", [], res, 404);
     }
 
-    // Clear the token from the user record
-    await user.update({ token: null, deviceToken: null });
+    if (source === 'web') {
+      // Employee portal logout — only clear webToken
+      await user.update({ webToken: null });
+    } else {
+      // Mobile app logout — clear app token and device token
+      await user.update({ token: null, deviceToken: null });
+    }
 
     return Helper.response(
       true,

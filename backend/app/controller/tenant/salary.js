@@ -2754,9 +2754,9 @@ exports.generateSalary = async (req, res) => {
 
       // --- Prepare next month ---
       const currentMonth = Number(emp.month);
-      const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+      const nextMonth = currentMonth == 12 ? 1 : currentMonth + 1;
       const nextYear =
-        currentMonth === 12 ? Number(emp.year) + 1 : Number(emp.year);
+        currentMonth == 12 ? Number(emp.year) + 1 : Number(emp.year);
 
       // --- Process next month leave for CL only ---
 
@@ -2786,11 +2786,31 @@ exports.generateSalary = async (req, res) => {
         const currentMonth = Number(emp.month);
         const nextMonth = currentMonth == 12 ? 1 : currentMonth + 1;
         const nextYear =
-          currentMonth === 12 ? Number(emp.year) + 1 : Number(emp.year);
+          currentMonth == 12 ? Number(emp.year) + 1 : Number(emp.year);
 
         // Policy: Add +2 CL each month
-        const monthlyCLAddition = 2;
-
+        // const monthlyCLAddition = 2;
+// Loop ke andar, nextYear / nextMonth calculate hone ke baad:
+let monthlyCLAddition = 2; // default — purana behavior
+const joiningDate =
+  emp.joiningDate ||
+  (await empPersonal.findOne({
+    where: { id: emp.employeeId, tenantId, branchId },
+    attributes: ["joiningDate"],
+    raw: true,
+    transaction: t,
+  }))?.joiningDate;
+if (joiningDate) {
+  const joiningMonthStart = moment(joiningDate).startOf("month");
+  const nextMonthStart = moment(
+    `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`,
+    "YYYY-MM-DD"
+  );
+  const monthsSinceJoining = nextMonthStart.diff(joiningMonthStart, "months");
+  // Joining month = 0, 2nd month = 1, 3rd month = 2 → 1 CL
+  // 4th month onwards (3+) → 2 CL
+  monthlyCLAddition = monthsSinceJoining < 3 ? 1 : 2;
+}
         // Find next month record
         const existingLeave = await leave_balance.findOne({
           where: {
@@ -2975,7 +2995,7 @@ exports.GeneratedSalaryList = async (req, res) => {
       );
     }
     const result=await bill.findOne({
-  attributes: [
+    attributes: [
     [
       fn(
         "COALESCE",
@@ -2994,7 +3014,7 @@ exports.GeneratedSalaryList = async (req, res) => {
     year,
     branchId,
     tenantId,
-    status: "active"
+    // status: "active"
   },
   raw: true
 });
@@ -3052,7 +3072,7 @@ console.log("Total Salary:", finalTotal);
           where: {
             id: item?.employeeId,
             branchId,
-            status: "active",
+            // status: "active",
           },
         });
         let designation, department;

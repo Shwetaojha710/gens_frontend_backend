@@ -23,7 +23,7 @@
 /* ─── Sidebar base ─── */
 .vertical-navbar {
   width: 248px;
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   background: var(--app-sidebar-bg, linear-gradient(180deg, rgba(221, 234, 255, 0.96) 0%, rgba(214, 227, 250, 0.92) 48%, rgba(231, 237, 250, 0.96) 100%));

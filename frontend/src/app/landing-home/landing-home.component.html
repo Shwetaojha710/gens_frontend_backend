@@ -3,6 +3,242 @@
   <i class="ri ri-palette-line"></i>
 </button>
 
+<!-- ─── Module Access FAB (admin/superadmin only) ─── -->
+<button class="lh-perm-fab" *ngIf="isAdmin" (click)="openPermDrawer()" title="Module Access Control">
+  <i class="ri ri-shield-keyhole-line"></i>
+</button>
+
+<!-- ─── Permission Drawer Overlay ─── -->
+<div class="lh-perm-overlay" [class.lh-perm-overlay--open]="permDrawerOpen" (click)="closePermDrawer()"></div>
+
+<!-- ─── Permission Drawer ─── -->
+<div class="lh-perm-drawer" [class.lh-perm-drawer--open]="permDrawerOpen">
+
+  <!-- Header -->
+  <div class="lh-perm-head">
+    <div>
+      <p class="lh-drawer-eyebrow">Admin Control</p>
+      <h6 class="lh-drawer-title">
+        <i class="ri ri-shield-keyhole-line me-1"></i>Module Access
+      </h6>
+    </div>
+    <button class="lh-drawer-close" (click)="closePermDrawer()">
+      <i class="ri ri-close-line"></i>
+    </button>
+  </div>
+
+  <!-- Body: left = user list | right = portal + detail -->
+  <div class="lh-perm-body">
+
+    <!-- ── LEFT: User list ── -->
+    <div class="lh-perm-users">
+      <div class="lh-perm-search">
+        <i class="ri ri-search-line lh-perm-search-icon"></i>
+        <input type="text" class="lh-perm-search-input" placeholder="Search users..."
+          [(ngModel)]="permSearchQuery" (input)="searchPermUsers()" />
+      </div>
+
+      <div class="lh-perm-user-list">
+        <div *ngIf="permLoadingUsers" class="lh-perm-empty">
+          <span class="spinner-border spinner-border-sm text-primary me-1"></span> Loading…
+        </div>
+        <div *ngIf="!permLoadingUsers && permFilteredUsers.length === 0" class="lh-perm-empty">
+          No users found
+        </div>
+        <div *ngFor="let user of permFilteredUsers"
+          class="lh-perm-user-row"
+          [class.lh-perm-user-row--active]="permSelectedUser?.id === user.id"
+          (click)="selectPermUser(user)">
+          <div class="lh-perm-avatar"
+            [style.background]="getPermRoleColor(user.role) + '22'"
+            [style.color]="getPermRoleColor(user.role)">
+            {{ getPermInitial(user.name) }}
+          </div>
+          <div class="lh-perm-uinfo">
+            <div class="lh-perm-uname">{{ user.name }}</div>
+            <div class="lh-perm-uemail">{{ user.email }}</div>
+            <div class="lh-perm-urole">{{ user.role }}</div>
+          </div>
+          <i class="ri ri-arrow-right-s-line lh-perm-arrow"
+            *ngIf="permSelectedUser?.id === user.id"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── RIGHT: Portal/Detail panel ── -->
+    <div class="lh-perm-right">
+
+      <!-- Placeholder: no user selected -->
+      <div *ngIf="!permSelectedUser" class="lh-perm-placeholder">
+        <i class="ri ri-user-3-line"></i>
+        <p>Select a user to manage<br>their module access</p>
+      </div>
+
+      <!-- Loading -->
+      <div *ngIf="permSelectedUser && permLoadingModules" class="lh-perm-placeholder">
+        <span class="spinner-border text-primary"></span>
+        <p class="mt-2 mb-0">Loading permissions…</p>
+      </div>
+
+      <!-- ── User bar ── -->
+      <div *ngIf="permSelectedUser && !permLoadingModules" class="lh-perm-user-bar">
+        <div class="lh-perm-avatar lh-perm-avatar--lg"
+          [style.background]="getPermRoleColor(permSelectedUser.role) + '22'"
+          [style.color]="getPermRoleColor(permSelectedUser.role)">
+          {{ getPermInitial(permSelectedUser.name) }}
+        </div>
+        <div class="flex-1" style="min-width:0">
+          <div class="fw-semibold" style="font-size:.88rem;color:#1f2937">{{ permSelectedUser.name }}</div>
+          <div style="font-size:.7rem;color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ permSelectedUser.email }}</div>
+        </div>
+        <span class="lh-perm-role-badge"
+          [style.background]="getPermRoleColor(permSelectedUser.role) + '22'"
+          [style.color]="getPermRoleColor(permSelectedUser.role)">
+          {{ permSelectedUser.role }}
+        </span>
+        <span *ngIf="permHasCustom" class="lh-perm-custom-badge">Custom</span>
+      </div>
+
+      <!-- ══ VIEW 1: 3 Portal cards ══ -->
+      <ng-container *ngIf="permSelectedUser && !permLoadingModules && permView === 'portals'">
+
+        <div class="lh-portal-grid">
+          <div class="lh-portal-card"
+            *ngFor="let portal of permPortals"
+            [class.lh-portal-card--clickable]="portal.sections.length > 0"
+            [style.backgroundImage]="'url(' + portal.bgImg + ')'"
+            (click)="openPortalDetail(portal)">
+
+            <div class="lh-portal-glass"
+              [class.lh-portal-glass--off]="portalStatus(portal) === 'none'">
+
+              <h2 class="lh-portal-name">{{ portal.label | uppercase }}</h2>
+
+              <p class="lh-portal-meta">
+                {{ portal.sections.length > 0 ? (portalTotalMenus(portal) + ' menus') : 'Not configured' }}
+              </p>
+
+              <span class="lh-portal-pill lh-portal-pill--full"
+                *ngIf="portalStatus(portal) === 'full'">
+                <i class="ri ri-checkbox-circle-fill me-1"></i>Full Access
+              </span>
+              <span class="lh-portal-pill lh-portal-pill--partial"
+                *ngIf="portalStatus(portal) === 'partial'">
+                <i class="ri ri-error-warning-fill me-1"></i>Partial
+              </span>
+              <span class="lh-portal-pill lh-portal-pill--none"
+                *ngIf="portalStatus(portal) === 'none'">
+                <i class="ri ri-forbid-line me-1"></i>No Access
+              </span>
+
+              <button class="lh-portal-btn" *ngIf="portal.sections.length > 0">
+                Manage &rarr;
+              </button>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="lh-perm-footer">
+          <button class="lh-perm-save-btn" [disabled]="permSaving" (click)="saveModulePermissions()">
+            <span *ngIf="permSaving" class="spinner-border spinner-border-sm me-1"></span>
+            <i *ngIf="!permSaving" class="ri ri-save-line me-1"></i>
+            {{ permSaving ? 'Saving…' : 'Save All Access' }}
+          </button>
+          <p class="lh-perm-note">
+            <i class="ri ri-information-line me-1"></i>
+            User will be auto-logged out to apply changes.
+          </p>
+        </div>
+      </ng-container>
+
+      <!-- ══ VIEW 2: Portal detail ══ -->
+      <ng-container *ngIf="permSelectedUser && !permLoadingModules && permView === 'detail' && permActivePortal">
+
+        <div class="lh-perm-detail-head">
+          <button class="lh-perm-back-btn" (click)="backToPortals()">
+            <i class="ri ri-arrow-left-s-line"></i> Back
+          </button>
+          <i [class]="permActivePortal.icon + ' lh-perm-detail-icon'"></i>
+          <span class="lh-perm-detail-name">{{ permActivePortal.label }}</span>
+          <div class="form-check form-switch mb-0 ms-auto">
+            <input class="form-check-input lh-perm-switch" type="checkbox" role="switch"
+              [id]="'portal-master-' + permActivePortal.key"
+              [checked]="isPortalAllOn(permActivePortal)"
+              (change)="togglePortalAll(permActivePortal)" />
+          </div>
+        </div>
+
+        <div class="lh-perm-detail-scroll">
+          <ng-container *ngFor="let section of permActivePortal.sections">
+
+            <div class="lh-perm-section-head"
+              [class.lh-perm-section-head--off]="!section.enabled">
+              <div class="lh-perm-section-icon"
+                [style.background]="section.enabled ? '#dbeafe' : '#f3f4f6'"
+                [style.color]="section.enabled ? '#0d5f9d' : '#9ca3af'">
+                <i [class]="section.icon"></i>
+              </div>
+              <div class="lh-perm-section-info">
+                <span class="lh-perm-section-name">{{ section.label }}</span>
+                <span class="lh-perm-section-count">
+                  {{ section.children.length > 0 ? section.children.length + ' items' : 'Single page' }}
+                </span>
+              </div>
+              <div class="form-check form-switch mb-0 ms-auto">
+                <input class="form-check-input lh-perm-switch"
+                  type="checkbox" role="switch"
+                  [id]="'sec-' + section.key"
+                  [checked]="section.enabled"
+                  (change)="togglePermModule(section)" />
+              </div>
+            </div>
+
+            <div *ngIf="section.children.length === 0"
+              class="lh-perm-child-item lh-perm-child-item--indented lh-perm-child-item--single"
+              [class.lh-perm-child-item--off]="!section.enabled">
+              <i class="ri ri-layout-line lh-perm-child-arrow"></i>
+              <span class="lh-perm-child-label" style="color:#9ca3af;font-style:italic">
+                Single-page module
+              </span>
+            </div>
+
+            <div *ngFor="let child of section.children"
+              class="lh-perm-child-item lh-perm-child-item--indented"
+              [class.lh-perm-child-item--off]="!child.enabled || !section.enabled">
+              <i class="ri ri-corner-down-right-line lh-perm-child-arrow"></i>
+              <span class="lh-perm-child-label">{{ child.label }}</span>
+              <div class="form-check form-switch mb-0 ms-auto">
+                <input class="form-check-input lh-perm-switch"
+                  type="checkbox" role="switch"
+                  [id]="'ci-' + child.key"
+                  [checked]="child.enabled && section.enabled"
+                  [disabled]="!section.enabled"
+                  (change)="togglePermChild(section, child)" />
+              </div>
+            </div>
+
+          </ng-container>
+        </div>
+
+        <div class="lh-perm-footer">
+          <button class="lh-perm-save-btn" [disabled]="permSaving" (click)="saveModulePermissions()">
+            <span *ngIf="permSaving" class="spinner-border spinner-border-sm me-1"></span>
+            <i *ngIf="!permSaving" class="ri ri-save-line me-1"></i>
+            {{ permSaving ? 'Saving…' : 'Save Access' }}
+          </button>
+          <p class="lh-perm-note">
+            <i class="ri ri-information-line me-1"></i>
+            User will be auto-logged out to apply changes.
+          </p>
+        </div>
+
+      </ng-container>
+
+    </div><!-- /lh-perm-right -->
+  </div><!-- /lh-perm-body -->
+</div><!-- /lh-perm-drawer -->
+
 <!-- ─── Drawer overlay ─── -->
 <div class="lh-drawer-overlay" [class.lh-drawer-overlay--open]="settingsOpen" (click)="closeSettings()"></div>
 
@@ -20,7 +256,6 @@
 
   <div class="lh-drawer-body">
 
-    <!-- Apply to modules -->
     <div class="lh-section mb-4">
       <p class="lh-section-label">Apply colors to</p>
       <div class="lh-module-list">
@@ -44,7 +279,6 @@
 
     <div class="lh-divider"></div>
 
-    <!-- Color pickers -->
     <div class="lh-section mt-4">
       <p class="lh-section-label">Colors</p>
 
@@ -105,7 +339,6 @@
       </div>
     </div>
 
-    <!-- Mini preview -->
     <div class="lh-section mt-4">
       <p class="lh-section-label">Preview</p>
       <div class="lh-preview-wrap">
@@ -127,7 +360,6 @@
 
   </div>
 
-  <!-- Drawer footer -->
   <div class="lh-drawer-footer">
     <button class="lh-btn-save" [disabled]="saving" (click)="saveSettings()">
       <i class="fas fa-circle-notch fa-spin me-1" *ngIf="saving"></i>
@@ -168,7 +400,7 @@
             <div class="row g-3 mb-8 justify-content-center">
               <div class="col-md-12">
                 <div class="row justify-content-center g-3">
-                  <div class="col-md-3">
+                  <div class="col-md-3" *ngIf="showRecruitment">
                     <div class="card-wrapper">
                       <div class="reuc-city-card">
                         <div class="overlay">
@@ -180,7 +412,7 @@
                       </div>
                     </div>
                   </div>
-                  <div class="col-md-3">
+                  <div class="col-md-3" *ngIf="showEmpManagement">
                     <div class="card-wrapper">
                       <div class="emp-city-card">
                         <div class="overlay">
@@ -192,7 +424,7 @@
                       </div>
                     </div>
                   </div>
-                  <div class="col-md-3">
+                  <div class="col-md-3" *ngIf="showTracking">
                     <div class="card-wrapper">
                       <div class="loc-city-card">
                         <div class="overlay">

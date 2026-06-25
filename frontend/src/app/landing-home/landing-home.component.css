@@ -459,5 +459,343 @@
     color: #0d5f9d;
 }
 
+/* ═══════════════════════════════════════════════════
+   Module Permission Drawer
+   ═══════════════════════════════════════════════════ */
 
+/* FAB — below the palette button */
+.lh-perm-fab {
+  position: fixed;
+  top: 4.75rem;
+  right: 1.25rem;
+  z-index: 1100;
+  width: 2.85rem;
+  height: 2.85rem;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #0b6db6, #209af7);
+  color: #fff;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(13,95,157,.45);
+  transition: transform .2s, box-shadow .2s;
+}
+.lh-perm-fab:hover {
+  transform: scale(1.08);
+  box-shadow: 0 8px 24px rgba(13,95,157,.55);
+}
 
+/* Overlay */
+.lh-perm-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.42);
+  z-index: 1200; opacity: 0;
+  pointer-events: none;
+  transition: opacity .28s ease;
+}
+.lh-perm-overlay--open { opacity:1; pointer-events:all; }
+
+/* Drawer — 700px wide, two-panel */
+.lh-perm-drawer {
+  position: fixed; top:0; right:0;
+  height: 100%; width: 700px; max-width: 98vw;
+  background: #fff; z-index: 1300;
+  display: flex; flex-direction: column;
+  transform: translateX(100%);
+  transition: transform .32s cubic-bezier(.4,0,.2,1);
+  box-shadow: -6px 0 36px rgba(0,0,0,.18);
+}
+.lh-perm-drawer--open { transform: translateX(0); }
+
+/* Drawer header */
+.lh-perm-head {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.3rem 1rem;
+  background: linear-gradient(135deg, #0b6db6 0%, #0d5f9d 100%);
+  color: #fff; flex-shrink: 0;
+}
+
+/* Body — flex row */
+.lh-perm-body {
+  flex: 1; display: flex; overflow: hidden;
+}
+
+/* ── Left: user list ── */
+.lh-perm-users {
+  width: 235px; flex-shrink: 0;
+  border-right: 1.5px solid #dbeafe;
+  display: flex; flex-direction: column;
+  overflow: hidden; background: #f0f7ff;
+}
+
+.lh-perm-search {
+  position: relative;
+  padding: .7rem .75rem;
+  border-bottom: 1px solid #dbeafe;
+}
+.lh-perm-search-icon {
+  position: absolute; left: 1.3rem; top: 50%;
+  transform: translateY(-50%);
+  color: #60a5fa; font-size: .9rem; pointer-events: none;
+}
+.lh-perm-search-input {
+  width: 100%; padding: .42rem .5rem .42rem 2rem;
+  border: 1.5px solid #bfdbfe; border-radius: 7px;
+  font-size: .82rem; outline: none; background: #fff;
+}
+.lh-perm-search-input:focus { border-color: #0d5f9d; }
+
+.lh-perm-user-list { flex:1; overflow-y:auto; }
+
+.lh-perm-empty {
+  display:flex; align-items:center; justify-content:center;
+  padding: 2rem 1rem; font-size:.82rem; color:#9ca3af;
+  text-align:center; height:100%;
+}
+
+.lh-perm-user-row {
+  display:flex; align-items:center; gap:.55rem;
+  padding: .6rem .75rem; cursor:pointer;
+  border-bottom: 1px solid #eff6ff;
+  transition: background .15s; user-select:none;
+}
+.lh-perm-user-row:hover { background:#eff6ff; }
+.lh-perm-user-row--active {
+  background: #dbeafe !important;
+  border-left: 3px solid #0d5f9d;
+}
+
+.lh-perm-avatar {
+  width:2.1rem; height:2.1rem; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:.85rem; font-weight:700; flex-shrink:0;
+}
+.lh-perm-avatar--lg { width:2.3rem; height:2.3rem; font-size:.92rem; }
+
+.lh-perm-uinfo { flex:1; min-width:0; }
+.lh-perm-uname {
+  font-size:.82rem; font-weight:600; color:#1f2937;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.lh-perm-uemail {
+  font-size:.68rem; color:#6b7280;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.lh-perm-urole {
+  font-size:.65rem; color:#0d5f9d;
+  text-transform:capitalize; font-weight:600;
+}
+.lh-perm-arrow { color:#0d5f9d; font-size:1rem; flex-shrink:0; }
+
+/* ── Right panel ── */
+.lh-perm-right {
+  flex:1; display:flex; flex-direction:column; overflow:hidden;
+}
+
+/* Placeholder */
+.lh-perm-placeholder {
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  height:100%; color:#93c5fd; text-align:center;
+}
+.lh-perm-placeholder i { font-size:3rem; margin-bottom:.75rem; opacity:.5; }
+.lh-perm-placeholder p { font-size:.85rem; color:#9ca3af; line-height:1.5; }
+
+/* User bar */
+.lh-perm-user-bar {
+  display:flex; align-items:center; gap:.6rem;
+  padding: .7rem 1rem;
+  background: #eff6ff;
+  border-bottom: 1.5px solid #dbeafe;
+  flex-shrink:0;
+}
+.lh-perm-role-badge {
+  font-size:.65rem; font-weight:700;
+  padding:.15rem .5rem; border-radius:20px;
+  text-transform:capitalize; white-space:nowrap; flex-shrink:0;
+}
+.lh-perm-custom-badge {
+  font-size:.62rem; font-weight:700;
+  padding:.12rem .45rem; border-radius:20px;
+  background:#fef3c7; color:#d97706; flex-shrink:0;
+}
+
+/* ═══ VIEW 1: Portal cards ═══ */
+.lh-portal-grid {
+  display: flex; flex-direction: column;
+  gap: 1rem; padding: .85rem 1rem;
+  overflow-y: auto; flex: 1;
+}
+
+.lh-portal-card {
+  position: relative; border-radius: 16px;
+  overflow: hidden; height: 200px;
+  background-size: cover; background-position: center;
+  cursor: not-allowed; flex-shrink: 0;
+  background-color: rgba(255,255,255,.08);
+  border: 1px solid #fff;
+  transition: transform .2s, box-shadow .2s;
+}
+.lh-portal-card--clickable { cursor: pointer; }
+.lh-portal-card--clickable:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(0,0,0,.35);
+}
+
+.lh-portal-glass {
+  position: absolute;
+  top: 18px; left: 18px; right: 18px; bottom: 18px;
+  border-radius: 16px;
+  border: 1.5px solid rgba(255,255,255,.7);
+  backdrop-filter: blur(2px);
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  color: #fff; text-align: center;
+  padding: 16px; gap: .3rem;
+  background: rgba(0,0,0,.15);
+}
+.lh-portal-glass--off { background: rgba(0,0,0,.38); }
+
+.lh-portal-name {
+  font-size: 1.1rem; font-weight: 700;
+  letter-spacing: 1px; margin: 0;
+  line-height: 1.2; text-shadow: 0 1px 4px rgba(0,0,0,.4);
+}
+.lh-portal-meta {
+  font-size: .72rem; opacity: .8; margin: 0;
+  text-transform: uppercase; letter-spacing: .04em;
+}
+
+.lh-portal-pill {
+  display: inline-flex; align-items: center;
+  font-size: .63rem; font-weight: 700;
+  padding: .2rem .6rem; border-radius: 20px;
+  margin-top: .2rem; letter-spacing: .03em;
+}
+.lh-portal-pill--full {
+  background: rgba(16,185,129,.35); color: #d1fae5;
+  border: 1px solid rgba(16,185,129,.5);
+}
+.lh-portal-pill--partial {
+  background: rgba(245,158,11,.32); color: #fde68a;
+  border: 1px solid rgba(245,158,11,.5);
+}
+.lh-portal-pill--none {
+  background: rgba(255,255,255,.12); color: rgba(255,255,255,.75);
+  border: 1px solid rgba(255,255,255,.3);
+}
+
+.lh-portal-btn {
+  margin-top: .35rem; width: 120px; height: 36px;
+  border-radius: 8px; border: 1px solid #fff;
+  background: transparent; color: #fff;
+  font-size: .78rem; cursor: pointer;
+  transition: background .2s;
+}
+.lh-portal-btn:hover { background: rgba(255,255,255,.15); }
+
+/* ═══ VIEW 2: Portal detail ═══ */
+.lh-perm-detail-head {
+  display:flex; align-items:center; gap:.65rem;
+  padding: .75rem 1rem;
+  background:#eff6ff;
+  border-bottom: 1.5px solid #dbeafe;
+  flex-shrink:0;
+}
+.lh-perm-back-btn {
+  display:flex; align-items:center; gap:.2rem;
+  background:none; border:1.5px solid #bfdbfe;
+  color:#0d5f9d; font-size:.78rem; font-weight:600;
+  padding:.28rem .6rem; border-radius:6px;
+  cursor:pointer; white-space:nowrap;
+  transition:background .15s; flex-shrink:0;
+}
+.lh-perm-back-btn:hover { background:#dbeafe; }
+.lh-perm-detail-icon { font-size:1.1rem; color:#0d5f9d; flex-shrink:0; }
+.lh-perm-detail-name {
+  font-size:.9rem; font-weight:700; color:#1f2937;
+  flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+
+.lh-perm-detail-scroll {
+  flex:1; overflow-y:auto; padding:.75rem 1rem;
+}
+
+.lh-perm-section-head {
+  display:flex; align-items:center; gap:.6rem;
+  padding:.6rem .75rem; background:#eff6ff;
+  border-radius:9px; margin-bottom:.25rem;
+  transition:background .2s;
+}
+.lh-perm-section-head--off { background:#f9fafb; opacity:.75; }
+
+.lh-perm-section-icon {
+  width:2rem; height:2rem; border-radius:7px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:1rem; flex-shrink:0;
+  transition:background .2s, color .2s;
+}
+.lh-perm-section-info { flex:1; min-width:0; }
+.lh-perm-section-name {
+  display:block; font-size:.84rem; font-weight:600; color:#1f2937;
+}
+.lh-perm-section-count { font-size:.68rem; color:#9ca3af; }
+
+.lh-perm-child-item {
+  display:flex; align-items:center; gap:.5rem;
+  padding:.55rem .75rem;
+  border:1.5px solid #e5e7eb; border-radius:9px;
+  background:#fff; margin-bottom:.3rem;
+  transition:border-color .18s, background .18s;
+}
+.lh-perm-child-item--indented { margin-left:1.8rem; }
+.lh-perm-child-item:has(.lh-perm-switch:checked) {
+  border-color:#0d5f9d; background:#f0f7ff;
+}
+.lh-perm-child-item--off { opacity:.4; background:#f9fafb; }
+
+.lh-perm-child-arrow { font-size:.85rem; color:#93c5fd; flex-shrink:0; }
+.lh-perm-child-label { font-size:.855rem; color:#374151; flex:1; }
+
+.lh-perm-switch {
+  width:2.4rem !important; height:1.2rem !important; cursor:pointer;
+}
+.lh-perm-switch:checked {
+  background-color:#0d5f9d !important;
+  border-color:#0d5f9d !important;
+}
+.lh-perm-switch:disabled { opacity:.3; cursor:not-allowed; }
+
+/* Footer */
+.lh-perm-footer {
+  padding:.85rem 1rem;
+  border-top:1.5px solid #dbeafe;
+  flex-shrink:0; background:#fff;
+}
+.lh-perm-save-btn {
+  width:100%; height:2.4rem; border:none;
+  border-radius:8px;
+  background:linear-gradient(135deg,#0b6db6,#0d5f9d);
+  color:#fff; font-size:.85rem; font-weight:600;
+  cursor:pointer; display:flex; align-items:center;
+  justify-content:center; gap:.3rem;
+  transition:opacity .2s;
+}
+.lh-perm-save-btn:disabled { opacity:.6; cursor:not-allowed; }
+.lh-perm-note {
+  font-size:.72rem; color:#9ca3af;
+  margin:.5rem 0 0; display:flex; align-items:center;
+}
+
+@media (max-width:700px) {
+  .lh-perm-drawer { width:100vw; }
+  .lh-perm-body { flex-direction:column; }
+  .lh-perm-users {
+    width:100%; height:200px;
+    border-right:none; border-bottom:1.5px solid #dbeafe;
+  }
+}

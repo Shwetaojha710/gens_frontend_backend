@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import {
   ApexAxisChartSeries,
@@ -16,6 +18,7 @@ import {
 } from 'ng-apexcharts';
 import { Notyf } from 'notyf';
 import { EmployeePortalService } from '../services/employee-portal.service';
+import { environment } from '../../../environments/environment';
 
 type EpDonutOptions = Partial<{
   series: ApexNonAxisChartSeries;
@@ -172,7 +175,7 @@ const EP_DASH_TIPS: readonly string[] = [
 @Component({
   selector: 'app-employee-portal-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, NgApexchartsModule],
+  imports: [CommonModule, FormsModule, RouterLink, NgApexchartsModule],
   templateUrl: './employee-portal-dashboard.component.html',
   styleUrls: ['./employee-portal-dashboard.component.css'],
 })
@@ -210,7 +213,9 @@ export class EmployeePortalDashboardComponent implements OnInit {
   teamAttendanceLoading = false;
   teamAttendanceRaw: Record<string, unknown>[] = [];
   teamBranchGroups: TeamBranchGroup[] = [];
+  teamBranchNames: string[] = ['All'];
   teamBranchFilter = 'All';
+  private teamBranchIdMap: Map<string, string> = new Map();
   expandedTeamBranches: Set<string> = new Set();
   teamDetailPanel: { title: string; members: TeamMember[] } | null = null;
   leavesActionLoading: Set<string> = new Set();
@@ -220,7 +225,116 @@ export class EmployeePortalDashboardComponent implements OnInit {
   userRole = '';
   userBranchId = '';
 
-  constructor(private api: EmployeePortalService) {}
+  // ── Chatbot ──────────────────────────────────────────────────────────────
+  isChatOpen = false;
+  chatMessages: { role: 'user' | 'bot'; text: string }[] = [];
+  chatInput = '';
+  chatLoading = false;
+  isListening = false;
+  micLang: 'hi-IN' | 'en-IN' = 'hi-IN';
+  recordingLabel = '● Listening…';
+  private recognition: any = null;
+  private readonly CHAT_API = environment.chatApiUrl;
+
+  toggleChat(): void {
+    this.isChatOpen = !this.isChatOpen;
+    if (this.isChatOpen && this.chatMessages.length === 0) {
+      this.chatMessages.push({ role: 'bot', text: 'Hi! How can I help you today?' });
+    }
+  }
+
+  sendChatMessage(): void {
+    const text = this.chatInput.trim();
+    if (!text || this.chatLoading) return;
+    this.chatMessages.push({ role: 'user', text });
+    this.chatInput = '';
+    this.chatLoading = true;
+    this.http.post<{ reply?: string; message?: string; response?: string }>(this.CHAT_API, { message: text, session_id: this.myEmployeeId || 'guest' }).subscribe({
+      next: (res) => {
+        const reply = res.reply ?? res.message ?? res.response ?? 'Done!';
+        this.chatMessages.push({ role: 'bot', text: reply });
+        this.chatLoading = false;
+      },
+      error: () => {
+        this.chatMessages.push({ role: 'bot', text: 'Sorry, something went wrong. Please try again.' });
+        this.chatLoading = false;
+      },
+    });
+  }
+
+  onChatKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      this.sendChatMessage();
+    }
+  }
+
+  toggleMic(): void {
+    if (this.isListening) {
+      this.isListening = false;
+      this.recordingLabel = '● Listening…';
+      this.recognition?.stop();
+      return;
+    }
+
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      this.notyf.error('Speech recognition is not supported in this browser. Use Chrome or Edge.');
+      return;
+    }
+
+    this.recognition = new SR();
+    this.recognition.lang = this.micLang;
+    this.recognition.interimResults = true;
+    this.recognition.continuous = true;
+    this.recognition.maxAlternatives = 1;
+
+    this.isListening = true;
+    this.chatInput = '';
+    this.recordingLabel = '● Listening…';
+    let finalText = '';
+
+    this.recognition.onresult = (event: any) => {
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalText += t + ' ';
+        } else {
+          interim = t;
+        }
+      }
+      this.chatInput = (finalText + interim).trim();
+      this.recordingLabel = `● ${this.chatInput || 'Listening…'}`;
+    };
+
+    this.recognition.onerror = (event: any) => {
+      if (event.error === 'no-speech' || event.error === 'network') return;
+      this.isListening = false;
+      this.recordingLabel = '● Listening…';
+      if (event.error === 'not-allowed') {
+        this.notyf.error('Microphone access denied. Allow mic in browser settings and reload.');
+      } else {
+        this.notyf.error('Mic error: ' + event.error);
+      }
+    };
+
+    this.recognition.onend = () => {
+      if (this.isListening) {
+        try { this.recognition.start(); } catch { /* ignore */ }
+      }
+    };
+
+    try {
+      this.recognition.start();
+    } catch {
+      this.isListening = false;
+      this.notyf.error('Could not start microphone.');
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
+  constructor(private api: EmployeePortalService, private http: HttpClient) {}
 
   ngOnInit(): void {
     try {
@@ -237,6 +351,9 @@ export class EmployeePortalDashboardComponent implements OnInit {
     }
     this.refresh();
     if (this.showTeamAttendance) {
+      if (this.isBranchView) {
+        this.loadTenantBranches();
+      }
       this.loadTeamAttendance();
     }
     if (this.showManagerActions) {
@@ -253,18 +370,44 @@ export class EmployeePortalDashboardComponent implements OnInit {
     return this.userRole === 'manager' || this.userRole === 'director';
   }
 
-  get teamBranchNames(): string[] {
-    return ['All', ...new Set(this.teamAttendanceRaw.map((r) => String(r['branchName'] || 'Unknown')))];
+  private refreshTeamBranchNames(): void {
+    // fallback: derive from attendance data if tenant branch load failed
+    this.teamBranchIdMap.clear();
+    for (const r of this.teamAttendanceRaw) {
+      const name = String(r['branchName'] || 'Unknown');
+      const id = String(r['branchId'] || '');
+      if (id && !this.teamBranchIdMap.has(name)) {
+        this.teamBranchIdMap.set(name, id);
+      }
+    }
+    this.teamBranchNames = ['All', ...new Set(this.teamAttendanceRaw.map((r) => String(r['branchName'] || 'Unknown')))];
+  }
+
+  loadTenantBranches(): void {
+    this.api.getTenantBranches().subscribe({
+      next: (branches) => {
+        if (branches.length === 0) return;
+        this.teamBranchIdMap.clear();
+        for (const b of branches) {
+          this.teamBranchIdMap.set(b.name, b.id);
+        }
+        this.teamBranchNames = ['All', ...branches.map((b) => b.name)];
+      },
+      error: () => { /* pills fall back to attendance-derived list */ },
+    });
   }
 
   loadTeamAttendance(): void {
     this.teamAttendanceLoading = true;
-    // manager/director always fetch all branches up front; filter client-side on pill click
     const filter = this.isBranchView ? 'All' : undefined;
     this.api.getTeamsAttendance(filter).subscribe({
       next: (rows) => {
         this.teamAttendanceRaw = rows;
-        this.teamBranchGroups = this.buildBranchGroups(rows);
+        if (this.teamBranchNames.length <= 1) {
+          this.refreshTeamBranchNames();
+        }
+        const required = this.isBranchView ? [...this.teamBranchIdMap.keys()] : undefined;
+        this.teamBranchGroups = this.buildBranchGroups(rows, required);
         this.teamAttendanceLoading = false;
         if (this.teamBranchGroups.length > 0) {
           this.expandedTeamBranches.add(this.teamBranchGroups[0].branchName);
@@ -279,20 +422,42 @@ export class EmployeePortalDashboardComponent implements OnInit {
   }
 
   onTeamBranchFilterChange(branchName: string): void {
+    if (this.teamBranchFilter === branchName || this.teamAttendanceLoading) return;
     this.teamBranchFilter = branchName;
     this.expandedTeamBranches.clear();
-    const filtered =
-      branchName === 'All'
-        ? this.teamAttendanceRaw
-        : this.teamAttendanceRaw.filter((r) => String(r['branchName'] || 'Unknown') === branchName);
-    this.teamBranchGroups = this.buildBranchGroups(filtered);
-    if (this.teamBranchGroups.length > 0) {
-      this.expandedTeamBranches.add(this.teamBranchGroups[0].branchName);
-    }
+    this.teamDetailPanel = null;
+    this.teamAttendanceLoading = true;
+
+    const branchId = branchName === 'All' ? 'All' : (this.teamBranchIdMap.get(branchName) ?? 'All');
+
+    this.api.getTeamsAttendance(branchId).subscribe({
+      next: (rows) => {
+        this.teamAttendanceRaw = rows;
+        if (branchName === 'All') {
+          this.refreshTeamBranchNames();
+        }
+        // For "All": seed every known branch. For specific branch: seed just that one.
+        const required = branchName === 'All'
+          ? [...this.teamBranchIdMap.keys()]
+          : [branchName];
+        this.teamBranchGroups = this.buildBranchGroups(rows, required);
+        if (this.teamBranchGroups.length > 0) {
+          this.expandedTeamBranches.add(this.teamBranchGroups[0].branchName);
+        }
+        this.teamAttendanceLoading = false;
+      },
+      error: () => {
+        this.teamAttendanceLoading = false;
+      },
+    });
   }
 
-  private buildBranchGroups(rows: Record<string, unknown>[]): TeamBranchGroup[] {
+  private buildBranchGroups(rows: Record<string, unknown>[], requiredBranches?: string[]): TeamBranchGroup[] {
     const branchMap = new Map<string, TeamMember[]>();
+    // Pre-seed required branches so 0-member branches still appear
+    for (const name of (requiredBranches ?? [])) {
+      branchMap.set(name, []);
+    }
     for (const r of rows) {
       const bn = String(r['branchName'] || 'Unknown');
       if (!branchMap.has(bn)) branchMap.set(bn, []);

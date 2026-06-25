@@ -2,6 +2,8 @@ export const environment = {
   production: true,
   apiUrl: 'https://gensdemo.demoquaeretech.in/api/api/',
   python_apiUrl: 'https://gens.demoquaeretech.in/resume_tracker/api/v1/ats',
+      chatApiUrl: 'https://wonderful-den-garlic-disposal.trycloudflare.com/api/chat',
+
   firebase: {
    apiKey: "AIzaSyCBII2E72DiTXfMWyRLoQ2JGtz9EZ1TXks",
   authDomain: "gens-7d05d.firebaseapp.com",

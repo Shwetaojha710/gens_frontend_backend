@@ -1,7 +1,5 @@
 import { Routes } from '@angular/router';
 import { LayoutComponent } from './layout.component';
-import { TrackingComponent } from '../tracking/tracking.component';
-import { LiveTrackingComponent } from '../tracking/live-tracking/live-tracking.component';
 import { AddComponent } from '../employee/add/add.component';
 import { AppointmentLetterComponent } from '../employee/profile/appointment-letter/appointment-letter.component';
 import { DocumentsComponent } from '../employee/profile/documents/documents.component';
@@ -16,10 +14,12 @@ import { SkillsComponent } from '../employee/profile/professional-info/skills/sk
 import { SalaryStructureComponent } from '../employee/profile/salary-structure/salary-structure.component';
 import { ServiceAgreementComponent } from '../employee/profile/service-agreement/service-agreement.component';
 import { SalarySetupComponent } from '../payroll/salary-setup/salary-setup.component';
+import { PermissionGuard } from '../permission.guard';
 
 /**
  * HR app area under `/layout/*` (sidebar in {@link LayoutComponent}).
- * Paths mirror links in `navbar.component.ts`.
+ * Every page is protected by PermissionGuard using the same permKey the
+ * navbar uses — so sidebar-off ≡ route-blocked.
  */
 export const layoutRoutes: Routes = [
   {
@@ -27,16 +27,28 @@ export const layoutRoutes: Routes = [
     component: LayoutComponent,
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+
+      // ── Dashboard ──────────────────────────────────────────────────────────
       {
         path: 'dashboard',
-        loadComponent: () => import('../dashboard/dashboard.component').then((m) => m.DashboardComponent),
+        canActivate: [PermissionGuard],
+        data: { permKey: 'dashboard' },
+        loadComponent: () =>
+          import('../dashboard/dashboard.component').then((m) => m.DashboardComponent),
       },
+
+      // ── Employee Management ────────────────────────────────────────────────
       {
         path: 'employee/list',
-        loadComponent: () => import('../employee/list/list.component').then((m) => m.ListComponent),
+        canActivate: [PermissionGuard],
+        data: { permKey: 'emp-mgmt' },
+        loadComponent: () =>
+          import('../employee/list/list.component').then((m) => m.ListComponent),
       },
       {
         path: 'employee/documents',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'emp-mgmt' },
         loadComponent: () =>
           import('../employee/documents-overview/documents-overview.component').then(
             (m) => m.DocumentsOverviewComponent,
@@ -44,6 +56,8 @@ export const layoutRoutes: Routes = [
       },
       {
         path: 'employee/all-letters',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'emp-mgmt.letters' },
         loadComponent: () =>
           import('../employee/all-letters/all-letters.component').then(
             (m) => m.AllLettersComponent,
@@ -51,39 +65,52 @@ export const layoutRoutes: Routes = [
       },
       {
         path: 'employee/joining',
-        loadComponent: () => import('../employee/joining/joining.component').then((m) => m.JoiningComponent),
+        canActivate: [PermissionGuard],
+        data: { permKey: 'emp-mgmt.add' },
+        loadComponent: () =>
+          import('../employee/joining/joining.component').then((m) => m.JoiningComponent),
       },
       {
         path: 'employee/add',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'emp-mgmt.add' },
         component: AddComponent,
         children: [
-          { path: 'profile/professional-info/qualification', component: QualificationComponent },
-          { path: 'profile/professional-info/personal', component: PersonalDetailsComponent },
-          { path: 'profile/professional-info/experience', component: ExperienceComponent },
-          { path: 'profile/professional-info/skills', component: SkillsComponent },
-          { path: 'profile/professional-info/salary', component: SalaryStructureComponent },
-          { path: 'profile/professional-info/documents', component: DocumentsComponent },
-          { path: 'profile/professional-info/bank-details', component: BankDetailsComponent },
-          { path: 'profile/professional-info/assign-leave', component: AssignLeaveComponent },
-          { path: 'profile/professional-info/salary-setup', component: SalarySetupComponent },
-          { path: 'profile/professional-info/nda', component: NdaComponent },
-          { path: 'profile/professional-info/service-agreement', component: ServiceAgreementComponent },
-          { path: 'profile/professional-info/appointment-letter', component: AppointmentLetterComponent },
-          { path: 'profile/professional-info/offer-letter', component: OfferLetterComponent },
+          { path: 'profile/professional-info/qualification',    component: QualificationComponent },
+          { path: 'profile/professional-info/personal',         component: PersonalDetailsComponent },
+          { path: 'profile/professional-info/experience',       component: ExperienceComponent },
+          { path: 'profile/professional-info/skills',           component: SkillsComponent },
+          { path: 'profile/professional-info/salary',           component: SalaryStructureComponent },
+          { path: 'profile/professional-info/documents',        component: DocumentsComponent },
+          { path: 'profile/professional-info/bank-details',     component: BankDetailsComponent },
+          { path: 'profile/professional-info/assign-leave',     component: AssignLeaveComponent },
+          { path: 'profile/professional-info/salary-setup',     component: SalarySetupComponent },
+          { path: 'profile/professional-info/nda',              component: NdaComponent },
+          { path: 'profile/professional-info/service-agreement',component: ServiceAgreementComponent },
+          { path: 'profile/professional-info/appointment-letter',component: AppointmentLetterComponent },
+          { path: 'profile/professional-info/offer-letter',     component: OfferLetterComponent },
         ],
       },
       {
         path: 'employee/apply-leave',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'emp-mgmt.leave' },
         loadComponent: () =>
           import('../employee/apply-leave/apply-leave.component').then((m) => m.ApplyLeaveComponent),
       },
+
+      // ── Attendance & Shift ─────────────────────────────────────────────────
       {
         path: 'attendance/shift',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'att.shift' },
         loadComponent: () =>
           import('../attendance/shift-master/shift-master.component').then((m) => m.ShiftMasterComponent),
       },
       {
         path: 'attendance/date-wise-attendance',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'att.datewise' },
         loadComponent: () =>
           import('../attendance/date-wise-attendance/date-wise-attendance.component').then(
             (m) => m.DateWiseAttendanceComponent,
@@ -91,18 +118,29 @@ export const layoutRoutes: Routes = [
       },
       {
         path: 'attendance/holiday',
-        loadComponent: () => import('../attendance/holiday/holiday.component').then((m) => m.HolidayComponent),
+        canActivate: [PermissionGuard],
+        data: { permKey: 'att.holiday' },
+        loadComponent: () =>
+          import('../attendance/holiday/holiday.component').then((m) => m.HolidayComponent),
       },
       {
         path: 'attendance/logs',
-        loadComponent: () => import('../attendance/logs/logs.component').then((m) => m.LogsComponent),
+        canActivate: [PermissionGuard],
+        data: { permKey: 'att.logs' },
+        loadComponent: () =>
+          import('../attendance/logs/logs.component').then((m) => m.LogsComponent),
       },
       {
         path: 'attendance/leaves',
-        loadComponent: () => import('../attendance/leaves/leaves.component').then((m) => m.LeavesComponent),
+        canActivate: [PermissionGuard],
+        data: { permKey: 'att.leaves' },
+        loadComponent: () =>
+          import('../attendance/leaves/leaves.component').then((m) => m.LeavesComponent),
       },
       {
         path: 'attendance/upload-attendance',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'att.upload' },
         loadComponent: () =>
           import('../attendance/attendance-upload/attendance-upload.component').then(
             (m) => m.AttendanceUploadComponent,
@@ -110,21 +148,31 @@ export const layoutRoutes: Routes = [
       },
       {
         path: 'attendance/regularize',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'att.regularize' },
         loadComponent: () =>
           import('../attendance/regularize/regularize.component').then((m) => m.RegularizeComponent),
       },
       {
         path: 'attendance/weekend-emp-list',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'att.weekend' },
         loadComponent: () =>
-          import('../attendance/weekend-emp-list/weekend-emp-list.component').then((m) => m.WeekendEmpListComponent),
+          import('../attendance/weekend-emp-list/weekend-emp-list.component').then(
+            (m) => m.WeekendEmpListComponent,
+          ),
       },
       {
         path: 'attendance/add-comp-off',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'att.compoff' },
         loadComponent: () =>
           import('../attendance/add-comoff/add-comoff.component').then((m) => m.AddComoffComponent),
       },
       {
         path: 'attendance/contractual-approval',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'att.contractual' },
         loadComponent: () =>
           import('../attendance/contractual-approval/contractual-approval.component').then(
             (m) => m.ContractualApprovalComponent,
@@ -132,115 +180,225 @@ export const layoutRoutes: Routes = [
       },
       {
         path: 'attendance/salary-master',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'set.attmaster' },
         loadComponent: () =>
-          import('../attendance/salary-master/salary-master.component').then((m) => m.SalaryMasterComponent),
+          import('../attendance/salary-master/salary-master.component').then(
+            (m) => m.SalaryMasterComponent,
+          ),
       },
+
+      // ── Payroll & Compensation ─────────────────────────────────────────────
       {
         path: 'payroll/full-time',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'pay.generate' },
         loadComponent: () =>
-          import('../payroll/full-time-salary/full-time-salary.component').then((m) => m.FullTimeSalaryComponent),
+          import('../payroll/full-time-salary/full-time-salary.component').then(
+            (m) => m.FullTimeSalaryComponent,
+          ),
       },
       {
         path: 'payroll/generated-salary',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'pay.list' },
         loadComponent: () =>
-          import('../payroll/generated-salary/generated-salary.component').then((m) => m.GeneratedSalaryComponent),
+          import('../payroll/generated-salary/generated-salary.component').then(
+            (m) => m.GeneratedSalaryComponent,
+          ),
       },
       {
         path: 'payroll/deduction-summary',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'pay.deduction' },
         loadComponent: () =>
-          import('../payroll/salary-deduction-summary/salary-deduction-summary.component').then((m) => m.SalaryDeductionSummaryComponent),
+          import('../payroll/salary-deduction-summary/salary-deduction-summary.component').then(
+            (m) => m.SalaryDeductionSummaryComponent,
+          ),
       },
       {
         path: 'payroll/reimbursement',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'pay.reimburse' },
         loadComponent: () =>
-          import('../payroll/reimbursement/reimbursement.component').then((m) => m.ReimbursementComponent),
+          import('../payroll/reimbursement/reimbursement.component').then(
+            (m) => m.ReimbursementComponent,
+          ),
       },
+
+      // ── Reports ───────────────────────────────────────────────────────────
       {
         path: 'reports/employee',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'rep.employee' },
         loadComponent: () =>
           import('../reports/employee/employee.component').then((m) => m.EmployeeComponent),
       },
       {
         path: 'reports/payroll',
-        loadComponent: () => import('../reports/payroll/payroll.component').then((m) => m.PayrollComponent),
+        canActivate: [PermissionGuard],
+        data: { permKey: 'rep.payroll' },
+        loadComponent: () =>
+          import('../reports/payroll/payroll.component').then((m) => m.PayrollComponent),
       },
       {
         path: 'reports/attendance',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'rep.late' },
         loadComponent: () =>
           import('../reports/attendance/attendance.component').then((m) => m.AttendanceComponent),
       },
       {
         path: 'reports/tracking-report',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'rep.tracking' },
         loadComponent: () =>
-          import('../reports/tracking-report/tracking-report.component').then((m) => m.TrackingReportComponent),
+          import('../reports/tracking-report/tracking-report.component').then(
+            (m) => m.TrackingReportComponent,
+          ),
       },
-        {
+
+      // ── Tracking (no permission restriction) ──────────────────────────────
+      {
         path: 'tracking',
-          loadComponent: () =>
+        loadComponent: () =>
           import('../../app/tracking/tracking.component').then((m) => m.TrackingComponent),
-
       },
-        {
+      {
         path: 'tracking/live',
-          loadComponent: () =>
-          import('../../app/tracking/live-tracking/live-tracking.component').then((m) => m.LiveTrackingComponent),
-
+        loadComponent: () =>
+          import('../../app/tracking/live-tracking/live-tracking.component').then(
+            (m) => m.LiveTrackingComponent,
+          ),
       },
-      // {
-      //   path: 'tracking/live',
-      //   component: LiveTrackingComponent
-      // },
+
+      // ── Master ────────────────────────────────────────────────────────────
       {
         path: 'master/designation',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'master.designation' },
         loadComponent: () =>
           import('../master/designation/designation.component').then((m) => m.DesignationComponent),
       },
       {
         path: 'master/department',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'master.department' },
         loadComponent: () =>
           import('../master/department/department.component').then((m) => m.DepartmentComponent),
       },
       {
         path: 'master/employment-type',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'master.emptype' },
         loadComponent: () =>
-          import('../master/employment-type/employment-type.component').then((m) => m.EmploymentTypeComponent),
+          import('../master/employment-type/employment-type.component').then(
+            (m) => m.EmploymentTypeComponent,
+          ),
       },
       {
         path: 'master/documents',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'master.docs' },
         loadComponent: () =>
-          import('../master/document-type/document-type.component').then((m) => m.DocumentTypeComponent),
+          import('../master/document-type/document-type.component').then(
+            (m) => m.DocumentTypeComponent,
+          ),
       },
       {
         path: 'master/holiday-type',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'master.holidaytype' },
         loadComponent: () =>
-          import('../master/holiday-type/holiday-type.component').then((m) => m.HolidayTypeComponent),
+          import('../master/holiday-type/holiday-type.component').then(
+            (m) => m.HolidayTypeComponent,
+          ),
       },
       {
         path: 'master/salary-component',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'master.salary' },
         loadComponent: () =>
-          import('../master/salary-component/salary-component.component').then((m) => m.SalaryComponentComponent),
+          import('../master/salary-component/salary-component.component').then(
+            (m) => m.SalaryComponentComponent,
+          ),
       },
       {
         path: 'master/pay-slip',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'master.payslip' },
         loadComponent: () =>
-          import('../master/payslip-order/payslip-order.component').then((m) => m.PayslipOrderComponent),
+          import('../master/payslip-order/payslip-order.component').then(
+            (m) => m.PayslipOrderComponent,
+          ),
       },
       {
         path: 'master/branch',
-        loadComponent: () => import('../master/branch/branch.component').then((m) => m.BranchComponent),
+        canActivate: [PermissionGuard],
+        data: { permKey: 'master.branch' },
+        loadComponent: () =>
+          import('../master/branch/branch.component').then((m) => m.BranchComponent),
       },
+
+      // ── Setting ───────────────────────────────────────────────────────────
       {
         path: 'master/currency',
-        loadComponent: () => import('../master/currency/currency.component').then((m) => m.CurrencyComponent),
+        canActivate: [PermissionGuard],
+        data: { permKey: 'set.currency' },
+        loadComponent: () =>
+          import('../master/currency/currency.component').then((m) => m.CurrencyComponent),
       },
       {
         path: 'master/prefix',
-        loadComponent: () => import('../master/preffix/preffix.component').then((m) => m.PreffixComponent),
+        canActivate: [PermissionGuard],
+        data: { permKey: 'set.prefix' },
+        loadComponent: () =>
+          import('../master/preffix/preffix.component').then((m) => m.PreffixComponent),
       },
       {
         path: 'master/brand-colors',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'set.brand' },
         loadComponent: () =>
-          import('../master/brand-colors/brand-colors.component').then((m) => m.BrandColorsComponent),
+          import('../master/brand-colors/brand-colors.component').then(
+            (m) => m.BrandColorsComponent,
+          ),
+      },
+      {
+        path: 'master/letterhead',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'set.brand' },
+        loadComponent: () =>
+          import('../master/letterhead/letterhead.component').then(
+            (m) => m.LetterheadComponent,
+          ),
+      },
+      {
+        path: 'master/role-permission',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'set.roleperm' },
+        loadComponent: () =>
+          import('../master/role-permission/role-permission.component').then(
+            (m) => m.RolePermissionComponent,
+          ),
+      },
+      {
+        path: 'master/user-permission',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'set.userperm' },
+        loadComponent: () =>
+          import('../master/user-permission/user-permission.component').then(
+            (m) => m.UserPermissionComponent,
+          ),
+      },
+      {
+        path: 'master/user-access',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'set.sidebaraccess' },
+        loadComponent: () =>
+          import('../master/user-access/user-access.component').then(
+            (m) => m.UserAccessComponent,
+          ),
       },
     ],
   },

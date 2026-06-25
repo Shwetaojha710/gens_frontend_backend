@@ -136,10 +136,16 @@ exports.getLetterData = async (req, res) => {
     }
 };
 
-const getLetterheadBase64 = (type) => {
-    // appointment letter has no letterhead (matches Angular frontend behavior)
-    // offer and relieving both use Letterhead-2.png
+const getLetterheadBase64 = (type, tenantLetterheadFile = null) => {
     if (type === 'appointment') return null;
+
+    // Use tenant's uploaded letterhead if available
+    if (tenantLetterheadFile) {
+        const uploadedPath = path.join(__dirname, '../../../upload', tenantLetterheadFile);
+        try { return `data:image/png;base64,${fs.readFileSync(uploadedPath).toString('base64')}`; } catch (_) {}
+    }
+
+    // Fallback to static asset
     const tryPaths = [
         path.join(__dirname, '../../../../frontend/assets/img', 'Letterhead-2.png'),
         path.join(__dirname, '../../../../frontend/dist/forntend/browser/assets/img', 'Letterhead-2.png')
@@ -437,7 +443,7 @@ exports.generateAllLettersPdf = async (req, res) => {
         const [emp, records, tenant] = await Promise.all([
             empPersonal.findOne({ where: { id: employeeId, tenantId, branchId }, raw: true }),
             LetterData.findAll({ where: { tenantId, branchId, employeeId, type: ['appointment', 'offer', 'relieving'] } }),
-            Tenant.findOne({ where: { id: tenantId }, attributes: ['companyName', 'companyAddress'], raw: true })
+            Tenant.findOne({ where: { id: tenantId }, attributes: ['companyName', 'companyAddress', 'letterhead'], raw: true })
         ]);
 
         if (!emp) return Helper.response(false, 'Employee not found', {}, res, 404);
@@ -450,7 +456,7 @@ exports.generateAllLettersPdf = async (req, res) => {
         const result = { appointment: null, offer: null, relieving: null };
 
         for (const record of records) {
-            const lhB64 = getLetterheadBase64(record.type);
+            const lhB64 = getLetterheadBase64(record.type, tenant && tenant.letterhead);
             const built = buildLetterDoc(record.type, emp, record.data || {}, designation, department, tenant, lhB64);
             if (built) {
                 result[record.type] = await savePdf(built.doc, built.fileName);
@@ -483,7 +489,7 @@ exports.generateLetterPdf = async (req, res) => {
         const [emp, record, tenant] = await Promise.all([
             empPersonal.findOne({ where: { id: employeeId, tenantId, branchId }, raw: true }),
             LetterData.findOne({ where: { tenantId, branchId, employeeId, type } }),
-            Tenant.findOne({ where: { id: tenantId }, attributes: ['companyName', 'companyAddress'], raw: true })
+            Tenant.findOne({ where: { id: tenantId }, attributes: ['companyName', 'companyAddress', 'letterhead'], raw: true })
         ]);
 
         if (!emp) return Helper.response(false, 'Employee not found', {}, res, 404);
@@ -494,7 +500,7 @@ exports.generateLetterPdf = async (req, res) => {
             emp.departmentId ? Department.findOne({ where: { id: emp.departmentId, tenantId }, raw: true }) : null
         ]);
 
-        const lhB64 = getLetterheadBase64(type);
+        const lhB64 = getLetterheadBase64(type, tenant && tenant.letterhead);
         const built = buildLetterDoc(type, emp, record.data || {}, designation, department, tenant, lhB64);
         if (!built) return Helper.response(false, 'Invalid letter type', {}, res, 400);
 

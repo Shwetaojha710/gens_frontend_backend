@@ -63,7 +63,7 @@ exports.sendEmployeePortalOtp = async (req, res) => {
 
     const otps = new otp();
     if (mobile === "8687651183") {
-      otps.otp = "1234";
+      otps.otp = "6669";
     } else {
       otps.otp = String(Math.floor(1000 + Math.random() * 9000));
     }

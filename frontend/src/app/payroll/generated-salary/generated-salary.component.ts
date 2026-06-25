@@ -202,22 +202,18 @@ export class GeneratedSalaryComponent {
   EmpList: any = []
   async empList() {
     this.EmpList = []
-    this.master.getemployeeList().subscribe((data: { [x: string]: any; data: any; }) => {
+    // Use getEmployeeListAll so inactive employees also appear in the dropdown
+    // (this page is the only one that uses this variant; no other page is affected)
+    this.master.getEmployeeListAll().subscribe((data: { [x: string]: any; data: any; }) => {
       console.log(data)
       if (data['status'] == true) {
-        // this.notyf.success(data['message']);
         this.EmpList = data.data;
-        console.log(this.EmpList, "attendance master list");
-
+        console.log(this.EmpList, "employee list (including inactive)");
       }
       else if (data['status'] == 'expired') {
         this.router.navigate(['login'])
       }
-      else {
-        // this.notyf.error(data['message']);
-      }
     });
-
   }
 
   back() {

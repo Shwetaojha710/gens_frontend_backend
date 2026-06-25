@@ -1,0 +1,127 @@
+<div class="container-fluid mt-5">
+
+  <!-- Page Card -->
+  <div class="row mb-4">
+    <div class="col-md">
+      <div class="card">
+
+        <!-- Card Header -->
+        <h5 class="card-header d-flex justify-content-between align-items-center">
+          <span>
+            <i class="ri ri-shield-keyhole-line me-1"></i>
+            Role Permissions
+          </span>
+          <div class="d-flex gap-2">
+            <a routerLink="/layout/master/user-permission" class="btn btn-xs btn-outline-success">
+              <i class="ri ri-user-settings-line"></i>&nbsp;User Permissions
+            </a>
+            <a routerLink="/layout/master/user-access" class="btn btn-xs btn-outline-info">
+              <i class="ri ri-eye-line"></i>&nbsp;Preview Access
+            </a>
+            <button type="button" class="btn btn-xs btn-outline-secondary" (click)="reset()">
+              <i class="fa-solid fa-rotate-left"></i>&nbsp;Reset Default
+            </button>
+            <button type="button" class="btn btn-xs btn-primary" (click)="save()">
+              <i class="fa-solid fa-floppy-disk"></i>&nbsp;Save Changes
+            </button>
+          </div>
+        </h5>
+
+        <!-- Role Legend Pills -->
+        <div class="card-body border-bottom py-2">
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            <small class="text-muted fw-semibold me-1">Roles:</small>
+            <span *ngFor="let role of allRoles"
+              class="badge rounded-pill px-3 py-1"
+              [style.background-color]="roleColor(role) + '20'"
+              [style.color]="roleColor(role)"
+              [style.border]="'1.5px solid ' + roleColor(role) + '50'">
+              {{ roleLabels[role] }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Permission Table -->
+        <div class="table-responsive">
+          <table class="table table-hover dataTable mb-0">
+            <thead>
+              <tr>
+                <th style="min-width:220px">Menu / Section</th>
+                <th *ngFor="let role of allRoles"
+                    class="text-center"
+                    [style.color]="roleColor(role)">
+                  {{ roleLabels[role] }}
+                </th>
+              </tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+
+              <ng-container *ngFor="let section of sections">
+
+                <!-- Parent Section Row -->
+                <tr class="table-light" style="cursor:pointer" (click)="toggleExpand(section.key)">
+                  <td>
+                    <span class="me-2 text-muted" style="font-size:0.8rem">
+                      <i class="fa-solid" [class.fa-chevron-down]="isExpanded(section.key)" [class.fa-chevron-right]="!isExpanded(section.key)"></i>
+                    </span>
+                    <i class="ri {{ section.icon }} me-1 text-primary"></i>
+                    <strong>{{ section.label }}</strong>
+                    <span class="badge bg-label-info ms-2" *ngIf="section.children">
+                      {{ section.children.length }} items
+                    </span>
+                  </td>
+                  <td *ngFor="let role of allRoles" class="text-center" (click)="$event.stopPropagation()">
+                    <div class="form-check form-switch d-flex justify-content-center m-0">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        role="switch"
+                        [checked]="hasRole(section.roles, role)"
+                        (change)="toggleParentRole(section, role)"
+                      />
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Child Item Rows -->
+                <ng-container *ngIf="isExpanded(section.key) && section.children">
+                  <tr *ngFor="let child of section.children">
+                    <td style="padding-left:2.5rem">
+                      <span class="text-muted me-2">—</span>
+                      {{ child.label }}
+                    </td>
+                    <td *ngFor="let role of allRoles" class="text-center">
+                      <div class="form-check form-switch d-flex justify-content-center m-0">
+                        <input
+                          class="form-check-input"
+                          type="checkbox"
+                          role="switch"
+                          [checked]="hasRole(child.roles, role)"
+                          [disabled]="!hasRole(section.roles, role)"
+                          (change)="toggleRole(child.roles, role)"
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                </ng-container>
+
+              </ng-container>
+
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Footer Note -->
+        <div class="card-footer">
+          <small class="text-muted">
+            <i class="ri ri-information-line me-1"></i>
+            Click <strong>Save Changes</strong> to apply. Reload the page after saving to see updated sidebar menus.
+            Child items (greyed toggles) are automatically disabled if the parent section is off for that role.
+          </small>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>

@@ -18,7 +18,8 @@ createEmp(data: any): Observable<any> {
 }
 
 getEmp(): Observable<any[]> {
-  return this.http.post<any[]>(`${this.baseUrl}getEmp`, {});
+  const branchId = localStorage.getItem('branchId') || '';
+  return this.http.post<any[]>(`${this.baseUrl}getEmp`, { branchId });
 }
 
 getCountry(): Observable<any[]> {

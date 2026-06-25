@@ -1669,7 +1669,8 @@ exports.TeamsAttendance = async (req, res) => {
     let branchIds = [];
     const userBranchId = req.users?.branchId;
 
-    if (!userBranchId) {
+    // Director may not have a specific branchId assigned — allow them through
+    if (!userBranchId && role !== "director") {
       return Helper.response(false, "branchId is required!", {}, res, 200);
     }
 
@@ -1681,13 +1682,20 @@ exports.TeamsAttendance = async (req, res) => {
           attributes: ["id"],
           raw: true,
         });
-
         branchIds = branches.map((b) => b.id);
       } else {
         branchIds = [req.query.branchId];
       }
-    } else {
+    } else if (userBranchId) {
       branchIds = [userBranchId];
+    } else {
+      // Director with no branchId and no query param → fetch all branches
+      const branches = await branch.findAll({
+        where: { tenantId, status: "active" },
+        attributes: ["id"],
+        raw: true,
+      });
+      branchIds = branches.map((b) => b.id);
     }
 
     // ✅ Fetch Employees
@@ -1697,10 +1705,10 @@ exports.TeamsAttendance = async (req, res) => {
       status: "active",
     };
 
-    if (role === "director") {
+    if (role == "director") {
       // Director sees all employees across fetched branches — no hierarchy filter
-    } else if (role === "manager") {
-      const branchFilter = req.query.branchId === "All" ? "All" : userBranchId;
+    } else if (role == "manager") {
+      const branchFilter = req.query.branchId === "All" ? "All" : (req.query.branchId || userBranchId);
       const subordinateIds = await Helper.getAllSubordinates(reportingPersonId, branchFilter, tenantId);
       employeeWhere.id = { [Op.in]: [...subordinateIds, reportingPersonId] };
     } else {
@@ -1727,11 +1735,11 @@ exports.TeamsAttendance = async (req, res) => {
 
     if (!teamEmployees.length) {
       return Helper.response(
-        false,
+        true,
         "No Employee is present in the team",
         [],
         res,
-        404,
+        200,
       );
     }
 
@@ -1739,170 +1747,144 @@ exports.TeamsAttendance = async (req, res) => {
     const today = moment().format("YYYY-MM-DD");
     const currentDay = moment().format("dddd");
 
-    // ✅ Fetch today's attendance
-    const records = await attendance.findAll({
-      where: {
-        employeeId: { [Op.in]: employeeIds },
-        tenantId,
-        branchId: { [Op.in]: branchIds },
-        date: today,
-      },
-      attributes: [
-        "employeeId",
-        "check_in_time",
-        "check_out_time",
-        "is_present",
-      ],
-      raw: true,
-    });
+    // Collect unique IDs for batch fetching
+    const uniqueBranchIds  = [...new Set(teamEmployees.map((e) => e.branchId).filter(Boolean))];
+    const uniqueDesigIds   = [...new Set(teamEmployees.map((e) => e.designationId).filter(Boolean))];
+    const uniqueDeptIds    = [...new Set(teamEmployees.map((e) => e.departmentId).filter(Boolean))];
+    const uniqueShiftIds   = [...new Set(teamEmployees.map((e) => e.shift_id).filter(Boolean))];
 
-    const data = await Promise.all(
-      teamEmployees.map(async (emp) => {
-        const record = records.find((r) => r.employeeId == emp.id);
+    // Single round-trip: fetch everything in parallel
+    const [
+      records,
+      allSettings,
+      allDesignations,
+      allBranches,
+      allDepartments,
+      allShifts,
+      todayHoliday,
+      allLeaves,
+    ] = await Promise.all([
+      attendance.findAll({
+        where: { employeeId: { [Op.in]: employeeIds }, tenantId, date: today },
+        attributes: ["employeeId", "check_in_time", "check_out_time", "is_present"],
+        raw: true,
+      }),
+      attendanceSetting.findAll({
+        where: { branchId: { [Op.in]: uniqueBranchIds }, tenantId },
+        raw: true,
+      }),
+      Designation.findAll({
+        where: { id: { [Op.in]: uniqueDesigIds } },
+        attributes: ["id", "name", "branchId"],
+        raw: true,
+      }),
+      branch.findAll({
+        where: { id: { [Op.in]: uniqueBranchIds }, tenantId },
+        attributes: ["id", "name"],
+        raw: true,
+      }),
+      Department.findAll({
+        where: { id: { [Op.in]: uniqueDeptIds } },
+        attributes: ["id", "name", "branchId"],
+        raw: true,
+      }),
+      Shift.findAll({
+        where: { shift: { [Op.in]: uniqueShiftIds }, tenantId, status: "active" },
+        raw: true,
+      }),
+      holiday.findOne({ where: { date: today } }),
+      leave_application.findAll({
+        where: {
+          employeeId: { [Op.in]: employeeIds },
+          fromDate: { [Op.lte]: today },
+          toDate:   { [Op.gte]: today },
+        },
+        raw: true,
+      }),
+    ]);
 
-        const attendanceSettings = await attendanceSetting.findOne({
-          where: { branchId: emp.branchId, tenantId },
-          raw: true,
-        });
+    // Build lookup maps
+    const settingsMap   = new Map(allSettings.map((s) => [s.branchId, s]));
+    const designMap     = new Map(allDesignations.map((d) => [d.id, d]));
+    const branchMapLkp  = new Map(allBranches.map((b) => [b.id, b]));
+    const deptMap       = new Map(allDepartments.map((d) => [d.id, d]));
+    const leaveMap      = new Map(allLeaves.map((l) => [l.employeeId, l]));
 
-        const designation = await Designation.findOne({
-          where: {
-            id: emp.designationId,
-            branchId: emp.branchId,
-          },
-          attributes: ["name"],
-          raw: true,
-        });
+    // Synchronous map — zero per-employee DB calls
+    const data = teamEmployees.map((emp) => {
+      const record            = records.find((r) => r.employeeId == emp.id);
+      const attendanceSettings = settingsMap.get(emp.branchId);
+      const designation       = designMap.get(emp.designationId);
+      const branchDetails     = branchMapLkp.get(emp.branchId);
+      const department        = deptMap.get(emp.departmentId);
+      const empShifts         = allShifts.filter((s) => s.shift === emp.shift_id && s.branchId === emp.branchId);
+      const todayShift        = empShifts.find((s) => s.day_of_week == currentDay);
 
-        const branchDetails = await branch.findOne({
-          where: {
-            id: emp.branchId,
-            tenantId,
-          },
-          attributes: ["name"],
-          raw: true,
-        });
+      let status  = "Absent";
+      let checkIn  = null;
+      let checkOut = null;
 
-        const department = await Department.findOne({
-          where: {
-            id: emp.departmentId,
-            branchId: emp.branchId, // ✅ fixed
-          },
-          attributes: ["name"],
-          raw: true,
-        });
+      if (record) {
+        checkIn  = record.check_in_time  ? record.check_in_time.split(" ")[1]  : null;
+        checkOut = record.check_out_time ? record.check_out_time.split(" ")[1] : null;
 
-        const shiftMap = await Shift.findAll({
-          where: {
-            shift: emp.shift_id,
-            branchId: emp.branchId,
-            tenantId,
-            status: "active",
-          },
-          raw: true,
-        });
+        if (checkIn && todayShift) {
+          const allowedTime  = moment(todayShift.startTime, "HH:mm:ss");
+          const actualCheckIn = moment(checkIn, "HH:mm:ss");
+          const graceMinutes = attendanceSettings?.graceMinutes || 0;
+          const graceLimit   = allowedTime.clone().add(graceMinutes, "minutes");
 
-        const todayShift = shiftMap.find((s) => s.day_of_week == currentDay);
-
-        let status = "Absent";
-        let checkIn = null;
-        let checkOut = null;
-
-        if (record) {
-          checkIn = record.check_in_time
-            ? record.check_in_time.split(" ")[1]
-            : null;
-
-          checkOut = record.check_out_time
-            ? record.check_out_time.split(" ")[1]
-            : null;
-
-          if (checkIn && todayShift) {
-            const allowedTime = moment(todayShift.startTime, "HH:mm:ss");
-            const actualCheckIn = moment(checkIn, "HH:mm:ss");
-            const graceMinutes = attendanceSettings?.graceMinutes || 0;
-
-            const graceLimit = allowedTime.clone().add(graceMinutes, "minutes");
-
-            if (actualCheckIn.isAfter(graceLimit)) {
-              const minutesLate = actualCheckIn.diff(graceLimit, "minutes");
-
-              if (minutesLate >= 60) {
-                const hoursLate = Math.floor(minutesLate / 60);
-                const remainingMins = minutesLate % 60;
-                status = `Late by ${hoursLate} hr ${remainingMins} min`;
-              } else {
-                status = `Late by ${minutesLate} min`;
-              }
+          if (actualCheckIn.isAfter(graceLimit)) {
+            const minutesLate = actualCheckIn.diff(graceLimit, "minutes");
+            if (minutesLate >= 60) {
+              const hoursLate     = Math.floor(minutesLate / 60);
+              const remainingMins = minutesLate % 60;
+              status = `Late by ${hoursLate} hr ${remainingMins} min`;
             } else {
-              status = "On Time";
+              status = `Late by ${minutesLate} min`;
             }
-          }
-        } else {
-          const holidaydata = await holiday.findOne({
-            where: {
-              date: today,
-            },
-          });
-          if (holidaydata) {
-            status = "holiday";
           } else {
-            const leaveData = await leave_application.findOne({
-              where: {
-                employeeId: emp.id,
-                fromDate: {
-                  [Op.lte]: today,
-                },
-                toDate: {
-                  [Op.gte]: today,
-                },
-              },
-            });
-            if (leaveData) {
-              if (leaveData.fromDate == today && leaveData.toDate == today) {
-                if (leaveData.duration_type == "first_half") {
-                  status = "First Half Leave";
-                } else if (leaveData.duration_type == "second_half") {
-                  status = "Second Half Leave";
-                } else {
-                  status = "Full Day Leave";
-                }
-              } else if (leaveData.fromDate == today) {
-                if (leaveData.duration_type == "second_half") {
-                  status = "Second Half Leave";
-                } else {
-                  status = "Full Day Leave";
-                }
-              } else if (leaveData.toDate == today) {
-                if (leaveData.to_duration_type == "first_half") {
-                  status = "First Half Leave";
-                } else {
-                  status = "Full Day Leave";
-                }
-              } else {
-                status = "Full Day Leave";
-              }
+            status = "On Time";
+          }
+        }
+      } else {
+        if (todayHoliday) {
+          status = "holiday";
+        } else {
+          const leaveData = leaveMap.get(emp.id);
+          if (leaveData) {
+            if (leaveData.fromDate == today && leaveData.toDate == today) {
+              if (leaveData.duration_type == "first_half")       status = "First Half Leave";
+              else if (leaveData.duration_type == "second_half") status = "Second Half Leave";
+              else                                                status = "Full Day Leave";
+            } else if (leaveData.fromDate == today) {
+              status = leaveData.duration_type == "second_half" ? "Second Half Leave" : "Full Day Leave";
+            } else if (leaveData.toDate == today) {
+              status = leaveData.to_duration_type == "first_half" ? "First Half Leave" : "Full Day Leave";
+            } else {
+              status = "Full Day Leave";
             }
           }
         }
+      }
 
-        return {
-          employeeId: emp.id,
-          employee_name: `${emp.firstName} ${emp.lastName}`,
-          date: today,
-          checkIn,
-          checkOut,
-          status,
-          branchName: branchDetails?.name ?? null,
-          designation: designation?.name ?? null,
-          department: department?.name ?? null,
-          day: currentDay,
-          joiningDate: emp.joiningDate,
-          dateOfBirth: emp.dateOfBirth,
-          profileImage: emp.profileImage ?? null,
-        };
-      }),
-    );
+      return {
+        employeeId:   emp.id,
+        employee_name: `${emp.firstName} ${emp.lastName}`,
+        date:         today,
+        checkIn,
+        checkOut,
+        status,
+        branchId:     emp.branchId,
+        branchName:   branchDetails?.name  ?? null,
+        designation:  designation?.name    ?? null,
+        department:   department?.name     ?? null,
+        day:          currentDay,
+        joiningDate:  emp.joiningDate,
+        dateOfBirth:  emp.dateOfBirth,
+        profileImage: emp.profileImage     ?? null,
+      };
+    });
 
     return Helper.response(
       true,
@@ -2309,25 +2291,25 @@ exports.EmployeeDetails = async (req, res) => {
       }),
       isStateInt
         ? State.findOne({
-            where: { id: employee?.state, branchId },
+            where: { id: employee?.state },
             attributes: ["name"],
             raw: true,
           })
-        : Promise.resolve(null),
+        : employee?.state,
       isCountryInt
         ? Country.findOne({
-            where: { id: employee?.country, branchId },
+            where: { id: employee?.country },
             attributes: ["name"],
             raw: true,
           })
-        : Promise.resolve(null),
+        :employee?.country,
       isCityInt
         ? City.findOne({
-            where: { id: employee?.city, branchId },
+            where: { id: employee?.city},
             attributes: ["name"],
             raw: true,
           })
-        : Promise.resolve(null),
+        : employee?.city,
       EmploymentType.findOne({
         where: {
           id: employee?.empType,
@@ -2370,10 +2352,7 @@ exports.EmployeeDetails = async (req, res) => {
       // check_out_flag: true ,
       check_in_time: empAttendance?.check_in_time ?? "",
       check_out_time: empAttendance?.check_out_time ?? "",
-      profileImage:
-        (employee?.profileImage && String(employee.profileImage).trim()) ||
-        (empAttendance?.profileImage && String(empAttendance.profileImage).trim()) ||
-        "",
+      profileImage: (employee?.profileImage && String(employee.profileImage).trim()) || (empAttendance?.profileImage && String(empAttendance.profileImage).trim()) || "",
       reportingPersonName: `${reportingPerson?.firstName} ${reportingPerson?.lastName} `,
     };
 
@@ -2894,7 +2873,7 @@ exports.AppupdatedApplyLeaveStatus = async (req, res) => {
 
     let remainingLeaves;
     if (await existingLeave.save()) {
-      if (status === "approved") {
+      if (status == "approved") {
         const fromDate = new Date(existingLeave.fromDate);
         const fromMonth = fromDate.getMonth() + 1;
         const fromYear = fromDate.getFullYear();
@@ -4601,7 +4580,6 @@ exports.updateRegularizationStatus = async (req, res) => {
       request.status = status;
       request.approverId = approverId;
       request.approvedAt = new Date();
-      await request.save({ transaction: t });
 
       // Only process attendance if approved
       if (status == "approved") {
@@ -4640,6 +4618,11 @@ exports.updateRegularizationStatus = async (req, res) => {
         });
 
         if (existingAttendance) {
+          // Store originals so they can be restored if this approval is reverted
+          request.originalCheckIn = existingAttendance.check_in_time;
+          request.originalCheckOut = existingAttendance.check_out_time;
+          request.wasNewAttendance = false;
+
           await attendance.update(
             {
               check_in_time: checkIn || existingAttendance.check_in_time,
@@ -4657,6 +4640,11 @@ exports.updateRegularizationStatus = async (req, res) => {
             },
           );
         } else {
+          // No prior attendance record — we are creating one fresh
+          request.originalCheckIn = null;
+          request.originalCheckOut = null;
+          request.wasNewAttendance = true;
+
           await attendance.create(
             {
               id: uuidv4(),
@@ -4676,6 +4664,8 @@ exports.updateRegularizationStatus = async (req, res) => {
           );
         }
       }
+
+      await request.save({ transaction: t });
     }
 
     await t.commit();
@@ -4690,6 +4680,7 @@ exports.updateRegularizationStatus = async (req, res) => {
 exports.markattendance = async (req, res) => {
   try {
     const { tenantId, id: employeeId } = req.users;
+    const branchId = req.users?.branchId || null;
 
     if (!tenantId || !employeeId) {
       return Helper.response(false, "User not found", {}, res, 404);
@@ -4699,7 +4690,11 @@ exports.markattendance = async (req, res) => {
     const date = today.toISOString().split("T")[0];
     const month = today.getMonth() + 1;
     const year = today.getFullYear();
-    const time = today.toLocaleTimeString();
+
+    // Format: YYYY-MM-DD HH:mm:ss  e.g. 2026-06-01 09:30:50
+    const pad = (n) => String(n).padStart(2, "0");
+    const datetime = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())} ${pad(today.getHours())}:${pad(today.getMinutes())}:${pad(today.getSeconds())}`;
+
     const ip_address =
       req.headers["x-forwarded-for"] || req.socket.remoteAddress;
 
@@ -4712,13 +4707,14 @@ exports.markattendance = async (req, res) => {
       attendanceRecord = await attendance.create({
         tenantId,
         employeeId,
+        branchId,
         date,
         month,
         year,
         ip_address,
         Inlatitude: req.body.latitude || null,
         Inlongitude: req.body.longitude || null,
-        check_in_time: time,
+        check_in_time: datetime,
         is_present: true,
         createdBy: employeeId,
         check_in_img: req.files?.[0]?.filename || null,
@@ -4743,7 +4739,7 @@ exports.markattendance = async (req, res) => {
     //   );
     // }
 
-    attendanceRecord.check_out_time = time;
+    attendanceRecord.check_out_time = datetime;
     attendanceRecord.check_out_img = req.files?.[0]?.filename || null;
     attendanceRecord.updatedBy = employeeId;
     attendanceRecord.Outlatitude = req.body.latitude || null;

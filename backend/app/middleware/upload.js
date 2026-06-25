@@ -1,10 +1,10 @@
 const multer = require('multer');
-const path =require("path");
+const path = require("path");
 const { v4: uuidv4 } = require("uuid");
 
 const storage = multer.diskStorage({
-    destination : (req, file, cb)=>{    //It takes three arguments: req (the incoming request), file (the file being uploaded), and cb a callback function that is used to pass a result back to multer (to either allow or deny the file upload).
-        cb(null,'upload/');
+    destination : (req, file, cb)=>{
+        cb(null, path.join(__dirname, '../../upload'));
         //Inside this function, cb(null, 'uploads/') tells multer to store the file in the uploads/ directory. The first argument to cb is null to indicate no error.
     },
     filename:(req,file,cb)=>{
