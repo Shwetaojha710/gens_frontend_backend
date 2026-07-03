@@ -3709,7 +3709,10 @@ exports.salarySetup = async (req, res) => {
 
         if (comp.component_name.toLowerCase() == "basic") {
           amount = (CTC * Number(comp.value)) / 100;
-        } else if (  comp.value_type === "percentage" && !comp.dependent_component ) {
+        } else if (comp.value_type === "basic_dependent") {
+          // All basic_dependent components (Basic+DA, HRA, etc.) are % of CTC
+          amount = (CTC * Number(comp.value)) / 100;
+        } else if (comp.value_type === "percentage" && !comp.dependent_component) {
           amount = (CTC * Number(comp.value)) / 100;
         } else if (comp.value_type === "fixed" && comp.amount) {
           amount = Number(comp.amount);
@@ -3723,10 +3726,17 @@ exports.salarySetup = async (req, res) => {
       let amount = 0;
       if (comp.value_type === "percentage") {
         if (Array.isArray(comp.dependent_component)) {
-          const baseSum = comp.dependent_component.reduce(
+          let baseSum = comp.dependent_component.reduce(
             (sum, depId) => sum + (computed[depId] || 0),
             0,
           );
+          // If dependent IDs are stale/unresolved, fall back to basic component value
+          if (baseSum === 0) {
+            const basicComp = salaryComponents.find(
+              (c) => c.value_type === "basic_dependent" && computed[c.id] > 0,
+            );
+            baseSum = basicComp ? computed[basicComp.id] : CTC;
+          }
           amount = (baseSum * Number(comp.value)) / 100;
         } else {
           const base = computed[comp.dependent_component] || CTC;
@@ -3795,10 +3805,10 @@ exports.salarySetup = async (req, res) => {
       records.push({
         employeeId,
         tenantId,
-        component_name: "Special Allowance",
+        component_name: "Misc. Allowance",
         component_type: "payable",
         value_type: "percentage",
-        value: 111,
+        value: 0,
         calculated_amount: miscAmount ? Number(miscAmount.toFixed(2)) : 0,
         dependent: "CTC",
         componentId: Helper.generateUUID(),
@@ -3836,6 +3846,49 @@ exports.salarySetup = async (req, res) => {
         componentId: Helper.generateUUID(),
       },
     );
+
+    // PF (Employee + Employer) – add only if not already in Salary Master
+    const hasPFInMaster = salaryComponents.some(
+      (c) =>
+        c.component_name.toLowerCase().includes("pf") ||
+        c.component_name.toLowerCase().includes("provident"),
+    );
+    if (!hasPFInMaster) {
+      const basicCompForPF = salaryComponents.find(
+        (c) => c.value_type === "basic_dependent" && computed[c.id] > 0,
+      );
+      const basicAnnual = basicCompForPF ? computed[basicCompForPF.id] : 0;
+      // 12% of monthly basic, capped at ₹1800/month
+      const pfMonthly = Math.min((basicAnnual / 12) * 0.12, 1800);
+      const pfEmployee = Math.round(pfMonthly * 12);
+      const pfEmployer = Math.round(pfMonthly * 12);
+      employerContribution += pfEmployer;
+      employerContribution = Math.round(employerContribution);
+      records.push(
+        {
+          employeeId,
+          tenantId,
+          component_name: "PF (Employee)",
+          component_type: "deductible",
+          value_type: "fixed",
+          calculated_amount: pfEmployee,
+          status: "active",
+          value: 12,
+          componentId: Helper.generateUUID(),
+        },
+        {
+          employeeId,
+          tenantId,
+          component_name: "PF (Employer)",
+          component_type: "deductible",
+          value_type: "employer",
+          calculated_amount: pfEmployer,
+          status: "active",
+          value: 12,
+          componentId: Helper.generateUUID(),
+        },
+      );
+    }
 
     //  Total deductions
     const totalDeductions = Math.round(
