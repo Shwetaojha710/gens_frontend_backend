@@ -28,3 +28,94 @@ export interface MenuItem {
   /** Set to true when children are loaded lazily (prevents empty-children filter). */
   lazyChildren?: boolean;
 }
+
+// ── Single source of truth for the app's menu tree ───────────────────────
+// Used by NavbarComponent (sidebar) and HeaderComponent (global search).
+export const APP_MENU_ITEMS: MenuItem[] = [
+  {
+    title: 'Dashboards',
+    icon: 'ri-home-smile-line',
+    active: true,
+    link: '/layout/dashboard',
+    permKey: 'dashboard',
+  },
+  {
+    title: 'Employee Management',
+    icon: 'ri-layout-2-line',
+    permKey: 'emp-mgmt',
+    children: [
+      { title: 'Add Employee',  icon: 'ri-user-add-line',     link: '/layout/employee/joining',     permKey: 'emp-mgmt.add' },
+      { title: 'Apply Leave',   icon: 'ri-file-list-2-line',  link: '/layout/employee/apply-leave', permKey: 'emp-mgmt.leave' },
+      { title: 'All Letters',   icon: 'ri-file-paper-2-line', link: '/layout/employee/all-letters', permKey: 'emp-mgmt.letters' },
+    ]
+  },
+  {
+    title: 'Attendance & Shift',
+    icon: 'ri-calendar-check-line',
+    permKey: 'attendance',
+    children: [
+      { title: 'Shift Master',            icon: 'ri-user-3-line',          link: '/layout/attendance/shift',                permKey: 'att.shift' },
+      { title: 'Date Wise Attendance',    icon: 'ri-calendar-line',        link: '/layout/attendance/date-wise-attendance', permKey: 'att.datewise' },
+      { title: 'Holiday',                 icon: 'ri-barricade-fill',       link: '/layout/attendance/holiday',              permKey: 'att.holiday' },
+      { title: 'Attendance Logs',         icon: 'ri-calendar-line',        link: '/layout/attendance/logs',                 permKey: 'att.logs' },
+      { title: 'Leaves',                  icon: 'ri-leaf-line',            link: '/layout/attendance/leaves',               permKey: 'att.leaves' },
+      { title: 'Upload Attendance',       icon: 'ri-upload-cloud-line',    link: '/layout/attendance/upload-attendance',    permKey: 'att.upload' },
+      { title: 'Regularize',              icon: 'ri-upload-cloud-line',    link: '/layout/attendance/regularize',           permKey: 'att.regularize' },
+      { title: 'Weekend Employee List',   icon: 'ri-upload-cloud-line',    link: '/layout/attendance/weekend-emp-list',     permKey: 'att.weekend' },
+      { title: 'Add Comp Off',            icon: 'ri-upload-cloud-line',    link: '/layout/attendance/add-comp-off',         permKey: 'att.compoff' },
+      { title: 'Contractual Approval',    icon: 'ri-checkbox-circle-line', link: '/layout/attendance/contractual-approval', permKey: 'att.contractual' },
+    ]
+  },
+  {
+    title: 'Payroll & Compensation',
+    icon: 'ri-money-cny-circle-line',
+    permKey: 'payroll',
+    children: [
+      { title: 'Generate Salary',       icon: 'ri-money-rupee-circle-line', link: '/layout/payroll/full-time',         permKey: 'pay.generate' },
+      { title: 'Generated Salary List', icon: 'ri-suitcase-line',           link: '/layout/payroll/generated-salary',  permKey: 'pay.list' },
+      { title: 'Deduction Summary',     icon: 'ri-subtract-line',           link: '/layout/payroll/deduction-summary', permKey: 'pay.deduction' },
+      { title: 'Reimbursement',         icon: 'ri-refund-line',             link: '/layout/payroll/reimbursement',     permKey: 'pay.reimburse' },
+    ]
+  },
+  {
+    title: 'Reports',
+    icon: 'ri-bar-chart-line',
+    permKey: 'reports',
+    children: [
+      { title: 'Employee Report',     icon: 'ri-file-user-line',   link: '/layout/reports/employee',         permKey: 'rep.employee' },
+      { title: 'Payroll Report',      icon: 'ri-file-paper-line',  link: '/layout/reports/payroll',          permKey: 'rep.payroll' },
+      { title: 'Late Arrival Report', icon: 'ri-file-list-3-line', link: '/layout/reports/attendance',       permKey: 'rep.late' },
+      { title: 'Tracking Report',     icon: 'ri-file-list-3-line', link: '/layout/reports/tracking-report',  permKey: 'rep.tracking' },
+    ]
+  },
+  {
+    title: 'Master',
+    icon: 'ri-settings-3-line',
+    permKey: 'master',
+    children: [
+      { title: 'Designation Master', icon: 'ri-team-line',        link: '/layout/master/designation',      permKey: 'master.designation' },
+      { title: 'Department Master',  icon: 'ri-building-4-line',  link: '/layout/master/department',       permKey: 'master.department' },
+      { title: 'Employment Type',    icon: 'ri-briefcase-4-line', link: '/layout/master/employment-type',  permKey: 'master.emptype' },
+      { title: 'Documents',          icon: 'ri-file-text-line',   link: '/layout/master/documents',        permKey: 'master.docs' },
+      { title: 'Holiday Types',      icon: 'ri-suitcase-line',    link: '/layout/master/holiday-type',     permKey: 'master.holidaytype' },
+      { title: 'Salary Component',   icon: 'ri-wallet-2-line',    link: '/layout/master/salary-component', permKey: 'master.salary' },
+      { title: 'Pay Slip Setup',     icon: 'ri-file-pdf-2-line',  link: '/layout/master/pay-slip',         permKey: 'master.payslip' },
+      { title: 'Branch',             icon: 'ri-file-pdf-2-line',  link: '/layout/master/branch',           permKey: 'master.branch' },
+    ]
+  },
+  {
+    title: 'Setting',
+    icon: 'ri-settings-3-line',
+    permKey: 'setting',
+    children: [
+      { title: 'Attendance Master', icon: 'ri-calendar-line',          link: '/layout/attendance/salary-master',  permKey: 'set.attmaster' },
+      { title: 'Currency',          icon: 'ri-copper-coin-line',       link: '/layout/master/currency',           permKey: 'set.currency' },
+      { title: 'Company Prefix',    icon: 'ri-info-card-line',         link: '/layout/master/prefix',             permKey: 'set.prefix' },
+      { title: 'Brand & Colors',    icon: 'ri-palette-line',           link: '/layout/master/brand-colors',       permKey: 'set.brand' },
+      { title: 'Company Letterhead', icon: 'ri-file-paper-line',       link: '/layout/master/letterhead',         permKey: 'set.brand' },
+      { title: 'Role Permissions',  icon: 'ri-shield-keyhole-line', link: '/layout/master/role-permission', permKey: 'set.roleperm' },
+      { title: 'User Permissions',  icon: 'ri-user-settings-line',  link: '/layout/master/user-permission', permKey: 'set.userperm' },
+      { title: 'My Sidebar Access', icon: 'ri-eye-line',            link: '/layout/master/user-access',     permKey: 'set.sidebaraccess' },
+    ]
+  },
+];

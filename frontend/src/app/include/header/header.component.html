@@ -7,12 +7,45 @@
     </button>
 
     <div class="header-search-shell">
-      <button type="button" class="search-icon-btn" aria-label="Search">
+      <button type="button" class="search-icon-btn" aria-label="Search" (click)="searchInputRef.focus()">
         <i class="ri ri-search-line"></i>
       </button>
-      <div class="search-copy">
-        <span class="search-placeholder">Search</span>
-        <span class="search-shortcut">CTRL + K</span>
+      <input
+        #searchInputRef
+        type="text"
+        class="search-input"
+        placeholder="Search pages e.g. payroll, attendance..."
+        [(ngModel)]="searchQuery"
+        (input)="onSearchInput()"
+        (focus)="onSearchFocus()"
+        (keydown)="onSearchKeydown($event)"
+        autocomplete="off"
+      />
+      <span class="search-shortcut" *ngIf="!searchQuery">CTRL + K</span>
+      <button *ngIf="searchQuery" type="button" class="search-clear-btn" aria-label="Clear search" (click)="clearSearch()">
+        <i class="ri ri-close-line"></i>
+      </button>
+
+      <div class="search-results-panel" *ngIf="showResults">
+        <ng-container *ngIf="searchResults.length; else noResults">
+          <button
+            type="button"
+            class="search-result-item"
+            *ngFor="let result of searchResults; let i = index"
+            [class.active]="i === activeResultIndex"
+            (mouseenter)="activeResultIndex = i"
+            (click)="selectResult(result)"
+          >
+            <i class="ri" [ngClass]="result.icon"></i>
+            <span class="result-text">
+              <span class="result-title">{{ result.title }}</span>
+              <span class="result-group" *ngIf="result.group">{{ result.group }}</span>
+            </span>
+          </button>
+        </ng-container>
+        <ng-template #noResults>
+          <div class="search-no-results">No pages found for "{{ searchQuery }}"</div>
+        </ng-template>
       </div>
     </div>
 

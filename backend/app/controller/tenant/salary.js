@@ -5089,7 +5089,7 @@ exports.calculateAttendance = async (req, res) => {
             {
               ...item,
               holiday_type_name: holidayTypeMap[item.holiday_type] || null,
-              isRestrictedHoliday: typeName === "restricted holiday",
+              isRestrictedHoliday: typeName.includes("restricted"),
             },
           ];
         }),
@@ -5110,8 +5110,54 @@ exports.calculateAttendance = async (req, res) => {
           isRestrictedHolidayLeave: !!isSingleDayRestrictedHoliday,
         };
       });
+      // Restricted holiday dates should only be treated as a sandwich-bridging
+      // non-working day when the employee has actually applied leave for that
+      // restricted holiday, and only if they were not present (attended) on it.
+      const restrictedHolidayAppliedDates = new Set();
+      leaveRecords
+        .filter((item) => item.isRestrictedHolidayLeave)
+        .forEach((item) => {
+          const leaveStart = moment(item.fromDate);
+          const leaveEnd = item.toDate ? moment(item.toDate) : moment(item.fromDate);
+          for (
+            let d = moment(leaveStart);
+            d.isSameOrBefore(leaveEnd);
+            d.add(1, "days")
+          ) {
+            restrictedHolidayAppliedDates.add(d.format("YYYY-MM-DD"));
+          }
+        });
+
+      const restrictedHolidayDates = Object.keys(holidayMap).filter(
+        (date) => holidayMap[date]?.isRestrictedHoliday,
+      );
+      const presentRestrictedHolidayDates = new Set();
+      if (restrictedHolidayDates.length) {
+        const restrictedHolidayAttendance = await attendance.findAll({
+          where: {
+            employeeId: employeeId[i],
+            branchId,
+            check_in_time: { [Op.ne]: null },
+            check_out_time: { [Op.ne]: null },
+          },
+          raw: true,
+        });
+        restrictedHolidayAttendance.forEach((att) => {
+          const dateKey = moment(att.check_in_time).format("YYYY-MM-DD");
+          if (restrictedHolidayDates.includes(dateKey)) {
+            presentRestrictedHolidayDates.add(dateKey);
+          }
+        });
+      }
+
       const holidays = holidayList
-        .filter((item) => !holidayMap[item.date]?.isRestrictedHoliday)
+        .filter((item) => {
+          if (!holidayMap[item.date]?.isRestrictedHoliday) return true;
+          return (
+            restrictedHolidayAppliedDates.has(item.date) &&
+            !presentRestrictedHolidayDates.has(item.date)
+          );
+        })
         .map((item) => item.date);
 
       const shiftWeekOffDates = [];

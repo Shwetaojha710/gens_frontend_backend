@@ -363,7 +363,7 @@ export class DashboardComponent {
         cardTitle: 'Anniversary',
         dateLabel: item?.joiningDate ? new Date(item.joiningDate).toLocaleDateString('en-GB') : 'NA'
       }))
-    ].slice(0, 2);
+    ];
   }
 
   onImageError(event: Event, data: any, imageType: string) {

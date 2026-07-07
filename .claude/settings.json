@@ -14,7 +14,8 @@
       "Bash(grep -E \"\\\\.js$\")",
       "Bash(dir \"c:\\\\Users\\\\Lakshya\\\\Documents\\\\GitHub\\\\gens_frontend_backend\\\\frontend\" /b)",
       "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\Lakshya\\\\Documents\\\\GitHub\\\\gens_frontend_backend\\\\backend\" -Depth 3 | Where-Object { $_.PSIsContainer } | Select-Object FullName)",
-      "Bash(findstr -i \"nom\\\\|account\\\\|detail\")"
+      "Bash(findstr -i \"nom\\\\|account\\\\|detail\")",
+      "Bash(node --check app/controller/tenant/salary.js)"
     ]
   }
 }

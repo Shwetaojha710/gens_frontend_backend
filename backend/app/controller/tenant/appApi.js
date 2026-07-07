@@ -5436,3 +5436,74 @@ exports.saveEmpLetterSignature = async (req, res) => {
     return Helper.response(false, error?.message, [], res, 500);
   }
 };
+
+
+exports.uploadEmpImage = async (req, res) => {
+  // const { id } = req.body;
+  const tenantId = req.users && req.users.tenantId;
+  const image = req.file ? req.file.filename : null;
+  const branchId = req.users && req.users.branchId;
+  if (!tenantId || !branchId) {
+    if (image) {
+      const filePath = path.join(__dirname, "../../../upload", image);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+    return Helper.response(
+      false,
+      "Branch Id ,Tenant ID and Employee ID are required",
+      [],
+      res,
+      400,
+    );
+  }
+ const employeeId = req.users.id;
+  if (!image) {
+    return Helper.response(false, "No image uploaded", [], res, 400);
+  }
+
+  try {
+    const emp = await empPersonal.findOne({
+      where: { id:employeeId},
+    });
+    if (!emp) {
+      const filePath = path.join(__dirname, "../../../upload", image);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      return Helper.response(false, "Employee not found", [], res, 404);
+    }
+
+    if (emp) {
+      const oldImagePath = path.join(
+        __dirname,
+        "../../../upload",
+        emp.profileImage,
+      );
+      if (fs.existsSync(oldImagePath)) {
+        try {
+          fs.unlinkSync(oldImagePath);
+        } catch (err) {
+          /* ignore */
+        }
+      }
+    }
+
+    emp.profileImage = image;
+    emp.updatedBy = req.users && req.users.id;
+    await emp.save();
+
+    return Helper.response(
+      true,
+      "Profile image updated successfully",
+      emp,
+      res,
+      200,
+    );
+  } catch (error) {
+    console.error("Error uploading profile image:", error);
+
+    if (image) {
+      const filePath = path.join(__dirname, "../../../upload", image);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+    return Helper.response(false, "Internal server error", [], res, 500);
+  }
+};
