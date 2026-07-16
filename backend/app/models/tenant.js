@@ -22,6 +22,10 @@ const Tenant = sequelize.define('tenant', {
         type: DataTypes.STRING,
         allowNull: true
     },
+    handbook: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
     companyCode: {
         type: DataTypes.STRING,
         allowNull: false,

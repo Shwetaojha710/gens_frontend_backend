@@ -66,6 +66,8 @@ export class DashboardComponent {
   trackingList: any[] = [];
   birthdays: any[] = [];
   anniversaries: any[] = [];
+  /** Celebrations card tabs */
+  celebrationTab: 'all' | 'upcoming' = 'all';
   attendanceChart: any = null;
   attendanceByDepartment: any[] = [];
   teamwiseAttendance: any[] = [];
@@ -352,18 +354,42 @@ export class DashboardComponent {
   }
 
   get celebrationsList(): any[] {
-    return [
+    const list = [
       ...this.birthdays.map((item: any) => ({
         ...item,
         cardTitle: 'Birthday',
-        dateLabel: item?.dateOfBirth ? new Date(item.dateOfBirth).toLocaleDateString('en-GB') : 'NA'
+        dateLabel: this.formatCelebrationDate(item),
       })),
       ...this.anniversaries.map((item: any) => ({
         ...item,
         cardTitle: 'Anniversary',
-        dateLabel: item?.joiningDate ? new Date(item.joiningDate).toLocaleDateString('en-GB') : 'NA'
-      }))
-    ];
+        dateLabel: this.formatCelebrationDate(item),
+      })),
+    ].sort((a: any, b: any) => (a.daysUntil ?? 999) - (b.daysUntil ?? 999));
+
+    if (this.celebrationTab === 'upcoming') {
+      // Today + next 30 days
+      return list.filter(
+        (item: any) =>
+          item.isUpcoming === true ||
+          (typeof item.daysUntil === 'number' && item.daysUntil >= 0 && item.daysUntil <= 30),
+      );
+    }
+
+    // All: celebrations in the current calendar month (past + remaining)
+    return list.filter((item: any) => item.inCurrentMonth === true || item.isToday === true);
+  }
+
+  private formatCelebrationDate(item: any): string {
+    const raw = item?.nextOccurrence || item?.eventDate || item?.dateOfBirth || item?.joiningDate;
+    if (!raw) return 'NA';
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return 'NA';
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+  }
+
+  setCelebrationTab(tab: 'all' | 'upcoming'): void {
+    this.celebrationTab = tab;
   }
 
   onImageError(event: Event, data: any, imageType: string) {

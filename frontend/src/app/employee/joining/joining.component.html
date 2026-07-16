@@ -518,7 +518,7 @@
           </button>
         </div>
 
-        <app-search-pagination [totalItems]="employees.length" [pageSize]="itemsPerPage" [currentPage]="currentPage"
+        <app-search-pagination [totalItems]="employees.length" [pageSize]="pageSize" [currentPage]="currentPage"
           (search)="onSearch($event)" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)">
           <div class="table-responsive">
             <table class="table dataTable">

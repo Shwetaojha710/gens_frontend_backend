@@ -4,7 +4,8 @@ export const environment = {
 //  apiUrl: 'https://gens.demoquaeretech.in/api/api/',
    apiUrl:  'http://192.168.23.25:3002/api/', //self
    python_apiUrl: 'https://gens.demoquaeretech.in/resume_tracker/api/v1/ats',
-    chatApiUrl: 'https://spending-fragrance-thesaurus-advertise.trycloudflare.com/api/chat',
+    chatApiUrl: 'http://192.168.23.19:8000/api/ai/chat',
+    aiHrmsApiUrl: 'http://192.168.23.19:8000',
     transcribeApiUrl: 'http://182.69.118.104:8000/api/transcribe',
   //  apiUrl:  'http://192.168.23.13:3001/api/' //ABHISHEK sir
   //  apiUrl:  'http://192.168.23.13:3001/api/' //ABHISHEK sir

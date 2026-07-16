@@ -15,13 +15,16 @@ export class RelevingLetterComponent implements OnInit {
   personalDetails: any = {};
   tenant: any = {};
   notyf: Notyf;
-  isDownload = false;
   tenantLetterheadUrl: string = '/assets/img/Letterhead-2.png';
 
   relievingDate: string = '';
   joiningDate: string = '';
   refNo: string = '';
   todayDate: string = '';
+  address: string = '';
+  addressCity: string = '';
+  addressState: string = '';
+  addressPinCode: string = '';
 
   constructor(private router: Router, private employeeService: EmployeeService, private masterService: MasterService) {
     this.notyf = new Notyf();
@@ -32,6 +35,10 @@ export class RelevingLetterComponent implements OnInit {
     this.todayDate = today.toISOString().split('T')[0];
     this.relievingDate = this.personalDetails.relievingDate || this.personalDetails.dol || this.todayDate;
     this.joiningDate = this.personalDetails.doj || this.personalDetails.joiningDate || '';
+    this.address = this.personalDetails.permanentAddress || '';
+    this.addressCity = this.personalDetails.city || '';
+    this.addressState = this.personalDetails.state || '';
+    this.addressPinCode = this.personalDetails.pinCode || '';
 
     const year = today.getFullYear();
     const seq = String(Math.floor(Math.random() * 900) + 100).padStart(3, '0');
@@ -43,7 +50,8 @@ export class RelevingLetterComponent implements OnInit {
   ngOnInit(): void {
     this.masterService.getLetterhead().subscribe({
       next: (res: any) => {
-        if (res?.data?.url) this.tenantLetterheadUrl = res.data.url;
+        if (res?.data?.base64) this.tenantLetterheadUrl = res.data.base64;
+        else if (res?.data?.url) this.tenantLetterheadUrl = res.data.url;
       },
       error: () => {}
     });
@@ -56,6 +64,10 @@ export class RelevingLetterComponent implements OnInit {
           if (res.data.relievingDate) this.relievingDate = res.data.relievingDate;
           if (res.data.joiningDate) this.joiningDate = res.data.joiningDate;
           if (res.data.refNo) this.refNo = res.data.refNo;
+          if (res.data.address) this.address = res.data.address;
+          if (res.data.addressCity) this.addressCity = res.data.addressCity;
+          if (res.data.addressState) this.addressState = res.data.addressState;
+          if (res.data.addressPinCode) this.addressPinCode = res.data.addressPinCode;
         }
       },
       error: () => {}
@@ -66,7 +78,11 @@ export class RelevingLetterComponent implements OnInit {
     this.employeeService.saveLetterData(this.personalDetails.id, 'relieving', {
       relievingDate: this.relievingDate,
       joiningDate: this.joiningDate,
-      refNo: this.refNo
+      refNo: this.refNo,
+      address: this.address,
+      addressCity: this.addressCity,
+      addressState: this.addressState,
+      addressPinCode: this.addressPinCode
     }).subscribe({ error: () => {} });
   }
 
@@ -88,7 +104,6 @@ export class RelevingLetterComponent implements OnInit {
     return {
       name:`${this.salutation} ${this.employeeFullName}`,
       fatherName: this.personalDetails.fatherName || '',
-      address: this.personalDetails.address || '',
       subject: 'Relieving Cum Experience Letter',
       greeting: `Dear ${this.personalDetails.firstName || 'Employee'},`,
       body1: `You are hereby relieved from the services of the company by the closing hours of <b> ${this.formatDate(this.relievingDate)}</b>.We wish to place on record that you had been under the employment from <b>${this.formatDate(this.joiningDate)}</b> to <b> ${this.formatDate(this.relievingDate)}</b> with the current position as '${this.personalDetails.designation || '_______________'}'.`,
@@ -108,18 +123,57 @@ export class RelevingLetterComponent implements OnInit {
     return `${day}<sup>${sup(day)}</sup> ${months[d.getMonth()]},${d.getFullYear()}`;
   }
 
+  private buildLetterContentHtml(): string {
+    const relievingData = {
+      ...this.relievingData,
+      closing: `With warm regards<br/><br/><br/><b>Human Resource Department</b><br/>Date: ${new Date().toLocaleDateString('en-GB')}`
+    };
+    const relievingDate = this.relievingDate ? this.formatDate(this.relievingDate) : new Date().toLocaleDateString('en-GB');
+    const refNo = this.refNo || '001';
+    const cityStateLine = [this.addressCity, this.addressState].filter(Boolean).join(', ') + (this.addressPinCode ? ` - ${this.addressPinCode}` : '');
+
+    return `
+  <table class="ref-date-row" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:12px;"><tr>
+    <td class="ref-left" style="text-align:left; vertical-align:top;"><b>Ref: Quaere/Emp/Relieving/${refNo}</b></td>
+    <td class="dated-right" style="text-align:right; vertical-align:top;"><b>Dated: ${relievingDate}</b></td>
+  </tr></table>
+
+  <div class="address-block">
+ <b>${relievingData.name} </b> <br/>
+    <b> ${this.fatherPrefix} ${relievingData.fatherName}</b> <br/>
+     <b>  ${(this.address || '').replace(/\n/g, '<br/>')}</b><br/>
+     ${cityStateLine ? `<b>${cityStateLine}</b><br/>` : ''}
+  </div>
+
+  <div class="subject-line">
+    Subject: <b><u>${relievingData.subject}</u></b>
+  </div>
+
+  <div class="salutation-line">
+    ${relievingData.greeting}
+  </div>
+
+  <div class="body-para">
+    ${relievingData.body1}
+  </div>
+
+  <div class="body-para">
+    ${relievingData.body3}
+  </div>
+  <div class="body-para">
+    ${relievingData.body4}
+  </div>
+  <div class="regards">
+    ${relievingData.closing.replace(/\\n/g, '<br/>')}
+  </div>
+`;
+  }
+
   printDoc() {
     const bgBase64Promise = this.getBase64FromSrc(this.tenantLetterheadUrl).catch(() => '');
 
     Promise.all([bgBase64Promise]).then(([bgImage]) => {
-
-      const relievingData = {
-        ...this.relievingData,
-        closing: `With warm regards<br/><br/><br/><b>Human Resource Department</b><br/>Date: ${new Date().toLocaleDateString('en-GB')}`
-      };
-      const relievingDate = this.relievingDate ? this.formatDate(this.relievingDate) : new Date().toLocaleDateString('en-GB');
-      const joiningDate = this.joiningDate ? this.formatDate(this.joiningDate) : new Date().toLocaleDateString('en-GB');
-      const refNo = this.refNo || '001';
+      const content = this.buildLetterContentHtml();
 
       const html = `
 <!DOCTYPE html>
@@ -149,8 +203,6 @@ body {
 }
 
 .ref-date-row {
-  display: flex;
-  justify-content: space-between;
   margin-bottom: 12px;
 }
 
@@ -195,42 +247,7 @@ body {
 <body>
 
 <div class="page">
-
-  <div class="ref-date-row">
-    <div class="ref-left"><b>Ref: Quaere/Emp/Relieving/${refNo}</b></div>
-    <div class="dated-right"><b>Dated: ${relievingDate}</b></div>
-  </div>
-
-  <div class="address-block">
- <b>${relievingData.name} </b> <br/>
-    <b> D/O ${relievingData.fatherName}</b> <br/>
-     <b>  ${(this.personalDetails.permanentAddress || '').replace(/\n/g, '<br/>')}</b><br/>
-  </div>
-
-  <div class="subject-line">
-    Subject: <b><u>${relievingData.subject}</u></b>
-  </div>
-
-  <div class="salutation-line">
-    ${relievingData.greeting}
-  </div>
-
-  <div class="body-para">
-    ${relievingData.body1}
-  </div>
-
-
-
-  <div class="body-para">
-    ${relievingData.body3}
-  </div>
-  <div class="body-para">
-    ${relievingData.body4}
-  </div>
-  <div class="regards">
-    ${relievingData.closing.replace(/\\n/g, '<br/>')}
-  </div>
-
+${content}
 </div>
 
 </body>
@@ -264,34 +281,38 @@ body {
   }
 
   downloadDoc() {
-    this.isDownload = true;
-    const element = document.getElementById('relieving-doc');
-    if (!element) return;
+    const logoPromise = this.getBase64FromSrc('/assets/img/logo/logo-quaere.png').catch(() => '');
+    const badge1Promise = this.getBase64FromSrc('/assets/img/logo/Picture1.jpg').catch(() => '');
+    const badge2Promise = this.getBase64FromSrc('/assets/img/logo/Picture2.png').catch(() => '');
 
-    const cloned = element.cloneNode(true) as HTMLElement;
-    const inputs = cloned.querySelectorAll('input');
-    inputs.forEach((input: any) => {
-      const span = document.createElement('span');
-      span.innerText = input.value || '';
-      input.parentNode?.replaceChild(span, input);
-    });
+    Promise.all([logoPromise, badge1Promise, badge2Promise]).then(([logoBase64, badge1Base64, badge2Base64]) => {
+      const content = this.buildLetterContentHtml();
 
-    const images = element.getElementsByTagName('img');
-    const imgPromises: Promise<void>[] = [];
-    for (let img of images) {
-      imgPromises.push(this.convertImageToBase64(img));
-    }
+      const headerHtml = logoBase64 ? `<img src="${logoBase64}" width="180" style="height:auto; display:block;" />` : '';
 
-    const letterheadPromise = fetch(this.tenantLetterheadUrl)
-      .then(r => r.blob())
-      .then(blob => new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      }));
+      const footerHtml = `
+        <table cellpadding="0" cellspacing="0" style="font-size:10.5px; line-height:1.6; color:#000;">
+          <tr>
+            <td width="15" style="background:#1f6fb2; font-size:4px; line-height:1px;">&nbsp;</td>
+            <td width="16" style="font-size:1px; line-height:4px;">&nbsp;</td>
+            <td width="300" valign="middle">
+              <b>Quaere Etechnologies Private Limited</b> AN ISO 9001 : 2015<br/>
+              7th Floor, Cyber Tower, Vibhuti Khand,<br/>
+              Gomti Nagar, Lucknow, U.P.-226010<br/>
+              Web: www.quaeretech.com<br/>
+              E-mail: info@quaeretech.com | Tel: 0522-4067760<br/>
+              <br/>
+              <b>GSTN- 09AAACQ1581F1ZI</b>
+            </td>
+            <td width="40">&nbsp;</td>
+            <td valign="middle">
+              ${badge1Base64 ? `<img src="${badge1Base64}" height="38" style="margin-right:8px; vertical-align:middle;" />` : ''}
+              ${badge2Base64 ? `<img src="${badge2Base64}" height="38" style="vertical-align:middle;" />` : ''}
+            </td>
+          </tr>
+        </table>
+      `;
 
-    Promise.all([Promise.all(imgPromises), letterheadPromise]).then(([, bgBase64]) => {
       const html = `
         <html xmlns:o='urn:schemas-microsoft-com:office:office'
               xmlns:w='urn:schemas-microsoft-com:office:word'
@@ -301,30 +322,37 @@ body {
             <title>Relieving Letter</title>
             <style>
               body { font-family: "Calibri", sans-serif; font-size: 13px; color: #000; margin: 0; padding: 0; }
+              .ref-date-row { margin-bottom: 12px; }
+              .dated-right { text-align: right; }
+              .address-block { margin: 12px 0; line-height: 1.6; }
+              .subject-line { margin: 14px 0; }
+              .salutation-line { margin: 12px 0; font-weight: bold; }
+              .body-para { margin-bottom: 8px; line-height: 1.5; }
+              .regards { margin-top: 30px; line-height: 1.6; }
               @page WordSection1 {
-                mso-header-margin: 0cm;
-                mso-footer-margin: 0cm;
-                mso-header: h1;
+                size: 21cm 29.7cm;
+                margin: 40px 55px 20px 55px;
               }
               div.WordSection1 { page: WordSection1; }
             </style>
             <!--[if gte mso 9]>
             <xml>
               <w:WordDocument>
-                <w:View>Normal</w:View>
+                <w:View>Print</w:View>
                 <w:Zoom>100</w:Zoom>
+                <w:DoNotOptimizeForBrowser/>
               </w:WordDocument>
             </xml>
             <![endif]-->
           </head>
           <body>
             <div class="WordSection1">
-              <div id="letterhead-header" style="position:relative; width:100%; margin:0; padding:0;">
-                <img src="${bgBase64}" style="width:100%; display:block;" />
-              </div>
-              <div style="padding: 20px 60px 60px 60px; margin-top: -40px;">
-                ${cloned.innerHTML}
-              </div>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr><td style="height:90px;" valign="top">${headerHtml}</td></tr>
+                <tr><td valign="top">${content}</td></tr>
+                <tr><td style="height:420px; font-size:1px; line-height:1px;">&nbsp;</td></tr>
+                <tr><td valign="top">${footerHtml}</td></tr>
+              </table>
             </div>
           </body>
         </html>
@@ -338,25 +366,6 @@ body {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      this.isDownload = false;
-    });
-  }
-
-  convertImageToBase64(img: HTMLImageElement): Promise<void> {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const image = new Image();
-      image.crossOrigin = 'anonymous';
-      image.src = img.src;
-      image.onload = () => {
-        canvas.width = image.width;
-        canvas.height = image.height;
-        ctx?.drawImage(image, 0, 0);
-        img.src = canvas.toDataURL('image/png');
-        resolve();
-      };
-      image.onerror = () => resolve();
     });
   }
 

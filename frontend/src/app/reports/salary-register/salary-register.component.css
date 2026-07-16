@@ -1,0 +1,140 @@
+.sr-page .card-header {
+  font-weight: 700;
+  color: #0f2942;
+}
+
+.sr-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.sr-summary__item {
+  min-width: 7.5rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.55rem;
+  background: #f0f5fb;
+  border: 1px solid rgba(0, 95, 168, 0.12);
+}
+
+.sr-summary__label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin-bottom: 0.15rem;
+}
+
+.sr-summary__item strong {
+  font-size: 0.95rem;
+  color: #0f2942;
+}
+
+.sr-search {
+  min-width: 180px;
+  max-width: 240px;
+}
+
+.sr-table-wrap {
+  max-height: min(70vh, 720px);
+  overflow: auto;
+}
+
+.sr-table {
+  min-width: 1800px;
+  font-size: 0.78rem;
+}
+
+.sr-th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  white-space: nowrap;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+  background: #1f4e79 !important;
+  color: #fff !important;
+}
+
+.sr-cell {
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.sr-cell--green {
+  background: rgba(198, 239, 206, 0.85) !important;
+}
+
+.sr-cell--purple {
+  background: rgba(226, 213, 241, 0.9) !important;
+}
+
+.sr-cell--orange {
+  background: rgba(252, 228, 214, 0.95) !important;
+}
+
+.sr-cell--net {
+  background: rgba(146, 208, 80, 0.55) !important;
+  font-weight: 700;
+}
+
+.sr-th.sr-cell--green,
+.sr-th.sr-cell--purple,
+.sr-th.sr-cell--orange,
+.sr-th.sr-cell--net {
+  background: #1f4e79 !important;
+  color: #fff !important;
+  filter: none;
+}
+
+.sr-total-row td {
+  font-weight: 700;
+  background: #d9e2f3 !important;
+  border-top: 2px solid rgba(15, 23, 42, 0.12);
+}
+
+.sr-section-card {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 8px 24px rgba(15, 41, 66, 0.05);
+  overflow: hidden;
+}
+
+.sr-section-head {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #0f2942;
+}
+
+.sr-section-head--leave {
+  background: #a9d08e !important;
+}
+
+.sr-section-head--other {
+  background: #ffc000 !important;
+}
+
+.sr-detail-table th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #475569;
+  background: #f8fafc;
+  white-space: nowrap;
+}
+
+.sr-detail-table td {
+  font-size: 0.84rem;
+  vertical-align: middle;
+}
+
+@media (max-width: 991.98px) {
+  .sr-summary {
+    justify-content: flex-start;
+  }
+}

@@ -73,10 +73,11 @@ export const DEFAULT_PERMISSIONS: PermissionSection[] = [
     key: 'reports', label: 'Reports', icon: 'ri-bar-chart-line',
     roles: ['admin', 'superadmin', 'hr', 'manager', 'director'],
     children: [
-      { key: 'rep.employee',  label: 'Employee Report',     roles: ['admin', 'superadmin', 'hr'] },
-      { key: 'rep.payroll',   label: 'Payroll Report',      roles: ['admin', 'superadmin', 'hr'] },
-      { key: 'rep.late',      label: 'Late Arrival Report', roles: ['admin', 'superadmin', 'hr', 'manager', 'director'] },
-      { key: 'rep.tracking',  label: 'Tracking Report',     roles: ['admin', 'superadmin', 'hr', 'manager', 'director'] },
+      { key: 'rep.employee',        label: 'Employee Report',     roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'rep.payroll',         label: 'Payroll Report',      roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'rep.salaryRegister',  label: 'Salary Register',     roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'rep.late',            label: 'Late Arrival Report', roles: ['admin', 'superadmin', 'hr', 'manager', 'director'] },
+      { key: 'rep.tracking',        label: 'Tracking Report',     roles: ['admin', 'superadmin', 'hr', 'manager', 'director'] },
     ]
   },
   {
@@ -101,9 +102,22 @@ export const DEFAULT_PERMISSIONS: PermissionSection[] = [
       { key: 'set.currency',     label: 'Currency',          roles: ['admin', 'superadmin'] },
       { key: 'set.prefix',       label: 'Company Prefix',    roles: ['admin', 'superadmin'] },
       { key: 'set.brand',        label: 'Brand & Colors',    roles: ['admin', 'superadmin'] },
+      { key: 'set.handbook',     label: 'Employee Handbook', roles: ['admin', 'superadmin'] },
       { key: 'set.roleperm',     label: 'Role Permissions',  roles: ['admin', 'superadmin'] },
       { key: 'set.userperm',     label: 'User Permissions',  roles: ['admin', 'superadmin'] },
       { key: 'set.sidebaraccess',label: 'My Sidebar Access', roles: ['admin', 'superadmin', 'hr', 'manager', 'director', 'recruiter'] },
+    ]
+  },
+  {
+    key: 'ai-insights', label: 'AI Insights', icon: 'ri-brain-line',
+    roles: ['admin', 'superadmin', 'hr', 'manager', 'director'],
+    children: [
+      { key: 'ai.attendance',  label: 'Attendance Analytics',   roles: ['admin', 'superadmin', 'hr', 'manager', 'director'] },
+      { key: 'ai.payroll',     label: 'Payroll Verification',   roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'ai.leave',       label: 'Leave Recommendations',  roles: ['admin', 'superadmin', 'hr', 'manager', 'director'] },
+      { key: 'ai.performance', label: 'Performance Insights',   roles: ['admin', 'superadmin', 'hr', 'manager', 'director'] },
+      { key: 'ai.attrition',   label: 'Attrition Prediction',   roles: ['admin', 'superadmin', 'hr', 'manager', 'director'] },
+      { key: 'ai.recruitment', label: 'Recruitment Assistant',  roles: ['admin', 'superadmin', 'hr', 'recruiter'] },
     ]
   },
   // ── Portal-level visibility keys (control landing-home cards) ───────────────
@@ -160,7 +174,7 @@ export class PermissionService {
   private readonly ROLE_PERM_KEY   = 'app_role_permissions';
   private readonly USER_PERM_KEY   = 'custom_user_permissions';
   // Bump this version whenever DEFAULT_PERMISSIONS changes — forces a fresh load
-  private readonly PERM_VERSION    = 'v5';
+  private readonly PERM_VERSION    = 'v6';
   private readonly VERSION_KEY     = 'app_role_permissions_version';
 
   // ── Role-based permissions (admin configures per role) ──────────────────

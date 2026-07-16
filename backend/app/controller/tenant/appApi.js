@@ -2343,7 +2343,7 @@ exports.EmployeeDetails = async (req, res) => {
       ...employee,
       bank_account,
       department: department?.name || null,
-      designation: designation?.name || null,
+       designation: employee?.role == 'teamLeader' ? 'team lead' : designation?.name || null,
       state: isStateInt ? (state?.name || null) : (employee?.state || null),
       country: isCountryInt ? (country?.name || null) : (employee?.country || null),
       city: isCityInt ? (city?.name || null) : (employee?.city || null),
@@ -2902,7 +2902,30 @@ exports.AppupdatedApplyLeaveStatus = async (req, res) => {
             );
           }
         }
+    
+
       }
+      // Fetch user device token
+      // const deviceInfo = await empPersonal.findOne({
+      //   where: { id: employeeId },
+      //   raw: true,
+      // });
+  
+      // // If user has FCM token, send push notification
+      // if (deviceInfo?.deviceToken) {
+      //   const leaveCount = data.length;
+      //   // await Helper.sendNotification(
+      //   //   deviceInfo.deviceId,
+      //   //   "Leave Approval Updates",
+      //   //   `${leaveCount} leave(s) have been approved in your team.`
+      //   // );
+      //   const response = await Helper.sendNotification(
+      //     deviceInfo.deviceToken,
+      //     "Leave Approval Updates",
+      //     `${leaveCount} leave(s) have been approved in your team.`,
+      //   );
+      //   // console.log(response, "response");
+      // }
 
       return Helper.response(
         true,
@@ -3687,7 +3710,7 @@ exports.notification = async (req, res) => {
       //   `${leaveCount} leave(s) have been approved in your team.`
       // );
       const response = await Helper.sendNotification(
-        deviceInfo.deviceId,
+        deviceInfo.deviceToken,
         "Leave Approval Updates",
         `${leaveCount} leave(s) have been approved in your team.`,
       );
@@ -3711,20 +3734,37 @@ exports.notification = async (req, res) => {
             })
           : null;
 
-        const creator = await empPersonal.findOne({
-          where: { id: item.createdBy },
-          raw: true,
-        });
+        const recommender = item?.recommendedId
+          ? await empPersonal.findOne({
+              where: { id: item.recommendedId },
+              raw: true,
+            })
+          : null;
+
+        const employee = item?.employeeId
+          ? await empPersonal.findOne({
+              where: { id: item.employeeId },
+              raw: true,
+            })
+          : null;
+
+        const creator = item?.createdBy
+          ? await empPersonal.findOne({
+              where: { id: item.createdBy },
+              raw: true,
+            })
+          : null;
+
+        const fullName = (p) =>
+          p ? `${p.firstName || ""} ${p.lastName || ""}`.trim() : null;
 
         return {
           ...item,
           leaveType: leaveType?.leaveName ?? null,
-          approvedBy: approver
-            ? `${approver.firstName} ${approver.lastName}`
-            : null,
-          createdBy: creator
-            ? `${creator.firstName} ${creator.lastName}`
-            : null,
+          employeeName: fullName(employee),
+          approvedBy: fullName(approver),
+          recommendedBy: fullName(recommender),
+          createdBy: fullName(creator),
           createdAt: Helper.dateFormat(item.createdAt),
           updatedAt: Helper.dateFormat(item.updatedAt),
         };
@@ -5418,6 +5458,21 @@ exports.getEmpLetterDocs = async (req, res) => {
   }
 };
 
+exports.getAppHandbook = async (req, res) => {
+  try {
+    const tenantId = req.users && req.users.tenantId;
+    if (!tenantId) return Helper.response(false, 'User Not Found', {}, res, 404);
+
+    const tenant = await Tenant.findOne({ where: { id: tenantId }, attributes: ['handbook'], raw: true });
+    const handbook = tenant?.handbook || null;
+    const url = handbook ? `${process.env.BASE_URL}/upload/${handbook}` : null;
+    return Helper.response(true, 'Handbook fetched', { url, filename: handbook }, res, 200);
+  } catch (error) {
+    console.error('getAppHandbook error:', error);
+    return Helper.response(false, error?.message, [], res, 500);
+  }
+};
+
 exports.saveEmpLetterSignature = async (req, res) => {
   try {
     const employeeId = req.users.id;
@@ -5504,6 +5559,62 @@ exports.uploadEmpImage = async (req, res) => {
       const filePath = path.join(__dirname, "../../../upload", image);
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
+    return Helper.response(false, "Internal server error", [], res, 500);
+  }
+};
+
+exports.getEmployeeUploadedImage = async (req, res) => {
+  const { id } = req.body;
+  const tenantId = req.users && req.users.tenantId;
+  const branchId = req.users && req.users.branchId;
+  if (!tenantId || !id || !branchId) {
+    return Helper.response(
+      false,
+      "branch Id,Tenant ID and Employee ID are required",
+      [],
+      res,
+      400,
+    );
+  }
+
+  try {
+    const emp = await empPersonal.findOne({
+      where: { id, tenantId, status: "active", branchId },
+    });
+    if (!emp) {
+      return Helper.response(false, "Employee not found", [], res, 404);
+    }
+
+    if (!emp.profileImage) {
+      return Helper.response(
+        false,
+        "No profile image found for this employee",
+        [],
+        res,
+        404,
+      );
+    }
+
+    const imagePath = path.join(__dirname, "../../../upload", emp.profileImage);
+    if (fs.existsSync(imagePath)) {
+      return Helper.response(
+        true,
+        "Profile image fetched successfully",
+        emp.profileImage,
+        res,
+        200,
+      );
+    } else {
+      return Helper.response(
+        false,
+        "Profile image file does not exist",
+        [],
+        res,
+        404,
+      );
+    }
+  } catch (error) {
+    console.error("Error fetching profile image:", error);
     return Helper.response(false, "Internal server error", [], res, 500);
   }
 };

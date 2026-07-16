@@ -3,6 +3,7 @@ export const environment = {
   apiUrl: 'https://gens.demoquaeretech.in/api/api/',
   python_apiUrl: 'https://gens.demoquaeretech.in/resume_tracker/api/v1/ats',
       chatApiUrl: 'https://wonderful-den-garlic-disposal.trycloudflare.com/api/chat',
+      aiHrmsApiUrl: 'https://wonderful-den-garlic-disposal.trycloudflare.com',
       transcribeApiUrl: 'https://wonderful-den-garlic-disposal.trycloudflare.com/api/transcribe',
 
     firebase: {

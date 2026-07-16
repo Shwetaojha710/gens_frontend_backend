@@ -347,6 +347,13 @@ export class EmployeePortalService {
     return this.http.post<any>(`${this.base}get-app-letter-pdfs`, {});
   }
 
+  /** Company handbook (uploaded by HR/Admin) — view/download only from the employee portal. */
+  getAppHandbook(): Observable<{ status: unknown; message?: string; data?: { url: string | null; filename: string | null } }> {
+    return this.http.get<{ status: unknown; message?: string; data?: { url: string | null; filename: string | null } }>(
+      `${this.base}get-app-handbook`,
+    );
+  }
+
   /** All active branches for the current tenant (used for branch filter pills). */
   getTenantBranches(): Observable<{ id: string; name: string }[]> {
     return this.http

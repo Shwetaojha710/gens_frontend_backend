@@ -84,9 +84,23 @@ export const APP_MENU_ITEMS: MenuItem[] = [
     children: [
       { title: 'Employee Report',     icon: 'ri-file-user-line',   link: '/layout/reports/employee',         permKey: 'rep.employee' },
       { title: 'Payroll Report',      icon: 'ri-file-paper-line',  link: '/layout/reports/payroll',          permKey: 'rep.payroll' },
+      { title: 'Salary Register',     icon: 'ri-file-list-3-line', link: '/layout/reports/salary-register',  permKey: 'rep.salaryRegister' },
       { title: 'Late Arrival Report', icon: 'ri-file-list-3-line', link: '/layout/reports/attendance',       permKey: 'rep.late' },
       { title: 'Tracking Report',     icon: 'ri-file-list-3-line', link: '/layout/reports/tracking-report',  permKey: 'rep.tracking' },
     ]
+  },
+  {
+    title: 'AI Insights',
+    icon: 'ri-brain-line',
+    permKey: 'ai-insights',
+    children: [
+      { title: 'Attendance Analytics',  icon: 'ri-calendar-check-line',      link: '/layout/ai-insights/attendance',  permKey: 'ai.attendance' },
+      { title: 'Payroll Verification',  icon: 'ri-money-rupee-circle-line', link: '/layout/ai-insights/payroll',     permKey: 'ai.payroll' },
+      { title: 'Leave Recommendations', icon: 'ri-file-list-2-line',        link: '/layout/ai-insights/leave',       permKey: 'ai.leave' },
+      { title: 'Performance Insights',  icon: 'ri-line-chart-line',         link: '/layout/ai-insights/performance', permKey: 'ai.performance' },
+      { title: 'Attrition Prediction',  icon: 'ri-user-unfollow-line',      link: '/layout/ai-insights/attrition',   permKey: 'ai.attrition' },
+      { title: 'Recruitment Assistant', icon: 'ri-briefcase-line',          link: '/layout/ai-insights/recruitment', permKey: 'ai.recruitment' },
+    ],
   },
   {
     title: 'Master',
@@ -113,6 +127,7 @@ export const APP_MENU_ITEMS: MenuItem[] = [
       { title: 'Company Prefix',    icon: 'ri-info-card-line',         link: '/layout/master/prefix',             permKey: 'set.prefix' },
       { title: 'Brand & Colors',    icon: 'ri-palette-line',           link: '/layout/master/brand-colors',       permKey: 'set.brand' },
       { title: 'Company Letterhead', icon: 'ri-file-paper-line',       link: '/layout/master/letterhead',         permKey: 'set.brand' },
+      { title: 'Employee Handbook', icon: 'ri-book-2-line',            link: '/layout/master/handbook',           permKey: 'set.handbook' },
       { title: 'Role Permissions',  icon: 'ri-shield-keyhole-line', link: '/layout/master/role-permission', permKey: 'set.roleperm' },
       { title: 'User Permissions',  icon: 'ri-user-settings-line',  link: '/layout/master/user-permission', permKey: 'set.userperm' },
       { title: 'My Sidebar Access', icon: 'ri-eye-line',            link: '/layout/master/user-access',     permKey: 'set.sidebaraccess' },

@@ -1094,13 +1094,13 @@
 <!-- ── Chatbot Widget ── -->
 <div class="ep-chat-widget">
   <!-- Chat Panel -->
-  <div class="ep-chat-panel" [class.ep-chat-panel--open]="isChatOpen">
+  <div class="ep-chat-panel " [class.ep-chat-panel--open]="isChatOpen">
     <div class="ep-chat-panel__header">
       <div class="d-flex align-items-center gap-2">
         <span class="ep-chat-avatar"><i class="ri ri-robot-2-line"></i></span>
         <div>
           <div class="ep-chat-panel__title">GENS Assistant</div>
-          <div class="ep-chat-panel__subtitle">Ask me anything</div>
+          <div class="ep-chat-panel__subtitle">{{ micLang === 'hi-IN' ? 'मुझसे कुछ भी पूछें' : 'Ask me anything' }}</div>
         </div>
       </div>
       <button class="ep-chat-close-btn" (click)="toggleChat()" title="Close">
@@ -1139,14 +1139,14 @@
       </button>
       <button
         class="ep-chat-lang-btn"
-        (click)="micLang = micLang === 'hi-IN' ? 'en-IN' : 'hi-IN'"
+        (click)="switchLang()"
         [title]="'Switch to ' + (micLang === 'hi-IN' ? 'English' : 'Hindi')"
         [disabled]="isListening"
       >{{ micLang === 'hi-IN' ? 'HI' : 'EN' }}</button>
       <input
         type="text"
         class="ep-chat-input"
-        [placeholder]="isListening ? 'Listening…' : 'Type a message…'"
+        [placeholder]="isListening ? (micLang === 'hi-IN' ? 'सुन रहा हूँ…' : 'Listening…') : (micLang === 'hi-IN' ? 'संदेश लिखें…' : 'Type a message…')"
         [(ngModel)]="chatInput"
         (keydown)="onChatKeydown($event)"
         [disabled]="chatLoading"
@@ -1158,7 +1158,7 @@
   </div>
 
   <!-- Floating Toggle Button -->
-  <!-- <button class="ep-chat-fab" (click)="toggleChat()" [title]="isChatOpen ? 'Close chat' : 'Open chat'">
+  <button class="ep-chat-fab" (click)="toggleChat()" [title]="isChatOpen ? 'Close chat' : 'Open chat'">
     <i class="ri" [class.ri-message-3-fill]="!isChatOpen" [class.ri-close-line]="isChatOpen"></i>
-  </button> -->
+  </button>
 </div>

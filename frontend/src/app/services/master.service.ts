@@ -344,4 +344,14 @@ export class MasterService {
     formData.append('letterhead', file);
     return this.http.post(`${this.baseUrl}upload-letterhead`, formData);
   }
+
+  getHandbook(): Observable<any> {
+    return this.http.post(`${this.baseUrl}get-handbook`, {});
+  }
+
+  uploadHandbook(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('handbook', file);
+    return this.http.post(`${this.baseUrl}upload-handbook`, formData);
+  }
 }

@@ -88,7 +88,8 @@
               <div class="d-flex align-items-center text-warning">
                 <h5 class="mb-0">{{ attendanceChart?.todayLeaveCount || '0' }}</h5>
                 <div class="d-flex align-items-center text-warning mx-1">
-                  <p class="mb-0 fw-medium">{{ getAttendanceBreakdown('On Leave') }} {{ getAttendanceTrendLabel('OnLeave') }}</p>
+                  <p class="mb-0 fw-medium">{{ getAttendanceBreakdown('On Leave') }} {{
+                    getAttendanceTrendLabel('OnLeave') }}</p>
                 </div>
               </div>
               <p class="mb-0">On Leave</p>
@@ -298,10 +299,24 @@
           <h5 class="mb-0 ml-2">Celebrations</h5>
           <ul class="nav nav-pills bg-white p-1" style="border-radius: 5px;" role="tablist">
             <li class="nav-item" role="presentation">
-              <button type="button" class="nav-link active waves-effect waves-light">All</button>
+              <button
+                type="button"
+                class="nav-link waves-effect waves-light"
+                [class.active]="celebrationTab === 'all'"
+                (click)="setCelebrationTab('all')"
+              >
+                All
+              </button>
             </li>
             <li class="nav-item" role="presentation">
-              <button type="button" class="nav-link waves-effect waves-light">Upcoming</button>
+              <button
+                type="button"
+                class="nav-link waves-effect waves-light"
+                [class.active]="celebrationTab === 'upcoming'"
+                (click)="setCelebrationTab('upcoming')"
+              >
+                Upcoming
+              </button>
             </li>
           </ul>
         </div>
@@ -317,15 +332,17 @@
                   <p class="mb-0">{{ item.dateLabel }}</p>
                   <h4>{{ item.firstName }} {{ item.lastName }}</h4>
                   <h2>{{ item.cardTitle }}</h2>
+                  <small class="celebration-when" *ngIf="celebrationTab === 'upcoming' && item.daysUntil != null">
+                    {{ item.daysUntil === 0 ? 'Today' : (item.daysUntil === 1 ? 'Tomorrow' : 'In ' + item.daysUntil + ' days') }}
+                  </small>
                 </div>
               </div>
             </div>
             <div class="col-12" *ngIf="!celebrationsList.length">
-              <div class="text-center text-muted py-4">No celebrations available.</div>
+              <div class="text-center text-muted py-4">
+                {{ celebrationTab === 'upcoming' ? 'No upcoming celebrations.' : 'No celebrations available.' }}
+              </div>
             </div>
-            <!-- <div class="col-12 d-flex justify-content-end mt-2">
-              <button type="button" class="btn btn-sm approve view-all-btn" (click)="openCelebrationPage()">View All</button>
-            </div> -->
           </div>
         </div>
       </div>
@@ -387,19 +404,19 @@
                   </button>
                 </li>
                 <li class="employee-table-header-bottom">
-                  <button *ngIf="activeEmployeeSectionTab === 'employee'" type="button"
+                  <button *ngIf="activeEmployeeSectionTab == 'employee'" type="button"
                     class="btn btn-sm approve view-all-btn" (click)="openEmployeeListPage()">
                     View All Employee
                   </button>
 
-                  <button *ngIf="activeEmployeeSectionTab === 'leave'" type="button"
+                  <button *ngIf="activeEmployeeSectionTab == 'leave'" type="button"
                     class="btn btn-sm approve view-all-btn" (click)="openLeaveListPage()">
                     View All Leave
                   </button>
                 </li>
               </ul>
 
-              <div class="dropdown table-range-dropdown" *ngIf="activeEmployeeSectionTab === 'leave'">
+              <div class="dropdown table-range-dropdown" *ngIf="activeEmployeeSectionTab == 'leave'">
                 <button class="btn table-range-btn dropdown-toggle" type="button"
                   (click)="toggleEmployeeTableRangeDropdown($event)" [attr.aria-expanded]="isEmployeeTableRangeOpen">
                   {{ selectedEmployeeTableRange }}
@@ -497,8 +514,7 @@
                     </td>
                     <td class="text-truncate">{{ item.mobile }} <br> {{ item.email }}</td>
 
-                    <td class="text-truncate">{{ item.fromDate | date:'dd MMM yyyy' }} To {{ item.toDate | date:'dd MMM
-                      yyyy' }} <br>
+                    <td class="text-truncate">{{ item.fromDate | date:'dd MMM yyyy' }} To {{ item.toDate | date:'dd MMM yyyy' }} <br>
                       {{ item.type }} - {{ item.days }} days</td>
                     <!-- <td class="text-truncate">{{ item.type }}</td> -->
                     <td class="text-truncate">
@@ -537,13 +553,8 @@
           </div>
           <div class="d-flex gap-2 align-items-center flex-wrap">
             <!-- Branch filter: visible only for manager / director -->
-            <ng-select *ngIf="isManagerDirectorRole"
-              [items]="teamBranchItems"
-              bindLabel="name"
-              bindValue="id"
-              [(ngModel)]="selectedTeamBranch"
-              (ngModelChange)="setTeamBranch($event)"
-              [clearable]="false"
+            <ng-select *ngIf="isManagerDirectorRole" [items]="teamBranchItems" bindLabel="name" bindValue="id"
+              [(ngModel)]="selectedTeamBranch" (ngModelChange)="setTeamBranch($event)" [clearable]="false"
               style="min-width: 160px; font-size: 13px;">
             </ng-select>
             <span class="badge bg-label-success px-3">Present</span>
@@ -593,7 +604,8 @@
                       </div>
                       <span class="text-muted small">{{ dept.presentPercent }}%</span>
                     </div>
-                    <i class="ri" [ngClass]="isDepartmentExpanded(dept.departmentId) ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
+                    <i class="ri"
+                      [ngClass]="isDepartmentExpanded(dept.departmentId) ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
                   </div>
                   <div *ngIf="isDepartmentExpanded(dept.departmentId)" class="px-3 pb-3 pt-2">
                     <div class="table-responsive">
@@ -612,7 +624,8 @@
                           <tr *ngFor="let member of dept.members">
                             <td>
                               <div class="d-flex align-items-center gap-2">
-                                <img [src]="member.profileImage || (member.gender === 'Male' ? 'assets/img/avatars/5.png' : 'assets/img/avatars/4.png')"
+                                <img
+                                  [src]="member.profileImage || (member.gender === 'Male' ? 'assets/img/avatars/5.png' : 'assets/img/avatars/4.png')"
                                   class="rounded-circle" width="28" height="28" alt=""
                                   (error)="onImageError($event, member, 'avatar')">
                                 <span class="fw-medium">{{ member.name }}</span>
@@ -667,7 +680,8 @@
                   </div>
                   <span class="text-muted small">{{ dept.presentPercent }}%</span>
                 </div>
-                <i class="ri" [ngClass]="isDepartmentExpanded(dept.departmentId) ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
+                <i class="ri"
+                  [ngClass]="isDepartmentExpanded(dept.departmentId) ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
               </div>
               <div *ngIf="isDepartmentExpanded(dept.departmentId)" class="px-3 pb-3 pt-2">
                 <div class="table-responsive">
@@ -686,7 +700,8 @@
                       <tr *ngFor="let member of dept.members">
                         <td>
                           <div class="d-flex align-items-center gap-2">
-                            <img [src]="member.profileImage || (member.gender === 'Male' ? 'assets/img/avatars/5.png' : 'assets/img/avatars/4.png')"
+                            <img
+                              [src]="member.profileImage || (member.gender === 'Male' ? 'assets/img/avatars/5.png' : 'assets/img/avatars/4.png')"
                               class="rounded-circle" width="28" height="28" alt=""
                               (error)="onImageError($event, member, 'avatar')">
                             <span class="fw-medium">{{ member.name }}</span>

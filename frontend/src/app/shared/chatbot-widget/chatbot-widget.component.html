@@ -1,0 +1,71 @@
+<!-- ── Chatbot Widget ── -->
+<div class="ep-chat-widget">
+  <!-- Chat Panel -->
+  <div class="ep-chat-panel " [class.ep-chat-panel--open]="isChatOpen">
+    <div class="ep-chat-panel__header">
+      <div class="d-flex align-items-center gap-2">
+        <span class="ep-chat-avatar"><i class="ri ri-robot-2-line"></i></span>
+        <div>
+          <div class="ep-chat-panel__title">GENS Assistant</div>
+          <div class="ep-chat-panel__subtitle">{{ micLang === 'hi-IN' ? 'मुझसे कुछ भी पूछें' : 'Ask me anything' }}</div>
+        </div>
+      </div>
+      <button class="ep-chat-close-btn" (click)="toggleChat()" title="Close">
+        <i class="ri ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="ep-chat-panel__body" #chatBody>
+      <div *ngFor="let msg of chatMessages" class="ep-chat-msg" [class.ep-chat-msg--user]="msg.role === 'user'" [class.ep-chat-msg--bot]="msg.role === 'bot'">
+        <span class="ep-chat-bubble">{{ msg.text }}</span>
+      </div>
+      <div *ngIf="chatLoading" class="ep-chat-msg ep-chat-msg--bot">
+        <span class="ep-chat-bubble ep-chat-bubble--typing">
+          <span></span><span></span><span></span>
+        </span>
+      </div>
+    </div>
+
+    <div *ngIf="isListening" class="ep-chat-recording-bar">
+      <span class="ep-chat-recording-bar__waves">
+        <span></span><span></span><span></span><span></span><span></span>
+      </span>
+      <span class="ep-chat-recording-bar__text">{{ recordingLabel }}</span>
+      <span class="ep-chat-recording-bar__hint">Mic band karo → text aayega</span>
+    </div>
+
+    <div class="ep-chat-panel__footer">
+      <button
+        class="ep-chat-mic-btn"
+        [class.ep-chat-mic-btn--active]="isListening"
+        (click)="toggleMic()"
+        [title]="isListening ? 'Stop & transcribe' : 'Speak a message'"
+        [disabled]="chatLoading"
+      >
+        <i class="ri" [class.ri-mic-fill]="!isListening" [class.ri-mic-off-line]="isListening"></i>
+      </button>
+      <button
+        class="ep-chat-lang-btn"
+        (click)="switchLang()"
+        [title]="'Switch to ' + (micLang === 'hi-IN' ? 'English' : 'Hindi')"
+        [disabled]="isListening"
+      >{{ micLang === 'hi-IN' ? 'HI' : 'EN' }}</button>
+      <input
+        type="text"
+        class="ep-chat-input"
+        [placeholder]="isListening ? (micLang === 'hi-IN' ? 'सुन रहा हूँ…' : 'Listening…') : (micLang === 'hi-IN' ? 'संदेश लिखें…' : 'Type a message…')"
+        [(ngModel)]="chatInput"
+        (keydown)="onChatKeydown($event)"
+        [disabled]="chatLoading"
+      />
+      <button class="ep-chat-send-btn" (click)="sendChatMessage()" [disabled]="chatLoading || !chatInput.trim()">
+        <i class="ri ri-send-plane-fill"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Floating Toggle Button -->
+  <button class="ep-chat-fab" (click)="toggleChat()" [title]="isChatOpen ? 'Close chat' : 'Open chat'">
+    <i class="ri" [class.ri-message-3-fill]="!isChatOpen" [class.ri-close-line]="isChatOpen"></i>
+  </button>
+</div>

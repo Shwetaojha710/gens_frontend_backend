@@ -242,6 +242,15 @@ export const layoutRoutes: Routes = [
           import('../reports/payroll/payroll.component').then((m) => m.PayrollComponent),
       },
       {
+        path: 'reports/salary-register',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'rep.salaryRegister' },
+        loadComponent: () =>
+          import('../reports/salary-register/salary-register.component').then(
+            (m) => m.SalaryRegisterComponent,
+          ),
+      },
+      {
         path: 'reports/attendance',
         canActivate: [PermissionGuard],
         data: { permKey: 'rep.late' },
@@ -255,6 +264,62 @@ export const layoutRoutes: Routes = [
         loadComponent: () =>
           import('../reports/tracking-report/tracking-report.component').then(
             (m) => m.TrackingReportComponent,
+          ),
+      },
+
+      // ── AI Insights ───────────────────────────────────────────────────────
+      {
+        path: 'ai-insights/attendance',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'ai.attendance' },
+        loadComponent: () =>
+          import('../ai-insights/attendance-analytics/attendance-analytics.component').then(
+            (m) => m.AttendanceAnalyticsComponent,
+          ),
+      },
+      {
+        path: 'ai-insights/payroll',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'ai.payroll' },
+        loadComponent: () =>
+          import('../ai-insights/payroll-verification/payroll-verification.component').then(
+            (m) => m.PayrollVerificationComponent,
+          ),
+      },
+      {
+        path: 'ai-insights/leave',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'ai.leave' },
+        loadComponent: () =>
+          import('../ai-insights/leave-recommendations/leave-recommendations.component').then(
+            (m) => m.LeaveRecommendationsComponent,
+          ),
+      },
+      {
+        path: 'ai-insights/performance',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'ai.performance' },
+        loadComponent: () =>
+          import('../ai-insights/performance-insights/performance-insights.component').then(
+            (m) => m.PerformanceInsightsComponent,
+          ),
+      },
+      {
+        path: 'ai-insights/attrition',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'ai.attrition' },
+        loadComponent: () =>
+          import('../ai-insights/attrition-prediction/attrition-prediction.component').then(
+            (m) => m.AttritionPredictionComponent,
+          ),
+      },
+      {
+        path: 'ai-insights/recruitment',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'ai.recruitment' },
+        loadComponent: () =>
+          import('../ai-insights/recruitment-assistant/recruitment-assistant.component').then(
+            (m) => m.RecruitmentAssistantComponent,
           ),
       },
 
@@ -371,6 +436,15 @@ export const layoutRoutes: Routes = [
         loadComponent: () =>
           import('../master/letterhead/letterhead.component').then(
             (m) => m.LetterheadComponent,
+          ),
+      },
+      {
+        path: 'master/handbook',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'set.handbook' },
+        loadComponent: () =>
+          import('../master/handbook/handbook.component').then(
+            (m) => m.HandbookComponent,
           ),
       },
       {

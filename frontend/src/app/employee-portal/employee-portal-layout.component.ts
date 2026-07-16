@@ -3,6 +3,28 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { EmployeePortalService } from './services/employee-portal.service';
+import { EmployeePortalNotificationReadService } from './services/employee-portal-notification-read.service';
+
+interface LeaveNotificationItem {
+  id: string;
+  status: string;
+  leaveType: string;
+  employeeName: string;
+  createdBy: string;
+  approvedBy: string;
+  recommendedBy: string;
+  fromDate: string;
+  toDate: string;
+  days: string;
+  reason: string;
+  updatedAt: string;
+}
+
+interface LeaveStatusGroup {
+  status: string;
+  label: string;
+  items: LeaveNotificationItem[];
+}
 
 @Component({
   selector: 'app-employee-portal-layout',
@@ -21,15 +43,31 @@ export class EmployeePortalLayoutComponent implements OnInit, OnDestroy {
   userMenuOpen = false;
 
   private routerSub = new Subscription();
+  private readSub = new Subscription();
 
   /** Notification bell */
   notifMenuOpen = false;
   notifLoading = false;
   notificationCount = 0;
-  notificationPreview = 'No new notifications.';
+  leaveNotifications: LeaveNotificationItem[] = [];
+  leaveStatusGroups: LeaveStatusGroup[] = [];
+
+  readonly leaveStatusOrder = [
+    'pending',
+    'recommended',
+    'approved',
+    'rejected',
+    'self_declined',
+  ] as const;
+
+  private readonly leaveStatusSet = new Set<string>([
+    ...this.leaveStatusOrder,
+    'escalate',
+  ]);
 
   constructor(
     private empApi: EmployeePortalService,
+    private notifRead: EmployeePortalNotificationReadService,
     private router: Router,
   ) {
     try {
@@ -45,15 +83,20 @@ export class EmployeePortalLayoutComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadNotificationSummary();
+    this.readSub = this.notifRead.changed$.subscribe(() => this.refreshUnreadCount());
     this.routerSub = this.router.events.subscribe(event => {
-      if (event instanceof NavigationEnd && window.innerWidth < 992) {
-        this.closeMobileSidebar();
+      if (event instanceof NavigationEnd) {
+        if (window.innerWidth < 992) {
+          this.closeMobileSidebar();
+        }
+        this.refreshUnreadCount();
       }
     });
   }
 
   ngOnDestroy(): void {
     this.routerSub.unsubscribe();
+    this.readSub.unsubscribe();
     document.body.style.overflow = '';
   }
 
@@ -62,29 +105,127 @@ export class EmployeePortalLayoutComponent implements OnInit, OnDestroy {
     this.empApi.getNotifications().subscribe({
       next: (res) => {
         this.notifLoading = false;
-        if (res.status === true && res.data != null) {
-          const d = res.data;
-          if (Array.isArray(d)) {
-            this.notificationCount = d.length;
-            this.notificationPreview =
-              d.length === 0
-                ? 'You are all caught up.'
-                : `${d.length} update(s) in your activity feed.`;
-          } else {
-            this.notificationCount = 1;
-            this.notificationPreview = 'You have notifications to review.';
-          }
-        } else {
-          this.notificationCount = 0;
-          this.notificationPreview = 'No active notifications right now.';
-        }
+        const raw = res.status === true && Array.isArray(res.data) ? res.data : [];
+        this.leaveNotifications = raw
+          .map((row) => this.normalizeLeaveNotification(row))
+          .filter((row): row is LeaveNotificationItem => row != null);
+
+        this.refreshUnreadCount();
+        this.leaveStatusGroups = this.buildLeaveStatusGroups(
+          this.leaveNotifications.filter((n) => this.notifRead.isUnread(n)),
+        );
       },
       error: () => {
         this.notifLoading = false;
+        this.leaveNotifications = [];
+        this.leaveStatusGroups = [];
         this.notificationCount = 0;
-        this.notificationPreview = 'Notifications could not be loaded.';
       },
     });
+  }
+
+  private refreshUnreadCount(): void {
+    this.notificationCount = this.notifRead.unreadCount(this.leaveNotifications);
+    this.leaveStatusGroups = this.buildLeaveStatusGroups(
+      this.leaveNotifications.filter((n) => this.notifRead.isUnread(n)),
+    );
+  }
+
+  markItemRead(n: LeaveNotificationItem): void {
+    this.notifRead.markRead([n]);
+    this.closeNotifMenu();
+  }
+
+  markAllVisibleRead(): void {
+    this.notifRead.markAllRead(this.leaveNotifications);
+    this.closeNotifMenu();
+  }
+
+  private normalizeLeaveNotification(row: unknown): LeaveNotificationItem | null {
+    if (!row || typeof row !== 'object') return null;
+    const r = row as Record<string, unknown>;
+    const status = String(r['status'] ?? '').toLowerCase();
+    if (!this.leaveStatusSet.has(status)) return null;
+
+    return {
+      id: String(r['id'] ?? ''),
+      status,
+      leaveType: r['leaveType'] != null ? String(r['leaveType']) : 'Leave',
+      employeeName:
+        r['employeeName'] != null && String(r['employeeName']).trim()
+          ? String(r['employeeName']).trim()
+          : r['createdBy'] != null
+            ? String(r['createdBy'])
+            : 'Employee',
+      createdBy: r['createdBy'] != null ? String(r['createdBy']) : '',
+      approvedBy: r['approvedBy'] != null ? String(r['approvedBy']) : '',
+      recommendedBy: r['recommendedBy'] != null ? String(r['recommendedBy']) : '',
+      fromDate: r['fromDate'] != null ? String(r['fromDate']) : '',
+      toDate: r['toDate'] != null ? String(r['toDate']) : '',
+      days: r['days'] != null ? String(r['days']) : '',
+      reason: r['reason'] != null ? String(r['reason']) : '',
+      updatedAt: r['updatedAt'] != null ? String(r['updatedAt']) : '',
+    };
+  }
+
+  private buildLeaveStatusGroups(items: LeaveNotificationItem[]): LeaveStatusGroup[] {
+    const byStatus = new Map<string, LeaveNotificationItem[]>();
+    for (const item of items) {
+      const list = byStatus.get(item.status) ?? [];
+      list.push(item);
+      byStatus.set(item.status, list);
+    }
+
+    const groups: LeaveStatusGroup[] = [];
+    for (const status of this.leaveStatusOrder) {
+      const list = byStatus.get(status);
+      if (list?.length) {
+        groups.push({ status, label: this.statusLabel(status), items: list });
+      }
+    }
+    // Any other leave statuses (e.g. escalate) not in the main order
+    for (const [status, list] of byStatus) {
+      if (!this.leaveStatusOrder.includes(status as (typeof this.leaveStatusOrder)[number]) && list.length) {
+        groups.push({ status, label: this.statusLabel(status), items: list });
+      }
+    }
+    return groups;
+  }
+
+  statusLabel(status: string): string {
+    const map: Record<string, string> = {
+      pending: 'Pending',
+      recommended: 'Recommended',
+      approved: 'Approved',
+      rejected: 'Rejected',
+      self_declined: 'Self Declined',
+      escalate: 'Escalated',
+    };
+    return map[String(status).toLowerCase()] || status;
+  }
+
+  statusTone(status: string): string {
+    const s = String(status).toLowerCase();
+    if (s === 'approved') return 'ok';
+    if (s === 'pending' || s === 'recommended' || s === 'escalate') return 'warn';
+    if (s === 'rejected' || s === 'self_declined') return 'bad';
+    return 'muted';
+  }
+
+  dateRange(n: LeaveNotificationItem): string {
+    if (n.fromDate && n.toDate && n.fromDate !== n.toDate) {
+      return `${n.fromDate} → ${n.toDate}`;
+    }
+    return n.fromDate || n.toDate || '';
+  }
+
+  actorHint(n: LeaveNotificationItem): string {
+    if (n.approvedBy && n.recommendedBy) {
+      return `Rec: ${n.recommendedBy} · App: ${n.approvedBy}`;
+    }
+    if (n.approvedBy) return `Approved by ${n.approvedBy}`;
+    if (n.recommendedBy) return `Recommended by ${n.recommendedBy}`;
+    return '';
   }
 
   get userInitials(): string {

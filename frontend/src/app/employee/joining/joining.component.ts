@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { EmployeeService } from '../../services/employee.service';
 import { CommonModule } from '@angular/common';
@@ -19,6 +19,7 @@ import Swal from 'sweetalert2';
   styleUrl: './joining.component.css'
 })
 export class JoiningComponent {
+  @ViewChild(SearchPaginationComponent) searchPaginationRef?: SearchPaginationComponent;
   notyf: Notyf
   maxDate: any
   constructor(public dataService: DataService, private employeeService: EmployeeService, private master: MasterService, public statusService: StatusService, private router: Router,) {
@@ -58,7 +59,6 @@ export class JoiningComponent {
 
   pageSize = 10;
   currentPage = 1;
-  itemsPerPage = 10;
   searchTerm = '';
   onSearch(term: string) {
     if (!term) {
@@ -87,7 +87,6 @@ export class JoiningComponent {
   searchText: any = ''
   originalList: any = []
   applyFilters() {
-    let data = [...this.employees];
     const value = this.searchTerm || '';
     this.searchText = value.trim();
     if (this.searchText === '') {
@@ -100,7 +99,15 @@ export class JoiningComponent {
     // pagination
     const start = (this.currentPage - 1) * this.pageSize;
     const end = start + this.pageSize;
-    this.filteredDesignation = data.slice(start, end);
+    this.filteredDesignation = this.employees.slice(start, end);
+  }
+
+  /** Clears any active search filter, e.g. after data has been added/edited/deleted. */
+  clearSearch(): void {
+    this.searchTerm = '';
+    this.searchText = '';
+    this.currentPage = 1;
+    this.searchPaginationRef?.resetSearch();
   }
 
   async getEmploymentTypes() {
@@ -422,6 +429,7 @@ stats:any
   employeeList: any = []
   cardData: any = {}
   async loadEmployees() {
+    this.clearSearch();
     // this.filteredDesignation = []
     this.employees = []
     this.employeeList = []

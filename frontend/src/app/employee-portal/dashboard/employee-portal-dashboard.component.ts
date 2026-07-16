@@ -1,8 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { AfterViewChecked, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import {
   ApexAxisChartSeries,
@@ -179,7 +179,7 @@ const EP_DASH_TIPS: readonly string[] = [
   templateUrl: './employee-portal-dashboard.component.html',
   styleUrls: ['./employee-portal-dashboard.component.css'],
 })
-export class EmployeePortalDashboardComponent implements OnInit {
+export class EmployeePortalDashboardComponent implements OnInit, AfterViewChecked {
   loading = true;
   chartsLoading = true;
   profileLoading = true;
@@ -236,11 +236,52 @@ export class EmployeePortalDashboardComponent implements OnInit {
   private recognition: any = null;
   private readonly CHAT_API = environment.chatApiUrl;
 
+  private greetingText(): string {
+    return this.micLang === 'hi-IN' ? 'नमस्ते! मैं आपकी कैसे मदद कर सकता हूँ?' : 'Hi! How can I help you today?';
+  }
+
   toggleChat(): void {
+    const wasOpen = this.isChatOpen;
     this.isChatOpen = !this.isChatOpen;
-    if (this.isChatOpen && this.chatMessages.length === 0) {
-      this.chatMessages.push({ role: 'bot', text: 'Hi! How can I help you today?' });
+
+    if (wasOpen && !this.isChatOpen) {
+      if (this.isListening) {
+        this.toggleMic();
+      }
+      this.chatMessages = [];
+      this.chatInput = '';
     }
+
+    if (this.isChatOpen && this.chatMessages.length === 0) {
+      this.chatMessages.push({ role: 'bot', text: this.greetingText() });
+    }
+    if (this.isChatOpen) {
+      this.shouldScroll = true;
+    }
+  }
+
+  switchLang(): void {
+    this.micLang = this.micLang === 'hi-IN' ? 'en-IN' : 'hi-IN';
+    if (this.chatMessages.length === 1 && this.chatMessages[0].role === 'bot') {
+      this.chatMessages[0] = { role: 'bot', text: this.greetingText() };
+    }
+  }
+   @ViewChild('chatBody') chatBody!: ElementRef;
+
+  private shouldScroll = false;
+
+  ngAfterViewChecked(): void {
+    if (this.shouldScroll) {
+      this.scrollToBottom();
+      this.shouldScroll = false;
+    }
+  }
+
+  private scrollToBottom(): void {
+    try {
+      const element = this.chatBody.nativeElement;
+      element.scrollTop = element.scrollHeight;
+    } catch (err) {}
   }
 
   sendChatMessage(): void {
@@ -249,17 +290,44 @@ export class EmployeePortalDashboardComponent implements OnInit {
     this.chatMessages.push({ role: 'user', text });
     this.chatInput = '';
     this.chatLoading = true;
-    this.http.post<{ reply?: string; message?: string; response?: string }>(this.CHAT_API, { message: text, session_id: this.myEmployeeId || 'guest' }).subscribe({
-      next: (res) => {
-        const reply = res.reply ?? res.message ?? res.response ?? 'Done!';
-        this.chatMessages.push({ role: 'bot', text: reply });
-        this.chatLoading = false;
-      },
-      error: () => {
-        this.chatMessages.push({ role: 'bot', text: 'Sorry, something went wrong. Please try again.' });
-        this.chatLoading = false;
-      },
+    this.shouldScroll = true;
+
+    let tenantId = '';
+    try {
+      const t = JSON.parse(localStorage.getItem('empPortalTenant') || '{}') as { id?: string };
+      tenantId = t.id != null ? String(t.id) : '';
+    } catch {
+      tenantId = '';
+    }
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+      'X-Tenant-Id': tenantId,
     });
+
+    const lang = this.micLang === 'hi-IN' ? 'hi' : 'en';
+    this.http
+      .post<{ answer?: string; reply?: string; message?: string; response?: string }>(
+        this.CHAT_API,
+        { employee_id: this.myEmployeeId || 'guest', message: text, lang },
+        { headers },
+      )
+      .subscribe({
+        next: (res) => {
+          const fallback = this.micLang === 'hi-IN' ? 'हो गया!' : 'Done!';
+          const reply = res.answer ?? res.reply ?? res.message ?? res.response ?? fallback;
+          this.chatMessages.push({ role: 'bot', text: reply });
+          this.chatLoading = false;
+          this.shouldScroll = true;
+        },
+        error: () => {
+          const errText = this.micLang === 'hi-IN'
+            ? 'क्षमा करें, कुछ गड़बड़ हो गई। कृपया फिर से प्रयास करें।'
+            : 'Sorry, something went wrong. Please try again.';
+          this.chatMessages.push({ role: 'bot', text: errText });
+          this.chatLoading = false;
+          this.shouldScroll = true;
+        },
+      });
   }
 
   onChatKeydown(event: KeyboardEvent): void {
@@ -272,7 +340,7 @@ export class EmployeePortalDashboardComponent implements OnInit {
   toggleMic(): void {
     if (this.isListening) {
       this.isListening = false;
-      this.recordingLabel = '● Listening…';
+      this.recordingLabel = this.micLang === 'hi-IN' ? '● सुन रहा हूँ…' : '● Listening…';
       this.recognition?.stop();
       return;
     }
@@ -287,31 +355,44 @@ export class EmployeePortalDashboardComponent implements OnInit {
     this.recognition.lang = this.micLang;
     this.recognition.interimResults = true;
     this.recognition.continuous = true;
-    this.recognition.maxAlternatives = 1;
+    this.recognition.maxAlternatives = 5;
 
     this.isListening = true;
     this.chatInput = '';
     this.recordingLabel = '● Listening…';
     let finalText = '';
+    let lowConfidenceWarned = false;
+    const LOW_CONFIDENCE_THRESHOLD = 0.5;
 
     this.recognition.onresult = (event: any) => {
       let interim = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const t = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalText += t + ' ';
+        const result = event.results[i];
+        // Pick the highest-confidence alternative instead of always [0] —
+        // hi-IN in particular returns weak/garbled top picks for code-mixed speech.
+        let best = result[0];
+        for (let a = 1; a < result.length; a++) {
+          if ((result[a].confidence || 0) > (best.confidence || 0)) best = result[a];
+        }
+        if (result.isFinal) {
+          finalText += best.transcript + ' ';
+          if (this.micLang === 'hi-IN' && best.confidence > 0 && best.confidence < LOW_CONFIDENCE_THRESHOLD && !lowConfidenceWarned) {
+            lowConfidenceWarned = true;
+            this.notyf.error('Hindi voice recognition sounded unclear — please check the text before sending.');
+          }
         } else {
-          interim = t;
+          interim = best.transcript;
         }
       }
       this.chatInput = (finalText + interim).trim();
-      this.recordingLabel = `● ${this.chatInput || 'Listening…'}`;
+      const listeningFallback = this.micLang === 'hi-IN' ? 'सुन रहा हूँ…' : 'Listening…';
+      this.recordingLabel = `● ${this.chatInput || listeningFallback}`;
     };
 
     this.recognition.onerror = (event: any) => {
       if (event.error === 'no-speech' || event.error === 'network') return;
       this.isListening = false;
-      this.recordingLabel = '● Listening…';
+      this.recordingLabel = this.micLang === 'hi-IN' ? '● सुन रहा हूँ…' : '● Listening…';
       if (event.error === 'not-allowed') {
         this.notyf.error('Microphone access denied. Allow mic in browser settings and reload.');
       } else {

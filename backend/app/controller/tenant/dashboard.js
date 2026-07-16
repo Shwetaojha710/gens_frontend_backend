@@ -630,24 +630,69 @@ const mapLeaves = async (leaves, leaveMasterList, tenantId, branchId) => {
 
 const mapCelebrations = (employees, designations, key, today) => {
   const designationMap = Object.fromEntries(designations.map((item) => [item.id, item.name]));
+  const todayStart = today.clone().startOf("day");
+  const monthStart = today.clone().startOf("month");
+  const monthEnd = today.clone().endOf("month");
+  const upcomingEnd = today.clone().add(30, "days").endOf("day");
 
   return employees
-    .filter((employee) => {
+    .map((employee) => {
       const value = employee[key];
-      if (!value) {
-        return false;
+      if (!value) return null;
+
+      const event = moment(value);
+      if (!event.isValid()) return null;
+
+      // Next occurrence of this month/day (today or future)
+      let nextOccurrence = moment({
+        year: today.year(),
+        month: event.month(),
+        date: event.date(),
+      }).startOf("day");
+      if (nextOccurrence.isBefore(todayStart, "day")) {
+        nextOccurrence = nextOccurrence.add(1, "year");
       }
-      const currentDate = new Date(value);
-      if (key === "joiningDate") {
-        return currentDate.getDate() === today.date() && currentDate.getMonth() + 1 === today.month() + 1;
+
+      // Same calendar date within the current month (may already have passed)
+      const thisMonthDate = moment({
+        year: today.year(),
+        month: event.month(),
+        date: event.date(),
+      }).startOf("day");
+      const inCurrentMonth =
+        event.month() === today.month() &&
+        thisMonthDate.isSameOrAfter(monthStart, "day") &&
+        thisMonthDate.isSameOrBefore(monthEnd, "day");
+
+      const daysUntil = nextOccurrence.diff(todayStart, "days");
+      const isUpcoming = daysUntil >= 0 && daysUntil <= 30;
+      const isToday = daysUntil === 0;
+
+      // Include if in current month (for All) or upcoming in next 30 days
+      if (!inCurrentMonth && !isUpcoming) {
+        return null;
       }
-      return currentDate.getMonth() + 1 === today.month() + 1;
+
+      return {
+        ...employee,
+        badgeColor: BADGE_COLORS[0],
+        designationName: designationMap[employee.designationId] || "No Designation",
+        profileImage: employee.profileImage
+          ? `${process.env.IMG_BASE_URL}/${employee.profileImage}`
+          : null,
+        eventDate: thisMonthDate.format("YYYY-MM-DD"),
+        nextOccurrence: nextOccurrence.format("YYYY-MM-DD"),
+        daysUntil,
+        inCurrentMonth,
+        isUpcoming,
+        isToday,
+      };
     })
+    .filter(Boolean)
+    .sort((a, b) => a.daysUntil - b.daysUntil)
     .map((employee, index) => ({
       ...employee,
       badgeColor: BADGE_COLORS[index % BADGE_COLORS.length],
-      designationName: designationMap[employee.designationId] || "No Designation",
-      profileImage: employee.profileImage ? `${process.env.IMG_BASE_URL}/${employee.profileImage}` : null,
     }));
 };
 

@@ -161,7 +161,7 @@ export class BranchwiseComponent implements OnInit, OnDestroy {
   getEmployeeList() {
     this.branchList = []
     this.employeeList = []
-    this.masterService.AppEmpList().subscribe((res) => {
+    this.masterService.getemployeeList().subscribe((res) => {
       if (res.status == true) {
         this.notyf.success(res.message || 'Dashboard data loaded successfully')
         this.stats = res.data.stats;

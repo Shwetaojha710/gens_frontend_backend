@@ -1,0 +1,446 @@
+/* Shared design system for the AI Insights pages (attrition, attendance, leave,
+   performance, payroll, recruitment). Each page picks an accent via the
+   .ai-hero--* modifier; everything else (panels, tables, states) is common. */
+
+.ai-page {
+  padding-bottom: 0.5rem;
+}
+
+/* ---------- Hero header ---------- */
+.ai-hero {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.1rem 1.35rem;
+  border-radius: 16px;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.25) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 10px 30px rgba(21, 45, 82, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.ai-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--ai-accent-1, #4f8cff) 0%, transparent 45%);
+  opacity: 0.06;
+  pointer-events: none;
+}
+
+.ai-hero__icon {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  color: #fff;
+  background: linear-gradient(145deg, var(--ai-accent-1, #4f8cff), var(--ai-accent-2, #2f5fd6));
+  box-shadow: 0 8px 18px -6px var(--ai-accent-1, #4f8cff);
+}
+
+.ai-hero__eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ai-accent-2, #2f5fd6);
+}
+
+.ai-hero__title {
+  font-weight: 700;
+  color: #26314d;
+}
+
+.ai-hero__sub {
+  font-size: 0.86rem;
+  color: #6b7590;
+}
+
+/* One consistent "AI" accent (matches the chatbot widget's blue/cyan brand)
+   across every AI Insights page — set on .ai-page so every element on the
+   page (hero, buttons, panels, meters, donuts) picks up the same color.
+   The old --rose/--green/--violet/--amber/--indigo modifier names are kept
+   as aliases so existing templates don't need to change classes. */
+.ai-hero--rose, .ai-page--rose,
+.ai-hero--blue, .ai-page--blue,
+.ai-hero--green, .ai-page--green,
+.ai-hero--violet, .ai-page--violet,
+.ai-hero--amber, .ai-page--amber,
+.ai-hero--indigo, .ai-page--indigo {
+  --ai-accent-1: #0ea5e9;
+  --ai-accent-2: #005fa8;
+}
+
+/* ---------- Panels (form + result cards) ---------- */
+.ai-panel {
+  border-radius: 16px;
+  background: linear-gradient(
+      110.78deg,
+      rgba(255, 255, 255, 0.55) 7.01%,
+      rgba(255, 255, 255, 0.15) 106.22%
+    ),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08));
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 10px 24px rgba(21, 45, 82, 0.05);
+}
+
+.ai-panel .form-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #57617a;
+  margin-bottom: 0.35rem;
+}
+
+.ai-panel .form-control,
+.ai-panel .form-select {
+  border-radius: 10px;
+  border-color: rgba(148, 163, 184, 0.45);
+}
+
+.ai-panel__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ai-accent-2, #2f5fd6);
+}
+
+.ai-run-btn {
+  border-radius: 10px;
+  font-weight: 600;
+  border: none;
+  color: #fff;
+  background: linear-gradient(135deg, var(--ai-accent-1, #4f8cff), var(--ai-accent-2, #2f5fd6));
+  box-shadow: 0 8px 18px -8px var(--ai-accent-2, #2f5fd6);
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+
+.ai-run-btn:hover:not(:disabled) {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  color: #fff;
+}
+
+.ai-run-btn:disabled {
+  opacity: 0.75;
+}
+
+/* ---------- Stat chips ---------- */
+.ai-stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.ai-stat-chip {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.5rem 0.95rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  min-width: 118px;
+}
+
+.ai-stat-chip strong {
+  font-size: 1.05rem;
+  line-height: 1.1;
+  color: #26314d;
+}
+
+.ai-stat-chip span {
+  font-size: 0.72rem;
+  color: #7a8399;
+  font-weight: 500;
+}
+
+/* ---------- Tables ---------- */
+.ai-table thead th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #7a8399;
+  font-weight: 700;
+  border-bottom-width: 1px;
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.ai-table tbody tr:hover {
+  background: rgba(148, 163, 184, 0.08);
+}
+
+/* ---------- Result cards (e.g. leave recommendation slots) ---------- */
+.ai-slot-card {
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.7);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ai-slot-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(21, 45, 82, 0.08);
+}
+
+/* ---------- Empty / loading states ---------- */
+.ai-empty-state,
+.ai-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: #8a92a6;
+}
+
+.ai-empty-state i {
+  font-size: 1.9rem;
+  color: #b7bfd1;
+}
+
+.ai-empty-state p,
+.ai-loading-state p {
+  margin: 0;
+  font-size: 0.86rem;
+}
+
+.ai-loading-state .spinner-border {
+  color: var(--ai-accent-2, #2f5fd6);
+}
+
+/* ---------- AI summary text (formatAiSummary output) ---------- */
+.ai-summary-heading {
+  margin-top: 0.75rem;
+  font-weight: 600;
+  color: #3c4056;
+}
+
+.ai-summary-line {
+  margin-bottom: 0.35rem;
+  color: #454c5f;
+}
+
+.ai-summary-bullet {
+  margin-bottom: 0.25rem;
+  padding-left: 1rem;
+  position: relative;
+  color: #454c5f;
+}
+
+.ai-summary-bullet::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: var(--ai-accent-2, #2f5fd6);
+}
+
+/* ---------- Meter bars (attendance rate, risk score, match score, …) ---------- */
+.ai-meter-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ai-meter-row__label {
+  flex: 0 0 auto;
+  min-width: 140px;
+  font-weight: 600;
+  color: #3c4056;
+  font-size: 0.85rem;
+}
+
+.ai-meter-track {
+  position: relative;
+  flex: 1 1 auto;
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.2);
+  overflow: hidden;
+}
+
+.ai-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--ai-accent-1, #4f8cff), var(--ai-accent-2, #2f5fd6));
+  transition: width 0.4s ease;
+}
+
+.ai-meter-fill--good { background: linear-gradient(90deg, #34d399, #047857); }
+.ai-meter-fill--warn { background: linear-gradient(90deg, #fbbf24, #b45309); }
+.ai-meter-fill--bad { background: linear-gradient(90deg, #fb7185, #be123c); }
+
+.ai-meter-value {
+  flex: 0 0 auto;
+  min-width: 42px;
+  text-align: right;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #26314d;
+}
+
+/* Compact variant for use inside table cells */
+.ai-meter-row--sm {
+  gap: 0.5rem;
+  min-width: 140px;
+}
+.ai-meter-row--sm .ai-meter-track {
+  height: 7px;
+}
+
+/* ---------- Rank badges ---------- */
+.ai-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: rgba(148, 163, 184, 0.16);
+  color: #57617a;
+  flex-shrink: 0;
+}
+
+.ai-rank--top {
+  background: linear-gradient(135deg, #fbbf24, #b45309);
+  color: #fff;
+}
+
+/* ---------- Donut / ring progress (completion rate, single-record risk, …) ---------- */
+.ai-donut {
+  --ai-donut-pct: 0;
+  --ai-donut-size: 84px;
+  width: var(--ai-donut-size);
+  height: var(--ai-donut-size);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: conic-gradient(
+    var(--ai-accent-2, #2f5fd6) calc(var(--ai-donut-pct) * 1%),
+    rgba(148, 163, 184, 0.18) 0
+  );
+  position: relative;
+  flex-shrink: 0;
+}
+
+.ai-donut::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.ai-donut__value {
+  position: relative;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #26314d;
+}
+
+/* ---------- Best-pick ribbon (top-scored recommendation / candidate) ---------- */
+.ai-slot-card {
+  position: relative;
+}
+
+.ai-best-badge {
+  position: absolute;
+  top: -10px;
+  right: 14px;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(135deg, #fbbf24, #b45309);
+  box-shadow: 0 6px 14px -6px rgba(180, 83, 9, 0.55);
+}
+
+.ai-slot-card--best {
+  border-color: rgba(251, 191, 36, 0.5);
+  box-shadow: 0 10px 24px rgba(180, 83, 9, 0.1);
+}
+
+/* ---------- Timeline list (issues, leave history, etc.) ---------- */
+.ai-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.ai-timeline__item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-left: 3px solid var(--ai-accent-1, #4f8cff);
+}
+
+.ai-timeline__item--danger { border-left-color: #dc2626; }
+.ai-timeline__item--warning { border-left-color: #d97706; }
+.ai-timeline__item--info { border-left-color: #0369a1; }
+.ai-timeline__item--success { border-left-color: #059669; }
+
+.ai-timeline__icon {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  background: rgba(148, 163, 184, 0.14);
+  color: #57617a;
+}
+
+.ai-timeline__item--danger .ai-timeline__icon { background: rgba(220, 38, 38, 0.12); color: #dc2626; }
+.ai-timeline__item--warning .ai-timeline__icon { background: rgba(217, 119, 6, 0.12); color: #d97706; }
+.ai-timeline__item--info .ai-timeline__icon { background: rgba(3, 105, 161, 0.12); color: #0369a1; }
+.ai-timeline__item--success .ai-timeline__icon { background: rgba(5, 150, 105, 0.12); color: #059669; }
+
+.ai-timeline__body {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.ai-timeline__title {
+  font-weight: 600;
+  font-size: 0.86rem;
+  color: #3c4056;
+  margin: 0;
+}
+
+.ai-timeline__meta {
+  font-size: 0.76rem;
+  color: #8a92a6;
+}
+
+@media (max-width: 767px) {
+  .ai-hero {
+    flex-wrap: wrap;
+  }
+
+  .ai-meter-row__label {
+    min-width: 96px;
+  }
+}

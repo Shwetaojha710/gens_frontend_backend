@@ -22,23 +22,24 @@
     <!-- Ref + Dated row -->
     <div class="ref-date-row">
       <div class="ref-left">
-        <b>Ref: Quaere/Emp/Relieving/<span *ngIf="!isDownload"><input type="text" [(ngModel)]="refNo" (ngModelChange)="saveData()" class="form-control d-inline-block" style="width:80px; height:24px; font-size:12px; padding:1px 4px; vertical-align:middle; font-weight:normal;" /></span><span *ngIf="isDownload">{{ refNo }}</span></b>
+        <b>Ref: Quaere/Emp/Relieving/<input type="text" [(ngModel)]="refNo" (ngModelChange)="saveData()" class="form-control d-inline-block" style="width:80px; height:24px; font-size:12px; padding:1px 4px; vertical-align:middle; font-weight:normal;" /></b>
       </div>
       <div class="dated-right">
-        <b>Dated:&nbsp;<span *ngIf="!isDownload"><input type="date" [(ngModel)]="relievingDate" (ngModelChange)="saveData()" class="form-control d-inline-block" style="width:140px; height:24px; font-size:12px; padding:1px 4px; vertical-align:middle; font-weight:normal;" /></span><span *ngIf="isDownload">{{ relievingDate | date:'dd MMMM, yyyy' }}</span></b>
+        <b>Dated:&nbsp;<input type="date" [(ngModel)]="relievingDate" (ngModelChange)="saveData()" class="form-control d-inline-block" style="width:140px; height:24px; font-size:12px; padding:1px 4px; vertical-align:middle; font-weight:normal;" /></b>
       </div>
     </div>
     <!-- EMPLOYEE ADDRESS -->
     <div class="address-block">
       <div><b>{{ salutation }} {{ employeeFullName }}</b></div>
       <div>{{ fatherPrefix }} <b>{{ personalDetails.fatherName }}</b></div>
-      <div style="white-space: pre-line;">{{ personalDetails.permanentAddress }}</div>
-      @if (personalDetails.city || personalDetails.state) {
-        <div>
-          {{ personalDetails.city }}@if (personalDetails.city && personalDetails.state) { <span>, </span> }{{ personalDetails.state }}
-          @if (personalDetails.pinCode) { <span>-{{ personalDetails.pinCode }}</span> }
-        </div>
-      }
+      <div>
+        <textarea rows="2" [(ngModel)]="address" (ngModelChange)="saveData()" class="form-control" style="width:100%; max-width:420px; font-size:13px; padding:2px 6px; resize:vertical;"></textarea>
+      </div>
+      <div class="d-flex gap-2 mt-1">
+        <input type="text" [(ngModel)]="addressCity" (ngModelChange)="saveData()" placeholder="City" class="form-control d-inline-block" style="width:120px; height:24px; font-size:12px; padding:1px 4px;" />
+        <input type="text" [(ngModel)]="addressState" (ngModelChange)="saveData()" placeholder="State" class="form-control d-inline-block" style="width:120px; height:24px; font-size:12px; padding:1px 4px;" />
+        <input type="text" [(ngModel)]="addressPinCode" (ngModelChange)="saveData()" placeholder="Pin Code" class="form-control d-inline-block" style="width:100px; height:24px; font-size:12px; padding:1px 4px;" />
+      </div>
     </div>
 
     <!-- SUBJECT -->
@@ -55,28 +56,14 @@
     <div class="body-para">
       You are hereby relieved from the services of the company by the closing hours of
       <b>
-        @if (!isDownload) {
-          <span>
-            <input type="date" [(ngModel)]="relievingDate" (ngModelChange)="saveData()" class="form-control d-inline-block" style="width:150px; height:26px; font-size:13px; padding:1px 5px;" />
-          </span>
-        }
-        @if (isDownload) {
-          <span>{{ relievingDate | date:'dd MMMM, yyyy' }}</span>
-        }
+        <input type="date" [(ngModel)]="relievingDate" (ngModelChange)="saveData()" class="form-control d-inline-block" style="width:150px; height:26px; font-size:13px; padding:1px 5px;" />
       </b>
     </div>
 
     <div class="body-para">
       We wish to place on record that you had been under the employment from
       <b>
-        @if (!isDownload) {
-          <span>
-            <input type="date" [(ngModel)]="joiningDate" (ngModelChange)="saveData()" class="form-control d-inline-block" style="width:150px; height:26px; font-size:13px; padding:1px 5px;" />
-          </span>
-        }
-        @if (isDownload) {
-          <span>{{ joiningDate | date:'dd MMMM, yyyy' }}</span>
-        }
+        <input type="date" [(ngModel)]="joiningDate" (ngModelChange)="saveData()" class="form-control d-inline-block" style="width:150px; height:26px; font-size:13px; padding:1px 5px;" />
       </b>
       to
       <b>{{ relievingDate | date:'dd MMMM, yyyy' }}</b>

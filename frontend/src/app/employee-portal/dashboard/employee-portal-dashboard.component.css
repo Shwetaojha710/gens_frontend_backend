@@ -1433,6 +1433,15 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 0.75rem;
+  /* The panel keeps its 520x600 box in layout even while "closed" (opacity: 0),
+     so without this the invisible box would swallow clicks on page content
+     underneath it (e.g. bottom-right pagination/action buttons). */
+  pointer-events: none;
+}
+
+.ep-chat-fab,
+.ep-chat-panel--open {
+  pointer-events: auto;
 }
 
 .ep-chat-fab {
@@ -1467,7 +1476,7 @@
   display: flex;
   flex-direction: column;
   border-radius: 1.125rem;
-  overflow: hidden;
+  /* overflow: hidden; */
   box-shadow: 0 16px 48px rgba(15, 41, 66, 0.2);
   background: #fff;
   border: 1px solid rgba(226, 232, 240, 0.9);
@@ -1476,6 +1485,8 @@
   pointer-events: none;
   transition: transform 0.22s ease, opacity 0.22s ease;
   transform-origin: bottom right;
+  overflow-y: auto;
+  scroll-behavior: smooth;
 }
 
 .ep-chat-panel--open {
@@ -1785,3 +1796,7 @@
 }
 /* ─────────────────────────────────────────────────────────────────────────── */
 
+/* .ep-chat-panel__body {
+  overflow-y: auto;
+  scroll-behavior: smooth;
+} */

@@ -1,0 +1,101 @@
+<div class="container-fluid ep-notif-page">
+  <a routerLink="/employee-portal/dashboard" class="ep-notif-page__back">
+    <i class="icon-base ri ri-arrow-left-line me-1"></i> Back to dashboard
+  </a>
+
+  <header class="ep-notif-page__header">
+    <div>
+      <h4 class="ep-notif-page__title">Leave notifications</h4>
+      <p class="ep-notif-page__sub">
+        Pending, recommended, approved, rejected and self-declined leave updates for you and your team.
+      </p>
+    </div>
+    <div class="ep-notif-page__actions">
+      <button
+        type="button"
+        class="ep-notif-page__mark"
+        *ngIf="!loading && unreadCount > 0"
+        (click)="markAllRead()"
+      >
+        <i class="icon-base ri ri-check-double-line me-1"></i>
+        Mark all read
+      </button>
+      <button type="button" class="ep-notif-page__refresh" (click)="load(false)" [disabled]="loading">
+        <i class="icon-base ri ri-refresh-line me-1"></i>
+        Refresh
+      </button>
+    </div>
+  </header>
+
+  <div class="ep-notif-card">
+    <div class="ep-notif-card__filters" *ngIf="!loading && rows.length > 0">
+      <button
+        type="button"
+        class="ep-notif-chip"
+        *ngFor="let f of statusFilters"
+        [class.ep-notif-chip--active]="selectedStatus === f.value"
+        (click)="selectFilter(f.value)"
+      >
+        {{ f.label }}
+        <span class="ep-notif-chip__count">{{ countFor(f.value) }}</span>
+      </button>
+    </div>
+
+    <div class="ep-notif-card__loading" *ngIf="loading">Loading leave notifications…</div>
+
+    <div class="ep-notif-table-wrap" *ngIf="!loading">
+      <table class="ep-notif-table" *ngIf="displayRows.length; else emptyList">
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Leave</th>
+            <th>Dates</th>
+            <th>Status</th>
+            <th>Recommended by</th>
+            <th>Approved by</th>
+            <th>Reason</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let n of displayRows"
+            [class.ep-notif-row--unread]="n.unread"
+            (click)="markOneRead(n)"
+          >
+            <td>
+              <strong class="ep-notif-emp">{{ n.employeeName }}</strong>
+              <small class="ep-notif-meta" *ngIf="n.appliedOn || n.createdAt">
+                Applied {{ n.appliedOn || n.createdAt }}
+              </small>
+            </td>
+            <td>
+              <span>{{ n.leaveType }}</span>
+              <small class="ep-notif-meta" *ngIf="n.days">{{ n.days }} day(s)</small>
+            </td>
+            <td>{{ dateRange(n) }}</td>
+            <td>
+              <span class="ep-notif-status" [attr.data-tone]="statusTone(n.status)">
+                {{ statusLabel(n.status) }}
+              </span>
+            </td>
+            <td>
+              {{ n.recommendedBy || '—' }}
+            </td>
+            <td>
+              {{ n.approvedBy || '—' }}
+            </td>
+            <td class="ep-notif-reason">{{ n.reason || '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <ng-template #emptyList>
+        <div class="ep-notif-empty-state">
+          <i class="icon-base ri ri-notification-off-line"></i>
+          <p *ngIf="rows.length === 0">No leave notifications found.</p>
+          <p *ngIf="rows.length > 0">No leaves match this status filter.</p>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+</div>

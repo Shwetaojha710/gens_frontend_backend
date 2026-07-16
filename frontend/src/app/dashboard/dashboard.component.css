@@ -66,6 +66,14 @@
     -webkit-text-fill-color: transparent;
 }
 
+.celebration-when {
+    display: block;
+    margin-top: 2px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #005B8F;
+}
+
 .approve {
     /* background: linear-gradient(90deg, rgba(147, 152, 154, 0.2) 0%, rgba(104, 197, 255, 0.2) 100%); */
     width: 77px;
