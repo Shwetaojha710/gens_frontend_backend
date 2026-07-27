@@ -281,7 +281,7 @@ ${content}
   }
 
   downloadDoc() {
-    const logoPromise = this.getBase64FromSrc('/assets/img/logo/logo-quaere.png').catch(() => '');
+    const logoPromise = this.getBase64FromSrc('/assets/img/logo/image.png').catch(() => '');
     const badge1Promise = this.getBase64FromSrc('/assets/img/logo/Picture1.jpg').catch(() => '');
     const badge2Promise = this.getBase64FromSrc('/assets/img/logo/Picture2.png').catch(() => '');
 

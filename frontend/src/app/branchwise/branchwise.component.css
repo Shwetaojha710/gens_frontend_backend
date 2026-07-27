@@ -1,4 +1,4 @@
-/* ── Branch Slider ─────────────────────────────── */
+﻿/* ── Branch Slider ─────────────────────────────── */
 .bw-slider-section {
   width: 100%;
   padding: 0 0.5rem;
@@ -89,7 +89,7 @@
 .buy-now .btn-buy-now {
     position: fixed;
     z-index: 1080;
-    box-shadow: 0 1px 20px 1px #0663a9;
+    box-shadow: 0 1px 20px 1px rgba(0, 180, 166, 0.55);
     inset-block-end: 5rem;
     inset-inline-end: 56.5rem;
 }
@@ -217,15 +217,23 @@ body {
 .card-wrapper {
     background: transparent;
     padding: 15px;
-    border-radius: 20px;
+    border-radius: 22px;
     width: 300px;
-    background: linear-gradient(110.78deg, rgba(255, 255, 255, 0.082) 7.01%, rgba(255, 255, 255, 0.002) 106.22%), linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));
-    border: 1px solid #fff;
+    background: linear-gradient(110.78deg, rgba(255, 255, 255, 0.5) 7.01%, rgba(255, 255, 255, 0.08) 106.22%);
+    border: 1px solid rgba(0, 180, 166, 0.25);
+    box-shadow: 0 10px 30px rgba(11, 43, 58, 0.08);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.card-wrapper:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 20px 44px rgba(0, 180, 166, 0.22);
+    border-color: rgba(0, 180, 166, 0.45);
 }
 
 /* Main Card */
 .city-card {
-    border-radius: 16px;
+    border-radius: 18px;
     background-image: url("/assets/img/bg-login/lko-bg.png");
     background-size: cover;
     background-position: center;
@@ -236,27 +244,35 @@ body {
     opacity: 1;
 }
 
-/* Gradient overlay */
+/* Light vignette so text stays readable — photo shows through clearly */
 .city-card::before {
     content: "";
     position: absolute;
     inset: 0;
-    /* background: linear-gradient(180deg,
-            rgba(0, 123, 255, 0.4),
-            rgba(0, 200, 100, 0.5),
-            rgba(0, 0, 0, 0.6)); */
+    background: linear-gradient(
+        180deg,
+        rgba(0, 43, 58, 0.05) 0%,
+        rgba(0, 43, 58, 0.1) 55%,
+        rgba(0, 29, 38, 0.42) 100%
+    );
+    z-index: 0;
+}
+
+.city-card .overlay {
+    z-index: 1;
 }
 
 /* Inner Glass Card */
 .overlay {
     position: absolute;
-    top: 30px;
+    top: 24px;
     left: 20px;
     right: 20px;
-    bottom: 30px;
-    border-radius: 20px;
-    border: 1.5px solid rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(2px);
+    bottom: 24px;
+    border-radius: 16px;
+    border: 1.5px solid rgba(255, 255, 255, 0.55);
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(3px);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -264,13 +280,19 @@ body {
     color: #fff;
     text-align: center;
     padding: 20px;
+    transition: border-color 0.25s ease, background 0.25s ease;
+}
+
+.card-wrapper:hover .overlay {
+    border-color: rgba(0, 210, 180, 0.85);
+    background: rgba(0, 180, 166, 0.1);
 }
 
 /* Text */
 .overlay h2 {
     font-size: 26px;
-    font-weight: 700;
-    letter-spacing: 1px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
     margin-bottom: 0px;
     line-height: 20px;
 }
@@ -295,12 +317,18 @@ body {
     gap: 16px;
     opacity: 1;
     border-radius: 8px;
-    border-width: 1px;
-    border: 1px solid #fff;
-    background: transparent;
+    border: none;
+    background: linear-gradient(90deg, #0081c9 0%, #00d2b4 100%);
     color: #fff;
+    font-weight: 600;
+    box-shadow: 0 8px 20px rgba(0, 129, 201, 0.35);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
 
-
+.btn-dashboard:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(0, 129, 201, 0.45);
+    color: #fff;
 }
 
 
@@ -334,8 +362,9 @@ body {
 
 .company-text {
     font-size: 32px;
-    color: #005495;
-    font-weight: 500;
+    color: #0b2b3a;
+    font-weight: 700;
+    letter-spacing: -0.02em;
 }
 
 /* Media Queries */
@@ -392,7 +421,7 @@ body {
     .buy-now .btn-buy-now {
         position: fixed;
         z-index: 1080;
-        box-shadow: 0 1px 20px 1px #0663a9;
+        box-shadow: 0 1px 20px 1px rgba(0, 180, 166, 0.55);
         inset-block-end: 4rem;
         inset-inline-end: 28.5rem;
     }
@@ -402,7 +431,7 @@ body {
     .buy-now .btn-buy-now {
         position: fixed;
         z-index: 1080;
-        box-shadow: 0 1px 20px 1px #0663a9;
+        box-shadow: 0 1px 20px 1px rgba(0, 180, 166, 0.55);
         inset-block-end: 2rem;
         inset-inline-end: 42.5rem;
     }
@@ -414,15 +443,15 @@ body {
     .buy-now .btn-buy-now {
         position: fixed;
         z-index: 1080;
-        box-shadow: 0 1px 20px 1px #0663a9;
+        box-shadow: 0 1px 20px 1px rgba(0, 180, 166, 0.55);
         inset-block-end: 2rem;
         inset-inline-end: 20.5rem;
     }
 
     .company-text {
         font-size: 18px;
-        color: #005495;
-        font-weight: 500;
+        color: #0b2b3a;
+        font-weight: 700;
     }
 
 }
@@ -432,7 +461,7 @@ body {
     .buy-now .btn-buy-now {
         position: fixed;
         z-index: 1080;
-        box-shadow: 0 1px 20px 1px #0663a9;
+        box-shadow: 0 1px 20px 1px rgba(0, 180, 166, 0.55);
         inset-block-end: 2rem;
         inset-inline-end: 9.5rem;
     }
@@ -505,7 +534,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 1.1rem 1.25rem 1rem;
-  background: linear-gradient(135deg, #0d5f9d 0%, #209af7 100%);
+  background: linear-gradient(90deg, #0081c9 0%, #00d2b4 100%);
   color: #fff;
   flex-shrink: 0;
 }
@@ -754,7 +783,7 @@ body {
 .bw-btn-save {
   flex: 1;
   padding: 0.55rem 0;
-  background: linear-gradient(135deg, #0d5f9d, #209af7);
+  background: linear-gradient(90deg, #0081c9 0%, #00d2b4 100%);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -790,7 +819,7 @@ body {
 }
 
 /* ════════════════════════════════════════════════
-   Module Permission Drawer  (blue — matches landing-home)
+   Module Permission Drawer (teal — matches app theme)
    ════════════════════════════════════════════════ */
 
 /* FAB — shield icon, below the palette button */
@@ -803,7 +832,7 @@ body {
   height: 2.85rem;
   border-radius: 50%;
   border: none;
-  background: linear-gradient(135deg, #0b6db6, #209af7);
+  background: linear-gradient(90deg, #0081c9 0%, #00d2b4 100%);
   color: #fff;
   font-size: 1.2rem;
   display: flex;

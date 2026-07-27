@@ -225,6 +225,15 @@ export const layoutRoutes: Routes = [
             (m) => m.ReimbursementComponent,
           ),
       },
+      {
+        path: 'payroll/employee-appraisal',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'pay.appraisal' },
+        loadComponent: () =>
+          import('../payroll/employee-appraisal/employee-appraisal.component').then(
+            (m) => m.EmployeeAppraisalComponent,
+          ),
+      },
 
       // ── Reports ───────────────────────────────────────────────────────────
       {

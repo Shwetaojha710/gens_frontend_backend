@@ -1,0 +1,18 @@
+<div class="relative overflow-hidden py-6">
+  <div class="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[var(--bg-secondary)] to-transparent z-10 pointer-events-none"></div>
+  <div class="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[var(--bg-secondary)] to-transparent z-10 pointer-events-none"></div>
+
+  <div class="flex animate-marquee whitespace-nowrap">
+    @for (copy of [0, 1]; track copy) {
+      <div class="flex shrink-0">
+        @for (name of companies; track name) {
+          <div class="mx-4 px-8 py-4 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-color)] shadow-card
+                      text-sm font-semibold text-[var(--text-secondary)] hover:text-gens-600 hover:border-gens-300
+                      hover:shadow-card-hover transition-all duration-300 cursor-default">
+            {{ name }}
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

@@ -1,5 +1,5 @@
 .lh-hero {
-  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+  background: linear-gradient(90deg, #0081c9 0%, #00d2b4 100%);
   color: #fff;
   border: none;
 }
@@ -15,8 +15,8 @@
   cursor: pointer;
   transition: border-color .2s, background .2s;
 }
-.lh-drop-zone:hover { border-color: #2563eb; background: #f0f6ff; }
-.lh-drop-icon { font-size: 2.4rem; color: #2563eb; display: block; margin-bottom: .5rem; }
+.lh-drop-zone:hover { border-color: #00b4a6; background: #f0faf8; }
+.lh-drop-icon { font-size: 2.4rem; color: #00b4a6; display: block; margin-bottom: .5rem; }
 
 .lh-preview-wrap { position: relative; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; }
 .lh-preview-img  { width: 100%; display: block; max-height: 560px; object-fit: contain; background: #f8fafc; }

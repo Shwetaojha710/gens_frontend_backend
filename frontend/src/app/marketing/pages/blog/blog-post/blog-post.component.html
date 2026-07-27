@@ -1,0 +1,76 @@
+@if (post; as p) {
+  <article class="section-padding">
+    <div class="container-gens max-w-3xl">
+      <a routerLink="/blog" class="inline-flex items-center gap-1 text-sm font-semibold text-gens-600 hover:text-gens-500 mb-8">
+        <i class="ri ri-arrow-left-line"></i> Back to Blog
+      </a>
+
+      <div class="flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)] mb-4">
+        <span class="px-3 py-1 rounded-full font-semibold bg-gens-500/10 text-gens-600">{{ p.category }}</span>
+        <span>{{ p.date }}</span>
+        <span>&middot;</span>
+        <span>{{ p.readTime }}</span>
+      </div>
+
+      <h1 class="font-display text-3xl md:text-4xl font-bold mb-4 leading-tight text-navy dark:text-white">
+        {{ p.title }}
+      </h1>
+      <p class="text-lg text-[var(--text-secondary)] mb-10 leading-relaxed">{{ p.excerpt }}</p>
+
+      <div class="space-y-6">
+        @if (p.content?.length) {
+          @for (block of p.content; track $index) {
+            @switch (block.type) {
+              @case ('heading') {
+                <h2 class="font-display text-2xl font-bold pt-4 text-navy dark:text-white">{{ block.text }}</h2>
+              }
+              @case ('subheading') {
+                <h3 class="font-display text-xl font-semibold pt-2 text-navy dark:text-white">{{ block.text }}</h3>
+              }
+              @case ('paragraph') {
+                <p class="text-[var(--text-secondary)] leading-relaxed">{{ block.text }}</p>
+              }
+              @case ('list') {
+                <ul class="list-disc pl-6 space-y-2 text-[var(--text-secondary)]">
+                  @for (item of block.items; track item) {
+                    <li class="leading-relaxed">{{ item }}</li>
+                  }
+                </ul>
+              }
+            }
+          }
+        } @else {
+          <p class="text-[var(--text-secondary)] leading-relaxed">
+            Full article coming soon &mdash; check back shortly!
+          </p>
+        }
+      </div>
+
+      @if (p.faqs?.length) {
+        <div class="mt-14">
+          <h2 class="font-display text-2xl font-bold mb-6 text-navy dark:text-white">Frequently Asked Questions</h2>
+          <div class="space-y-6">
+            @for (faq of p.faqs; track faq.question) {
+              <div class="glass-card p-5">
+                <h4 class="font-display font-semibold text-base mb-2 text-navy dark:text-white">{{ faq.question }}</h4>
+                <p class="text-sm text-[var(--text-secondary)] leading-relaxed">{{ faq.answer }}</p>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </article>
+
+  <app-cta-banner />
+} @else {
+  <section class="min-h-[60vh] flex items-center justify-center section-padding">
+    <div class="text-center max-w-md mx-auto">
+      <h1 class="font-display text-2xl font-bold mb-4 text-navy dark:text-white">Article Not Found</h1>
+      <p class="text-[var(--text-secondary)] mb-8">
+        This blog post doesn't exist or the link may be incorrect.
+      </p>
+      <a routerLink="/blog" class="btn-primary">Back to Blog</a>
+    </div>
+  </section>
+}

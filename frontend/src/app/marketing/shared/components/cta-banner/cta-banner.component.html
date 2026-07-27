@@ -1,0 +1,21 @@
+<section class="section-padding">
+  <div class="container-gens">
+    <div class="relative rounded-3xl overflow-hidden p-10 md:p-20 text-center">
+      <div class="absolute inset-0 bg-cta-gradient"></div>
+      <div class="absolute top-0 right-0 w-96 h-96 bg-accent-light/10 rounded-full blur-3xl"></div>
+      <div class="absolute bottom-0 left-0 w-72 h-72 bg-gens-400/10 rounded-full blur-3xl"></div>
+      <div class="relative z-10">
+        <h2 class="font-display text-3xl md:text-5xl font-bold text-white mb-5 tracking-tight">{{ title }}</h2>
+        <p class="text-gens-100/90 text-lg md:text-xl mb-10 max-w-2xl mx-auto leading-relaxed">{{ subtitle }}</p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a [routerLink]="primaryCtaLink" class="inline-flex items-center justify-center px-8 py-3.5 rounded-full font-semibold bg-white text-navy hover:bg-gens-50 transition-all shadow-lg hover:-translate-y-0.5">
+            {{ primaryCtaLabel }}
+          </a>
+          <a [routerLink]="secondaryCtaLink" class="inline-flex items-center justify-center px-8 py-3.5 rounded-full font-semibold border-2 border-white/40 text-white hover:bg-white/10 transition-all">
+            {{ secondaryCtaLabel }}
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

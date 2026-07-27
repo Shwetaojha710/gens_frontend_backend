@@ -643,7 +643,7 @@ console.log(this.personalDetails,"personal details data --");
     const grossSalary = earnings.reduce((sum: any, e: any) => sum + parseFloat(e.finalAmount), 0);
     const totalDeductions = deductions.reduce((sum: any, d: any) => sum + parseFloat(d.finalAmount), 0);
     const netSalary = grossSalary - totalDeductions;
-    const logoBase64 = await this.getBase64ImageFromURL('assets/img/logo/logo-quaere.png');
+    const logoBase64 = await this.getBase64ImageFromURL('assets/img/logo/image.png');
     // Employee Details block
 
     const employeeHeadingTable: any = {
@@ -1220,7 +1220,7 @@ new Paragraph(""),
 //       transformation:{ width:w, height:h }
 //     });
 
-//     const logo = await loadImg('assets/img/logo/logo-quaere.png',120,40);
+//     const logo = await loadImg('assets/img/logo/image.png',120,40);
 
 //     const soc2 = await loadImg('assets/img/footer1.png',45,45);
 //     const cmmi = await loadImg('assets/img/footer_2.png',60,40);
@@ -1526,7 +1526,7 @@ new Paragraph(""),
   //     // LOAD LOGO
   //     // ==========================
 
-  //     const logoBuffer = await fetch('assets/img/logo/logo-quaere.png').then(r => r.arrayBuffer());
+  //     const logoBuffer = await fetch('assets/img/logo/image.png').then(r => r.arrayBuffer());
 
   //     const logo = new ImageRun({
   //       data: logoBuffer,

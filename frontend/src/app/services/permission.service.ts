@@ -67,6 +67,7 @@ export const DEFAULT_PERMISSIONS: PermissionSection[] = [
       { key: 'pay.list',       label: 'Generated Salary List', roles: ['admin', 'superadmin', 'hr'] },
       { key: 'pay.deduction',  label: 'Deduction Summary',     roles: ['admin', 'superadmin', 'hr'] },
       { key: 'pay.reimburse',  label: 'Reimbursement',         roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'pay.appraisal',  label: 'Employee Appraisal',    roles: ['admin', 'superadmin', 'hr'] },
     ]
   },
   {

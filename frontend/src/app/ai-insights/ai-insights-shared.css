@@ -118,8 +118,8 @@
   font-weight: 600;
   border: none;
   color: #fff;
-  background: linear-gradient(135deg, var(--ai-accent-1, #4f8cff), var(--ai-accent-2, #2f5fd6));
-  box-shadow: 0 8px 18px -8px var(--ai-accent-2, #2f5fd6);
+  background: linear-gradient(90deg, #0081c9 0%, #00d2b4 100%);
+  box-shadow: 0 8px 18px -8px rgba(0, 129, 201, 0.5);
   transition: filter 0.15s ease, transform 0.15s ease;
 }
 

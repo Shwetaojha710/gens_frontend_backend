@@ -10,11 +10,25 @@ export interface ApplyToModules {
 
 export interface BrandColors {
   primaryColor?: string;
+  /** @deprecated kept for backward compatibility — use sidebarTop/sidebarBottom */
   sidebarColor?: string;
+  sidebarTop?: string;
+  sidebarBottom?: string;
+  navActiveStart?: string;
+  navActiveEnd?: string;
+  promoCardBg?: string;
+  promoTitleColor?: string;
   pageBgStart?: string;
   pageBgEnd?: string;
   heroBgStart?: string;
   heroBgEnd?: string;
+  buttonColor?: string;
+  buttonHoverColor?: string;
+  landingBgStart?: string;
+  landingBgEnd?: string;
+  loginBgStart?: string;
+  loginBgEnd?: string;
+  loginButtonColor?: string;
   applyTo?: ApplyToModules;
 }
 
@@ -25,12 +39,25 @@ export interface SAColors {
 }
 
 export const BRAND_DEFAULTS: Omit<Required<BrandColors>, 'applyTo'> = {
-  primaryColor: '#0d5f9d',
-  sidebarColor: '#ddeaff',
-  pageBgStart: '#fff1eb',
-  pageBgEnd: '#d1e8f3',
-  heroBgStart: '#209af7',
-  heroBgEnd: '#025a9d',
+  primaryColor: '#00d2b4',
+  sidebarColor: '#003b5c',
+  sidebarTop: '#003b5c',
+  sidebarBottom: '#008e9b',
+  navActiveStart: '#0081c9',
+  navActiveEnd: '#00d2b4',
+  promoCardBg: '#0d486b',
+  promoTitleColor: '#00d2b4',
+  pageBgStart: '#eaf1f6',
+  pageBgEnd: '#dfe9f0',
+  heroBgStart: '#0f3d4c',
+  heroBgEnd: '#00b4a6',
+  buttonColor: '#00b4a6',
+  buttonHoverColor: '#008f84',
+  landingBgStart: '#d6e4f0',
+  landingBgEnd: '#fff1eb',
+  loginBgStart: '#fff5f5',
+  loginBgEnd: '#eaf1f6',
+  loginButtonColor: '#00b4a6',
 };
 
 export const SA_DEFAULTS: Required<SAColors> = {
@@ -81,33 +108,54 @@ export class ThemeService {
     const root = document.documentElement;
 
     root.style.setProperty('--app-primary', c.primaryColor);
+    root.style.setProperty('--app-button', c.buttonColor);
+    root.style.setProperty('--app-button-hover', c.buttonHoverColor);
 
     const pr = hexToRgb(c.primaryColor);
     if (pr) {
       root.style.setProperty('--app-primary-subtle', `rgba(${pr.r}, ${pr.g}, ${pr.b}, 0.12)`);
-      root.style.setProperty('--app-nav-active-bg', c.primaryColor);
     }
 
-    const sc = hexToRgb(c.sidebarColor);
-    if (sc) {
-      root.style.setProperty(
-        '--app-sidebar-bg',
-        `linear-gradient(180deg, rgba(${sc.r}, ${sc.g}, ${sc.b}, 0.96) 0%, rgba(${sc.r}, ${sc.g}, ${sc.b}, 0.92) 48%, rgba(${sc.r}, ${sc.g}, ${sc.b}, 0.96) 100%)`,
-      );
-    }
+    root.style.setProperty('--app-nav-active-start', c.navActiveStart);
+    root.style.setProperty('--app-nav-active-end', c.navActiveEnd);
+    root.style.setProperty('--app-nav-active-bg', `linear-gradient(90deg, ${c.navActiveStart} 0%, ${c.navActiveEnd} 100%)`);
 
-    root.style.setProperty('--app-page-bg', `linear-gradient(to top, ${c.pageBgStart} 0%, ${c.pageBgEnd} 100%)`);
+    const sidebarTop = c.sidebarTop || c.sidebarColor;
+    const sidebarBottom = c.sidebarBottom || c.sidebarColor;
+    root.style.setProperty('--app-sidebar-top', sidebarTop);
+    root.style.setProperty('--app-sidebar-bottom', sidebarBottom);
+    root.style.setProperty('--app-sidebar-bg', `linear-gradient(180deg, ${sidebarTop} 0%, ${sidebarBottom} 100%)`);
+
+    root.style.setProperty('--app-promo-card-bg', c.promoCardBg);
+    root.style.setProperty('--app-promo-title', c.promoTitleColor);
+
+    root.style.setProperty('--app-page-bg', `linear-gradient(180deg, ${c.pageBgStart} 0%, ${c.pageBgEnd} 100%)`);
     root.style.setProperty('--app-hero-bg', `linear-gradient(89.79deg, ${c.heroBgStart} 0.92%, ${c.heroBgEnd} 99.82%)`);
+
+    root.style.setProperty('--app-landing-bg', `linear-gradient(90deg, ${c.landingBgStart} 0%, ${c.landingBgEnd} 100%)`);
+    root.style.setProperty('--app-login-bg', `linear-gradient(180deg, ${c.loginBgStart} 0%, ${c.loginBgEnd} 100%)`);
+    root.style.setProperty('--app-login-button', c.loginButtonColor);
   }
 
   resetToDefaults(): void {
     const root = document.documentElement;
     root.style.removeProperty('--app-primary');
     root.style.removeProperty('--app-primary-subtle');
+    root.style.removeProperty('--app-button');
+    root.style.removeProperty('--app-button-hover');
+    root.style.removeProperty('--app-nav-active-start');
+    root.style.removeProperty('--app-nav-active-end');
     root.style.removeProperty('--app-nav-active-bg');
+    root.style.removeProperty('--app-sidebar-top');
+    root.style.removeProperty('--app-sidebar-bottom');
     root.style.removeProperty('--app-sidebar-bg');
+    root.style.removeProperty('--app-promo-card-bg');
+    root.style.removeProperty('--app-promo-title');
     root.style.removeProperty('--app-page-bg');
     root.style.removeProperty('--app-hero-bg');
+    root.style.removeProperty('--app-landing-bg');
+    root.style.removeProperty('--app-login-bg');
+    root.style.removeProperty('--app-login-button');
   }
 
   applyForUrl(url: string): void {

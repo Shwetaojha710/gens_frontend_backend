@@ -1,0 +1,22 @@
+.pricing-card__accent {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, #1a8075, #3fb8aa, #7ed321);
+  opacity: 0.55;
+}
+
+.pricing-card--featured {
+  border-color: rgba(37, 158, 144, 0.45);
+  box-shadow: 0 12px 32px -16px rgba(26, 128, 117, 0.45);
+  background: linear-gradient(180deg, rgba(238, 249, 248, 0.95) 0%, rgba(255, 255, 255, 0.9) 28%);
+}
+
+.pricing-card--featured .pricing-card__accent {
+  height: 4px;
+  opacity: 1;
+}
+
+:host-context(.dark) .pricing-card--featured {
+  background: linear-gradient(180deg, rgba(11, 43, 58, 0.55) 0%, rgba(15, 61, 76, 0.35) 40%);
+}

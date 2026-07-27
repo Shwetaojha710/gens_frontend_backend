@@ -1,0 +1,215 @@
+/* Styles for the new /Home + marketing site (Features, Solutions, Pricing, ...).
+   Scoped entirely under `.gens-marketing` via tailwind.config.js `important`
+   selector — inert everywhere else in this app. Preflight is disabled there,
+   so a small hand-written reset for the marketing subtree lives below. */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.gens-marketing {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f7faf9;
+  --bg-tertiary: #eef9f8;
+  --text-primary: #0b2b3a;
+  --text-secondary: #45606b;
+  --text-muted: #7c93a0;
+  --border-color: rgba(11, 43, 58, 0.1);
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --shadow-color: rgba(11, 43, 58, 0.12);
+
+  box-sizing: border-box;
+  font-family: Inter, system-ui, sans-serif;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+}
+
+.gens-marketing.dark,
+.gens-marketing .dark {
+  --bg-primary: #061e28;
+  --bg-secondary: #0b2b3a;
+  --bg-tertiary: #0f3d4c;
+  --text-primary: #eef9f8;
+  --text-secondary: #abe5de;
+  --text-muted: #72d1c6;
+  --border-color: rgba(238, 249, 248, 0.1);
+  --glass-bg: rgba(15, 61, 76, 0.6);
+  --glass-border: rgba(238, 249, 248, 0.08);
+  --shadow-color: rgba(0, 0, 0, 0.35);
+}
+
+.gens-marketing *,
+.gens-marketing *::before,
+.gens-marketing *::after {
+  box-sizing: border-box;
+}
+
+.gens-marketing h1,
+.gens-marketing h2,
+.gens-marketing h3,
+.gens-marketing h4,
+.gens-marketing h5,
+.gens-marketing h6,
+.gens-marketing p,
+.gens-marketing figure {
+  margin: 0;
+}
+
+.gens-marketing ul,
+.gens-marketing ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gens-marketing button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.gens-marketing a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.gens-marketing img {
+  max-width: 100%;
+  display: block;
+}
+
+@layer components {
+  .gens-marketing .glass {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .gens-marketing .glass-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px var(--shadow-color);
+  }
+
+  .gens-marketing .gradient-text {
+    background: linear-gradient(90deg, #259e90, #7ed321, #259e90);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer 3.5s linear infinite;
+  }
+
+  .gens-marketing .lattice-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 12px 32px rgba(0, 0, 0, 0.06);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  }
+
+  .gens-marketing .card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(11, 43, 58, 0.14);
+    border-color: rgba(37, 158, 144, 0.35);
+  }
+
+  .gens-marketing .section-padding {
+    padding-block: 5rem;
+  }
+
+  .gens-marketing .container-gens {
+    width: 100%;
+    max-width: 1280px;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+
+  .gens-marketing .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.75rem;
+    border-radius: 10px;
+    font-weight: 600;
+    color: #fff;
+    background-color: #00afa1;
+    background-image: linear-gradient(135deg, #1a8075 0%, #7ed321 100%);
+    /* box-shadow: 0 10px 24px rgba(26, 128, 117, 0.28); */
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  }
+
+  .gens-marketing .btn-primary:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.04);
+    box-shadow: 0 14px 30px rgba(26, 128, 117, 0.36);
+  }
+
+  .gens-marketing .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.75rem;
+    border-radius: 999px;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    border: 1.5px solid var(--border-color);
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  }
+
+  .gens-marketing .btn-secondary:hover {
+    transform: translateY(-2px);
+    border-color: #259e90;
+    background: var(--bg-secondary);
+  }
+
+  .gens-marketing .btn-shine {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .gens-marketing .btn-shine::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+    background-size: 200% 100%;
+    background-position: 200% 0;
+    transition: background-position 0.6s ease;
+  }
+
+  .gens-marketing .btn-shine:hover::after {
+    background-position: -20% 0;
+  }
+
+  .gens-marketing .skeleton {
+    background: linear-gradient(90deg, var(--bg-tertiary) 25%, var(--bg-secondary) 37%, var(--bg-tertiary) 63%);
+    background-size: 400% 100%;
+    animation: shimmer 1.4s ease infinite;
+    border-radius: 0.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gens-marketing .animate-float,
+  .gens-marketing .animate-float-delayed,
+  .gens-marketing .animate-pulse-slow,
+  .gens-marketing .animate-shimmer,
+  .gens-marketing .animate-marquee,
+  .gens-marketing .animate-marquee-reverse,
+  .gens-marketing .animate-glow {
+    animation: none !important;
+  }
+}

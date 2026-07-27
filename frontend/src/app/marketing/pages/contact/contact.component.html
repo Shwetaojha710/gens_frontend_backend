@@ -1,0 +1,73 @@
+<app-page-hero
+  badge="Contact"
+  title="Let's talk."
+  subtitle="Questions about GENS.Ai, pricing, or a live demo? Our team usually replies within a few hours."
+/>
+
+<section class="section-padding">
+  <div class="container-gens">
+    <!-- Quick actions -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-14">
+      <a href="tel:{{ contactInfo.phone }}" class="glass-card p-5 flex items-center gap-4 card-hover">
+        <span class="w-11 h-11 rounded-full bg-gens-100 dark:bg-gens-900 flex items-center justify-center text-gens-600 flex-shrink-0">
+          <i class="ri ri-phone-line text-lg"></i>
+        </span>
+        <div>
+          <p class="text-xs text-[var(--text-muted)] uppercase tracking-wide">Call us</p>
+          <p class="font-semibold">{{ contactInfo.phone }}</p>
+        </div>
+      </a>
+
+      <a href="mailto:{{ contactInfo.salesEmail }}" class="glass-card p-5 flex items-center gap-4 card-hover">
+        <span class="w-11 h-11 rounded-full bg-gens-100 dark:bg-gens-900 flex items-center justify-center text-gens-600 flex-shrink-0">
+          <i class="ri ri-mail-line text-lg"></i>
+        </span>
+        <div>
+          <p class="text-xs text-[var(--text-muted)] uppercase tracking-wide">Email sales</p>
+          <p class="font-semibold break-all">{{ contactInfo.salesEmail }}</p>
+        </div>
+      </a>
+
+      <a routerLink="/pricing" class="glass-card p-5 flex items-center gap-4 card-hover">
+        <span class="w-11 h-11 rounded-full bg-gens-100 dark:bg-gens-900 flex items-center justify-center text-gens-600 flex-shrink-0">
+          <i class="ri ri-price-tag-3-line text-lg"></i>
+        </span>
+        <div>
+          <p class="text-xs text-[var(--text-muted)] uppercase tracking-wide">Not sure yet?</p>
+          <p class="font-semibold">View pricing plans</p>
+        </div>
+      </a>
+    </div>
+
+    <!-- Form + office details -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+      <app-contact-form />
+
+      <div class="space-y-4">
+        <div class="glass-card p-5">
+          <p class="text-xs text-[var(--text-muted)] uppercase tracking-wide mb-1">Address</p>
+          <p class="font-medium">{{ contactInfo.address }}</p>
+        </div>
+        <div class="glass-card p-5">
+          <p class="text-xs text-[var(--text-muted)] uppercase tracking-wide mb-1">Careers</p>
+          <p class="font-medium">{{ contactInfo.careersEmail }} &middot; {{ contactInfo.careersPhone }}</p>
+        </div>
+        <div class="glass-card p-5">
+          <p class="text-xs text-[var(--text-muted)] uppercase tracking-wide mb-1">Business hours</p>
+          <p class="font-medium">{{ contactInfo.hours }}</p>
+        </div>
+        <div class="glass-card overflow-hidden">
+          <iframe
+            [src]="mapEmbedSafeUrl"
+            width="100%"
+            height="240"
+            style="border:0"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            title="GENS.Ai office location"
+          ></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

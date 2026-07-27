@@ -1,4 +1,4 @@
-@import '../employee-portal-glass.css';
+﻿@import '../employee-portal-glass.css';
 
 /* —— Page —— */
 .ep-leave-page {
@@ -21,14 +21,14 @@
   gap: 0.35rem;
   padding: 0.65rem 1rem;
   border-radius: 0.65rem;
-  background: rgba(0, 95, 168, 0.06);
-  border: 1px solid rgba(0, 95, 168, 0.12);
-  border-left: 3px solid #005fa8;
+  background: rgba(0, 129, 201, 0.06);
+  border: 1px solid rgba(0, 129, 201, 0.12);
+  border-left: 3px solid #0081c9;
   line-height: 1.45;
 }
 
 .ep-leave-hint__icon {
-  color: #005fa8;
+  color: #0081c9;
   margin-top: 0.1rem;
   flex-shrink: 0;
 }
@@ -67,9 +67,9 @@
   justify-content: center;
   flex-shrink: 0;
   color: #fff;
-  background: linear-gradient(135deg, #005fa8 0%, #0284c7 55%, #0369a1 100%);
+  background: linear-gradient(135deg, #0081c9 0%, #008f84 55%, #0369a1 100%);
   box-shadow:
-    0 6px 16px rgba(0, 95, 168, 0.35),
+    0 6px 16px rgba(0, 129, 201, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
   font-size: 1rem;
 }
@@ -100,7 +100,7 @@
   border-radius: 999px;
   padding: 0.55rem 1.35rem;
   font-weight: 600;
-  box-shadow: 0 4px 14px rgba(13, 110, 253, 0.28);
+  box-shadow: 0 4px 14px rgba(0, 129, 201, 0.28);
   border: none;
   transition:
     transform 0.15s ease,
@@ -109,7 +109,7 @@
 
 .ep-leave-submit:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(13, 110, 253, 0.35);
+  box-shadow: 0 6px 18px rgba(0, 129, 201, 0.35);
 }
 
 .ep-leave-submit:disabled {
@@ -126,8 +126,8 @@
   display: inline-block;
   padding: 0.5rem 1rem;
   border-radius: 0.65rem;
-  background: rgba(0, 95, 168, 0.08);
-  border: 1px solid rgba(0, 95, 168, 0.15);
+  background: rgba(0, 129, 201, 0.08);
+  border: 1px solid rgba(0, 129, 201, 0.15);
   color: #0f2942;
   font-weight: 700;
   font-size: 1.05rem;
@@ -163,15 +163,15 @@
 }
 
 .ep-duration-item:has(input:checked) {
-  border-color: #005fa8;
-  background: rgba(0, 95, 168, 0.08);
-  color: #005fa8;
+  border-color: #0081c9;
+  background: rgba(0, 129, 201, 0.08);
+  color: #0081c9;
   font-weight: 600;
 }
 
 .ep-duration-item input {
   margin: 0;
-  accent-color: #005fa8;
+  accent-color: #0081c9;
 }
 
 /* —— Applications card —— */
@@ -256,9 +256,9 @@
 .ep-leave-toolbar__refresh {
   border-radius: 0.5rem;
   padding: 0.28rem 0.65rem;
-  border: 1px solid rgba(0, 95, 168, 0.35);
-  background: rgba(0, 95, 168, 0.08);
-  color: #005fa8;
+  border: 1px solid rgba(0, 129, 201, 0.35);
+  background: rgba(0, 129, 201, 0.08);
+  color: #0081c9;
   font-weight: 600;
   transition:
     background 0.15s ease,
@@ -266,8 +266,8 @@
 }
 
 .ep-leave-toolbar__refresh:hover:not(:disabled) {
-  background: rgba(0, 95, 168, 0.14);
-  border-color: rgba(0, 95, 168, 0.5);
+  background: rgba(0, 129, 201, 0.14);
+  border-color: rgba(0, 129, 201, 0.5);
   color: #004a87;
 }
 
@@ -281,12 +281,12 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.45rem 1rem;
-  background: rgba(0, 95, 168, 0.04);
-  border-bottom: 1px solid rgba(0, 95, 168, 0.1);
+  background: rgba(0, 129, 201, 0.04);
+  border-bottom: 1px solid rgba(0, 129, 201, 0.1);
 }
 
 .ep-leave-branch-bar__icon {
-  color: #005fa8;
+  color: #0081c9;
   font-size: 0.8rem;
   flex-shrink: 0;
 }
@@ -302,13 +302,13 @@
   min-width: 160px;
   max-width: 240px;
   font-size: 0.8rem;
-  border-color: rgba(0, 95, 168, 0.25);
+  border-color: rgba(0, 129, 201, 0.25);
   border-radius: 6px;
 }
 
 .ep-leave-branch-bar__select:focus {
-  border-color: #005fa8;
-  box-shadow: 0 0 0 3px rgba(0, 95, 168, 0.1);
+  border-color: #0081c9;
+  box-shadow: 0 0 0 3px rgba(0, 129, 201, 0.1);
 }
 
 /* Segmented tabs */
@@ -359,7 +359,7 @@
 }
 
 .ep-leave-segment__btn--active .ep-leave-segment__ico {
-  color: #005fa8;
+  color: #0081c9;
 }
 
 .ep-leave-segment__ico {
@@ -413,7 +413,7 @@
 .ep-leave-branch-cell {
   font-size: 0.78rem;
   font-weight: 600;
-  color: #005fa8;
+  color: #0081c9;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -457,8 +457,8 @@
   font-weight: 800;
   letter-spacing: 0.02em;
   color: #fff;
-  background: linear-gradient(145deg, #005fa8, #0ea5e9);
-  box-shadow: 0 3px 10px rgba(0, 95, 168, 0.28);
+  background: linear-gradient(145deg, #0081c9, #00d2b4);
+  box-shadow: 0 3px 10px rgba(0, 129, 201, 0.28);
 }
 
 .ep-leave-applicant__info {
@@ -551,7 +551,7 @@
   left: 0.7rem;
   top: 50%;
   transform: translateY(-50%);
-  color: #005fa8;
+  color: #0081c9;
   font-size: 0.75rem;
   pointer-events: none;
   z-index: 1;
@@ -560,7 +560,7 @@
 .ep-leave-search__input {
   width: 100%;
   padding: 0.38rem 0.85rem 0.38rem 2.1rem;
-  border: 1px solid rgba(0, 95, 168, 0.25);
+  border: 1px solid rgba(0, 129, 201, 0.25);
   border-radius: 8px;
   font-size: 0.8rem;
   color: #0f172a;
@@ -575,8 +575,8 @@
 }
 
 .ep-leave-search__input:focus {
-  border-color: #005fa8;
-  box-shadow: 0 0 0 3px rgba(0, 95, 168, 0.1);
+  border-color: #0081c9;
+  box-shadow: 0 0 0 3px rgba(0, 129, 201, 0.1);
 }
 
 .ep-leave-pagesize {
@@ -732,13 +732,13 @@
   padding: 1rem 1rem 1.1rem;
   border-radius: 1rem;
   background: #e3edf7;
-  border: 1px solid rgba(0, 95, 168, 0.14);
+  border: 1px solid rgba(0, 129, 201, 0.14);
   box-shadow: 0 6px 24px rgba(15, 41, 66, 0.06);
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .ep-leave__kpi:hover {
-  border-color: rgba(0, 95, 168, 0.22);
+  border-color: rgba(0, 129, 201, 0.22);
   box-shadow: 0 10px 32px rgba(15, 41, 66, 0.09);
 }
 
@@ -753,7 +753,7 @@
   font-size: 1.15rem;
 }
 
-.ep-leave__kpi-icon--primary { background: rgba(0, 95, 168, 0.1);    color: #005fa8; }
+.ep-leave__kpi-icon--primary { background: rgba(0, 129, 201, 0.1);    color: #0081c9; }
 .ep-leave__kpi-icon--success { background: rgba(22, 163, 74, 0.12);  color: #15803d; }
 .ep-leave__kpi-icon--warning { background: rgba(217, 119, 6, 0.12);  color: #b45309; }
 .ep-leave__kpi-icon--danger  { background: rgba(220, 38, 38, 0.1);   color: #b91c1c; }
@@ -798,7 +798,7 @@
 }
 
 .ep-leave-history-heading__icon {
-  color: #005fa8;
+  color: #0081c9;
 }
 
 .ep-leave-history-heading__hint {
@@ -870,7 +870,7 @@
 }
 
 .ep-leave-history-summary__days {
-  color: #005fa8;
+  color: #0081c9;
   font-weight: 600;
 }
 
@@ -896,7 +896,7 @@
 
 .ep-leave-history-type {
   font-weight: 600;
-  color: #005fa8;
+  color: #0081c9;
 }
 
 .ep-leave-history-reason {

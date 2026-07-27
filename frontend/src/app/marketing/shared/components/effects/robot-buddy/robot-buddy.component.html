@@ -1,0 +1,61 @@
+<div class="robot-buddy-layer" *ngIf="enabled()">
+  <button
+    type="button"
+    class="robot-buddy"
+    [class.robot-buddy--dragging]="dragging()"
+    [class.robot-buddy--active]="panelOpen()"
+    [style.left.px]="robotX()"
+    [style.top.px]="robotY()"
+    [attr.aria-expanded]="panelOpen()"
+    aria-label="GENS assistant buddy"
+    (pointerdown)="onPointerDown($event)"
+    (click)="onBuddyClick($event)"
+  >
+    <span class="robot-pulse-ring" *ngIf="!panelOpen()"></span>
+    <span class="robot-body">
+      <span class="robot-antenna"></span>
+      <span class="robot-head">
+        <span class="robot-eye" [class.robot-eye--blink]="blinking()"></span>
+        <span class="robot-eye" [class.robot-eye--blink]="blinking()"></span>
+        <span class="robot-smile"></span>
+      </span>
+      <span class="robot-feet">
+        <span class="robot-foot"></span>
+        <span class="robot-foot"></span>
+      </span>
+    </span>
+  </button>
+
+  <span
+    class="robot-bubble"
+    *ngFor="let bubble of bubbles()"
+    [style.left.px]="bubble.x"
+    [style.top.px]="bubble.y"
+  >
+    {{ bubble.text }}
+  </span>
+
+  <div
+    class="robot-panel"
+    *ngIf="panelOpen()"
+    [style.left.px]="panelX()"
+    [style.top.px]="panelY()"
+  >
+    <div class="robot-panel-header">
+      <span class="robot-panel-title">GENS Buddy</span>
+      <button type="button" class="robot-panel-close" (click)="closePanel()" aria-label="Close">&times;</button>
+    </div>
+    <p class="robot-panel-tip">{{ currentTip() }}</p>
+    <div class="robot-panel-actions">
+      <button
+        type="button"
+        class="robot-panel-btn"
+        *ngFor="let action of quickActions()"
+        (click)="navigate(action.path)"
+      >
+        <span>{{ action.icon }}</span>
+        <span>{{ action.label }}</span>
+      </button>
+    </div>
+  </div>
+</div>
