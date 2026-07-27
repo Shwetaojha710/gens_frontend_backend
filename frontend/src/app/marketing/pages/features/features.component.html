@@ -1,0 +1,70 @@
+<app-page-hero
+  badge="Features"
+  title="Powerful HR Features"
+  subtitle="Everything you need to manage your workforce — from hire to retire, all in one intelligent platform."
+/>
+
+<section class="section-padding">
+  <div class="container-gens">
+    <app-section-heading
+      badge="Feature Suite"
+      titleBefore="Complete"
+      highlight="HR Toolkit"
+      subtitle="12 integrated modules designed to handle every aspect of human resource management."
+    />
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" appStaggerReveal>
+      @for (feature of keyFeatures; track feature.title) {
+        <app-feature-card [feature]="feature" />
+      }
+    </div>
+  </div>
+</section>
+
+<section id="location-tracking" class="section-padding bg-[var(--bg-secondary)]">
+  <div class="container-gens">
+    <app-section-heading
+      badge="New in GENS"
+      titleBefore="Smarter"
+      highlight="Location Tracking"
+      subtitle="Live team pulse, geofencing, route replay, stay intelligence, and travel insights — built right in."
+    />
+    <div appScrollReveal>
+      <app-location-tracking-showcase />
+    </div>
+  </div>
+</section>
+
+<section id="ai-assistant" class="section-padding">
+  <div class="container-gens">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <div appScrollReveal>
+        <app-section-heading
+          align="left"
+          badge="GENS AI"
+          titleBefore="AI-Powered"
+          highlight="Intelligence"
+          subtitle="Our AI assistant learns from your HR data to answer questions, predict trends, and automate routine tasks in plain language."
+        />
+      </div>
+      <div appScrollReveal animation="slide-right">
+        <app-ai-chat-showcase />
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section-padding bg-[var(--bg-secondary)]">
+  <div class="container-gens">
+    <app-section-heading
+      badge="Product Tour"
+      titleBefore="See GENS"
+      highlight="in Action"
+      subtitle="A closer look at the screens your HR team and employees will use every day."
+    />
+    <div appScrollReveal>
+      <app-product-gallery />
+    </div>
+  </div>
+</section>
+
+<app-cta-banner />

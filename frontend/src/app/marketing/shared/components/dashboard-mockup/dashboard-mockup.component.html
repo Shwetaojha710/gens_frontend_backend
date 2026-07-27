@@ -1,0 +1,81 @@
+<div class="relative">
+  <!-- Glow ring -->
+  <div class="absolute inset-0 rounded-3xl bg-gradient-to-br from-gens-400/20 to-accent-light/20 blur-2xl scale-105 animate-glow"></div>
+
+  <div class="relative glass-card p-1.5 shadow-premium max-w-lg mx-auto animate-float">
+    <div class="rounded-2xl overflow-hidden bg-[var(--bg-primary)]">
+      <div class="flex items-center gap-2 px-4 py-3 border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
+        <div class="flex gap-1.5">
+          <div class="w-3 h-3 rounded-full bg-red-400"></div>
+          <div class="w-3 h-3 rounded-full bg-amber-400"></div>
+          <div class="w-3 h-3 rounded-full bg-green-400"></div>
+        </div>
+        <span class="text-xs text-[var(--text-muted)] ml-2 font-medium">GENS Dashboard</span>
+      </div>
+
+      <div class="p-4 grid grid-cols-3 gap-3">
+        @for (card of statCards; track card.label) {
+          <div class="mock-stat col-span-1 p-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-color)] hover:shadow-card transition-shadow">
+            <p class="text-[10px] text-[var(--text-muted)] mb-1">{{ card.label }}</p>
+            <p class="text-sm font-bold" [ngClass]="card.color">{{ card.value }}</p>
+          </div>
+        }
+
+        <div class="col-span-2 p-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-color)]">
+          <p class="text-[10px] text-[var(--text-muted)] mb-2">Attendance Trend</p>
+          <div class="flex items-end gap-1 h-12">
+            @for (h of barHeights; track $index) {
+              <div class="mock-bar flex-1 rounded-t bg-gradient-to-t from-gens-700 to-gens-400 origin-bottom" [style.height.%]="h"></div>
+            }
+          </div>
+        </div>
+
+        <div class="col-span-1 p-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-color)]">
+          <p class="text-[10px] text-[var(--text-muted)] mb-2">Leave Used</p>
+          <div class="relative w-12 h-12 mx-auto">
+            <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
+              <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" class="text-gray-200 dark:text-gray-700" stroke-width="3" />
+              <circle
+                class="progress-ring"
+                cx="18"
+                cy="18"
+                r="15.5"
+                fill="none"
+                stroke="url(#ringGrad)"
+                stroke-width="3"
+                stroke-linecap="round"
+                [attr.stroke-dasharray]="ringCircumference"
+                [attr.stroke-dashoffset]="ringCircumference"
+              />
+              <defs>
+                <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#1a8075" />
+                  <stop offset="100%" stop-color="#7ed321" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <span class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-gens-600">78%</span>
+          </div>
+        </div>
+
+        <div class="col-span-3 p-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-color)]">
+          <p class="text-[10px] text-[var(--text-muted)] mb-2">Recent Activity</p>
+          @for (activity of activities; track activity) {
+            <div class="mock-activity flex items-center gap-2 py-1 opacity-0 -translate-x-2">
+              <div class="w-1.5 h-1.5 rounded-full bg-gens-500"></div>
+              <span class="text-[10px] text-[var(--text-secondary)]">{{ activity }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating badges -->
+  <div class="absolute -top-3 -right-3 glass-card px-4 py-2.5 text-xs font-semibold text-gens-700 shadow-card animate-float-delayed flex items-center gap-1.5">
+    <span class="text-accent-light">&#10022;</span> AI Powered
+  </div>
+  <div class="absolute -bottom-3 -left-3 glass-card px-4 py-2.5 text-xs font-semibold text-green-600 shadow-card animate-float flex items-center gap-1.5">
+    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> 99.9% Uptime
+  </div>
+</div>

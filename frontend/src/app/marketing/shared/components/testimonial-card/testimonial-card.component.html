@@ -1,0 +1,20 @@
+<div class="lattice-card p-6 h-full flex flex-col group">
+  <div class="flex gap-1 mb-4">
+    <i
+      *ngFor="let star of stars; let i = index"
+      class="ri ri-star-fill text-base"
+      [class.text-amber-400]="i < testimonial.rating"
+      [class.text-slate-300]="i >= testimonial.rating"
+    ></i>
+  </div>
+  <p class="text-[var(--text-secondary)] leading-relaxed mb-6 flex-1 italic">&quot;{{ testimonial.quote }}&quot;</p>
+  <div class="flex items-center gap-3">
+    <div class="w-11 h-11 rounded-full bg-gradient-to-br from-gens-500 to-accent flex items-center justify-center text-white text-sm font-semibold">
+      {{ testimonial.avatar }}
+    </div>
+    <div>
+      <p class="font-semibold text-sm text-navy dark:text-white">{{ testimonial.name }}</p>
+      <p class="text-xs text-[var(--text-muted)]">{{ testimonial.role }}, {{ testimonial.company }}</p>
+    </div>
+  </div>
+</div>

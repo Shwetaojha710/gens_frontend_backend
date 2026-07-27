@@ -120,4 +120,17 @@ baseUrl=environment.apiUrl
   SubmitSalaryDoc(data: any): Observable<any> {
     return this.http.post(`${this.baseUrl}SubmitSalaryDoc`, data);
   }
+
+  getAppraisalEmployees(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}appraisal/employees`, data);
+  }
+  getAppraisalDetail(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}appraisal/detail`, data);
+  }
+  previewAppraisal(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}appraisal/preview`, data);
+  }
+  applyAppraisal(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}appraisal/apply`, data);
+  }
 }

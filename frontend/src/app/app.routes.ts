@@ -3,7 +3,6 @@ import { AuthGuard } from './auth.guard';
 import { SuperadminGuard } from './superadmin/superadmin.guard';
 import { employeePortalGuard } from './employee-portal/employee-portal.guard';
 import { CandidateRouteGuard } from './candidate-route.guard';
-import { LandingPageComponent } from './landing-page/landing-page.component';
 /**
  * Application routes — feature areas use `loadChildren` / `loadComponent` for lazy loading.
  */
@@ -11,9 +10,8 @@ export const routes: Routes = [
   { path: '', redirectTo: '/Home', pathMatch: 'full' },
 
   {
-    path: 'Home',
-    loadComponent: () =>
-      import('./landing-page/landing-page.component').then((m) => m.LandingPageComponent),
+    path: '',
+    loadChildren: () => import('./marketing/marketing.routes').then((m) => m.marketingRoutes),
   },
   {
     path: 'landing-home',

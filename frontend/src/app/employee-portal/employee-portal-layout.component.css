@@ -1,4 +1,4 @@
-.ep-shell {
+﻿.ep-shell {
   min-height: 100vh;
   display: flex;
   align-items: stretch;
@@ -6,9 +6,9 @@
 }
 
 .ep-sidebar {
-  --ep-sidebar-bg: #eef4ff;
-  --ep-sidebar-muted: #4e6b8a;
-  --ep-sidebar-active: #005fa8;
+  --ep-sidebar-bg: var(--app-sidebar-bg, linear-gradient(180deg, #003b5c 0%, #008e9b 100%));
+  --ep-sidebar-muted: #a9bdc6;
+  --ep-sidebar-active: var(--app-nav-active-bg, linear-gradient(90deg, #0081c9 0%, #00d2b4 100%));
   position: fixed;
   left: 0;
   top: 0;
@@ -17,8 +17,8 @@
   width: 260px;
   flex-shrink: 0;
   background: var(--ep-sidebar-bg);
-  border-right: 1px solid rgba(0, 95, 168, 0.1);
-  box-shadow: 4px 0 20px rgba(15, 23, 42, 0.04);
+  border-right: 1px solid rgba(0, 180, 166, 0.14);
+  box-shadow: 4px 0 20px rgba(15, 23, 42, 0.18);
   display: flex;
   flex-direction: column;
   padding: 1.1rem 0.85rem 1rem;
@@ -41,7 +41,7 @@
   gap: 0.5rem;
   padding-bottom: 0.85rem;
   margin-bottom: 0.65rem;
-  border-bottom: 1px solid rgba(0, 95, 168, 0.12);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .ep-brand {
@@ -57,7 +57,7 @@
   display: block;
   font-weight: 800;
   font-size: 1.05rem;
-  color: #0a3d6b;
+  color: #fff;
   letter-spacing: -0.02em;
   line-height: 1.25;
 }
@@ -66,7 +66,7 @@
   display: block;
   margin-top: 0.2rem;
   font-size: 0.68rem;
-  color: #64748b;
+  color: rgba(255, 255, 255, 0.65);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   line-height: 1.3;
@@ -81,9 +81,9 @@
   justify-content: center;
   border: none;
   border-radius: 0.5rem;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.08);
   color: var(--ep-sidebar-muted);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  box-shadow: none;
   cursor: pointer;
   transition:
     color 0.15s ease,
@@ -91,8 +91,8 @@
 }
 
 .ep-sidebar-toggle:hover {
-  color: var(--ep-sidebar-active);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.1);
+  color: #fff;
+  box-shadow: none;
 }
 
 .ep-sidebar--collapsed .ep-brand-row {
@@ -159,8 +159,8 @@
 }
 
 .ep-nav a:hover:not(.active) {
-  background: rgba(0, 95, 168, 0.07);
-  color: var(--ep-sidebar-active);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
 }
 
 .ep-nav a.active {
@@ -168,7 +168,7 @@
   border-color: transparent;
   color: #fff;
   font-weight: 600;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 18px rgba(0, 129, 201, 0.28);
 }
 
 .ep-nav a.active .ep-nav__icon {
@@ -205,7 +205,7 @@
   justify-content: flex-end;
   padding: 0 1rem 0 1.25rem;
   background: rgba(255, 255, 255, 0.92);
-  border-bottom: 1px solid rgba(0, 95, 168, 0.1);
+  border-bottom: 1px solid rgba(0, 129, 201, 0.1);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   transition: left 0.22s ease;
@@ -234,7 +234,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(0, 95, 168, 0.15);
+  border: 1px solid rgba(0, 129, 201, 0.15);
   border-radius: 0.65rem;
   background: #fff;
   color: #0f2942;
@@ -246,8 +246,8 @@
 }
 
 .ep-topbar__notif-btn:hover {
-  border-color: rgba(0, 95, 168, 0.35);
-  color: #005fa8;
+  border-color: rgba(0, 129, 201, 0.35);
+  color: #0081c9;
   box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
 }
 
@@ -280,7 +280,7 @@
   padding: 0.85rem 0.85rem 0.75rem;
   border-radius: 0.75rem;
   background: #fff;
-  border: 1px solid rgba(0, 95, 168, 0.12);
+  border: 1px solid rgba(0, 129, 201, 0.12);
   box-shadow: 0 12px 40px rgba(15, 23, 42, 0.14);
   z-index: 1050;
   text-align: left;
@@ -309,8 +309,8 @@
   min-width: 1.35rem;
   padding: 0.1rem 0.4rem;
   border-radius: 999px;
-  background: rgba(0, 95, 168, 0.1);
-  color: #005fa8;
+  background: rgba(0, 129, 201, 0.1);
+  color: #0081c9;
   font-size: 0.68rem;
   font-weight: 800;
   text-align: center;
@@ -381,7 +381,7 @@
 
 .ep-topbar__notif-item:hover {
   background: #eff6ff;
-  border-color: rgba(0, 95, 168, 0.18);
+  border-color: rgba(0, 129, 201, 0.18);
   color: inherit;
 }
 
@@ -475,7 +475,7 @@
   font-weight: 600;
   text-decoration: none;
   color: #fff;
-  background: linear-gradient(135deg, #005fa8, #0284c7);
+  background: linear-gradient(135deg, #0081c9, #008f84);
   border: none;
   transition: filter 0.15s ease;
 }
@@ -494,7 +494,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.35rem 0.65rem 0.35rem 0.4rem;
-  border: 1px solid rgba(0, 95, 168, 0.15);
+  border: 1px solid rgba(0, 129, 201, 0.15);
   border-radius: 999px;
   background: #fff;
   color: #0f2942;
@@ -507,7 +507,7 @@
 }
 
 .ep-topbar__trigger:hover {
-  border-color: rgba(0, 95, 168, 0.3);
+  border-color: rgba(0, 129, 201, 0.3);
   box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
 }
 
@@ -515,7 +515,7 @@
   width: 2rem;
   height: 2rem;
   border-radius: 50%;
-  background: linear-gradient(135deg, #005fa8 0%, #0d7cc9 100%);
+  background: linear-gradient(135deg, #0081c9 0%, #0d7cc9 100%);
   color: #fff;
   font-size: 0.72rem;
   font-weight: 700;
@@ -550,7 +550,7 @@
   padding: 0.35rem;
   border-radius: 0.65rem;
   background: #fff;
-  border: 1px solid rgba(0, 95, 168, 0.12);
+  border: 1px solid rgba(0, 129, 201, 0.12);
   box-shadow: 0 12px 40px rgba(15, 23, 42, 0.12);
   z-index: 1050;
 }
@@ -573,8 +573,8 @@
 }
 
 .ep-topbar__item:hover {
-  background: rgba(0, 95, 168, 0.08);
-  color: #005fa8;
+  background: rgba(0, 129, 201, 0.08);
+  color: #0081c9;
 }
 
 .ep-topbar__item--btn {
@@ -667,12 +667,12 @@
   }
 
   .ep-content::-webkit-scrollbar-thumb {
-    background: rgba(0, 95, 168, 0.28);
+    background: rgba(0, 129, 201, 0.28);
     border-radius: 8px;
   }
 
   .ep-content::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 95, 168, 0.4);
+    background: rgba(0, 129, 201, 0.4);
   }
 }
 
@@ -705,7 +705,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(0, 95, 168, 0.15);
+  border: 1px solid rgba(0, 129, 201, 0.15);
   border-radius: 0.65rem;
   background: #fff;
   color: #0f2942;
@@ -717,7 +717,7 @@
 }
 
 .ep-hamburger:hover {
-  border-color: rgba(0, 95, 168, 0.3);
+  border-color: rgba(0, 129, 201, 0.3);
   box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
 }
 
@@ -735,7 +735,7 @@
     height: 100dvh;
     min-height: 100dvh;
     z-index: 1050;
-    border-right: 1px solid rgba(0, 95, 168, 0.2);
+    border-right: 1px solid rgba(0, 129, 201, 0.2);
     box-shadow: 4px 0 24px rgba(15, 23, 42, 0.18);
     transition: left 0.28s cubic-bezier(0.4, 0, 0.2, 1);
     overflow-y: auto;
@@ -792,6 +792,6 @@
 
 @supports not (backdrop-filter: blur(1px)) {
   .ep-sidebar {
-    background: #eef4ff;
+    background: #003b5c;
   }
 }

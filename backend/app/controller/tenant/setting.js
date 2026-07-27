@@ -9,7 +9,12 @@ exports.getBrandColors = async (req, res) => {
     if (!tenantId) return Helper.response(false, 'User Not Found', {}, res, 404);
 
     const tenant = await Tenant.findByPk(tenantId, { attributes: ['brandColors'], raw: true });
-    return Helper.response(true, 'Brand colors fetched', tenant?.brandColors || {}, res, 200);
+    let colors = tenant?.brandColors || {};
+    // DbGate edits sometimes wrap the object in an array — unwrap it
+    if (Array.isArray(colors)) {
+      colors = colors[0] && typeof colors[0] === 'object' ? colors[0] : {};
+    }
+    return Helper.response(true, 'Brand colors fetched', colors || {}, res, 200);
   } catch (error) {
     console.error('getBrandColors error:', error);
     return Helper.response(false, error.message, {}, res, 500);
@@ -21,8 +26,58 @@ exports.saveBrandColors = async (req, res) => {
     const tenantId = req.users?.tenantId;
     if (!tenantId) return Helper.response(false, 'User Not Found', {}, res, 404);
 
-    const { primaryColor, sidebarColor, pageBgStart, pageBgEnd, heroBgStart, heroBgEnd } = req.body;
-    const brandColors = { primaryColor, sidebarColor, pageBgStart, pageBgEnd, heroBgStart, heroBgEnd };
+    let body = req.body || {};
+    if (Array.isArray(body)) {
+      body = body[0] && typeof body[0] === 'object' ? body[0] : {};
+    }
+
+    const {
+      primaryColor = '#00d2b4',
+      sidebarColor = '#003b5c',
+      sidebarTop = '#003b5c',
+      sidebarBottom = '#008e9b',
+      navActiveStart = '#0081c9',
+      navActiveEnd = '#00d2b4',
+      promoCardBg = '#0d486b',
+      promoTitleColor = '#00d2b4',
+      pageBgStart = '#eaf1f6',
+      pageBgEnd = '#dfe9f0',
+      heroBgStart = '#0f3d4c',
+      heroBgEnd = '#00b4a6',
+      buttonColor = '#00b4a6',
+      buttonHoverColor = '#008f84',
+      landingBgStart = '#d6e4f0',
+      landingBgEnd = '#fff1eb',
+      loginBgStart = '#fff5f5',
+      loginBgEnd = '#eaf1f6',
+      loginButtonColor = '#00b4a6',
+      applyTo,
+    } = body;
+
+    const brandColors = {
+      primaryColor,
+      sidebarColor: sidebarTop || sidebarColor,
+      sidebarTop: sidebarTop || sidebarColor,
+      sidebarBottom,
+      navActiveStart,
+      navActiveEnd,
+      promoCardBg,
+      promoTitleColor,
+      pageBgStart,
+      pageBgEnd,
+      heroBgStart,
+      heroBgEnd,
+      buttonColor,
+      buttonHoverColor,
+      landingBgStart,
+      landingBgEnd,
+      loginBgStart,
+      loginBgEnd,
+      loginButtonColor,
+    };
+    if (applyTo && typeof applyTo === 'object') {
+      brandColors.applyTo = applyTo;
+    }
 
     await Tenant.update({ brandColors }, { where: { id: tenantId } });
     return Helper.response(true, 'Brand colors saved', brandColors, res, 200);

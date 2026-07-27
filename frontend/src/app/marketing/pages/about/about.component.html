@@ -1,0 +1,58 @@
+<app-page-hero
+  badge="About Us"
+  title="About GENS.Ai"
+  subtitle="We're on a mission to make HR simple, intelligent, and effortless for businesses of every size."
+/>
+
+<section class="section-padding">
+  <div class="container-gens max-w-4xl">
+    <div appScrollReveal class="prose prose-lg max-w-none text-[var(--text-secondary)] leading-relaxed space-y-6">
+      <p>
+        <strong class="text-[var(--text-primary)]">GENS.Ai</strong> is an AI-powered Human Resource Management
+        System built by <strong class="text-[var(--text-primary)]">{{ companyName }}</strong> to help
+        organizations move beyond spreadsheets, paper registers, and disconnected tools. We bring attendance,
+        payroll, leave, recruitment, and performance management together into a single intelligent platform,
+        so HR teams can spend less time on repetitive admin work and more time on the people they support.
+      </p>
+      <p>
+        Our mission is to simplify HR operations for Indian businesses of every size — from startups tracking
+        their first handful of employees to large, multi-branch enterprises managing complex payroll and
+        compliance needs. We do this by pairing dependable, everyday HR workflows with AI features like
+        face-recognition attendance, predictive analytics, and natural-language reporting, so powerful
+        automation feels effortless rather than overwhelming.
+      </p>
+      <p>
+        We believe HR technology should adapt to how organizations actually work, not the other way around.
+        That's why GENS.Ai is built to be flexible across industries, scalable as teams grow, and secure enough
+        to be trusted with sensitive employee data. Everything we build starts from a simple question: does
+        this make life easier for the HR teams and employees who rely on it every day?
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="section-padding bg-[var(--bg-secondary)]">
+  <div class="container-gens">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+      @for (stat of stats; track stat.label) {
+        <div appScrollReveal>
+          <app-counter [stat]="stat" />
+        </div>
+      }
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      @for (value of values; track value.title) {
+        <div appScrollReveal class="glass-card p-6 text-center card-hover">
+          <div class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gens-500/10 flex items-center justify-center">
+            <i class="text-2xl text-gens-600 dark:text-gens-400" [class]="'ri ' + value.icon"></i>
+          </div>
+          <h3 class="font-display font-bold text-lg mb-2">{{ value.title }}</h3>
+          <p class="text-sm text-[var(--text-secondary)]">{{ value.description }}</p>
+        </div>
+      }
+    </div>
+  </div>
+</section>
+
+<app-cta-banner />

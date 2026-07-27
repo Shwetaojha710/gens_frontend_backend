@@ -375,7 +375,12 @@
 
 <!-- ─── Main landing page ─── -->
 <div class="authentication-wrapper authentication-basic container-p-y p-4 p-sm-0"
-  style="background-image: url('/assets/img/bg-login/bg-branch.jpg');background-size: cover;background-repeat: no-repeat;">
+  style="background:
+    radial-gradient(ellipse 60% 50% at 15% 20%, rgba(0, 180, 166, 0.16) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 85% 15%, rgba(255, 140, 66, 0.14) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 50% 95%, rgba(126, 211, 33, 0.12) 0%, transparent 60%),
+    linear-gradient(180deg, #eaf6f5 0%, #f7fbfa 100%);
+  background-size: cover;background-repeat: no-repeat;">
   <div
     style="border: 0px solid ;padding: 30px 30px;width: 1588px;background-image: linear-gradient(110.78deg, rgba(255, 255, 255, 0.41) 7.01%, rgba(255, 255, 255, 0.01) 106.22%), linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)), url('/assets/img/bg-login/bg-branch1.png');background-size: cover;background-position: center;border-radius: 32px;">
     <div class="py-6">
@@ -385,15 +390,15 @@
           <div class="row mb-6">
             <div class="app-brand justify-content-center">
               <a href="/" class="app-brand-link gap-2 mb-2">
-                <img src="/assets/img/logo/logo-quaere.png" width="200">
+                <img src="/assets/img/marketing/gens-logo.png" width="260">
               </a>
             </div>
             <div class="app-brand justify-content-center">
               <div class="text-center">
-                <h4 style="font-size: 32px; color: #005495; font-weight: 500;">
+                <h4 style="font-size: 32px; color: #0b2b3a; font-weight: 700; letter-spacing: -0.02em;">
                   {{tenantDetails?.companyName}}
                 </h4>
-                <p>{{tenantDetails?.companyAddress}}</p>
+                <p style="color: #45606b;">{{tenantDetails?.companyAddress}}</p>
               </div>
             </div>
 

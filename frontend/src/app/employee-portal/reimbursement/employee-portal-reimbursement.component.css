@@ -1,11 +1,11 @@
-@import '../employee-portal-glass.css';
+﻿@import '../employee-portal-glass.css';
 
 .ep-ep-page__back {
   display: inline-flex;
   align-items: center;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #005fa8;
+  color: #0081c9;
   text-decoration: none;
   margin-bottom: 1rem;
 }
@@ -31,7 +31,7 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: #64748b;
-  border-bottom-color: rgba(0, 95, 168, 0.12);
+  border-bottom-color: rgba(0, 129, 201, 0.12);
 }
 
 .ep-reim__table td {
@@ -82,7 +82,7 @@
   font-weight: 600;
   padding: 0.28rem 0.75rem;
   border-radius: 999px;
-  border: 1.5px solid rgba(0, 95, 168, 0.25);
+  border: 1.5px solid rgba(0, 129, 201, 0.25);
   background: transparent;
   color: #475569;
   cursor: pointer;
@@ -91,14 +91,14 @@
 }
 
 .ep-reim-filter-btn:hover {
-  background: rgba(0, 95, 168, 0.07);
-  border-color: #005fa8;
-  color: #005fa8;
+  background: rgba(0, 129, 201, 0.07);
+  border-color: #0081c9;
+  color: #0081c9;
 }
 
 .ep-reim-filter-btn.active {
-  background: #005fa8;
-  border-color: #005fa8;
+  background: #0081c9;
+  border-color: #0081c9;
   color: #fff;
 }
 

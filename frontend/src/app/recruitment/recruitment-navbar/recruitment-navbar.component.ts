@@ -173,7 +173,7 @@ export class RecruitmentNavbarComponent implements OnInit, OnDestroy {
   }
 
   get companyLogo(): string {
-    return 'assets/img/logo/logo-quaere.png';
+    return 'assets/img/logo/image.png';
   }
 
   toggleItem(menu: MenuItem): void {

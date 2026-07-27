@@ -1,0 +1,267 @@
+:host {
+  display: contents;
+}
+
+.robot-buddy-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 105;
+  pointer-events: none;
+}
+
+/* --- Buddy button --- */
+.robot-buddy {
+  position: fixed;
+  width: 56px;
+  height: 56px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  transform-origin: center;
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  filter: drop-shadow(0 6px 14px rgba(11, 43, 58, 0.24));
+  transition: filter 0.3s ease;
+  will-change: left, top;
+}
+
+.robot-buddy--dragging {
+  cursor: grabbing;
+  filter: drop-shadow(0 10px 20px rgba(11, 43, 58, 0.35));
+  z-index: 110;
+}
+
+/* --- Robot body / head / face --- */
+.robot-body {
+  width: 100%;
+  height: 100%;
+  border-radius: 18px;
+  background: linear-gradient(160deg, #f8fffd, #def6f2 55%, #b5eadf);
+  border: 2px solid rgba(26, 128, 117, 0.35);
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+
+.robot-buddy--active .robot-body {
+  box-shadow: 0 0 0 3px rgba(37, 158, 144, 0.25);
+}
+
+.robot-head {
+  width: 70%;
+  height: 56%;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0b2b3a, #17524d);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+}
+
+.robot-eye {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #7ed321;
+  box-shadow: 0 0 8px rgba(126, 211, 33, 0.6);
+}
+
+.robot-eye--blink {
+  transform: scaleY(0.1);
+  transition: transform 0.1s ease;
+}
+
+.robot-smile {
+  position: absolute;
+  bottom: 6px;
+  width: 16px;
+  height: 7px;
+  border-bottom: 2px solid #9fe4d9;
+  border-radius: 0 0 12px 12px;
+}
+
+.robot-antenna {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 8px;
+  background: #1a8075;
+  border-radius: 999px;
+}
+
+.robot-antenna::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #7ed321;
+  animation: antennaPulse 2s ease-in-out infinite;
+}
+
+.robot-feet {
+  position: absolute;
+  bottom: 5px;
+  display: flex;
+  gap: 10px;
+}
+
+.robot-feet .robot-foot {
+  display: block;
+  width: 10px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(11, 43, 58, 0.35);
+}
+
+.robot-pulse-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 22px;
+  border: 2px solid rgba(37, 158, 144, 0.35);
+  animation: robotPulse 2.4s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes robotPulse {
+  0% { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+@keyframes antennaPulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(126, 211, 33, 0.5); }
+  50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(126, 211, 33, 0); }
+}
+
+/* --- Speech bubbles --- */
+.robot-bubble {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  background: #ffffff;
+  color: #155f56;
+  border: 1px solid rgba(26, 128, 117, 0.28);
+  border-radius: 9999px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  max-width: 200px;
+  box-shadow: 0 6px 18px rgba(11, 43, 58, 0.14);
+  animation: buddyBubble 2.2s ease forwards;
+  pointer-events: none;
+  z-index: 108;
+}
+
+:host-context(.dark) .robot-bubble {
+  background: #0f172a;
+  color: #7ed4c9;
+  border-color: rgba(37, 158, 144, 0.35);
+}
+
+@keyframes buddyBubble {
+  0% { opacity: 0; transform: translate(-50%, 0) scale(0.88); }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -56px) scale(1); }
+}
+
+/* --- Tip panel --- */
+.robot-panel {
+  position: fixed;
+  width: 260px;
+  background: #ffffff;
+  border: 1px solid rgba(26, 128, 117, 0.25);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 16px 40px rgba(11, 43, 58, 0.16);
+  pointer-events: auto;
+  z-index: 106;
+}
+
+:host-context(.dark) .robot-panel {
+  background: #0f172a;
+  border-color: rgba(37, 158, 144, 0.3);
+}
+
+.robot-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.robot-panel-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1a8075;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+:host-context(.dark) .robot-panel-title {
+  color: #7ed4c9;
+}
+
+.robot-panel-close {
+  border: 0;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+}
+
+.robot-panel-tip {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #475569;
+  margin: 0 0 12px;
+}
+
+:host-context(.dark) .robot-panel-tip {
+  color: #cbd5e1;
+}
+
+.robot-panel-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.robot-panel-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(26, 128, 117, 0.2);
+  background: #f0faf8;
+  color: #155f56;
+  border-radius: 10px;
+  padding: 7px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+:host-context(.dark) .robot-panel-btn {
+  background: rgba(37, 158, 144, 0.12);
+  color: #7ed4c9;
+  border-color: rgba(37, 158, 144, 0.25);
+}
+
+.robot-panel-btn:hover {
+  background: #1a8075;
+  color: #fff;
+  border-color: #1a8075;
+  transform: translateY(-1px);
+}

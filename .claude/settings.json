@@ -41,7 +41,18 @@
       "Bash(tasklist)",
       "Bash(npx tsc *)",
       "Bash(echo \"exit: $?\")",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(npm i *)",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/tailwindcss/package.json'\\).version\\); console.log\\(require\\('./node_modules/gsap/package.json'\\).version\\)\")",
+      "Bash(grep -oE '\\\\.gens-marketing\\\\\\\\\\\\.hidden\\\\{[^}]*\\\\}' dist/forntend/browser/styles.css)",
+      "Bash(grep -oE '\\\\.gens-marketing[^{}]{0,40}hidden[^{}]{0,10}\\\\{[^}]*\\\\}' dist/forntend/browser/styles.css)",
+      "Bash(grep -oE '\\\\.dark[^{}]{0,60}gens-950[^{}]{0,60}\\\\{[^}]*\\\\}' dist/forntend/browser/styles.css)",
+      "Bash(grep -oE '@media \\\\\\(min-width:[^\\)]*\\\\\\)\\\\{[^}]{0,300}\\\\}' dist/forntend/browser/styles.css)",
+      "Bash(python3 -c ' *)",
+      "Bash(cp \"/c/Users/Lakshya/Downloads/Archive/public/images/gens-hero-dashboard.png\" \"/c/Users/Lakshya/Documents/GitHub/gens_frontend_backend/frontend/assets/img/marketing/gens-hero-dashboard.png\")",
+      "Bash(cp \"/c/Users/Lakshya/Downloads/Archive/public/images/gens-logo.png\" \"/c/Users/Lakshya/Documents/GitHub/gens_frontend_backend/frontend/assets/img/marketing/gens-logo.png\")",
+      "Bash(cp \"/c/Users/Lakshya/Downloads/Archive/public/images/location-tracking-dashboard.png\" \"/c/Users/Lakshya/Documents/GitHub/gens_frontend_backend/frontend/assets/img/marketing/location-tracking-dashboard.png\")",
+      "Bash(git ls-tree *)"
     ]
   }
 }

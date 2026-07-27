@@ -75,6 +75,7 @@ export const APP_MENU_ITEMS: MenuItem[] = [
       { title: 'Generated Salary List', icon: 'ri-suitcase-line',           link: '/layout/payroll/generated-salary',  permKey: 'pay.list' },
       { title: 'Deduction Summary',     icon: 'ri-subtract-line',           link: '/layout/payroll/deduction-summary', permKey: 'pay.deduction' },
       { title: 'Reimbursement',         icon: 'ri-refund-line',             link: '/layout/payroll/reimbursement',     permKey: 'pay.reimburse' },
+      { title: 'Employee Appraisal',    icon: 'ri-percent-line',            link: '/layout/payroll/employee-appraisal', permKey: 'pay.appraisal' },
     ]
   },
   {

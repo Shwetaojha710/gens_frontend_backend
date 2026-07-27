@@ -1,0 +1,208 @@
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+  <!-- Thumbnails -->
+  <div class="lg:col-span-1 flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
+    @for (item of screenshots; track item.id) {
+      <button
+        type="button"
+        (click)="selectScreenshot(item.id)"
+        class="flex-shrink-0 lg:flex-shrink p-3 rounded-xl text-left transition-all duration-300 border"
+        [class.border-gens-500]="active() === item.id"
+        [class.bg-gens-50]="active() === item.id"
+        [class.dark:bg-gens-950]="active() === item.id"
+        [class.border-[var(--border-color)]]="active() !== item.id"
+        [class.hover:border-gens-300]="active() !== item.id"
+      >
+        <i class="ri text-base text-gens-600 mb-1 block" [ngClass]="getIcon(item.id)"></i>
+        <p class="text-xs font-semibold whitespace-nowrap">{{ item.title }}</p>
+      </button>
+    }
+  </div>
+
+  <!-- Preview -->
+  <div class="lg:col-span-4">
+    <div class="glass-card p-1 shadow-premium">
+      <div class="rounded-xl overflow-hidden bg-[var(--bg-secondary)] min-h-[300px] md:min-h-[400px]">
+        <div class="flex items-center gap-2 px-4 py-3 border-b border-[var(--border-color)]">
+          <div class="flex gap-1.5">
+            <div class="w-3 h-3 rounded-full bg-red-400"></div>
+            <div class="w-3 h-3 rounded-full bg-amber-400"></div>
+            <div class="w-3 h-3 rounded-full bg-green-400"></div>
+          </div>
+          <span class="text-xs text-[var(--text-muted)] ml-2">{{ activeScreenshot().title }}</span>
+        </div>
+
+        <div class="p-6">
+          @switch (active()) {
+            @case ('dashboard') {
+              <div class="grid grid-cols-4 gap-3 animate-fade-in-up">
+                <div class="col-span-2 sm:col-span-1 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-center">
+                  <p class="text-2xl font-bold text-blue-600">248</p>
+                  <p class="text-xs text-gray-500">Employees</p>
+                </div>
+                <div class="col-span-2 sm:col-span-1 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 text-center">
+                  <p class="text-2xl font-bold text-green-600">94%</p>
+                  <p class="text-xs text-gray-500">Attendance</p>
+                </div>
+                <div class="col-span-2 sm:col-span-1 p-4 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-center">
+                  <p class="text-2xl font-bold text-purple-600">12</p>
+                  <p class="text-xs text-gray-500">Open Roles</p>
+                </div>
+                <div class="col-span-2 sm:col-span-1 p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-center">
+                  <p class="text-2xl font-bold text-amber-600">$124K</p>
+                  <p class="text-xs text-gray-500">Payroll</p>
+                </div>
+                <div class="col-span-4 sm:col-span-3 p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                  <p class="text-xs font-semibold mb-3">Department Overview</p>
+                  <div class="space-y-2">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs w-20">Engineering</span>
+                      <div class="flex-1 h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                        <div class="h-full rounded-full bg-blue-500" style="width:85%"></div>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs w-20">Sales</span>
+                      <div class="flex-1 h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                        <div class="h-full rounded-full bg-green-500" style="width:72%"></div>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs w-20">Marketing</span>
+                      <div class="flex-1 h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                        <div class="h-full rounded-full bg-purple-500" style="width:68%"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-span-4 sm:col-span-1 p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                  <p class="text-xs font-semibold mb-2">Quick Actions</p>
+                  <div class="space-y-2">
+                    <div class="p-2 rounded bg-blue-100 dark:bg-blue-900/30 text-xs text-center">Run Payroll</div>
+                    <div class="p-2 rounded bg-green-100 dark:bg-green-900/30 text-xs text-center">Add Employee</div>
+                    <div class="p-2 rounded bg-purple-100 dark:bg-purple-900/30 text-xs text-center">View Reports</div>
+                  </div>
+                </div>
+              </div>
+            }
+            @case ('profile') {
+              <div class="flex flex-col sm:flex-row gap-6 animate-fade-in-up">
+                <div class="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-3xl font-bold shrink-0">JD</div>
+                <div class="flex-1">
+                  <h3 class="text-xl font-bold">John Doe</h3>
+                  <p class="text-sm text-gray-500">Senior Software Engineer &middot; Engineering</p>
+                  <div class="grid grid-cols-3 gap-3 mt-4">
+                    <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 text-center">
+                      <p class="text-xs text-gray-500">Employee ID</p>
+                      <p class="font-semibold text-sm">EMP-2048</p>
+                    </div>
+                    <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 text-center">
+                      <p class="text-xs text-gray-500">Join Date</p>
+                      <p class="font-semibold text-sm">Jan 2024</p>
+                    </div>
+                    <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 text-center">
+                      <p class="text-xs text-gray-500">Leave Balance</p>
+                      <p class="font-semibold text-sm">12 days</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+            @case ('attendance') {
+              <div class="space-y-3 animate-fade-in-up">
+                <div class="flex justify-between items-center">
+                  <p class="font-semibold text-sm">Today's Attendance</p>
+                  <span class="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">94.2% Present</span>
+                </div>
+                <div class="grid grid-cols-7 gap-1 text-center text-xs">
+                  <div class="p-2 rounded bg-green-100 dark:bg-green-900/30 text-green-700">Mon<br /><b>42</b></div>
+                  <div class="p-2 rounded bg-green-100 dark:bg-green-900/30 text-green-700">Tue<br /><b>44</b></div>
+                  <div class="p-2 rounded bg-green-100 dark:bg-green-900/30 text-green-700">Wed<br /><b>43</b></div>
+                  <div class="p-2 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700">Thu<br /><b>38</b></div>
+                  <div class="p-2 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 font-bold ring-2 ring-blue-500">Fri<br /><b>40</b></div>
+                  <div class="p-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-400">Sat<br />-</div>
+                  <div class="p-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-400">Sun<br />-</div>
+                </div>
+              </div>
+            }
+            @case ('payroll') {
+              <div class="space-y-4 animate-fade-in-up">
+                <div class="flex justify-between">
+                  <p class="font-semibold">July 2026 Payroll</p>
+                  <span class="text-xs px-3 py-1 rounded-full bg-green-100 text-green-700">Ready to Process</span>
+                </div>
+                <table class="w-full text-sm">
+                  <tr class="border-b border-gray-200 dark:border-gray-700">
+                    <td class="py-2 text-gray-500">Gross Salary</td>
+                    <td class="py-2 text-right font-semibold">$124,500</td>
+                  </tr>
+                  <tr class="border-b border-gray-200 dark:border-gray-700">
+                    <td class="py-2 text-gray-500">Deductions</td>
+                    <td class="py-2 text-right font-semibold text-red-500">-$18,200</td>
+                  </tr>
+                  <tr class="border-b border-gray-200 dark:border-gray-700">
+                    <td class="py-2 text-gray-500">Tax</td>
+                    <td class="py-2 text-right font-semibold text-red-500">-$12,450</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 font-bold">Net Payout</td>
+                    <td class="py-2 text-right font-bold text-green-600 text-lg">$93,850</td>
+                  </tr>
+                </table>
+              </div>
+            }
+            @case ('reports') {
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fade-in-up">
+                <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                  <p class="text-xs text-gray-500 mb-1">Headcount Report</p>
+                  <p class="font-semibold text-sm">Monthly Trend &#8599; 12%</p>
+                </div>
+                <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                  <p class="text-xs text-gray-500 mb-1">Attrition Report</p>
+                  <p class="font-semibold text-sm">Rate: 4.2% &#8600; 1.1%</p>
+                </div>
+                <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                  <p class="text-xs text-gray-500 mb-1">Leave Utilization</p>
+                  <p class="font-semibold text-sm">Avg: 68% of quota</p>
+                </div>
+                <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                  <p class="text-xs text-gray-500 mb-1">Overtime Analysis</p>
+                  <p class="font-semibold text-sm">340 hrs this month</p>
+                </div>
+              </div>
+            }
+            @case ('mobile') {
+              <div class="max-w-[200px] mx-auto animate-fade-in-up">
+                <div class="rounded-3xl border-4 border-gray-800 dark:border-gray-600 p-2 bg-gray-900">
+                  <div class="rounded-2xl bg-white dark:bg-gray-800 p-3 min-h-[280px]">
+                    <div class="text-center mb-3">
+                      <p class="text-xs font-bold text-blue-600">GENS Mobile</p>
+                    </div>
+                    <div class="space-y-2">
+                      <div class="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center gap-2">
+                        <i class="ri ri-calendar-check-line text-sm"></i>
+                        <span class="text-xs">Check In</span>
+                      </div>
+                      <div class="p-2 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center gap-2">
+                        <i class="ri ri-plane-line text-sm"></i>
+                        <span class="text-xs">Apply Leave</span>
+                      </div>
+                      <div class="p-2 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center gap-2">
+                        <i class="ri ri-money-dollar-circle-line text-sm"></i>
+                        <span class="text-xs">View Payslip</span>
+                      </div>
+                      <div class="p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center gap-2">
+                        <i class="ri ri-bar-chart-box-line text-sm"></i>
+                        <span class="text-xs">My Reports</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+    </div>
+    <p class="text-center text-sm text-[var(--text-secondary)] mt-4">{{ activeScreenshot().description }}</p>
+  </div>
+</div>
