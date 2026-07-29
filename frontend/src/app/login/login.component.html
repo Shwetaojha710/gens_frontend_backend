@@ -1,186 +1,218 @@
-<div class="authentication-wrapper authentication-cover">
-  <div class="authentication-inner row m-0"
-    style="background-image: url('/assets/img/bg-login/Login1.png');background-size: cover;background-repeat: no-repeat;background-position: center;z-index: 0;">
+<div class="gens-login">
+  <div class="gens-login__bg" aria-hidden="true"></div>
+  <div class="gens-login__wave" aria-hidden="true"></div>
 
-    <!-- Left Section (Illustration) -->
-    <div class="d-none d-lg-flex col-lg-7 col-xl-8 align-items-center justify-content-center p-12 pb-2">
-      <img src="../../../assets/img/bg-login/Hero.png" class="auth-cover-illustration w-100" alt="auth-illustration" />
-      <img alt="mask" src="assets/img/illustrations/auth-basic-login-mask-light.png"
-        class="authentication-image d-none d-lg-block" />
-    </div>
+  <div class="gens-login__shell">
+    <!-- LEFT: text + features -->
+    <aside class="gens-login__left">
+      <!-- <a class="gens-login__brand" href="/">
+        <img src="assets/img/marketing/gens-logo.png" alt="GENS.Ai" />
+      </a> -->
 
-    <!-- Login Form Section -->
-    <div class="d-flex col-12 col-lg-5 col-xl-4 align-items-center justify-content-center position-relative py-sm-6 px-12 py-6"
-      style="background-image: url('/assets/img/bg-login/Rectangle3.png');background-size: cover;background-position: center;background-repeat: no-repeat;">
-
-      <div style="padding: 50px 40px;background: linear-gradient(110.78deg, rgba(255, 255, 255, 0.41) 7.01%, rgba(255, 255, 255, 0.01) 106.22%),linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));border-radius: 8px;height: 800px;z-index: 0;">
-        <div style="padding: 80px 40px;background: linear-gradient(110.78deg, rgba(255, 255, 255, 0.41) 7.01%, rgba(255, 255, 255, 0.01) 106.22%),linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));border-radius: 8px;height: 720px;z-index: 0;">
-          <div class="w-px-400 mx-auto pt-12 pt-lg-0" style="z-index: 999999;">
-
-            <!-- Logo -->
-            <div class="text-center mb-3">
-              <a href="" class="text-center mx-auto w-100">
-                <img src="../../../assets/img/marketing/gens-logo.png" alt="Company Logo" width="30%" />
-              </a>
-            </div>
-
-            <!-- ========== EMPLOYEE LOGIN (default) ========== -->
-            <ng-container *ngIf="!showMobileLogin">
-              <h4 class="mb-1">Welcome to GENS HR Payroll</h4>
-              <p class="mb-3">Please sign in to your account</p>
-
-              <form id="formAuthentication" class="mb-5" [formGroup]="form" (ngSubmit)="login()">
-
-                <!-- Company Code -->
-                <div class="form-floating form-floating-outline mb-4">
-                  <input type="text" class="form-control" id="company_code" formControlName="tenantId"
-                    [ngClass]="{ 'is-invalid': isInvalid(form, 'tenantId') }"
-                    placeholder="Enter your company code" autofocus />
-                  <label for="company_code">Company Code</label>
-                  <div class="invalid-feedback">Company code is required.</div>
-                </div>
-
-                <!-- Email -->
-                <div class="form-floating form-floating-outline mb-4">
-                  <input type="email" class="form-control" id="email" formControlName="email"
-                    [ngClass]="{ 'is-invalid': isInvalid(form, 'email') }"
-                    placeholder="Enter your email" />
-                  <label for="email">Email</label>
-                  <div class="invalid-feedback">Enter a valid email address.</div>
-                </div>
-
-                <!-- Password -->
-                <div class="form-floating form-floating-outline mb-4 position-relative">
-                  <input [type]="passwordVisible ? 'text' : 'password'" class="form-control" id="password"
-                    formControlName="password" [ngClass]="{ 'is-invalid': isInvalid(form, 'password') }"
-                    placeholder="Enter your password" />
-                  <label for="password">Password</label>
-                  <span class="ri" [ngClass]="passwordVisible ? 'ri-eye-off-line' : 'ri-eye-line'"
-                    (click)="passwordVisible = !passwordVisible"
-                    style="cursor: pointer; position: absolute; top: 50%; right: 12px; transform: translateY(-50%);"></span>
-                  <div class="invalid-feedback">Password is required.</div>
-                </div>
-
-                <!-- Remember + Forgot -->
-                <div class="mb-4 d-flex justify-content-between align-items-center mt-4">
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="remember-me" />
-                    <label class="form-check-label" for="remember-me">Remember Me</label>
-                  </div>
-                  <!-- <a (click)="goToEmpProfile()" class="link-info" style="cursor: pointer;">Forgot Password?</a> -->
-                </div>
-
-                <!-- Sign In Button -->
-                <button type="submit" class="btn btn-primary d-grid w-100" [disabled]="form.invalid">
-                  Sign in
-                </button>
-
-              </form>
-
-              <p class="text-center">
-                <span>New on our platform?</span>
-                <a (click)="gotoRegister()" class="link-info" style="cursor: pointer;">
-                  <span> Create an account</span>
-                </a>
-              </p>
-            </ng-container>
-
-            <!-- ========== INTERVIEWER LOGIN (mobile icon clicked) ========== -->
-            <ng-container *ngIf="showMobileLogin">
-              <h4 class="mb-1">Interviewer Portal</h4>
-              <p class="mb-3">Sign in with company code &amp; mobile OTP</p>
-
-              <!-- Step 1: Company Code + Phone -->
-              <div *ngIf="!interviewerOtpStep" [formGroup]="phoneForm">
-
-                <div class="form-floating form-floating-outline mb-4">
-                  <input type="text" class="form-control" id="iv_tenant" formControlName="tenantId"
-                    placeholder="Enter company code" autofocus />
-                  <label for="iv_tenant">Company Code</label>
-                </div>
-
-                <div class="form-floating form-floating-outline mb-4">
-                  <input type="tel" class="form-control" id="iv_phone" [formControl]="phoneControl"
-                    [ngClass]="{ 'is-invalid': isInvalid(phoneForm, 'phone') }"
-                    placeholder="Mobile Number" (input)="onInterviewerPhoneInput($event)" />
-                  <label for="iv_phone">Mobile Number</label>
-                  <div class="invalid-feedback" *ngIf="phoneControl.touched && phoneControl.hasError('required')">
-                    Mobile number is required.
-                  </div>
-                  <div class="invalid-feedback" *ngIf="phoneControl.touched && phoneControl.hasError('pattern')">
-                    Enter a valid 10-digit number starting with 6-9.
-                  </div>
-                </div>
-
-                <button type="button" class="btn btn-primary d-grid w-100 mb-3" (click)="sendInterviewerOtp()">
-                  Send OTP
-                </button>
-
-                <p class="text-center mb-0">
-                  <a class="link-info" style="cursor:pointer;" (click)="loginWithMobile()">
-                    <i class="ri ri-arrow-left-line me-1"></i> Back to Admin Login
-                  </a>
-                </p>
-              </div>
-
-              <!-- Step 2: OTP Verification -->
-              <div *ngIf="interviewerOtpStep" [formGroup]="otpForm">
-                <p class="text-center mb-3 fw-semibold">Enter the OTP sent to your mobile</p>
-
-                <div class="d-flex justify-content-center gap-2 mb-4">
-                  <input #i1 type="text" class="form-control text-center fs-4 fw-bold" formControlName="digit1"
-                    maxlength="1" style="width:56px;height:56px;" inputmode="numeric"
-                    (input)="onOtpInput($event, i2)" (keydown)="onOtpKeydown($event, null)">
-                  <input #i2 type="text" class="form-control text-center fs-4 fw-bold" formControlName="digit2"
-                    maxlength="1" style="width:56px;height:56px;" inputmode="numeric"
-                    (input)="onOtpInput($event, i3)" (keydown)="onOtpKeydown($event, i1)">
-                  <input #i3 type="text" class="form-control text-center fs-4 fw-bold" formControlName="digit3"
-                    maxlength="1" style="width:56px;height:56px;" inputmode="numeric"
-                    (input)="onOtpInput($event, i4)" (keydown)="onOtpKeydown($event, i2)">
-                  <input #i4 type="text" class="form-control text-center fs-4 fw-bold" formControlName="digit4"
-                    maxlength="1" style="width:56px;height:56px;" inputmode="numeric"
-                    (input)="onOtpInput($event, null)" (keydown)="onOtpKeydown($event, i3)">
-                </div>
-
-                <button type="button" class="btn btn-primary d-grid w-100 mb-3" (click)="verifyInterviewerOtp()">
-                  Verify &amp; Login
-                </button>
-
-                <small class="text-muted d-block text-center">
-                  <span *ngIf="interviewerResendTimer > 0">Resend OTP in {{ interviewerResendTimer }}s</span>
-                  <a *ngIf="interviewerResendTimer === 0" class="link-info" style="cursor:pointer;" (click)="sendInterviewerOtp()">
-                    Resend OTP
-                  </a>
-                </small>
-
-                <p class="text-center mt-3 mb-0">
-                  <a class="link-info" style="cursor:pointer;" (click)="interviewerOtpStep = false">
-                    <i class="ri ri-arrow-left-line me-1"></i> Change Number
-                  </a>
-                </p>
-              </div>
-
-            </ng-container>
-
-          </div>
-
-          <!-- Bottom: "or" + mobile icon (only on employee login) -->
-          <ng-container *ngIf="!showMobileLogin">
-            <div class="divider my-5">
-              <div class="divider-text">or</div>
-            </div>
-            <div class="d-flex justify-content-center gap-2">
-              <a href="javascript:;" class="btn btn-icon rounded-circle btn-text-primary waves-effect"
-                (click)="loginWithMobile()" title="Interviewer Login">
-                <i class="icon-base ri ri-smartphone-line icon-18px"></i>
-              </a>
-            </div>
-          </ng-container>
-
-        </div>
+      <div class="gens-login__intro">
+        <p class="gens-login__welcome">Welcome to</p>
+        <h1>
+          <span class="gens-login__brand-dark">GENS</span>
+          <span class="gens-login__brand-teal"> HR Payroll</span>
+        </h1>
+        <p class="gens-login__tagline">
+          A smarter way to manage your employees and simplify payroll.
+        </p>
       </div>
 
+      <ul class="gens-login__features">
+        <li>
+          <span class="gens-login__feat-icon"><i class="ri ri-team-line"></i></span>
+          <div>
+            <strong>Employee Management</strong>
+            <small>Manage your workforce efficiently</small>
+          </div>
+        </li>
+        <li>
+          <span class="gens-login__feat-icon"><i class="ri ri-shield-check-line"></i></span>
+          <div>
+            <strong>Accurate Payroll</strong>
+            <small>Error-free payroll processing</small>
+          </div>
+        </li>
+        <li>
+          <span class="gens-login__feat-icon"><i class="ri ri-bar-chart-box-line"></i></span>
+          <div>
+            <strong>Insightful Reports</strong>
+            <small>Make data-driven decisions</small>
+          </div>
+        </li>
+      </ul>
+
+      <div class="gens-login__secure">
+        <i class="ri ri-shield-check-fill"></i>
+        <div>
+          <strong>Secure · Reliable · Compliant</strong>
+          <small>Your data is safe with us.</small>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MIDDLE: girl image -->
+    <div class="gens-login__center">
+      <div class="gens-login__hero-wrap">
+        <img
+          class="gens-login__hero-img"
+          src="assets/img/bg-login/Hero.png"
+          alt="HR professional"
+        />
+      </div>
     </div>
-    <!-- /Login -->
+
+    <!-- RIGHT: login card -->
+    <main class="gens-login__right">
+      <div class="gens-login__card">
+        <div class="gens-login__card-logo">
+          <img src="assets/img/marketing/gens-logo.png" alt="GENS.Ai" />
+        </div>
+
+        <ng-container *ngIf="!showMobileLogin">
+          <h2>Sign in to your account</h2>
+          <p class="gens-login__sub">Please enter your credentials to continue</p>
+
+          <form [formGroup]="form" (ngSubmit)="login()" novalidate>
+            <label class="gens-field">
+              <span>Company Code</span>
+              <div class="gens-field__control" [class.is-invalid]="isInvalid(form, 'tenantId')">
+                <i class="ri ri-building-line"></i>
+                <input type="text" formControlName="tenantId" placeholder="Enter company code" />
+              </div>
+              <small class="gens-field__error" *ngIf="isInvalid(form, 'tenantId')">
+                Company code is required.
+              </small>
+            </label>
+
+            <label class="gens-field">
+              <span>Email</span>
+              <div class="gens-field__control" [class.is-invalid]="isInvalid(form, 'email')">
+                <i class="ri ri-mail-line"></i>
+                <input type="email" formControlName="email" placeholder="Enter your email" />
+              </div>
+              <small class="gens-field__error" *ngIf="isInvalid(form, 'email')">
+                Enter a valid email address.
+              </small>
+            </label>
+
+            <label class="gens-field">
+              <span>Password</span>
+              <div class="gens-field__control" [class.is-invalid]="isInvalid(form, 'password')">
+                <i class="ri ri-lock-line"></i>
+                <input
+                  [type]="passwordVisible ? 'text' : 'password'"
+                  formControlName="password"
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  class="gens-field__eye"
+                  (click)="passwordVisible = !passwordVisible"
+                  tabindex="-1"
+                >
+                  <i class="ri" [ngClass]="passwordVisible ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
+                </button>
+              </div>
+              <small class="gens-field__error" *ngIf="isInvalid(form, 'password')">
+                Password is required.
+              </small>
+            </label>
+
+            <div class="gens-login__row">
+              <label class="gens-check">
+                <input type="checkbox" id="remember-me" />
+                <span>Remember Me</span>
+              </label>
+              <a class="gens-link" href="javascript:;">Forgot Password?</a>
+            </div>
+
+            <button type="submit" class="gens-btn gens-btn--primary" [disabled]="form.invalid">
+              Sign In
+            </button>
+          </form>
+
+          <p class="gens-login__footer-text">
+            New to our platform?
+            <a class="gens-link" (click)="gotoRegister()">Create an account</a>
+          </p>
+
+          <div class="gens-or"><span>or</span></div>
+
+          <button type="button" class="gens-btn gens-btn--google" (click)="loginWithMobile()">
+            <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+              <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.2 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.9z"/>
+              <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16.1 19 13 24 13c3 0 5.8 1.1 7.9 3l5.7-5.7C34.2 6.1 29.3 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"/>
+              <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/>
+              <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.2 5.6l.1-.1 6.2 5.2C39.2 36.3 44 31.2 44 24c0-1.3-.1-2.7-.4-3.9z"/>
+            </svg>
+            Sign in with Google
+          </button>
+
+          <p class="gens-login__otp-hint">
+            Interviewer?
+            <a class="gens-link" (click)="loginWithMobile()">Login with OTP</a>
+          </p>
+        </ng-container>
+
+        <ng-container *ngIf="showMobileLogin">
+          <h2>Interviewer Portal</h2>
+          <p class="gens-login__sub">Sign in with company code &amp; mobile OTP</p>
+
+          <div *ngIf="!interviewerOtpStep" [formGroup]="phoneForm">
+            <label class="gens-field">
+              <span>Company Code</span>
+              <div class="gens-field__control">
+                <i class="ri ri-building-line"></i>
+                <input type="text" formControlName="tenantId" placeholder="Enter company code" />
+              </div>
+            </label>
+
+            <label class="gens-field">
+              <span>Mobile Number</span>
+              <div class="gens-field__control" [class.is-invalid]="isInvalid(phoneForm, 'phone')">
+                <i class="ri ri-smartphone-line"></i>
+                <input
+                  type="tel"
+                  [formControl]="phoneControl"
+                  placeholder="10-digit mobile"
+                  (input)="onInterviewerPhoneInput($event)"
+                />
+              </div>
+            </label>
+
+            <button type="button" class="gens-btn gens-btn--primary" (click)="sendInterviewerOtp()">
+              Send OTP
+            </button>
+
+            <p class="gens-login__footer-text">
+              <a class="gens-link" (click)="loginWithMobile()">← Back to Admin Login</a>
+            </p>
+          </div>
+
+          <div *ngIf="interviewerOtpStep" [formGroup]="otpForm">
+            <p class="gens-login__sub">Enter the OTP sent to your mobile</p>
+            <div class="gens-otp">
+              <input #i1 type="text" formControlName="digit1" maxlength="1" inputmode="numeric"
+                (input)="onOtpInput($event, i2)" (keydown)="onOtpKeydown($event, null)" />
+              <input #i2 type="text" formControlName="digit2" maxlength="1" inputmode="numeric"
+                (input)="onOtpInput($event, i3)" (keydown)="onOtpKeydown($event, i1)" />
+              <input #i3 type="text" formControlName="digit3" maxlength="1" inputmode="numeric"
+                (input)="onOtpInput($event, i4)" (keydown)="onOtpKeydown($event, i2)" />
+              <input #i4 type="text" formControlName="digit4" maxlength="1" inputmode="numeric"
+                (input)="onOtpInput($event, null)" (keydown)="onOtpKeydown($event, i3)" />
+            </div>
+            <button type="button" class="gens-btn gens-btn--primary" (click)="verifyInterviewerOtp()">
+              Verify &amp; Login
+            </button>
+            <p class="gens-login__footer-text">
+              <a class="gens-link" (click)="interviewerOtpStep = false">Change Number</a>
+            </p>
+          </div>
+        </ng-container>
+      </div>
+    </main>
   </div>
 </div>

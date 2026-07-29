@@ -174,3 +174,31 @@ exports.uploadHandbook = async (req, res) => {
     return Helper.response(false, error.message, {}, res, 500);
   }
 };
+exports.getCompanyProfile = async (req, res) => {
+  try {
+    const tenantId = req.users?.tenantId;
+    if (!tenantId) return Helper.response(false, 'User Not Found', {}, res, 404);
+
+    const tenant = await Tenant.findByPk(tenantId, {
+      attributes: ['companyName', 'companyAddress', 'image', 'productLogo'],
+      raw: true
+    });
+
+    if (!tenant) return Helper.response(false, 'Tenant not found', {}, res, 404);
+
+    const data = {
+      companyName: tenant.companyName || '',
+      companyAddress: tenant.companyAddress || '',
+      logo: tenant.image
+        ? `${process.env.BASE_URL}/upload/${tenant.image}`
+        : null,
+      productLogo: tenant.productLogo
+        ? `${process.env.BASE_URL}/upload/${tenant.productLogo}`
+        : null
+    };
+
+    return Helper.response(true, 'Company profile fetched', data, res, 200);
+  } catch (error) {
+    return Helper.response(false, error.message, {}, res, 500);
+  }
+};

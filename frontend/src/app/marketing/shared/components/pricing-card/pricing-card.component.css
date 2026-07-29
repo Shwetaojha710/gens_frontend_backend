@@ -7,6 +7,62 @@
 }
 
 .pricing-card--featured {
+  border-color: rgba(37, 158, 144, 0.55);
+  box-shadow: 0 20px 48px -12px rgba(26, 128, 117, 0.5);
+  background: linear-gradient(180deg, rgba(26, 128, 117, 0.12) 0%, rgba(255, 255, 255, 0.95) 32%);
+  /* transform: scale(1.08);  ← REMOVE this */
+  z-index: 2;
+  padding: 0.75rem 0.25rem; /* thoda andar se bada feel */
+  min-height: 100%;
+}
+
+.pricing-card--featured .pricing-card__accent {
+  height: 5px;
+  opacity: 1;
+}
+
+.pricing-card--featured h3 {
+  font-size: 1.35rem;
+}
+
+.pricing-card--featured .gradient-text,
+.pricing-card--featured [class*="text-3xl"] {
+  font-size: 2.25rem;
+}
+
+@media (max-width: 1023px) {
+  .pricing-card--featured {
+    padding: 0;
+  }
+}
+:host-context(.dark) .pricing-card--featured,
+:host-context(html.dark) .pricing-card--featured,
+.dark .pricing-card--featured {
+  background: linear-gradient(
+    180deg,
+    rgba(26, 128, 117, 0.28) 0%,
+    rgba(15, 61, 76, 0.92) 35%,
+    rgba(11, 43, 58, 0.95) 100%
+  ) !important;
+  border-color: rgba(63, 184, 170, 0.45);
+  box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.55);
+  color: #e8f5f3;
+}
+
+:host-context(.dark) .pricing-card--featured h3,
+.dark .pricing-card--featured h3 {
+  color: #ffffff;
+}
+
+:host-context(.dark) .pricing-card--featured p,
+:host-context(.dark) .pricing-card--featured li,
+:host-context(.dark) .pricing-card--featured span,
+.dark .pricing-card--featured p,
+.dark .pricing-card--featured li,
+.dark .pricing-card--featured span {
+  color: inherit;
+}
+/* .pricing-card--featured {
   border-color: rgba(37, 158, 144, 0.45);
   box-shadow: 0 12px 32px -16px rgba(26, 128, 117, 0.45);
   background: linear-gradient(180deg, rgba(238, 249, 248, 0.95) 0%, rgba(255, 255, 255, 0.9) 28%);
@@ -19,4 +75,4 @@
 
 :host-context(.dark) .pricing-card--featured {
   background: linear-gradient(180deg, rgba(11, 43, 58, 0.55) 0%, rgba(15, 61, 76, 0.35) 40%);
-}
+} */

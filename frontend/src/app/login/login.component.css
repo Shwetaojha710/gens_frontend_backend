@@ -1,109 +1,602 @@
-/* Authentication
-******************************************************************************* */
-.authentication-wrapper {
-  --bs-auth-basic-inner-max-width: 450px;
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.gens-login {
+  --teal: #20b2aa;
+  --teal-dark: #178f89;
+  --navy: #2d3748;
+  --muted: #718096;
+  --border: #e2e8f0;
+  --bg: #ffffff;
+  position: relative;
+  min-height: 100vh;
+  background: var(--bg);
+  overflow: hidden;
+  font-family: Inter, "Segoe UI", system-ui, sans-serif;
+}
+
+.gens-login__bg {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(ellipse 55% 40% at 70% 35%, rgba(32, 178, 170, 0.16), transparent 60%),
+    linear-gradient(135deg, rgba(32, 178, 170, 0.10) 0%, rgba(32, 178, 170, 0) 45%),
+    radial-gradient(#cbd5e1 1.1px, transparent 1.2px);
+  background-size: auto, 18px 18px;
+  background-position: center, 0 0;
+  opacity: 0.55;
+  pointer-events: none;
+}
+.gens-login__wave {
+  position: absolute;
+  background: linear-gradient(180deg,
+  #7de8df 0%,
+  #2dd4bf 46%,
+  #0d9488 100%);
+  left: -10%;
+  bottom: -22%;
+  width: 70%;
+  height: 48%;
+
+  /* first-design wave: light top + dark bottom */
+  background: linear-gradient(180deg, #63e0d5 0%, #2dd4bf 44%, #0d9488 100%);
+
+  border-radius: 45% 55% 40% 60% / 55% 40% 60% 45%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* 3 columns: text | girl | card */
+.gens-login__shell {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 0.95fr 1.05fr 0.7fr;
+  align-items: start;
+  gap: 24px;
+  min-height: 100vh;
+  max-width: 1660px;
+  margin: 0 auto;
+  padding-top: 72px;
+  /* padding: 36px 34px; */
+}
+
+/* LEFT */
+.gens-login__left {
   display: flex;
-  flex-basis: 100%;
-  inline-size: 100%;
-  min-block-size: 100vh;
-  /* For two-steps auth */
+  flex-direction: column;
+  justify-content: flex-start;
+  min-width: 0;
+  padding-top: 18px;
 }
-/*#005495*/
-.authentication-wrapper .authentication-bg {
-  background-color: var(--bs-paper-bg);
+
+.gens-login__brand {
+  position: absolute;
+  top: 24px;
+  left: 28px;
+  z-index: 5;
 }
-.authentication-wrapper[_ngcontent-ng-c2242060599] .auth-cover-illustration[_ngcontent-ng-c2242060599] {
-    z-index: 1;
-    max-inline-size: 44rem!important;
+.gens-login__brand img {
+  height: 32px;
+  width: auto;
 }
-.authentication-wrapper .authentication-inner {
-  inline-size: 100%;
+
+/* .gens-login__brand img {
+  height: 44px;
+  width: auto;
+} */
+
+.gens-login__intro {
+  margin-top: 36px;
+  max-width: 420px;
 }
-.authentication-wrapper.authentication-basic {
+
+.gens-login__welcome {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.gens-login__intro h1 {
+  margin: 0 0 12px;
+  font-size: 36px;
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.gens-login__brand-dark { color: var(--navy); }
+.gens-login__brand-teal { color: var(--teal); }
+
+.gens-login__tagline {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--muted);
+  max-width: 360px;
+}
+
+.gens-login__features {
+  list-style: none;
+  margin: 28px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.gens-login__features li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+}
+
+.gens-login__feat-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: rgba(32, 178, 170, 0.14);
+  color: var(--teal);
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.gens-login__features strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 2px;
+}
+
+.gens-login__features small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.gens-login__secure {
+  margin-top: auto;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: #fff;
+  max-width: 300px;
+  padding-bottom: 22px;
+}
+
+.gens-login__secure i {
+  font-size: 22px;
+  color: #fff;
+  margin-top: 2px;
+}
+
+.gens-login__secure strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.gens-login__secure small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  opacity: 0.92;
+}
+
+/* MIDDLE — girl */
+.gens-login__center {
+  display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 0;
 }
-.authentication-wrapper.authentication-basic .authentication-inner {
-  max-inline-size: var(--bs-auth-basic-inner-max-width);
-}
-.authentication-wrapper .auth-cover-illustration {
-  z-index: 1;
-  max-inline-size: 38rem;
-}
-.authentication-wrapper .authentication-image {
-  position: absolute;
-  z-index: -1;
-  inline-size: 100%;
-  inset-block-end: 7%;
-  inset-inline-start: 0;
-}
-.authentication-wrapper .authentication-image-model {
-  inline-size: 768px;
-}
-.authentication-wrapper.authentication-cover {
-  align-items: flex-start;
-}
-.authentication-wrapper.authentication-cover .authentication-inner {
+
+.gens-login__hero-wrap {
   position: relative;
-  min-block-size: 100vh;
-}
-.authentication-wrapper.authentication-cover .authentication-image {
-  inline-size: 70%;
-  inset-inline-start: unset;
-}
-.authentication-wrapper .auth-input-wrapper .auth-input {
-  font-size: 150%;
-  max-inline-size: 50px;
-  padding-inline: 0.4rem;
-}
-@media (max-width: 575.98px) {
-  .authentication-wrapper .auth-input-wrapper .auth-input {
-    font-size: 1.125rem;
-  }
-}
-.authentication-wrapper .divider .divider-text {
-  font-size: 0.9375rem;
+  width: 100%;
+  max-width: 440px;
+  padding-top: 18px;
 }
 
-@media (max-width: 1199.98px) {
-  .authentication-cover .authentication-image-model {
-    position: relative;
-    inline-size: 575px;
-    inset-block-start: 1rem;
-  }
-}
-/* app-brand at he corner of page */
-.auth-cover-brand {
+.gens-login__hero-arch {
   position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 92%;
+  height: 78%;
+  background: linear-gradient(180deg, #d9f3f1 0%, #c5ebe8 100%);
+  border-radius: 180px 180px 24px 24px;
+  z-index: 0;
+}
+
+.gens-login__hero-img {
+  position: relative;
   z-index: 1;
-  inset-block-start: 2rem;
-  inset-inline-start: 2.5rem;
-}
-@media (max-width: 575.98px) {
-  .auth-cover-brand {
-    inset-inline-start: 1.5rem;
-  }
-}
-
-/* Two Steps Verification
-? Used for validation specific style as we have validated hidden field */
-#twoStepsForm .fv-plugins-bootstrap5-row-invalid .form-control {
-  border-width: 2px;
-  border-color: #ff4d49;
-  box-shadow: none;
+  display: block;
+  width: 100%;
+  height: 500px;
+  object-fit: contain;
+  object-position: bottom center;
+  border-radius: 0;
 }
 
-@media (max-width: 575.98px) {
-  .numeral-mask-wrapper .numeral-mask {
-    padding: 0;
-  }
-  .numeral-mask {
-    margin-inline: 1px;
-  }
-}
-
-span.ri.ri-eye-line.float-end.mt-1{
+.gens-login__float {
   position: absolute;
-    top: 14px;
-    right: 13px;
+  z-index: 3;
+  background: #fff;
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--navy);
+  box-shadow: 0 12px 28px -14px rgba(45, 55, 72, 0.35);
+}
+
+.gens-login__float--tl {
+  top: 8%;
+  left: -8%;
+  white-space: nowrap;
+}
+
+.gens-login__float--attendance {
+  left: -10%;
+  bottom: 16%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 180px;
+}
+
+.gens-login__float--bl {
+  right: -6%;
+  bottom: 8%;
+  white-space: nowrap;
+}
+
+.gens-login__float strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.gens-login__float small {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  white-space: normal;
+  line-height: 1.3;
+}
+
+.gens-login__ring {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: conic-gradient(var(--teal) 100%, #e2e8f0 0);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.gens-login__ring::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.gens-login__tile {
+  position: absolute;
+  z-index: 3;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 16px;
+  box-shadow: 0 10px 20px -10px rgba(45, 55, 72, 0.45);
+}
+
+.gens-login__tile--1 {
+  background: #2c5282;
+  top: 46%;
+  left: -10%;
+}
+
+.gens-login__tile--2 {
+  background: var(--teal);
+  top: 58%;
+  right: -8%;
+}
+
+.gens-login__dots {
+  position: absolute;
+  right: -22px;
+  top: 62%;
+  width: 56px;
+  height: 56px;
+  background-image: radial-gradient(#a0aec0 1.3px, transparent 1.4px);
+  background-size: 9px 9px;
+  opacity: 0.5;
+  z-index: 0;
+}
+
+/* RIGHT CARD */
+.gens-login__right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-top: 12px;
+}
+
+.gens-login__card {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 24px;
+  padding: 30px 26px 24px;
+  box-shadow: 0 24px 60px -28px rgba(45, 55, 72, 0.35);
+  border: 1px solid #edf2f7;
+}
+
+.gens-login__card-logo {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.gens-login__card-logo img {
+  height: 38px;
+  width: auto;
+}
+
+.gens-login__card h2 {
+  margin: 0 0 8px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--navy);
+}
+
+.gens-login__sub {
+  margin: 0 0 22px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.gens-field {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.gens-field > span {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4a5568;
+}
+
+.gens-field__control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.gens-field__control:focus-within {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(32, 178, 170, 0.15);
+}
+
+.gens-field__control.is-invalid {
+  border-color: #e53e3e;
+}
+
+.gens-field__control i {
+  color: #a0aec0;
+  font-size: 18px;
+}
+
+.gens-field__control input {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 14px;
+  color: var(--navy);
+  padding: 12px 0;
+}
+
+.gens-field__eye {
+  border: 0;
+  background: transparent;
+  color: #a0aec0;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.gens-field__error {
+  display: block;
+  margin-top: 6px;
+  color: #e53e3e;
+  font-size: 12px;
+}
+
+.gens-login__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 4px 0 18px;
+}
+
+.gens-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.gens-link {
+  color: var(--teal);
+  font-weight: 600;
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.gens-link:hover {
+  color: var(--teal-dark);
+}
+
+.gens-btn {
+  width: 100%;
+  min-height: 46px;
+  border-radius: 12px;
+  border: 0;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.gens-btn--primary {
+  background: var(--teal);
+  color: #fff;
+}
+
+.gens-btn--primary:hover:not(:disabled) {
+  background: var(--teal-dark);
+}
+
+.gens-btn--primary:disabled {
+  background: #9ad5d1;
+  cursor: not-allowed;
+}
+
+.gens-btn--google {
+  background: #fff;
+  border: 1.5px solid var(--border);
+  color: #2d3748;
+  font-weight: 600;
+}
+
+.gens-btn--google:hover {
+  border-color: #cbd5e0;
+  background: #f7fafc;
+}
+
+.gens-login__footer-text {
+  text-align: center;
+  margin: 16px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.gens-login__otp-hint {
+  text-align: center;
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.gens-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  color: #a0aec0;
+  font-size: 12px;
+}
+
+.gens-or::before,
+.gens-or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.gens-otp {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.gens-otp input {
+  width: 48px;
+  height: 48px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  color: var(--navy);
+}
+
+.gens-otp input:focus {
+  outline: 0;
+  border-color: var(--teal);
+}
+
+@media (max-width: 1100px) {
+  .gens-login__shell {
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  .gens-login__center {
+    grid-column: 1 / -1;
+  }
+
+  .gens-login__hero-img {
+    height: 390px;
+  }
+}
+
+@media (max-width: 991px) {
+  .gens-login__shell {
+    grid-template-columns: 1fr;
+    padding: 24px 16px;
+    gap: 24px;
+  }
+
+  .gens-login__left,
+  .gens-login__center,
+  .gens-login__wave {
+    display: none;
+  }
+
+  .gens-login__card {
+    margin: 12px auto;
+    padding: 28px 20px;
+  }
 }

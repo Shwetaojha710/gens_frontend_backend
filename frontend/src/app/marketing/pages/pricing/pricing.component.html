@@ -28,26 +28,41 @@
           <div class="skeleton h-96 rounded-2xl"></div>
         }
       </div>
-    } @else if (loadError) {
+    } @else if (plans.length) {
+      <!-- API plans -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+        @for (plan of plans; track plan.id) {
+          <app-pricing-card
+            [plan]="toPricingCardData(plan)"
+            (ctaClick)="registerWithPlan(plan.id)"
+          />
+        }
+      </div>
+    } @else if (staticCards.length) {
+      <!-- Static fallback from site-data.ts -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+        @for (plan of staticCards; track plan.name) {
+          <app-pricing-card
+            [plan]="plan"
+            (ctaClick)="goContact()"
+          />
+        }
+      </div>
+    } @else {
       <div class="text-center py-12">
-        <p class="text-[var(--text-secondary)] mb-4">Could not load pricing plans right now.</p>
+        <p class="text-[var(--text-secondary)] mb-4">
+          Could not load pricing plans right now.
+        </p>
         <button type="button" class="btn-secondary" (click)="retryLoad()">
           <i class="ri ri-refresh-line"></i>
           Try again
         </button>
+        <p class="text-[var(--text-secondary)] mt-4">
+          Or
+          <a routerLink="/contact" class="text-gens-600 font-semibold">contact our sales team</a>
+          for pricing.
+        </p>
       </div>
-    } @else if (plans.length) {
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
-        @for (plan of plans; track plan.id) {
-          <app-pricing-card [plan]="toPricingCardData(plan)" (ctaClick)="registerWithPlan(plan.id)" />
-        }
-      </div>
-    } @else {
-      <p class="text-center text-[var(--text-secondary)]">
-        Plan details are temporarily unavailable —
-        <a routerLink="/contact" class="text-gens-600 font-semibold">contact our sales team</a>
-        for pricing.
-      </p>
     }
   </div>
 </section>
@@ -55,7 +70,12 @@
 <!-- Pricing FAQ -->
 <section class="section-padding bg-[var(--bg-secondary)]">
   <div class="container-gens max-w-3xl">
-    <app-section-heading badge="FAQ" title="Pricing questions," highlight="answered" align="center" />
+    <app-section-heading
+      badge="FAQ"
+      title="Pricing questions,"
+      highlight="answered"
+      align="center"
+    />
     <div class="mt-10">
       <app-faq-accordion [items]="pricingFaqs" />
     </div>

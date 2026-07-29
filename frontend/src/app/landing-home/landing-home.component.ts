@@ -52,6 +52,7 @@ export class LandingHomeComponent {
   permActivePortal: any | null = null;
   private permCurrentSections: PermissionSection[] = [];
 
+
   // 3 portals matching landing-home cards
   private readonly PORTAL_GROUPS = [
     {
@@ -144,6 +145,9 @@ export class LandingHomeComponent {
         )
       : [...this.permUsers];
   }
+  // ngOnInit(): void {
+  //   this.loadCompanyProfile();
+  // }
 
   selectPermUser(user: TenantUser): void {
     this.permSelectedUser = user;

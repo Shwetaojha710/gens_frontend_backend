@@ -40,9 +40,22 @@ export class ScrollRevealDirective implements OnInit, OnDestroy {
         trigger: element,
         start: 'top 88%',
         toggleActions: 'play none none none',
+        once: true,
       },
     });
+
+
+    // this.tween = gsap.from(element, {
+    //   ...fromVars,
+    //   scrollTrigger: {
+    //     trigger: element,
+    //     start: 'top 88%',
+    //     toggleActions: 'play none none none',
+    //   },
+    // });
   }
+
+  // requestAnimationFrame(() => ScrollTrigger.refresh());
 
   ngOnDestroy(): void {
     this.tween?.scrollTrigger?.kill();

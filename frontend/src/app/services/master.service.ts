@@ -334,7 +334,9 @@ export class MasterService {
   saveBrandColors(colors: any): Observable<any> {
     return this.http.post(`${this.baseUrl}save-brand-colors`, colors);
   }
-
+  // getCompanyProfile(): Observable<any> {
+  //   return this.http.post(`${this.baseUrl}get-company-profile`, {});
+  // }
   getLetterhead(): Observable<any> {
     return this.http.post(`${this.baseUrl}get-letterhead`, {});
   }

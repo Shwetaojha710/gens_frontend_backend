@@ -56,8 +56,10 @@ export class LoginComponent {
   }
 
   // ─── Employee Login ───────────────────────────────────────────────────────
+  submitted = false;
 
   login() {
+    this.submitted = true;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.notyf.error('Please fill in all required fields.');
@@ -98,6 +100,7 @@ export class LoginComponent {
       error: (err) => this.notyf.error(err?.error?.message || 'Server error. Please try again.')
     });
   }
+
 
   // ─── Interviewer OTP Login ────────────────────────────────────────────────
 
@@ -216,6 +219,6 @@ export class LoginComponent {
 
   isInvalid(form: FormGroup, controlName: string): boolean {
     const control = form.get(controlName);
-    return !!control && control.invalid && (control.dirty || control.touched);
+    return !!control && control.invalid && this.submitted && (control.dirty || control.touched);
   }
 }

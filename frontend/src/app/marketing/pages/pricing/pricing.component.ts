@@ -9,6 +9,9 @@ import { CtaBannerComponent } from '../../shared/components/cta-banner/cta-banne
 import { SeoService } from '../../services/seo.service';
 import { FAQ_ITEMS } from '../../data/site-data';
 import { PublicLandingService, PublicPlan } from '../../../services/public-landing.service';
+import {  PRICING_PLANS } from '../../data/site-data';
+import { PricingPlan } from '../../data/site.models';
+
 
 @Component({
   selector: 'app-pricing-page',
@@ -50,27 +53,87 @@ export class PricingComponent implements OnInit {
     this.fetchPlans();
   }
 
+  staticCards: PricingCardData[] = [];
+
+  private useStaticPlans(): void {
+    this.staticCards = PRICING_PLANS.map(p => ({
+      name: p.name,
+      price: p.price,
+      period: p.period,
+      description: p.description,
+      features: p.features,
+      highlighted: p.highlighted,
+      badge: p.badge,
+      employees: p.employees,
+      support: p.support,
+      options: p.options,
+      ctaLabel: p.cta,
+    }));
+    this.plans = [];
+    this.loadError = false;
+    this.plansLoading = false;
+  }
+
+  goContact(): void {
+    void this.router.navigate(['/contact']);
+  }
+
+//   staticCards: PricingCardData[] = [];
+
+// private useStaticPlans(): void {
+//   this.staticCards = PRICING_PLANS.map(p => ({
+//     name: p.name,
+//     price: p.price,
+//     period: p.period,
+//     description: p.description,
+//     features: p.features,
+//     highlighted: p.highlighted,
+//     badge: p.badge,
+//     employees: p.employees,
+//     support: p.support,
+//     options: p.options,
+//     ctaLabel: p.cta,
+//   }));
+//   this.plans = [];
+//   this.loadError = false;
+//   this.plansLoading = false;
+// }
+  // private fetchPlans(): void {
+  //   this.publicLanding.getLanding().subscribe({
+  //     next: (raw) => {
+  //       try {
+  //         const data = JSON.parse(raw);
+  //         if (data?.status && data.data?.plans?.length) {
+  //           this.plans = data.data.plans;
+  //           this.currencySymbol = data.data.content?.pricing?.currencySymbol ?? '₹';
+  //           this.loadError = false;
+  //           this.plansLoading = false;
+  //           return;
+  //         }
+  //       } catch { /* fall through */ }
+  //       this.useStaticPlans(); // fallback
+  //     },
+  //     error: () => this.useStaticPlans(),
+  //   });
+  // }
+
   private fetchPlans(): void {
     this.publicLanding.getLanding().subscribe({
       next: (raw) => {
         try {
           const data = JSON.parse(raw);
-          if (data?.status && data.data) {
-            this.plans = data.data.plans || [];
+          if (data?.status && data.data?.plans?.length) {
+            this.plans = data.data.plans;
             this.currencySymbol = data.data.content?.pricing?.currencySymbol ?? '₹';
+            this.staticCards = [];
             this.loadError = false;
-          } else {
-            this.loadError = true;
+            this.plansLoading = false;
+            return;
           }
-        } catch {
-          this.loadError = true;
-        }
-        this.plansLoading = false;
+        } catch { /* ignore */ }
+        this.useStaticPlans();
       },
-      error: () => {
-        this.loadError = true;
-        this.plansLoading = false;
-      },
+      error: () => this.useStaticPlans(),
     });
   }
 

@@ -114,13 +114,13 @@
     }
 }
 
-/* 
+/*
 .card-border-hover1:hover{
     border: 1px solid #005495 !important;
 } */
 
 
-/* 
+/*
 .auth-pattern-shapes::before {
     width: 140px;
     height: 140px;
@@ -153,7 +153,7 @@
     -webkit-backdrop-filter: blur(25px);
 }
 
-.auth-pattern-outline::before {
+.auth-pattern-outline::before
     content: "";
     position: absolute;
     width: 100px;
@@ -214,7 +214,7 @@ body {
 }
 
 /* Outer white container */
-.card-wrapper {
+/* .card-wrapper {
     background: transparent;
     padding: 15px;
     border-radius: 22px;
@@ -229,7 +229,7 @@ body {
     transform: translateY(-6px);
     box-shadow: 0 20px 44px rgba(0, 180, 166, 0.22);
     border-color: rgba(0, 180, 166, 0.45);
-}
+} */
 
 /* Main Card */
 .city-card {
@@ -283,10 +283,10 @@ body {
     transition: border-color 0.25s ease, background 0.25s ease;
 }
 
-.card-wrapper:hover .overlay {
+/* .card-wrapper:hover .overlay {
     border-color: rgba(0, 210, 180, 0.85);
     background: rgba(0, 180, 166, 0.1);
-}
+} */
 
 /* Text */
 .overlay h2 {
@@ -310,8 +310,37 @@ body {
     margin-bottom: 25px;
     font-weight: 300;
 }
-
 .btn-dashboard {
+  width: auto;
+  min-width: 160px;
+  height: 42px;
+  padding: 0 20px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  box-shadow: none;
+  cursor: pointer;
+  transition: background 0.25s ease, border-color 0.25s ease, transform 0.2s ease;
+}
+
+.btn-dashboard:hover {
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  color: #fff;
+}
+
+.card-wrapper:hover .btn-dashboard {
+  border-color: rgba(0, 210, 180, 0.9);
+}
+
+/* .btn-dashboard {
     width: 149px;
     height: 42px;
     gap: 16px;
@@ -329,7 +358,7 @@ body {
     transform: translateY(-2px);
     box-shadow: 0 10px 26px rgba(0, 129, 201, 0.45);
     color: #fff;
-}
+} */
 
 
 .bg-1 {

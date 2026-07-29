@@ -668,3 +668,391 @@
         flex-direction: column;
     }
 }
+
+/* ── Team-wise Attendance (redesign) ─────────────────────────────── */
+.tw-attendance-panel .card-body {
+    padding-top: 0.25rem;
+}
+
+.tw-attendance-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding-bottom: 0.75rem;
+}
+
+.tw-attendance-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.tw-attendance-icon-badge {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, #0d9488, #14b8a6);
+    color: #fff;
+    font-size: 0.95rem;
+    box-shadow: 0 6px 14px -8px rgba(13, 148, 136, 0.65);
+}
+
+.tw-attendance-title {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #0f3d4c;
+    letter-spacing: -0.01em;
+}
+
+.tw-branch-select {
+    min-width: 160px;
+    font-size: 13px;
+}
+
+.tw-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.tw-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    font-weight: 600;
+}
+
+.tw-legend-present {
+    background: rgba(16, 185, 129, 0.12);
+    color: #047857;
+}
+
+.tw-legend-leave {
+    background: rgba(245, 158, 11, 0.14);
+    color: #b45309;
+}
+
+.tw-legend-absent {
+    background: rgba(239, 68, 68, 0.12);
+    color: #b91c1c;
+}
+
+.tw-empty-state {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: #64748b;
+}
+
+.tw-empty-state i {
+    font-size: 2.25rem;
+    display: block;
+    margin-bottom: 0.5rem;
+    opacity: 0.7;
+}
+
+.tw-branch-label {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 1rem 0 0.65rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: 8px;
+    background: rgba(13, 148, 136, 0.08);
+    color: #0f766e;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.tw-dept-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+}
+
+@media (min-width: 992px) {
+  .tw-dept-grid {
+      grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 576px) and (max-width: 991px) {
+  .tw-dept-grid {
+      grid-template-columns: repeat(2, 1fr);
+  }
+}
+/* @media (min-width: 992px) {
+    .tw-dept-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+} */
+
+.tw-dept-card {
+    border: 1px solid rgba(15, 61, 76, 0.08);
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 3px 10px -8px rgba(15, 61, 76, 0.3);
+    overflow: hidden;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.tw-dept-card:hover {
+    border-color: rgba(13, 148, 136, 0.28);
+    box-shadow: 0 10px 24px -14px rgba(13, 148, 136, 0.45);
+}
+
+.tw-dept-card--open {
+    border-color: rgba(13, 148, 136, 0.35);
+    box-shadow: 0 12px 28px -12px rgba(13, 148, 136, 0.4);
+}
+
+.tw-dept-card__head {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.7rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.tw-dept-card__identity {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    flex: 1 1 120px;
+}
+
+.tw-dept-avatar {
+    width: 1.85rem;
+    height: 1.85rem;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.tw-dept-meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.tw-dept-name {
+    font-weight: 700;
+    font-size: 0.78rem;
+    color: #0f3d4c;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tw-dept-count {
+    font-size: 0.62rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.tw-dept-stats {
+    display: flex;
+    gap: 0.3rem;
+    flex: 1 1 auto;
+    justify-content: flex-end;
+}
+
+.tw-stat {
+    min-width: 2.6rem;
+    padding: 0.22rem 0.3rem;
+    border-radius: 7px;
+    text-align: center;
+    line-height: 1.1;
+}
+
+.tw-stat__value {
+    display: block;
+    font-weight: 800;
+    font-size: 0.78rem;
+}
+
+.tw-stat__label {
+    display: block;
+    font-size: 0.52rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    opacity: 0.85;
+}
+
+.tw-stat--present {
+    background: rgba(16, 185, 129, 0.12);
+    color: #047857;
+}
+
+.tw-stat--leave {
+    background: rgba(245, 158, 11, 0.14);
+    color: #b45309;
+}
+
+.tw-stat--absent {
+    background: rgba(239, 68, 68, 0.12);
+    color: #b91c1c;
+}
+
+.tw-dept-ring-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-shrink: 0;
+}
+
+.tw-dept-ring {
+    width: 2.15rem;
+    height: 2.15rem;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    position: relative;
+}
+
+.tw-dept-ring::before {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: #fff;
+}
+
+.tw-dept-ring span {
+    position: relative;
+    z-index: 1;
+    font-size: 0.52rem;
+    font-weight: 800;
+    color: #0f3d4c;
+}
+
+.tw-dept-chevron {
+    font-size: 0.95rem;
+    color: #94a3b8;
+}
+
+.tw-dept-card__body {
+    border-top: 1px solid rgba(15, 61, 76, 0.06);
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+    padding: 0.5rem 0.7rem 0.7rem;
+}
+
+.tw-member-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.tw-member-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.5rem;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px solid rgba(15, 61, 76, 0.06);
+    flex-wrap: wrap;
+}
+
+.tw-member-info {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    flex: 1 1 140px;
+}
+
+.tw-member-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1.5px solid #e2e8f0;
+}
+
+.tw-member-name {
+    font-weight: 650;
+    font-size: 0.72rem;
+    color: #0f3d4c;
+    line-height: 1.2;
+}
+
+.tw-member-sub {
+    font-size: 0.6rem;
+    color: #64748b;
+}
+
+.tw-member-times {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.62rem;
+    color: #475569;
+    font-weight: 500;
+}
+
+.tw-member-times i {
+    color: #94a3b8;
+    margin-right: 0.15rem;
+}
+
+.tw-member-badge {
+    margin-left: auto;
+    font-size: 0.58rem;
+    font-weight: 700;
+    padding: 0.15rem 0.4rem;
+    border-radius: 999px;
+}
+
+.tw-no-members {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.72rem;
+    padding: 0.5rem;
+}
+
+@media (max-width: 767px) {
+    .tw-dept-stats {
+        width: 100%;
+        justify-content: stretch;
+        order: 3;
+    }
+
+    .tw-stat {
+        flex: 1;
+    }
+
+    .tw-dept-card__head {
+        flex-wrap: wrap;
+    }
+
+    .tw-dept-ring-wrap {
+        margin-left: auto;
+    }
+
+    .tw-member-times {
+        width: 100%;
+    }
+
+    .tw-member-badge {
+        margin-left: 0;
+    }
+}
