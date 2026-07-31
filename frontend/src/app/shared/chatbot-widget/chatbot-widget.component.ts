@@ -2,6 +2,7 @@ import { AfterViewChecked, Component, ElementRef, ViewChild } from '@angular/cor
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Notyf } from 'notyf';
 import { environment } from '../../../environments/environment';
 
@@ -28,7 +29,18 @@ export class ChatbotWidgetComponent implements AfterViewChecked {
 
   @ViewChild('chatBody') chatBody!: ElementRef;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private sanitizer: DomSanitizer) {}
+
+  formatText(text: string): SafeHtml {
+    const escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    const withBold = escaped
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>');
+    return this.sanitizer.bypassSecurityTrustHtml(withBold);
+  }
 
   ngAfterViewChecked(): void {
     if (this.shouldScroll) {

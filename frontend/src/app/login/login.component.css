@@ -31,23 +31,19 @@
 }
 .gens-login__wave {
   position: absolute;
-  background: linear-gradient(180deg,
-  #7de8df 0%,
-  #2dd4bf 46%,
-  #0d9488 100%);
-  left: -10%;
-  bottom: -22%;
-  width: 70%;
-  height: 48%;
-
-  /* first-design wave: light top + dark bottom */
-  background: linear-gradient(180deg, #63e0d5 0%, #2dd4bf 44%, #0d9488 100%);
-
-  border-radius: 45% 55% 40% 60% / 55% 40% 60% 45%;
   z-index: 0;
   pointer-events: none;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 46vh;
+  min-height: 320px;
+  background-image: url('/assets/img/bg-login/Group 103.jpg');
+  background-repeat: no-repeat;
+  background-position: bottom left;
+  background-size: 100% 100%;
 }
-
 /* 3 columns: text | girl | card */
 .gens-login__shell {
   position: relative;
@@ -165,17 +161,12 @@
 }
 
 .gens-login__secure {
-  margin-top: auto;
   position: relative;
   z-index: 2;
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  margin-top: auto;
+  padding-bottom: 32px;
   color: #fff;
-  max-width: 300px;
-  padding-bottom: 22px;
 }
-
 .gens-login__secure i {
   font-size: 22px;
   color: #fff;
@@ -298,6 +289,7 @@
   border-radius: 50%;
   background: #fff;
 }
+
 
 .gens-login__tile {
   position: absolute;

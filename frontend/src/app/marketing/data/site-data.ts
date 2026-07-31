@@ -256,20 +256,12 @@ export const PRICING_PLANS: PricingPlan[] = [
 /** Testimonials */
 export const TESTIMONIALS: Testimonial[] = [
   {
-    name: 'Sarah Mitchell', role: 'HR Director', company: 'TechCorp Industries', avatar: 'SM', rating: 5,
+    name: 'Sushmita Dixit', role: 'HR Manager', company: 'Quaere E-Technologies', avatar: 'SD', rating: 5,
     quote: 'GENS transformed our HR operations. Payroll that used to take 3 days now completes in 2 hours. The AI insights help us predict attrition before it happens.',
   },
   {
-    name: 'Rajesh Kumar', role: 'CEO', company: 'HealthPlus Medical', avatar: 'RK', rating: 5,
-    quote: 'Managing 500+ healthcare staff across shifts was a nightmare. GENS automated everything — attendance, leave, compliance. Our HR team can finally focus on people, not paperwork.',
-  },
-  {
-    name: 'Emily Chen', role: 'Operations Manager', company: 'RetailMax Global', avatar: 'EC', rating: 5,
-    quote: 'The mobile app is a game-changer for our retail workforce. Employees love the self-service features, and managers approve requests in seconds.',
-  },
-  {
-    name: 'David Okafor', role: 'Head of People', company: 'FinServe Solutions', avatar: 'DO', rating: 5,
-    quote: 'Security and compliance were our top concerns. GENS exceeded expectations with enterprise-grade encryption and audit-ready reports.',
+    name: 'Abhishek Shukla', role: 'Team Lead', company: 'Quaere E-Technologies', avatar: 'VK', rating: 5,
+    quote: 'GENS has transformed our HR operations. Payroll that used to take 3 days now completes in 2 hours. The AI insights help us predict attrition before it happens.',
   },
 ];
 

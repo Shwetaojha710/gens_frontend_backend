@@ -19,7 +19,7 @@ import {
 import { Notyf } from 'notyf';
 import { EmployeePortalService } from '../services/employee-portal.service';
 import { environment } from '../../../environments/environment';
-
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 type EpDonutOptions = Partial<{
   series: ApexNonAxisChartSeries;
   chart: ApexChart;
@@ -337,6 +337,21 @@ export class EmployeePortalDashboardComponent implements OnInit, AfterViewChecke
     }
   }
 
+  /**
+   * Angular's ngModel re-writes the input's `.value` after every keystroke,
+   * which resets the caret to the end even when the string is unchanged —
+   * very noticeable when editing mid-text (e.g. Hindi transliteration).
+   * Restore the caret the user actually had, right after that rewrite.
+   */
+  preserveCaret(el: HTMLInputElement): void {
+    const { selectionStart, selectionEnd } = el;
+    Promise.resolve().then(() => {
+      if (document.activeElement === el) {
+        el.setSelectionRange(selectionStart, selectionEnd);
+      }
+    });
+  }
+
   toggleMic(): void {
     if (this.isListening) {
       this.isListening = false;
@@ -415,7 +430,7 @@ export class EmployeePortalDashboardComponent implements OnInit, AfterViewChecke
   }
   // ─────────────────────────────────────────────────────────────────────────
 
-  constructor(private api: EmployeePortalService, private http: HttpClient) {}
+  constructor(private api: EmployeePortalService, private http: HttpClient, private sanitizer: DomSanitizer) {}
 
   ngOnInit(): void {
     try {
@@ -1413,4 +1428,16 @@ export class EmployeePortalDashboardComponent implements OnInit, AfterViewChecke
       },
     });
   }
+
+  formatText(text: string): SafeHtml {
+    const escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    const withBold = escaped
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>');
+    return this.sanitizer.bypassSecurityTrustHtml(withBold);
+  }
+
 }

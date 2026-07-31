@@ -6,6 +6,7 @@ import { HeaderComponent } from '../shared/components/header/header.component';
 import { FooterComponent } from '../shared/components/footer/footer.component';
 import { BackToTopComponent } from '../shared/components/back-to-top/back-to-top.component';
 import { RobotBuddyComponent } from '../shared/components/effects/robot-buddy/robot-buddy.component';
+import { WebsiteChatbotComponent } from '../shared/components/website-chatbot/website-chatbot.component';
 import { isPlatformBrowser } from '@angular/common';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
@@ -20,6 +21,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
     FooterComponent,
     BackToTopComponent,
     RobotBuddyComponent,
+    WebsiteChatbotComponent,
   ],
   templateUrl: './marketing-shell.component.html',
   styleUrl: './marketing-shell.component.css',

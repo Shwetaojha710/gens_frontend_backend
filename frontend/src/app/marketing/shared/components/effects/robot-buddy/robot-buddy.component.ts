@@ -12,6 +12,7 @@ import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
 import gsap from 'gsap';
+import { WebsiteChatTriggerService } from '../../../../services/website-chat-trigger.service';
 
 interface Bubble {
   id: number;
@@ -48,9 +49,12 @@ export class RobotBuddyComponent implements OnInit, OnDestroy {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly router = inject(Router);
   private readonly doc = inject(DOCUMENT);
+  private readonly chatTrigger = inject(WebsiteChatTriggerService);
 
   readonly enabled = signal(false);
   readonly panelOpen = signal(false);
+  /** Speech chip: "Want to ask something?" — click opens website chatbot. */
+  readonly askPromptOpen = signal(false);
   readonly robotX = signal(0);
   readonly robotY = signal(HEADER_SAFE);
   readonly blinking = signal(false);
@@ -268,7 +272,17 @@ export class RobotBuddyComponent implements OnInit, OnDestroy {
     this.closePanel();
     gsap.set('.robot-buddy', { y: 0 });
   }
+  askDraft :any= '';
 
+  submitAsk(event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+    const text = this.askDraft.trim();
+    this.askDraft = '';
+    this.closePanel();
+    this.chatTrigger.openChat();
+    // optional: agar chatbot me pehle message bhejna ho to service me startWith bhi expose karo
+  }
   onBuddyClick(event: MouseEvent): void {
     if (this.didDrag) {
       event.preventDefault();
@@ -276,10 +290,31 @@ export class RobotBuddyComponent implements OnInit, OnDestroy {
       this.didDrag = false;
       return;
     }
+    this.askPromptOpen.set(false);
     this.togglePanel();
+    // this.closePanel();
+    this.askPromptOpen.update((open) => !open);
+    if (this.askPromptOpen() && isPlatformBrowser(this.platformId)) {
+      gsap.from('.robot-ask-chip', {
+        opacity: 0,
+        y: 8,
+        scale: 0.94,
+        duration: 0.28,
+        ease: 'back.out(1.4)',
+      });
+    }
+  }
+
+  askSomething(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.askPromptOpen.set(false);
+    this.closePanel();
+    this.chatTrigger.openChat();
   }
 
   togglePanel(): void {
+    this.askPromptOpen.set(false);
     this.panelOpen.update((open) => !open);
     if (this.panelOpen() && isPlatformBrowser(this.platformId)) {
       gsap.from('.robot-panel', { opacity: 0, y: 12, scale: 0.95, duration: 0.35, ease: 'back.out(1.5)' });
@@ -288,6 +323,7 @@ export class RobotBuddyComponent implements OnInit, OnDestroy {
 
   closePanel(): void {
     this.panelOpen.set(false);
+    this.askPromptOpen.set(false);
   }
 
   navigate(path: string): void {
@@ -358,7 +394,7 @@ export class RobotBuddyComponent implements OnInit, OnDestroy {
 
   private tick = (time: number) => {
     if (!this.enabled() || !isPlatformBrowser(this.platformId)) return;
-    if (this.panelOpen() || this.dragging()) {
+    if (this.panelOpen() || this.askPromptOpen() || this.dragging()) {
       this.rafId = requestAnimationFrame(this.tick);
       return;
     }
@@ -424,7 +460,7 @@ export class RobotBuddyComponent implements OnInit, OnDestroy {
 
   private scheduleIdleCheck(): void {
     this.idleInterval = setInterval(() => {
-      if (Date.now() - this.lastActivity > 18000 && !this.panelOpen()) {
+      if (Date.now() - this.lastActivity > 18000 && !this.panelOpen() && !this.askPromptOpen()) {
         this.spawnBubble('Still browsing? I can help! 👋');
         this.lastActivity = Date.now();
       }
@@ -433,7 +469,7 @@ export class RobotBuddyComponent implements OnInit, OnDestroy {
 
   private scheduleAmbientTip(): void {
     const timer = setTimeout(() => {
-      if (this.enabled() && !this.panelOpen()) {
+      if (this.enabled() && !this.panelOpen() && !this.askPromptOpen()) {
         const tip = this.helpfulTips[Math.floor(Math.random() * this.helpfulTips.length)];
         this.spawnBubble(tip);
       }

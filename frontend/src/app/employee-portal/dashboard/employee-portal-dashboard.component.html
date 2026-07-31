@@ -1108,9 +1108,22 @@
       </button>
     </div>
 
-    <div class="ep-chat-panel__body" #chatBody>
+    <!-- <div class="ep-chat-panel__body" #chatBody>
       <div *ngFor="let msg of chatMessages" class="ep-chat-msg" [class.ep-chat-msg--user]="msg.role === 'user'" [class.ep-chat-msg--bot]="msg.role === 'bot'">
         <span class="ep-chat-bubble">{{ msg.text }}</span>
+      </div>
+      <div *ngIf="chatLoading" class="ep-chat-msg ep-chat-msg--bot">
+        <span class="ep-chat-bubble ep-chat-bubble--typing">
+          <span></span><span></span><span></span>
+        </span>
+      </div>
+    </div> -->
+
+
+
+    <div class="ep-chat-panel__body" #chatBody>
+      <div *ngFor="let msg of chatMessages" class="ep-chat-msg" [class.ep-chat-msg--user]="msg.role == 'user'" [class.ep-chat-msg--bot]="msg.role == 'bot'">
+        <span class="ep-chat-bubble" [innerHTML]="formatText(msg.text)"></span>
       </div>
       <div *ngIf="chatLoading" class="ep-chat-msg ep-chat-msg--bot">
         <span class="ep-chat-bubble ep-chat-bubble--typing">
@@ -1142,12 +1155,14 @@
         (click)="switchLang()"
         [title]="'Switch to ' + (micLang === 'hi-IN' ? 'English' : 'Hindi')"
         [disabled]="isListening"
-      >{{ micLang === 'hi-IN' ? 'HI' : 'EN' }}</button>
+      >{{ micLang === 'hi-IN' ? 'EN' : 'HI' }}</button>
       <input
+        #chatInputEl
         type="text"
         class="ep-chat-input"
         [placeholder]="isListening ? (micLang === 'hi-IN' ? 'सुन रहा हूँ…' : 'Listening…') : (micLang === 'hi-IN' ? 'संदेश लिखें…' : 'Type a message…')"
         [(ngModel)]="chatInput"
+        (input)="preserveCaret(chatInputEl)"
         (keydown)="onChatKeydown($event)"
         [disabled]="chatLoading"
       />

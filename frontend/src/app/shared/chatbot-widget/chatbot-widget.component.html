@@ -16,8 +16,8 @@
     </div>
 
     <div class="ep-chat-panel__body" #chatBody>
-      <div *ngFor="let msg of chatMessages" class="ep-chat-msg" [class.ep-chat-msg--user]="msg.role === 'user'" [class.ep-chat-msg--bot]="msg.role === 'bot'">
-        <span class="ep-chat-bubble">{{ msg.text }}</span>
+      <div *ngFor="let msg of chatMessages" class="ep-chat-msg" [class.ep-chat-msg--user]="msg.role == 'user'" [class.ep-chat-msg--bot]="msg.role == 'bot'">
+        <span class="ep-chat-bubble" [innerHTML]="formatText(msg.text)"></span>
       </div>
       <div *ngIf="chatLoading" class="ep-chat-msg ep-chat-msg--bot">
         <span class="ep-chat-bubble ep-chat-bubble--typing">

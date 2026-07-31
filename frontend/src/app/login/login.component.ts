@@ -178,6 +178,10 @@ export class LoginComponent {
 
   // ─── Toggle between Employee form and Interviewer OTP form ───────────────
 
+  loginWithGoogle() {
+    this.notyf.error('Google sign-in is not available yet.');
+  }
+
   loginWithMobile() {
     this.showMobileLogin = !this.showMobileLogin;
     this.interviewerOtpStep = false;

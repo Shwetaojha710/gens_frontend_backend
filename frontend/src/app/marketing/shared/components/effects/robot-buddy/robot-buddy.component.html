@@ -3,15 +3,15 @@
     type="button"
     class="robot-buddy"
     [class.robot-buddy--dragging]="dragging()"
-    [class.robot-buddy--active]="panelOpen()"
+    [class.robot-buddy--active]="panelOpen() || askPromptOpen()"
     [style.left.px]="robotX()"
     [style.top.px]="robotY()"
-    [attr.aria-expanded]="panelOpen()"
+    [attr.aria-expanded]="panelOpen() || askPromptOpen()"
     aria-label="GENS assistant buddy"
     (pointerdown)="onPointerDown($event)"
     (click)="onBuddyClick($event)"
   >
-    <span class="robot-pulse-ring" *ngIf="!panelOpen()"></span>
+    <span class="robot-pulse-ring" *ngIf="!panelOpen() && !askPromptOpen()"></span>
     <span class="robot-body">
       <span class="robot-antenna"></span>
       <span class="robot-head">
@@ -34,28 +34,53 @@
   >
     {{ bubble.text }}
   </span>
-
-  <div
-    class="robot-panel"
-    *ngIf="panelOpen()"
+<!--
+  <button
+    type="button"
+    class="robot-ask-chip"
+    *ngIf="askPromptOpen()"
     [style.left.px]="panelX()"
     [style.top.px]="panelY()"
+    (click)="askSomething($event)"
   >
-    <div class="robot-panel-header">
-      <span class="robot-panel-title">GENS Buddy</span>
-      <button type="button" class="robot-panel-close" (click)="closePanel()" aria-label="Close">&times;</button>
-    </div>
-    <p class="robot-panel-tip">{{ currentTip() }}</p>
-    <div class="robot-panel-actions">
-      <button
-        type="button"
-        class="robot-panel-btn"
-        *ngFor="let action of quickActions()"
-        (click)="navigate(action.path)"
-      >
-        <span>{{ action.icon }}</span>
-        <span>{{ action.label }}</span>
-      </button>
-    </div>
+    Want to ask something?
+  </button> -->
+  <div
+  class="robot-panel"
+  *ngIf="panelOpen()"
+  [style.left.px]="panelX()"
+  [style.top.px]="panelY()"
+>
+  <div class="robot-panel-header">
+    <span class="robot-panel-title">Want to ask something?</span>
+    <button type="button" class="robot-panel-close" (click)="closePanel()" aria-label="Close">&times;</button>
   </div>
+
+  <p class="robot-panel-tip">{{ currentTip() }}</p>
+
+  <div class="robot-panel-ask-row">
+    <!-- <input
+      type="text"
+      class="robot-panel-input"
+      placeholder="Type a message…"
+      [(ngModel)]="askDraft"
+      (keydown.enter)="submitAsk($event)"
+    /> -->
+    <button type="button" class="robot-panel-send" (click)="submitAsk($event)" aria-label="Send">
+      →
+    </button>
+  </div>
+
+  <div class="robot-panel-actions">
+    <button
+      type="button"
+      class="robot-panel-btn"
+      *ngFor="let action of quickActions()"
+      (click)="navigate(action.path)"
+    >
+      <span>{{ action.icon }}</span>
+      <span>{{ action.label }}</span>
+    </button>
+  </div>
+</div>
 </div>
