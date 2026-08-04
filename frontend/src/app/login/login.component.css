@@ -17,7 +17,7 @@
   font-family: Inter, "Segoe UI", system-ui, sans-serif;
 }
 
-.gens-login__bg {
+/* .gens-login__bg {
   position: absolute;
   inset: 0;
   background-image:
@@ -28,7 +28,7 @@
   background-position: center, 0 0;
   opacity: 0.55;
   pointer-events: none;
-}
+} */
 .gens-login__wave {
   position: absolute;
   z-index: 0;
@@ -37,25 +37,27 @@
   right: 0;
   bottom: 0;
   width: 100%;
-  height: 46vh;
+  height: 100vh;
   min-height: 320px;
   background-image: url('/assets/img/bg-login/Group 103.jpg');
   background-repeat: no-repeat;
   background-position: bottom left;
-  background-size: 100% 100%;
+  background-size: cover;
 }
+
 /* 3 columns: text | girl | card */
 .gens-login__shell {
   position: relative;
   z-index: 1;
-  display: grid;
+  display: flex;
   grid-template-columns: 0.95fr 1.05fr 0.7fr;
   align-items: start;
   gap: 24px;
-  min-height: 100vh;
+  max-height: 100vh;
   max-width: 1660px;
   margin: 0 auto;
-  padding-top: 72px;
+  padding-top: 102px;
+  margin: auto;
   /* padding: 36px 34px; */
 }
 
@@ -74,6 +76,7 @@
   left: 28px;
   z-index: 5;
 }
+
 .gens-login__brand img {
   height: 32px;
   width: auto;
@@ -104,8 +107,13 @@
   letter-spacing: -0.02em;
 }
 
-.gens-login__brand-dark { color: var(--navy); }
-.gens-login__brand-teal { color: var(--teal); }
+.gens-login__brand-dark {
+  color: var(--navy);
+}
+
+.gens-login__brand-teal {
+  color: var(--teal);
+}
 
 .gens-login__tagline {
   margin: 0;
@@ -161,12 +169,14 @@
 }
 
 .gens-login__secure {
-  position: relative;
+  position: absolute;
   z-index: 2;
   margin-top: auto;
   padding-bottom: 32px;
   color: #fff;
+  bottom: 5px;
 }
+
 .gens-login__secure i {
   font-size: 22px;
   color: #fff;
@@ -376,7 +386,7 @@
   margin-bottom: 16px;
 }
 
-.gens-field > span {
+.gens-field>span {
   display: block;
   margin-bottom: 8px;
   font-size: 13px;
@@ -566,7 +576,7 @@
   }
 
   .gens-login__center {
-    grid-column: 1 / -1;
+    grid-column: 1 / 1;
   }
 
   .gens-login__hero-img {
@@ -590,5 +600,33 @@
   .gens-login__card {
     margin: 12px auto;
     padding: 28px 20px;
+  }
+
+
+}
+
+@media (max-width: 1024px) {
+  .gens-login__left {
+    display: none;
+  }
+
+  .gens-login__right {
+    justify-content: flex-start;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 14400px) {
+  .gens-login__shell {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    align-items: start;
+    gap: 24px;
+    min-height: 100vh;
+    max-width: 1360px;
+    margin: 0 auto;
+    padding-top: 102px;
+    margin: auto;
+    /* padding: 36px 34px; */
   }
 }
