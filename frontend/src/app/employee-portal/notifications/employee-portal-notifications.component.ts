@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Notyf } from 'notyf';
 import { EmployeePortalService } from '../services/employee-portal.service';
-import { EmployeePortalNotificationReadService } from '../services/employee-portal-notification-read.service';
 
 export interface LeaveNotificationRow {
   id: string;
@@ -34,6 +33,7 @@ export class EmployeePortalNotificationsComponent implements OnInit {
   loading = true;
   rows: LeaveNotificationRow[] = [];
   selectedStatus: string | null = null;
+  activeTab: 'unread' | 'read' = 'read';
   private notyf = new Notyf();
 
   readonly statusFilters = [
@@ -54,20 +54,39 @@ export class EmployeePortalNotificationsComponent implements OnInit {
     'escalate',
   ]);
 
-  constructor(
-    private api: EmployeePortalService,
-    private notifRead: EmployeePortalNotificationReadService,
-  ) {}
+  constructor(private api: EmployeePortalService) {}
 
   ngOnInit(): void {
-    this.load(true);
+    this.load();
+  }
+
+  get unreadRows(): LeaveNotificationRow[] {
+    return this.rows.filter((r) => r.unread);
+  }
+
+  get readRows(): LeaveNotificationRow[] {
+    return this.rows.filter((r) => !r.unread);
   }
 
   get unreadCount(): number {
-    return this.rows.filter((r) => r.unread).length;
+    return this.unreadRows.length;
   }
 
-  load(markPageAsRead = false): void {
+  get tabRows(): LeaveNotificationRow[] {
+    return this.activeTab === 'unread' ? this.unreadRows : this.readRows;
+  }
+
+  get displayRows(): LeaveNotificationRow[] {
+    if (!this.selectedStatus) return this.tabRows;
+    return this.tabRows.filter((r) => r.status === this.selectedStatus);
+  }
+
+  selectTab(tab: 'unread' | 'read'): void {
+    this.activeTab = tab;
+    this.selectedStatus = null;
+  }
+
+  load(): void {
     this.loading = true;
     this.api.getNotifications().subscribe({
       next: (res) => {
@@ -76,14 +95,6 @@ export class EmployeePortalNotificationsComponent implements OnInit {
         this.rows = raw
           .map((row) => this.normalize(row))
           .filter((row): row is LeaveNotificationRow => row != null);
-
-        if (markPageAsRead && this.rows.length) {
-          // Opening this page counts as reading all current notifications
-          this.notifRead.markAllRead(this.rows);
-          this.rows = this.rows.map((r) => ({ ...r, unread: false }));
-        } else {
-          this.syncUnreadFlags();
-        }
       },
       error: (e: Error) => {
         this.loading = false;
@@ -94,23 +105,35 @@ export class EmployeePortalNotificationsComponent implements OnInit {
   }
 
   markAllRead(): void {
-    if (!this.rows.length) return;
-    this.notifRead.markAllRead(this.rows);
-    this.rows = this.rows.map((r) => ({ ...r, unread: false }));
-    this.notyf.success('All notifications marked as read');
+    const unread = this.unreadRows;
+    if (!unread.length) return;
+    const items = unread.map((r) => ({
+      id: r.id,
+      status: r.status,
+      updatedAt: r.updatedAt,
+    }));
+    this.api.markNotificationsRead(items).subscribe({
+      next: () => {
+        this.notyf.success('All notifications marked as read');
+        this.activeTab = 'read';
+        this.load();
+      },
+      error: (e: Error) => {
+        this.notyf.error(e?.message || 'Could not mark as read');
+      },
+    });
   }
 
   markOneRead(n: LeaveNotificationRow): void {
     if (!n.unread) return;
-    this.notifRead.markRead([n]);
-    n.unread = false;
-  }
-
-  private syncUnreadFlags(): void {
-    this.rows = this.rows.map((r) => ({
-      ...r,
-      unread: this.notifRead.isUnread(r),
-    }));
+    this.api
+      .markNotificationsRead([{ id: n.id, status: n.status, updatedAt: n.updatedAt }])
+      .subscribe({
+        next: () => this.load(),
+        error: (e: Error) => {
+          this.notyf.error(e?.message || 'Could not mark as read');
+        },
+      });
   }
 
   private normalize(row: unknown): LeaveNotificationRow | null {
@@ -126,7 +149,7 @@ export class EmployeePortalNotificationsComponent implements OnInit {
           ? String(r['createdBy'])
           : 'Employee';
 
-    const base = {
+    return {
       id: String(r['id'] ?? ''),
       status,
       leaveType: r['leaveType'] != null ? String(r['leaveType']) : 'Leave',
@@ -141,22 +164,13 @@ export class EmployeePortalNotificationsComponent implements OnInit {
       appliedOn: r['appliedOn'] != null ? String(r['appliedOn']) : '',
       createdAt: r['createdAt'] != null ? String(r['createdAt']) : '',
       updatedAt: r['updatedAt'] != null ? String(r['updatedAt']) : '',
+      unread: r['isRead'] !== true,
     };
-
-    return {
-      ...base,
-      unread: this.notifRead.isUnread(base),
-    };
-  }
-
-  get displayRows(): LeaveNotificationRow[] {
-    if (!this.selectedStatus) return this.rows;
-    return this.rows.filter((r) => r.status === this.selectedStatus);
   }
 
   countFor(status: string | null): number {
-    if (!status) return this.rows.length;
-    return this.rows.filter((r) => r.status === status).length;
+    if (!status) return this.tabRows.length;
+    return this.tabRows.filter((r) => r.status === status).length;
   }
 
   selectFilter(status: string | null): void {

@@ -14,6 +14,10 @@ const salarydoc = require('./app/models/salarydoc');
 const interview_round = require('./app/models/interview_round');
 const round_type = require('./app/models/round_type');
 const UserPermission = require('./app/models/userPermission');
+const employeeOldSalary = require('./app/models/employeeOldSalary');
+// employeeOldSalary.sync({ alter: false }).catch(err =>
+//   console.error('employeeOldSalary sync error:', err)
+// );
 require('./app/models/index');
 
 // Auto-create user_permissions table if it doesn't exist

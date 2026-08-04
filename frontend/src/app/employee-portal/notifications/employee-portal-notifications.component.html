@@ -7,20 +7,20 @@
     <div>
       <h4 class="ep-notif-page__title">Leave notifications</h4>
       <p class="ep-notif-page__sub">
-        Pending, recommended, approved, rejected and self-declined leave updates for you and your team.
+        Unread stay in Unread; after mark as read they move to Read.
       </p>
     </div>
     <div class="ep-notif-page__actions">
       <button
         type="button"
         class="ep-notif-page__mark"
-        *ngIf="!loading && unreadCount > 0"
+        *ngIf="!loading && activeTab === 'unread' && unreadCount > 0"
         (click)="markAllRead()"
       >
         <i class="icon-base ri ri-check-double-line me-1"></i>
         Mark all read
       </button>
-      <button type="button" class="ep-notif-page__refresh" (click)="load(false)" [disabled]="loading">
+      <button type="button" class="ep-notif-page__refresh" (click)="load()" [disabled]="loading">
         <i class="icon-base ri ri-refresh-line me-1"></i>
         Refresh
       </button>
@@ -28,7 +28,30 @@
   </header>
 
   <div class="ep-notif-card">
-    <div class="ep-notif-card__filters" *ngIf="!loading && rows.length > 0">
+    <!-- Unread / Read tabs -->
+    <div class="ep-notif-card__filters mb-2">
+      <button
+        type="button"
+        class="ep-notif-chip"
+        [class.ep-notif-chip--active]="activeTab === 'unread'"
+        (click)="selectTab('unread')"
+      >
+        Unread
+        <span class="ep-notif-chip__count">{{ unreadCount }}</span>
+      </button>
+      <button
+        type="button"
+        class="ep-notif-chip"
+        [class.ep-notif-chip--active]="activeTab === 'read'"
+        (click)="selectTab('read')"
+      >
+        Read
+        <span class="ep-notif-chip__count">{{ readRows.length }}</span>
+      </button>
+    </div>
+
+    <!-- Status filters (current tab ke andar) -->
+    <div class="ep-notif-card__filters" *ngIf="!loading && tabRows.length > 0">
       <button
         type="button"
         class="ep-notif-chip"
@@ -78,12 +101,8 @@
                 {{ statusLabel(n.status) }}
               </span>
             </td>
-            <td>
-              {{ n.recommendedBy || '—' }}
-            </td>
-            <td>
-              {{ n.approvedBy || '—' }}
-            </td>
+            <td>{{ n.recommendedBy || '—' }}</td>
+            <td>{{ n.approvedBy || '—' }}</td>
             <td class="ep-notif-reason">{{ n.reason || '—' }}</td>
           </tr>
         </tbody>
@@ -92,8 +111,9 @@
       <ng-template #emptyList>
         <div class="ep-notif-empty-state">
           <i class="icon-base ri ri-notification-off-line"></i>
-          <p *ngIf="rows.length === 0">No leave notifications found.</p>
-          <p *ngIf="rows.length > 0">No leaves match this status filter.</p>
+          <p *ngIf="tabRows.length === 0 && activeTab === 'unread'">No unread notifications.</p>
+          <p *ngIf="tabRows.length === 0 && activeTab === 'read'">No read notifications yet.</p>
+          <p *ngIf="tabRows.length > 0">No leaves match this status filter.</p>
         </div>
       </ng-template>
     </div>

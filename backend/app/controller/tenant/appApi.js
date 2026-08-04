@@ -28,7 +28,7 @@ const bills = require("../../models/bill");
 const base_url = process.env.BASE_URL;
 const sequelize = require("../../connection/connection");
 const { v4: uuidv4 } = require("uuid");
-
+const notification_reads = require("../../models/notification_reads");
 const PdfPrinter = require("pdfmake");
 const dayMap = {
   Sunday: 0,
@@ -2882,14 +2882,14 @@ exports.AppupdatedApplyLeaveStatus = async (req, res) => {
         const balanceRecord = await LeaveBalance.findOne({
           where: { tenantId, branchId, leaveTypeId: existingLeave.leaveTypeId, employeeId: existingLeave.employeeId, year: fromYear, month: fromMonth },
         });
-        if (balanceRecord) {
-          const newUsed = Number(balanceRecord.usedLeaves || 0) + leaveDays;
-          const newRemaining = Math.max(Number(balanceRecord.remainingLeaves || 0) - leaveDays, 0);
-          await LeaveBalance.update(
-            { usedLeaves: newUsed.toFixed(1), remainingLeaves: newRemaining.toFixed(1), updatedBy: req.users?.id },
-            { where: { id: balanceRecord.id } },
-          );
-        }
+        // if (balanceRecord) {
+        //   const newUsed = Number(balanceRecord.usedLeaves || 0) + leaveDays;
+        //   const newRemaining = Math.max(Number(balanceRecord.remainingLeaves || 0) - leaveDays, 0);
+        //   // await LeaveBalance.update(
+        //   //   { usedLeaves: newUsed.toFixed(1), remainingLeaves: newRemaining.toFixed(1), updatedBy: req.users?.id },
+        //   //   { where: { id: balanceRecord.id } },
+        //   // );
+        // }
 
         if (existingLeave.compOffId) {
           const compOffRecord = await comp_off.findOne({ where: { id: existingLeave.compOffId } });
@@ -3770,10 +3770,31 @@ exports.notification = async (req, res) => {
         };
       }),
     );
-    const mergedData = [
-      ...finalData, // leave data (with detailed info)
-      ...Attendacedata, // today's attendance
-    ];
+
+    // Mark leave rows as read/unread from notification_reads (per user + status snapshot)
+    const reads = await notification_reads.findAll({
+      where: { userId, tenantId, refType: "leave" },
+      attributes: ["refId", "status", "updatedAtSnapshot"],
+      raw: true,
+    });
+    const normalizeSnap = (v) => String(v || "").split(",")[0].trim();
+    // const readKey = (id, status, updatedAt) =>
+    //   `${id}|${String(status || "").toLowerCase()}|${String(updatedAt || "")}`;
+    const readKey = (id, status, updatedAt) =>
+      `${id}|${String(status || "").toLowerCase()}|${normalizeSnap(updatedAt)}`;
+    const readSet = new Set(
+      reads.map((r) => readKey(r.refId, r.status, r.updatedAtSnapshot)),
+    );
+    const leavesWithRead = finalData.map((item) => ({
+      ...item,
+      isRead: readSet.has(readKey(item.id, item.status, item.updatedAt)),
+    }));
+
+    // Portal / feed: only unread leave notifications (+ today's attendance)
+    // const unreadLeaves = leavesWithRead.filter((item) => !item.isRead);
+    // const mergedData = [...unreadLeaves, ...Attendacedata];
+    // ab:
+    const mergedData = [...leavesWithRead, ...Attendacedata];
 
     return Helper.response(
       true,
@@ -4330,8 +4351,7 @@ exports.getMyLeaveHistory = async (req, res) => {
 exports.applyRegularization = async (req, res) => {
   const t = await sequelize.transaction();
   try {
-    const { attendanceDate, inTimeRequested, outTimeRequested, reason } =
-      req.body;
+    const { attendanceDate, inTimeRequested, outTimeRequested, reason } = req.body;
 
     const employeeId = req.users?.id;
     const tenantId = req.users?.tenantId;
@@ -4361,20 +4381,58 @@ exports.applyRegularization = async (req, res) => {
       );
     }
 
+    // const today = new Date();
+    // const attDate = new Date(attendanceDate);
+
+    // today.setHours(0, 0, 0, 0);
+    // attDate.setHours(0, 0, 0, 0);
+
+    // const diffTime = today.getTime() - attDate.getTime();
+    // const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+    // if (diffDays > 2) {
+    //   await t.rollback();
+    //   return Helper.response(
+    //     false,
+    //     "Regularization allowed only within 2 days from attendance date",
+    //     {},
+    //     res,
+    //     200,
+    //   );
+    // }
+
+
     const today = new Date();
     const attDate = new Date(attendanceDate);
 
     today.setHours(0, 0, 0, 0);
     attDate.setHours(0, 0, 0, 0);
 
-    const diffTime = today.getTime() - attDate.getTime();
-    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    if (attDate > today) {
+      await t.rollback();
+      return Helper.response(false, "Attendance date cannot be in the future", {}, res, 200);
+    }
 
-    if (diffDays > 2) {
+    // Count weekdays after attendance date up to today (Sat/Sun skipped)
+    const countWorkingDaysBetween = (from, to) => {
+      let count = 0;
+      const d = new Date(from);
+      d.setDate(d.getDate() + 1); // start from next day
+      while (d <= to) {
+        const day = d.getDay(); // 0 = Sun, 6 = Sat
+        if (day !== 0 && day !== 6) count++;
+        d.setDate(d.getDate() + 1);
+      }
+      return count;
+    };
+
+    const workingDiff = countWorkingDaysBetween(attDate, today);
+
+    if (workingDiff > 2) {
       await t.rollback();
       return Helper.response(
         false,
-        "Regularization allowed only within 2 days from attendance date",
+        "Regularization allowed only within 2 working days from attendance date (weekends excluded)",
         {},
         res,
         200,
@@ -4725,6 +4783,30 @@ exports.markattendance = async (req, res) => {
     if (!tenantId || !employeeId) {
       return Helper.response(false, "User not found", {}, res, 404);
     }
+
+    const emp = await empPersonal.findOne({
+      where: { id: employeeId, tenantId, status: "active" },
+      attributes: ["id", "isofflineAtt", "isofflineAllTimeAtt", "shift_id", "branchId"],
+      raw: true,
+    });
+    
+    if (!emp) {
+      return Helper.response(false, "Employee not found", {}, res, 404);
+    }
+    
+    // Web / offline attendance must be enabled
+    if (!emp.isofflineAtt) {
+      return Helper.response(
+        false,
+        "Web attendance is not enabled for your account. Contact HR.",
+        {},
+        res,
+        403,
+      );
+    }
+    
+    // Optional: if NOT all-time, you can later add shift-window check here
+    // if (!emp.isofflineAllTimeAtt) { ... shift start/end validation ... }
 
     const today = new Date();
     const date = today.toISOString().split("T")[0];
@@ -5616,5 +5698,59 @@ exports.getEmployeeUploadedImage = async (req, res) => {
   } catch (error) {
     console.error("Error fetching profile image:", error);
     return Helper.response(false, "Internal server error", [], res, 500);
+  }
+};
+
+exports.markNotificationsRead = async (req, res) => {
+  try {
+    const userId = req.users?.id;
+    const tenantId = req.users?.tenantId;
+    const branchId = req.users?.branchId;
+    const items = Array.isArray(req.body?.items) ? req.body.items : [];
+
+    if (!userId || !tenantId) {
+      return Helper.response(false, "User Not Found", {}, res, 404);
+    }
+    if (!items.length) {
+      return Helper.response(false, "items required", {}, res, 400);
+    }
+
+    // Always same format (date-only) — avoid "27/02/2026, 07:55 PM" vs "27/02/2026"
+    const normalizeSnap = (v) =>
+      String(v || "")
+        .split(",")[0]
+        .trim();
+
+    for (const it of items) {
+      const snap = normalizeSnap(it.updatedAt);
+
+      const existing = await notification_reads.findOne({
+        where: {
+          userId,
+          tenantId,
+          refType: "leave",
+          refId: it.id,
+          status: String(it.status || "").toLowerCase(),
+          updatedAtSnapshot: snap,
+        },
+      });
+
+      if (!existing) {
+        await notification_reads.create({
+          userId,
+          tenantId,
+          branchId,
+          refType: "leave",
+          refId: it.id,
+          status: String(it.status || "").toLowerCase(),
+          updatedAtSnapshot: snap,
+          readAt: new Date(),
+        });
+      }
+    }
+
+    return Helper.response(true, "Marked as read", {}, res, 200);
+  } catch (e) {
+    return Helper.response(false, e.message, {}, res, 500);
   }
 };

@@ -790,6 +790,23 @@
               <dd class="col-7 mb-1">{{ daily['check_out_time'] || '—' }}</dd>
             </dl>
             <div class="d-flex flex-wrap gap-2">
+              <ng-container *ngIf="canMarkWebAttendance(); else webAttOff">
+                <button *ngIf="canCheckIn()" type="button" class="btn btn-primary ep-dash-mark-btn" (click)="mark()" [disabled]="marking">
+                  {{ marking ? 'Please wait…' : 'Check in' }}
+                </button>
+                <button *ngIf="canCheckOut()" type="button" class="btn btn-outline-primary ep-dash-mark-btn" (click)="mark()" [disabled]="marking">
+                  {{ marking ? 'Please wait…' : 'Check out' }}
+                </button>
+                <span *ngIf="!canCheckIn() && !canCheckOut() && daily['check_in_time']" class="ep-dash-done-pill">
+                  <i class="icon-base ri ri-check-line me-1"></i> Day complete
+                </span>
+              </ng-container>
+
+              <ng-template #webAttOff>
+                <span class="text-muted small">Web attendance not enabled for your account.</span>
+              </ng-template>
+            </div>
+            <!-- <div class="d-flex flex-wrap gap-2">
               <button *ngIf="canCheckIn()" type="button" class="btn btn-primary ep-dash-mark-btn" (click)="mark()" [disabled]="marking">
                 {{ marking ? 'Please wait…' : 'Check in' }}
               </button>
@@ -799,7 +816,11 @@
               <span *ngIf="!canCheckIn() && !canCheckOut() && daily['check_in_time']" class="ep-dash-done-pill">
                 <i class="icon-base ri ri-check-line me-1"></i> Day complete
               </span>
-            </div>
+            </div> -->
+            <!-- <div *ngIf="!canMarkWebAttendance()" class="ep-dash-attendance-card__alert">
+              <i class="icon-base ri ri-alert-line me-1"></i>
+              <span>Web attendance is not enabled for your account. Contact HR.</span>
+            </div> -->
           </ng-container>
         </div>
       </div>
