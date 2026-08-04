@@ -1,0 +1,7 @@
+/* `blog-thumb--{post.image}` is a decorative hook (post.image is only an id,
+   e.g. "future-hr-ai" — there is no real image file to load). Add per-id
+   background tweaks here later if desired; a plain gradient is the default. */
+:host {
+  display: block;
+  height: 100%;
+}

@@ -21,6 +21,7 @@ const Departments = require("../../models/department");
 const bankAccnt = require("../../models/bankAccnt");
 const leaveMaster = require("../../models/leaveMaster");
 const HolidayType = require("../../models/HolidayType");
+const comp_off = require("../../models/comp_off");
 const { literal } = require("sequelize");
 const dayMap = {
   Sunday: 0,
@@ -932,765 +933,849 @@ const dayMap = {
 //     return Helper.response(false, error?.message, [], res, 500);
 //   }
 // };
-exports.calculateAttendance = async (req, res) => {
-  let { employeeId, month, year } = req.body;
-  const tenantId = req.users && req.users.tenantId;
-  const branchId = req.users && req.users.branchId;
 
-  if (!branchId || branchId == "null") {
-    return Helper.response(false, "branchId is required!", {}, res, 200);
-  }
+// exports.calculateAttendance = async (req, res) => {
+//   let { employeeId, month, year, isPenaltyEnabled, penaltyType, penaltyValue } = req.body;
+//   const tenantId = req.users && req.users.tenantId;
+//   const branchId = req.users && req.users.branchId;
 
-  let leavebalance;
-  let data = [];
-  if (!tenantId || !employeeId) {
-    return Helper.response(
-      false,
-      "TenantId and employeeId required",
-      [],
-      res,
-      400,
-    );
-  }
+//   if (!branchId || branchId == "null") {
+//     return Helper.response(false, "branchId is required!", {}, res, 200);
+//   }
 
-  try {
-    const empData = await empPersonal.findAll({
-      where: {
-        id: {
-          [Op.in]: employeeId,
-        },
-        branchId,
-      },
-      attributes: ["id", "shift_id", "joiningDate"],
-      raw: true,
-    });
-    if (!empData || empData.length == 0) {
-      return Helper.response(false, "Employee not found", [], res, 400);
-    }
+//   let leavebalance;
+//   let data = [];
+//   if (!tenantId || !employeeId) {
+//     return Helper.response(
+//       false,
+//       "TenantId and employeeId required",
+//       [],
+//       res,
+//       400,
+//     );
+//   }
 
-    const checkshift = await Shift.findAll({
-      where: {
-        tenantId,
-        branchId,
-        shift: {
-          [Op.ne]: empData.map((i) => i.shift_id).filter((s) => s != null)[0],
-        },
-      },
-      raw: true,
-    });
-    if (!checkshift) {
-      return Helper.response(false, "Create Shift First", [], res, 400);
-    }
-    // Attendance setting
-    const deduction = await attendanceSetting.findOne({
-      where: { tenantId, branchId },
-    });
-    const GRACE_MINUTES = deduction.graceMinutes;
-    const HALF_DAY_THRESHOLD = deduction.halfdayToAbsentMin; // hours
-    const HALF_DAY_CUTOFF_MINUTES = deduction.halfDayThreshold; // minutes
-    const lateAllowanceMin = deduction.lateAllowanceMin;
+//   try {
+//     const empData = await empPersonal.findAll({
+//       where: {
+//         id: {
+//           [Op.in]: employeeId,
+//         },
+//         branchId,
+//       },
+//       attributes: ["id", "shift_id", "joiningDate"],
+//       raw: true,
+//     });
+//     if (!empData || empData.length == 0) {
+//       return Helper.response(false, "Employee not found", [], res, 400);
+//     }
 
-    const employees = await bill.findAll({
-      where: {
-        employeeId: { [Op.in]: employeeId },
-        tenantId,
-        branchId,
-        month,
-        year,
-      },
-      raw: true,
-      attributes: ["employeeId"],
-    });
+//     const checkshift = await Shift.findAll({
+//       where: {
+//         tenantId,
+//         branchId,
+//         shift: {
+//           [Op.ne]: empData.map((i) => i.shift_id).filter((s) => s != null)[0],
+//         },
+//       },
+//       raw: true,
+//     });
+//     if (!checkshift) {
+//       return Helper.response(false, "Create Shift First", [], res, 400);
+//     }
+//     // Attendance setting
+//     const deduction = await attendanceSetting.findOne({
+//       where: { tenantId, branchId },
+//     });
+//     const GRACE_MINUTES = deduction.graceMinutes;
+//     const HALF_DAY_THRESHOLD = deduction.halfdayToAbsentMin; // hours
+//     const HALF_DAY_CUTOFF_MINUTES = deduction.halfDayThreshold; // minutes
+//     const lateAllowanceMin = deduction.lateAllowanceMin;
 
-    employeeId = employeeId.filter((item) => {
-      return !employees.some((emp) => emp.employeeId == item);
-    });
-    const attendanceEmployees = await attendance.findAll({
-      where: {
-        employeeId: { [Op.in]: employeeId },
-        month,
-        branchId,
-        year,
-        tenantId,
-      },
-      attributes: ["employeeId"],
-      raw: true,
-    });
+//     const employees = await bill.findAll({
+//       where: {
+//         employeeId: { [Op.in]: employeeId },
+//         tenantId,
+//         branchId,
+//         month,
+//         year,
+//       },
+//       raw: true,
+//       attributes: ["employeeId"],
+//     });
 
-    const employeesWithAttendance = attendanceEmployees.map(
-      (emp) => emp.employeeId,
-    );
+//     employeeId = employeeId.filter((item) => {
+//       return !employees.some((emp) => emp.employeeId == item);
+//     });
+//     const attendanceEmployees = await attendance.findAll({
+//       where: {
+//         employeeId: { [Op.in]: employeeId },
+//         month,
+//         branchId,
+//         year,
+//         tenantId,
+//       },
+//       attributes: ["employeeId"],
+//       raw: true,
+//     });
 
-    employeeId = employeeId.filter((id) =>
-      employeesWithAttendance.includes(id),
-    );
+//     const employeesWithAttendance = attendanceEmployees.map(
+//       (emp) => emp.employeeId,
+//     );
 
-    if (employeeId.length == 0) {
-      return Helper.response(
-        false,
-        "No attendance found for the selected month/year. Salary not generated.",
-        {},
-        res,
-        200,
-      );
-    }
+//     employeeId = employeeId.filter((id) =>
+//       employeesWithAttendance.includes(id),
+//     );
 
-    // console.log("Proceeding salary generation for:", employeeId);
-    let absentdaysArr = [];
-    for (let i = 0; i < employeeId.length; i++) {
-      absentdaysArr = [];
-      let startDate = moment(
-        `${year}-${String(month).padStart(2, "0")}-01`,
-        "YYYY-MM-DD",
-      ).startOf("month");
-      let endDate = moment(startDate).endOf("month");
-      const employee = await empPersonal.findOne({
-        where: { id: employeeId[i], tenantId },
-        attributes: ["joiningDate", "exitDate"],
-        raw: true,
-      });
-      let newEnddate;
-      // Adjust end date based on exit date
-      if (employee?.exitDate) {
-        const exitMoment = moment(employee.exitDate);
-        // If exit is before month end, end at exit date
-        if (exitMoment.isBefore(endDate)) {
-          newEnddate = exitMoment.clone();
-        }
-      }
+//     if (employeeId.length == 0) {
+//       return Helper.response(
+//         false,
+//         "No attendance found for the selected month/year. Salary not generated.",
+//         {},
+//         res,
+//         200,
+//       );
+//     }
 
-      // Check if employee was active at all during this month
-      // if (startDate.isAfter(endDate)) {
-      //   console.log(`Skipping ${employeeId[i]} — not active in ${month}/${year}`);
-      //   continue;
-      // }
+//     // console.log("Proceeding salary generation for:", employeeId);
+//     let absentdaysArr = [];
+//     for (let i = 0; i < employeeId.length; i++) {
+//       absentdaysArr = [];
+//       let startDate = moment(
+//         `${year}-${String(month).padStart(2, "0")}-01`,
+//         "YYYY-MM-DD",
+//       ).startOf("month");
+//       let endDate = moment(startDate).endOf("month");
+//       const employee = await empPersonal.findOne({
+//         where: { id: employeeId[i], tenantId },
+//         attributes: ["joiningDate", "exitDate"],
+//         raw: true,
+//       });
+//       let newEnddate;
+//       // Adjust end date based on exit date
+//       if (employee?.exitDate) {
+//         const exitMoment = moment(employee.exitDate);
+//         // If exit is before month end, end at exit date
+//         if (exitMoment.isBefore(endDate)) {
+//           newEnddate = exitMoment.clone();
+//         }
+//       }
 
-      let effectiveStartDate = moment(startDate); // keep as Moment
+//       // Check if employee was active at all during this month
+//       // if (startDate.isAfter(endDate)) {
+//       //   console.log(`Skipping ${employeeId[i]} — not active in ${month}/${year}`);
+//       //   continue;
+//       // }
 
-      if (employee && employee.joiningDate) {
-        const joiningMoment = moment(employee.joiningDate);
+//       let effectiveStartDate = moment(startDate); // keep as Moment
 
-        const sameMonth =
-          joiningMoment.month() == effectiveStartDate.month() &&
-          joiningMoment.year() == effectiveStartDate.year();
+//       if (employee && employee.joiningDate) {
+//         const joiningMoment = moment(employee.joiningDate);
 
-        if (sameMonth && joiningMoment.isAfter(effectiveStartDate)) {
-          effectiveStartDate = joiningMoment.clone(); // keep as Moment
-          startDate = effectiveStartDate;
-        }
-      }
-      const CtcValue = await Basic.findOne({
-        where: {
-          tenantId,
-          branchId,
-          employeeId: employeeId[i],
-          dependent: "CTC",
-          status: "active",
-          startDate: {
-            [Op.lte]: effectiveStartDate,
-          },
-        },
-      });
-      if (!CtcValue) {
-        continue;
-        //  Helper.response(
-        //   false,
-        //   "Add Salary Component First",
-        //   [],
-        //   res,
-        //   400
-        // );
-      }
-      const PersonalInfo = await empPersonal.findOne({
-        where: {
-          id: employeeId[i],
-          branchId,
-        },
-      });
-      const empTypeData = await EmploymentType.findOne({
-        where: {
-          id: PersonalInfo?.empType,
-          status: "active",
-        },
-        raw: true,
-      });
+//         const sameMonth =
+//           joiningMoment.month() == effectiveStartDate.month() &&
+//           joiningMoment.year() == effectiveStartDate.year();
 
-       const designationData=await Designation.findOne({
-          where:{
-            id:PersonalInfo?.designationId
-          },
-          raw:true
-        })
+//         if (sameMonth && joiningMoment.isAfter(effectiveStartDate)) {
+//           effectiveStartDate = joiningMoment.clone(); // keep as Moment
+//           startDate = effectiveStartDate;
+//         }
+//       }
+//       const CtcValue = await Basic.findOne({
+//         where: {
+//           tenantId,
+//           branchId,
+//           employeeId: employeeId[i],
+//           dependent: "CTC",
+//           status: "active",
+//           startDate: {
+//             [Op.lte]: effectiveStartDate,
+//           },
+//         },
+//       });
+//       if (!CtcValue) {
+//         continue;
+//         //  Helper.response(
+//         //   false,
+//         //   "Add Salary Component First",
+//         //   [],
+//         //   res,
+//         //   400
+//         // );
+//       }
+//       const PersonalInfo = await empPersonal.findOne({
+//         where: {
+//           id: employeeId[i],
+//           branchId,
+//         },
+//       });
+//       const empTypeData = await EmploymentType.findOne({
+//         where: {
+//           id: PersonalInfo?.empType,
+//           status: "active",
+//         },
+//         raw: true,
+//       });
 
-      // Apply employment type rule on CTC
-      let totalCTC = CtcValue?.amount;
+//        const designationData=await Designation.findOne({
+//           where:{
+//             id:PersonalInfo?.designationId
+//           },
+//           raw:true
+//         })
 
-      if (empTypeData?.duration_type == "half_paid") {
-        totalCTC = totalCTC / 2;
-      }
-      // const totalCTC = CtcValue?.amount;
+//       // Apply employment type rule on CTC
+//       let totalCTC = CtcValue?.amount;
 
-      const totalDaysInMonth = endDate.date();
-      const perMonthSalary = totalCTC / 12;
-      const perDaySalary = perMonthSalary / totalDaysInMonth;
+//       if (empTypeData?.duration_type == "half_paid") {
+//         totalCTC = totalCTC / 2;
+//       }
+//       // const totalCTC = CtcValue?.amount;
 
-      // console.clear();
-      // Approved Leaves Map
-      let leaveRecords = await leave_application.findAll({
-        where: {
-          employeeId: employeeId[i],
-          branchId,
-          status: "approved",
-          [Op.or]: [
-            {
-              fromDate: {
-                [Op.between]: [
-                  startDate.format("YYYY-MM-DD"),
-                  endDate.format("YYYY-MM-DD"),
-                ],
-              },
-            },
-            {
-              toDate: {
-                [Op.between]: [
-                  startDate.format("YYYY-MM-DD"),
-                  endDate.format("YYYY-MM-DD"),
-                ],
-              },
-            },
-            {
-              fromDate: { [Op.lte]: startDate.format("YYYY-MM-DD") },
-              toDate: { [Op.gte]: endDate.format("YYYY-MM-DD") },
-            },
-          ],
-        },
-        raw: true,
-      });
-      const leaveTypeIds = [...new Set(leaveRecords.map((item) => item.leaveTypeId).filter(Boolean))];
-      const leaveTypeList = leaveTypeIds.length
-        ? await leaveMaster.findAll({
-            where: {
-              id: { [Op.in]: leaveTypeIds },
-              branchId,
-            },
-            attributes: ["id", "leaveName", "leaveCode"],
-            raw: true,
-          })
-        : [];
-      const leaveTypeMap = Object.fromEntries(
-        leaveTypeList.map((item) => [item.id, item]),
-      );
-      leaveRecords = leaveRecords.map((item) => {
-        const leaveTypeInfo = leaveTypeMap[item.leaveTypeId] || {};
-        const leaveName = String(leaveTypeInfo.leaveName || "").trim().toLowerCase();
-        const leaveCode = String(leaveTypeInfo.leaveCode || "").trim().toLowerCase();
-        const normalizedLeaveName = leaveName.replace(/\s+/g, " ");
-        return {
-          ...item,
-          leave_name: leaveTypeInfo.leaveName || null,
-          leave_code: leaveTypeInfo.leaveCode || null,
-          isRestrictedHolidayLeave:
-            normalizedLeaveName.includes("restricted") || leaveCode.startsWith("rh"),
-        };
-      });
-      leavebalance = await leave_balance.findAll({
-        where: {
-          employeeId: employeeId[i],
-          branchId,
-          tenantId,
-          year,
-          month,
-        },
-        raw: true,
-      });
-      leavebalance = await Promise.all(
-        leavebalance.map(async (item) => {
-          const leaveName = await leaveMaster.findOne({
-            where: {
-              id: item?.leaveTypeId,
-              branchId,
-            },
-          });
-          return {
-            ...item,
-            leave_name: leaveName?.leaveName,
-          };
-        }),
-      );
+//       const totalDaysInMonth = endDate.date();
+//       const perMonthSalary = totalCTC / 12;
+//       const perDaySalary = perMonthSalary / totalDaysInMonth;
 
-      // Collect all holidays for tenant
-      const holidayList = await holiday.findAll({
-        where: {
-          tenantId,
-          branchId,
-          date: {
-            [Op.between]: [
-              startDate.format("YYYY-MM-DD"),
-              endDate.format("YYYY-MM-DD"),
-            ],
-          },
-        },
-        raw: true,
-      });
-      const holidayTypeIds = [...new Set(holidayList.map((item) => item.holiday_type).filter(Boolean))];
-      const holidayTypeList = holidayTypeIds.length
-        ? await HolidayType.findAll({
-            where: {
-              id: { [Op.in]: holidayTypeIds },
-              tenantId,
-              branchId,
-              status: "active",
-            },
-            attributes: ["id", "name"],
-            raw: true,
-          })
-        : [];
-      const holidayTypeMap = Object.fromEntries(
-        holidayTypeList.map((item) => [item.id, item.name]),
-      );
-      const holidayMap = Object.fromEntries(
-        holidayList.map((item) => {
-          const typeName = String(holidayTypeMap[item.holiday_type] || "").trim().toLowerCase();
-          return [
-            item.date,
-            {
-              ...item,
-              holiday_type_name: holidayTypeMap[item.holiday_type] || null,
-              isRestrictedHoliday: typeName === "restricted holiday",
-            },
-          ];
-        }),
-      );
-      leaveRecords = leaveRecords.map((item) => {
-        if (item.isRestrictedHolidayLeave) {
-          return item;
-        }
-        const fromDate = item.fromDate;
-        const toDate = item.toDate || item.fromDate;
-        const isSingleDayRestrictedHoliday =
-          fromDate &&
-          toDate &&
-          fromDate === toDate &&
-          holidayMap[fromDate]?.isRestrictedHoliday;
-        return {
-          ...item,
-          isRestrictedHolidayLeave: !!isSingleDayRestrictedHoliday,
-        };
-      });
-      const holidays = holidayList
-        .filter((item) => !holidayMap[item.date]?.isRestrictedHoliday)
-        .map((item) => item.date);
+//       // console.clear();
+//       // Applied leaves are considered for sandwich detection; only approved
+//       // leave is later treated as paid leave after balance adjustment.
+//       let leaveRecords = await leave_application.findAll({
+//         where: {
+//           employeeId: employeeId[i],
+//           branchId,
+//           status: { [Op.in]: ["pending", "recommended", "approved"] },
+//           [Op.or]: [
+//             {
+//               fromDate: {
+//                 [Op.between]: [
+//                   startDate.format("YYYY-MM-DD"),
+//                   endDate.format("YYYY-MM-DD"),
+//                 ],
+//               },
+//             },
+//             {
+//               toDate: {
+//                 [Op.between]: [
+//                   startDate.format("YYYY-MM-DD"),
+//                   endDate.format("YYYY-MM-DD"),
+//                 ],
+//               },
+//             },
+//             {
+//               fromDate: { [Op.lte]: startDate.format("YYYY-MM-DD") },
+//               toDate: { [Op.gte]: endDate.format("YYYY-MM-DD") },
+//             },
+//           ],
+//         },
+//         raw: true,
+//       });
+//       const leaveTypeIds = [...new Set(leaveRecords.map((item) => item.leaveTypeId).filter(Boolean))];
+//       const leaveTypeList = leaveTypeIds.length
+//         ? await leaveMaster.findAll({
+//             where: {
+//               id: { [Op.in]: leaveTypeIds },
+//               branchId,
+//             },
+//             attributes: ["id", "leaveName", "leaveCode"],
+//             raw: true,
+//           })
+//         : [];
+//       const leaveTypeMap = Object.fromEntries(
+//         leaveTypeList.map((item) => [item.id, item]),
+//       );
+//       leaveRecords = leaveRecords.map((item) => {
+//         const leaveTypeInfo = leaveTypeMap[item.leaveTypeId] || {};
+//         const leaveName = String(leaveTypeInfo.leaveName || "").trim().toLowerCase();
+//         const leaveCode = String(leaveTypeInfo.leaveCode || "").trim().toLowerCase();
+//         const normalizedLeaveName = leaveName.replace(/\s+/g, " ");
+//         return {
+//           ...item,
+//           leave_name: leaveTypeInfo.leaveName || null,
+//           leave_code: leaveTypeInfo.leaveCode || null,
+//           isRestrictedHolidayLeave:
+//             normalizedLeaveName.includes("restricted") || leaveCode.startsWith("rh"),
+//         };
+//       });
+//       leavebalance = await leave_balance.findAll({
+//         where: {
+//           employeeId: employeeId[i],
+//           branchId,
+//           tenantId,
+//           year,
+//           month,
+//         },
+//         raw: true,
+//       });
+//       leavebalance = await Promise.all(
+//         leavebalance.map(async (item) => {
+//           const leaveName = await leaveMaster.findOne({
+//             where: {
+//               id: item?.leaveTypeId,
+//               branchId,
+//             },
+//           });
+//           return {
+//             ...item,
+//             leave_name: leaveName?.leaveName,
+//           };
+//         }),
+//       );
 
-      // Apply sandwich rule
-      let applysandwitchleave = Helper.applySandwichRule(
-        leaveRecords.filter((item) => !item.isRestrictedHolidayLeave),
-        holidays,
-        startDate,
-        endDate,
-      );
-      applysandwitchleave = [
-        ...applysandwitchleave,
-        ...leaveRecords
-          .filter((item) => item.isRestrictedHolidayLeave)
-          .map((item) => ({
-            ...item,
-            leavestatus: "approved",
-          })),
-      ];
-      const leaveDateMap1 = {};
-      for (const leave of applysandwitchleave) {
-        const leaveStart = moment(leave.fromDate);
+//       // Collect all holidays for tenant
+//       const holidayList = await holiday.findAll({
+//         where: {
+//           tenantId,
+//           branchId,
+//           date: {
+//             [Op.between]: [
+//               startDate.format("YYYY-MM-DD"),
+//               endDate.format("YYYY-MM-DD"),
+//             ],
+//           },
+//         },
+//         raw: true,
+//       });
+//       const holidayTypeIds = [...new Set(holidayList.map((item) => item.holiday_type).filter(Boolean))];
+//       const holidayTypeList = holidayTypeIds.length
+//         ? await HolidayType.findAll({
+//             where: {
+//               id: { [Op.in]: holidayTypeIds },
+//               tenantId,
+//               branchId,
+//               status: "active",
+//             },
+//             attributes: ["id", "name"],
+//             raw: true,
+//           })
+//         : [];
+//       const holidayTypeMap = Object.fromEntries(
+//         holidayTypeList.map((item) => [item.id, item.name]),
+//       );
+//       const holidayMap = Object.fromEntries(
+//         holidayList.map((item) => {
+//           const typeName = String(holidayTypeMap[item.holiday_type] || "").trim().toLowerCase();
+//           return [
+//             item.date,
+//             {
+//               ...item,
+//               holiday_type_name: holidayTypeMap[item.holiday_type] || null,
+//               isRestrictedHoliday: typeName === "restricted holiday",
+//             },
+//           ];
+//         }),
+//       );
+//       leaveRecords = leaveRecords.map((item) => {
+//         if (item.isRestrictedHolidayLeave) {
+//           return item;
+//         }
+//         const fromDate = item.fromDate;
+//         const toDate = item.toDate || item.fromDate;
+//         const isSingleDayRestrictedHoliday =
+//           fromDate &&
+//           toDate &&
+//           fromDate === toDate &&
+//           holidayMap[fromDate]?.isRestrictedHoliday;
+//         return {
+//           ...item,
+//           isRestrictedHolidayLeave: !!isSingleDayRestrictedHoliday,
+//         };
+//       });
+//       const holidays = holidayList
+//         .filter((item) => !holidayMap[item.date]?.isRestrictedHoliday)
+//         .map((item) => item.date);
 
-        // Handle case when toDate is null → treat as single-day leave
-        const leaveEnd = leave.toDate
-          ? moment(leave.toDate)
-          : moment(leave.fromDate);
+//       const shiftWeekOffDates = [];
+//       for (let d = moment(startDate); d.isSameOrBefore(endDate); d.add(1, "days")) {
 
-        for (
-          let d = moment(leaveStart);
-          d.isSameOrBefore(leaveEnd);
-          d.add(1, "days")
-        ) {
-          const dateKey = d.format("YYYY-MM-DD");
-          leaveDateMap1[dateKey] = leave.duration_type || "full"; // full, first_half, second_half
-        }
-      }
+//         console.log(d.format("dddd"));
+        
+//         const shift = await Shift.findOne({
+//           where: {
+//             day_of_week: d.format("dddd"),
+//             branchId,
+//             // status: "active",
+//             shift: PersonalInfo?.shift_id,
+//             tenantId,
+//           },
+//           raw: true,
+//         });
+//         if (shift?.is_week_off) {
+//           shiftWeekOffDates.push(d.format("YYYY-MM-DD"));
+//         }
+//       }
+//       const sandwichNonWorkingDays = [...new Set([...holidays, ...shiftWeekOffDates])];
 
-      // Adjust leave records
-      const nonRestrictedLeaves = applysandwitchleave.filter(
-        (item) => !item.isRestrictedHolidayLeave,
-      );
-      const restrictedHolidayLeaves = applysandwitchleave
-        .filter((item) => item.isRestrictedHolidayLeave)
-        .map((item) => ({
-          ...item,
-          leavestatus: "approved",
-        }));
-      leaveRecords = [
-        ...Helper.adjustLeaveRecords(leavebalance, nonRestrictedLeaves),
-        ...restrictedHolidayLeaves,
-      ];
+//       // Apply sandwich rule
+//       let applysandwitchleave = Helper.applySandwichRule(
+//         leaveRecords.filter((item) => !item.isRestrictedHolidayLeave),
+//         sandwichNonWorkingDays,
+//         startDate,
+//         endDate,
+//       );
+//       applysandwitchleave = [
+//         ...applysandwitchleave,
+//         ...leaveRecords
+//           .filter((item) => item.isRestrictedHolidayLeave)
+//           .map((item) => ({
+//             ...item,
+//             leavestatus: item.status === "approved" ? "approved" : "unpaid",
+//           })),
+//       ];
+//       const leaveDateMap1 = {};
+//       for (const leave of applysandwitchleave) {
+//         const leaveStart = moment(leave.fromDate);
 
-      const leaveDateMap = {};
-      for (const leave of leaveRecords) {
-        const leaveStart = moment(leave.fromDate);
+//         // Handle case when toDate is null → treat as single-day leave
+//         const leaveEnd = leave.toDate
+//           ? moment(leave.toDate)
+//           : moment(leave.fromDate);
 
-        // Handle null toDate safely again
-        const leaveEnd = leave.toDate
-          ? moment(leave.toDate)
-          : moment(leave.fromDate);
+//         for (
+//           let d = moment(leaveStart);
+//           d.isSameOrBefore(leaveEnd);
+//           d.add(1, "days")
+//         ) {
+//           const dateKey = d.format("YYYY-MM-DD");
+//           leaveDateMap1[dateKey] = leave.duration_type || "full"; // full, first_half, second_half
+//         }
+//       }
 
-        for (
-          let d = moment(leaveStart);
-          d.isSameOrBefore(leaveEnd);
-          d.add(1, "days")
-        ) {
-          const dateKey = d.format("YYYY-MM-DD");
-          leaveDateMap[dateKey] = {
-            duration_type: leave.duration_type || "full", // full, first_half, second_half
-            leavestatus: leave.leavestatus,
-            isRestrictedHolidayLeave: !!leave.isRestrictedHolidayLeave,
-          };
-        }
-      }
+//       // Adjust leave records
+//       const nonRestrictedLeaves = applysandwitchleave.filter(
+//         (item) => !item.isRestrictedHolidayLeave,
+//       );
+//       const restrictedHolidayLeaves = applysandwitchleave
+//         .filter((item) => item.isRestrictedHolidayLeave)
+//         .map((item) => ({
+//           ...item,
+//           leavestatus: item.status === "approved" ? "approved" : "unpaid",
+//         }));
 
-      // Collect working days with shifts
-      const workingDays = [];
-      let dynamicWorkingDays = 0;
+//       // Comp-off leaves use comp_off balance, not regular leave_balance
+//       const compOffLeaveIds = nonRestrictedLeaves
+//         .filter((r) => r.compOffId)
+//         .map((r) => r.compOffId);
+//       const compOffRecords = compOffLeaveIds.length
+//         ? await comp_off.findAll({
+//             where: { id: { [Op.in]: compOffLeaveIds } },
+//             raw: true,
+//           })
+//         : [];
+//       const compOffMap = Object.fromEntries(
+//         compOffRecords.map((r) => [r.id, r]),
+//       );
+//       const compOffLeaves = nonRestrictedLeaves
+//         .filter((r) => r.compOffId)
+//         .map((r) => {
+//           const compOffRecord = compOffMap[r.compOffId];
+//           const isValid =
+//             compOffRecord &&
+//             (compOffRecord.status === "used" ||
+//               compOffRecord.status === "active");
+//           return {
+//             ...r,
+//             leavestatus:
+//               r.status === "approved" && isValid ? "approved" : "unpaid",
+//             isCompOff: true,
+//           };
+//         });
+//       const normalLeaves = nonRestrictedLeaves.filter((r) => !r.compOffId);
 
-      for (let d = moment(startDate); d <= endDate; d.add(1, "days")) {
-        const dayName = d.format("dddd");
-        const shift = await Shift.findOne({
-          where: {
-            day_of_week: dayName,
-            branchId,
-            status: "active",
-            shift: PersonalInfo?.shift_id,
-            tenantId,
-          },
-          raw: true,
-        });
+//       leaveRecords = [
+//         ...Helper.adjustLeaveRecords(leavebalance, normalLeaves),
+//         ...compOffLeaves,
+//         ...restrictedHolidayLeaves,
+//       ];
 
-        workingDays.push({ date: d.clone(), shift });
-        dynamicWorkingDays++;
-      }
+//       const leaveDateMap = {};
+//       for (const leave of leaveRecords) {
+//         const leaveStart = moment(leave.fromDate);
 
-      let fullDays = 0;
-      let halfDays = 0;
-      let lateDays = 0;
-      let graceLateCount = 0;
-      let absentDays = 0;
+//         // Handle null toDate safely again
+//         const leaveEnd = leave.toDate
+//           ? moment(leave.toDate)
+//           : moment(leave.fromDate);
 
-      for (let entry of workingDays) {
-        const date = entry.date;
-        const shift = entry.shift;
-        const dayStr = date.format("YYYY-MM-DD");
+//         for (
+//           let d = moment(leaveStart);
+//           d.isSameOrBefore(leaveEnd);
+//           d.add(1, "days")
+//         ) {
+//           const dateKey = d.format("YYYY-MM-DD");
+//           leaveDateMap[dateKey] = {
+//             duration_type: leave.duration_type || "full", // full, first_half, second_half
+//             leavestatus: leave.leavestatus,
+//             isRestrictedHolidayLeave: !!leave.isRestrictedHolidayLeave,
+//             isSandwich: !!leave.isSandwich,
+//             isCompOff: !!leave.isCompOff,
+//           };
+//         }
+//       }
 
-        const startOfDayUTC = `${dayStr} 00:00:00`;
-        const endOfDayUTC = `${dayStr} 23:59:59`;
-        if (new Date(newEnddate) < new Date(date)) {
-          absentdaysArr.push({
-            date: dayStr,
-            reason: "Left Employee",
-          });
-          absentDays++;
-          continue;
-        }
-        if (!shift || shift.is_week_off) {
-          fullDays++;
-          continue;
-        }
-        const getMonthlyAttendance = await attendance.findAll({
-          where: {
-            employeeId: employeeId[i],
-            tenantId,
-            branchId,
-            month,
-            year,
-          },
-          raw: true,
-        });
-        if (getMonthlyAttendance && getMonthlyAttendance.length > 0) {
-          if (!shift || shift.is_week_off) {
-            fullDays++;
-            continue;
-          }
-        }
-        // else if(getMonthlyAttendance.length == 0)
-        //   {
-        //         absentDays++;
-        //     continue;
-        // }
+//       // Collect working days with shifts
+//       const workingDays = [];
+//       let dynamicWorkingDays = 0;
+
+//       for (let d = moment(startDate); d <= endDate; d.add(1, "days")) {
+//         const dayName = d.format("dddd");
+//         const shift = await Shift.findOne({
+//           where: {
+//             day_of_week: dayName,
+//             branchId,
+//             status: "active",
+//             shift: PersonalInfo?.shift_id,
+//             tenantId,
+//           },
+//           raw: true,
+//         });
+
+//         workingDays.push({ date: d.clone(), shift });
+//         dynamicWorkingDays++;
+//       }
+
+//       let fullDays = 0;
+//       let halfDays = 0;
+//       let lateDays = 0;
+//       let graceLateCount = 0;
+//       let absentDays = 0;
+
+//       for (let entry of workingDays) {
+//         const date = entry.date;
+//         const shift = entry.shift;
+//         const dayStr = date.format("YYYY-MM-DD");
+
+//         const startOfDayUTC = `${dayStr} 00:00:00`;
+//         const endOfDayUTC = `${dayStr} 23:59:59`;
+//         if (new Date(newEnddate) < new Date(date)) {
+//           absentdaysArr.push({
+//             date: dayStr,
+//             reason: "Left Employee",
+//           });
+//           absentDays++;
+//           continue;
+//         }
+//         if (!shift || shift.is_week_off) {
+//           const sandwichLeave = leaveDateMap[dayStr];
+//           if (sandwichLeave?.isSandwich && sandwichLeave?.leavestatus === "unpaid") {
+//             absentdaysArr.push({ date: dayStr, reason: "Sandwich leave unpaid" });
+//             absentDays++;
+//           } else {
+//             fullDays++;
+//           }
+//           continue;
+//         }
+//         const getMonthlyAttendance = await attendance.findAll({
+//           where: {
+//             employeeId: employeeId[i],
+//             tenantId,
+//             branchId,
+//             month,
+//             year,
+//           },
+//           raw: true,
+//         });
+//         if (getMonthlyAttendance && getMonthlyAttendance.length > 0) {
+//           if (!shift || shift.is_week_off) {
+//             fullDays++;
+//             continue;
+//           }
+//         }
+//         // else if(getMonthlyAttendance.length == 0)
+//         //   {
+//         //         absentDays++;
+//         //     continue;
+//         // }
         
        
 
-        const attendances = await attendance.findOne({
-          where: {
-            employeeId: employeeId[i],
-            branchId,
-            check_in_time: {
-              [Op.between]: [startOfDayUTC, endOfDayUTC],
-            },
-          },
-          raw: true,
-        });
-        // console.log(attendances,"attendance data")
-        // console.log(startOfDayUTC,endOfDayUTC)
-        if (
-          !attendances ||
-          !attendances.check_in_time ||
-          !attendances.check_out_time
-        ) {
-          const leaveType = leaveDateMap[dayStr];
-          const holidaydata = holidayMap[dayStr];
+//         const attendances = await attendance.findOne({
+//           where: {
+//             employeeId: employeeId[i],
+//             branchId,
+//             check_in_time: {
+//               [Op.between]: [startOfDayUTC, endOfDayUTC],
+//             },
+//           },
+//           raw: true,
+//         });
+//         // console.log(attendances,"attendance data")
+//         // console.log(startOfDayUTC,endOfDayUTC)
+//         if (
+//           !attendances ||
+//           !attendances.check_in_time ||
+//           !attendances.check_out_time
+//         ) {
+//           const leaveType = leaveDateMap[dayStr];
+//           const holidaydata = holidayMap[dayStr];
 
-          // if(holidaydata){
-          //   fullDays++
-          // }
+//           // if(holidaydata){
+//           //   fullDays++
+//           // }
 
-          // else
-          if (
-            holidaydata?.isRestrictedHoliday &&
-            leaveType?.isRestrictedHolidayLeave &&
-            leaveType?.leavestatus == "approved"
-          ) {
-            fullDays++;
-          } else if (leaveType?.leavestatus == "approved") {
-            fullDays++;
-          } else if (
-            leaveType?.duration_type == "full" &&
-            leaveType?.leavestatus == "unpaid"
-          ) {
-            absentdaysArr.push({
-              date: dayStr,
-              reason: "Leave Not Available",
-            });
-            // fullDays++;
-            absentDays++;
-          } else if (
-            leaveType?.duration_type == "first_half" ||
-            leaveType?.duration_type == "second_half"
-          ) {
-            absentdaysArr.push({
-              date: dayStr,
-              reason: "halfDays applied",
-            });
-            halfDays++;
-          }
-          //  else if (
-          //   getMonthlyAttendance &&
-          //   getMonthlyAttendance.length > 0
-          // ) {
+//           // else
+//           if (
+//             holidaydata?.isRestrictedHoliday &&
+//             leaveType?.isRestrictedHolidayLeave &&
+//             leaveType?.leavestatus == "approved"
+//           ) {
+//             fullDays++;
+//           } else if (leaveType?.leavestatus == "approved") {
+//             if (
+//               leaveType?.duration_type == "first_half" ||
+//               leaveType?.duration_type == "second_half"
+//             ) {
+//               halfDays++;
+//             } else {
+//               fullDays++;
+//             }
+//           } else if (
+//             leaveType?.duration_type == "full" &&
+//             leaveType?.leavestatus == "unpaid"
+//           ) {
+//             absentdaysArr.push({
+//               date: dayStr,
+//               reason: "Leave Not Available",
+//             });
+//             absentDays++;
+//           } else if (
+//             leaveType?.duration_type == "first_half" ||
+//             leaveType?.duration_type == "second_half"
+//           ) {
+//             absentdaysArr.push({
+//               date: dayStr,
+//               reason: "halfDays applied",
+//             });
+//             halfDays++;
+//           }
+//           //  else if (
+//           //   getMonthlyAttendance &&
+//           //   getMonthlyAttendance.length > 0
+//           // ) {
 
-          //   fullDays++;
-          // }
-          else if (holidaydata && !holidaydata.isRestrictedHoliday) {
-            fullDays++;
-          } else if (leaveType?.duration_type == "half_full") {
-            absentdaysArr.push({
-              date: dayStr,
-              reason: "halfDays applied",
-            });
-            halfDays++;
-          } else if (leaveType?.leavestatus == "approved") {
-            fullDays++;
-          } else {
-            absentdaysArr.push({
-              date: dayStr,
-              reason: "Attendance and Leave not available",
-            });
-            // console.log("absentdayasss");
-            absentDays++;
-          }
-          continue;
-        }
+//           //   fullDays++;
+//           // }
+//           else if (holidaydata && !holidaydata.isRestrictedHoliday) {
+//             fullDays++;
+//           } else if (leaveType?.duration_type == "half_full") {
+//             absentdaysArr.push({
+//               date: dayStr,
+//               reason: "halfDays applied",
+//             });
+//             halfDays++;
+//           } else if (leaveType?.leavestatus == "approved") {
+//             fullDays++;
+//           } else {
+//             absentdaysArr.push({
+//               date: dayStr,
+//               reason: "Attendance and Leave not available",
+//             });
+//             // console.log("absentdayasss");
+//             absentDays++;
+//           }
+//           continue;
+//         }
 
-        // const shiftStart = moment(
-        //   `${dayStr} ${shift.startTime}`,
-        //   "YYYY-MM-DD HH:mm:ss"
-        // );
-        const shiftStart = moment(
-          `${dayStr} ${shift.startTime}`,
-          "YYYY-MM-DD HH:mm:ss",
-        )
-          .seconds(0)
-          .milliseconds(0);
+//         // const shiftStart = moment(
+//         //   `${dayStr} ${shift.startTime}`,
+//         //   "YYYY-MM-DD HH:mm:ss"
+//         // );
+//         const shiftStart = moment(
+//           `${dayStr} ${shift.startTime}`,
+//           "YYYY-MM-DD HH:mm:ss",
+//         )
+//           .seconds(0)
+//           .milliseconds(0);
 
-        const checkIn = moment(attendances.check_in_time)
-          .seconds(0)
-          .milliseconds(0);
-        // const checkIn = moment(attendances.check_in_time);
-        const checkOut = moment(attendances.check_out_time);
+//         const checkIn = moment(attendances.check_in_time)
+//           .seconds(0)
+//           .milliseconds(0);
+//         // const checkIn = moment(attendances.check_in_time);
+//         const checkOut = moment(attendances.check_out_time);
 
-        const workedHours = moment.duration(checkOut.diff(checkIn)).asHours();
-        const graceTime = shiftStart.clone().add(GRACE_MINUTES, "minutes");
-        const halfDayTime = shiftStart
-          .clone()
-          .add(HALF_DAY_CUTOFF_MINUTES, "minutes");
+//         const workedHours = moment.duration(checkOut.diff(checkIn)).asHours();
+//         const graceTime = shiftStart.clone().add(GRACE_MINUTES, "minutes");
+//         const halfDayTime = shiftStart
+//           .clone()
+//           .add(HALF_DAY_CUTOFF_MINUTES, "minutes");
 
-        if (workedHours < HALF_DAY_THRESHOLD) {
-          absentdaysArr.push({
-            date: dayStr,
-            reason: "Late Attendance",
-          });
-          absentDays++;
-          continue;
-        }
-        const leaveType = leaveDateMap[dayStr];
+//         if (workedHours < HALF_DAY_THRESHOLD) {
+//           absentdaysArr.push({
+//             date: dayStr,
+//             reason: "Late Attendance",
+//           });
+//           absentDays++;
+//           continue;
+//         }
+//         const leaveType = leaveDateMap[dayStr];
 
-        if (checkIn.isAfter(halfDayTime)) {
-          if (leaveType && leaveType.leavestatus == "approved") {
-            fullDays++;
-          } else {
-            absentdaysArr.push({
-              date: dayStr,
-              reason: "late Attendance halfDays",
-            });
-            halfDays++;
-          }
-          // halfDays++;
-        } else if (checkIn.isAfter(graceTime)) {
-          lateDays++;
-          if (graceLateCount < lateAllowanceMin) {
-            graceLateCount++;
-            fullDays++;
-          } else {
-            if (leaveType && leaveType.leavestatus == "approved") {
-              fullDays++;
-            } else {
-              absentdaysArr.push({
-                date: dayStr,
-                reason: "late attendance halfDays",
-              });
-              halfDays++;
-            }
-            // halfDays++;
-          }
-        } else {
-          // if (workedHours < parseFloat(shift.workingHours)) {
-          //   halfDays++;
-          // } else {
-          //   fullDays++;
-          // }
-          fullDays++;
-          //console.log("Full day for", halfDays,"Worked Hours:", workedHours,"Working Hours:",shift.workingHours);
-        }
-      }
+//         if (checkIn.isAfter(halfDayTime)) {
+//           if (leaveType && leaveType.leavestatus == "approved") {
+//             fullDays++;
+//           } else {
+//             absentdaysArr.push({
+//               date: dayStr,
+//               reason: "late Attendance halfDays",
+//             });
+//             halfDays++;
+//           }
+//           // halfDays++;
+//         } else if (checkIn.isAfter(graceTime)) {
+//           lateDays++;
+//           if (graceLateCount < lateAllowanceMin) {
+//             graceLateCount++;
+//             fullDays++;
+//           } else {
+//             if (leaveType && leaveType.leavestatus == "approved") {
+//               fullDays++;
+//             } else {
+//               absentdaysArr.push({
+//                 date: dayStr,
+//                 reason: "late attendance halfDays",
+//               });
+//               halfDays++;
+//             }
+//             // halfDays++;
+//           }
+//         } else {
+//           // if (workedHours < parseFloat(shift.workingHours)) {
+//           //   halfDays++;
+//           // } else {
+//           //   fullDays++;
+//           // }
+//           fullDays++;
+//           //console.log("Full day for", halfDays,"Worked Hours:", workedHours,"Working Hours:",shift.workingHours);
+//         }
+//       }
 
-      const totalLeaveDays = Object.values(leaveDateMap1).reduce(
-        (acc, type) => {
-          return acc + (type == "full" ? 1 : 0.5);
-        },
-        0,
-      );
+//       const totalLeaveDays = Object.values(leaveDateMap1).reduce(
+//         (acc, type) => {
+//           return acc + (type == "full" ? 1 : 0.5);
+//         },
+//         0,
+//       );
 
-      const bonusallowanceamount = await allowance.findOne({
-        where: {
-          employeeId: employeeId[i],
-          branchId,
-          status: "active",
-          type: "is_special",
-          [Op.and]: [
-            { startDate: { [Op.lte]: endDate } }, // record starts before your range ends
-            {
-              [Op.or]: [
-                { endDate: { [Op.gte]: startDate } }, // record ends after your range starts
-                { endDate: null }, // OR no endDate (open-ended)
-              ],
-            },
-          ],
-        },
-        raw: true,
-        attributes: [[fn("SUM", col("finalAmount")), "totalBonus"]],
-      });
-      const bonusdedamount = await deductionS.findOne({
-        where: {
-          employeeId: employeeId[i],
-          branchId,
-          status: "active",
-          type: "is_special",
-          [Op.and]: [
-            { startDate: { [Op.lte]: endDate } }, // record starts before your range ends
-            {
-              [Op.or]: [
-                { endDate: { [Op.gte]: startDate } }, // record ends after your range starts
-                { endDate: null }, // OR no endDate (open-ended)
-              ],
-            },
-          ],
-        },
-        raw: true,
-        attributes: [[fn("SUM", col("finalAmount")), "totalBonus"]],
-      });
-      let bonusamount =
-        Number(bonusallowanceamount?.totalBonus) +
-        Number(bonusdedamount?.totalBonus);
+//       const bonusallowanceamount = await allowance.findOne({
+//         where: {
+//           employeeId: employeeId[i],
+//           branchId,
+//           status: "active",
+//           type: "is_special",
+//           [Op.and]: [
+//             { startDate: { [Op.lte]: endDate } }, // record starts before your range ends
+//             {
+//               [Op.or]: [
+//                 { endDate: { [Op.gte]: startDate } }, // record ends after your range starts
+//                 { endDate: null }, // OR no endDate (open-ended)
+//               ],
+//             },
+//           ],
+//         },
+//         raw: true,
+//         attributes: [[fn("SUM", col("finalAmount")), "totalBonus"]],
+//       });
+//       const bonusdedamount = await deductionS.findOne({
+//         where: {
+//           employeeId: employeeId[i],
+//           branchId,
+//           status: "active",
+//           type: "is_special",
+//           [Op.and]: [
+//             { startDate: { [Op.lte]: endDate } }, // record starts before your range ends
+//             {
+//               [Op.or]: [
+//                 { endDate: { [Op.gte]: startDate } }, // record ends after your range starts
+//                 { endDate: null }, // OR no endDate (open-ended)
+//               ],
+//             },
+//           ],
+//         },
+//         raw: true,
+//         attributes: [[fn("SUM", col("finalAmount")), "totalBonus"]],
+//       });
+//       let bonusamount =
+//         Number(bonusallowanceamount?.totalBonus) +
+//         Number(bonusdedamount?.totalBonus);
 
-      const allowedLeave = leavebalance.reduce((acc, remainingLeaves) => {
-        return acc + Number(remainingLeaves.remainingLeaves);
-      }, 0);
+//       const allowedLeave = leavebalance.reduce((acc, remainingLeaves) => {
+//         return acc + Number(remainingLeaves.remainingLeaves);
+//       }, 0);
 
-      // let basePay = (
-      //   fullDays * perDaySalary +
-      //   halfDays * perDaySalary * 0.5
-      // ).toFixed(2);
-      let basePay = fullDays * perDaySalary + halfDays * perDaySalary * 0.5;
-      basePay = Math.round(basePay);
-      fullDays = fullDays + halfDays * 0.5;
+//       // let basePay = (
+//       //   fullDays * perDaySalary +
+//       //   halfDays * perDaySalary * 0.5
+//       // ).toFixed(2);
+//       let basePay = fullDays * perDaySalary + halfDays * perDaySalary * 0.5;
+//       basePay = Math.round(basePay);
+//       fullDays = fullDays + halfDays * 0.5;
 
-      const TotalSalary = totalDaysInMonth * perDaySalary;
+//       const TotalSalary = totalDaysInMonth * perDaySalary;
 
-      const shiftName = await Shift.findOne({
-        where: {
-          shift: PersonalInfo?.shift_id,
-        },
-        raw: true,
-      });
+//       // Penalty calculation
+//       let penaltyAmount = 0;
+//       if (isPenaltyEnabled) {
+//         if (penaltyType === "percentage") {
+//           // penaltyValue = number of days to deduct
+//           penaltyAmount = Math.round(Number(penaltyValue || 0) * perDaySalary);
+//         } else if (penaltyType === "amount") {
+//           penaltyAmount = Math.round(Number(penaltyValue || 0));
+//         }
+//       }
 
-      data.push({
-        employeeId: employeeId[i],
-        employeeName: `${PersonalInfo?.firstName} ${PersonalInfo?.lastName}`,
-        empCode: PersonalInfo?.empCode,
-        month,
-        year,
-        fullDays,
-        halfDays,
-        lateDays,
-        graceLateUsed: graceLateCount,
-        absentDays,
-        absentdaysArr,
-        allowedLeave,
-        bonusamount,
-        leavebalance,
-        empType: empTypeData?.duration_type,
-        totalWorkingDays: dynamicWorkingDays,
-        TotalSalary: Math.round(TotalSalary),
-        totalDaysInMonth,
-        perDaySalary: Math.round(perDaySalary),
-        totalLeaveDays,
-        applysandwitchleave,
-        basePay: basePay + bonusamount,
-        totalDeduction: Math.round(perMonthSalary - basePay),
-        shift_id: shiftName?.id,
-        shift_name: shiftName?.shift,
-        designation_name: designationData?.name,
-      });
-    }
-    if (data.length == 0) {
-      return Helper.response(
-        false,
-        "Salary already generated for all selected employees",
-        [],
-        res,
-        400,
-      );
-    }
-    return Helper.response(true, "Record Found Successfully!", data, res, 200);
-  } catch (error) {
-    console.error("Attendance calculation error:", error);
-    return Helper.response(false, error?.message, [], res, 500);
-  }
-};
+//       const shiftName = await Shift.findOne({
+//         where: {
+//           shift: PersonalInfo?.shift_id,
+//         },
+//         raw: true,
+//       });
+
+//       data.push({
+//         employeeId: employeeId[i],
+//         employeeName: `${PersonalInfo?.firstName} ${PersonalInfo?.lastName}`,
+//         empCode: PersonalInfo?.empCode,
+//         month,
+//         year,
+//         fullDays,
+//         halfDays,
+//         lateDays,
+//         graceLateUsed: graceLateCount,
+//         absentDays,
+//         absentdaysArr,
+//         allowedLeave,
+//         bonusamount,
+//         leavebalance,
+//         empType: empTypeData?.duration_type,
+//         totalWorkingDays: dynamicWorkingDays,
+//         TotalSalary: Math.round(TotalSalary),
+//         totalDaysInMonth,
+//         perDaySalary: Math.round(perDaySalary),
+//         totalLeaveDays,
+//         applysandwitchleave,
+//         penaltyAmount,
+//         basePay: Math.max(0, basePay + bonusamount - penaltyAmount),
+//         totalDeduction: Math.round(perMonthSalary - basePay) + penaltyAmount,
+//         shift_id: shiftName?.id,
+//         shift_name: shiftName?.shift,
+//         designation_name: designationData?.name,
+//       });
+//     }
+//     if (data.length == 0) {
+//       return Helper.response(
+//         false,
+//         "Salary already generated for all selected employees",
+//         [],
+//         res,
+//         400,
+//       );
+//     }
+//     return Helper.response(true, "Record Found Successfully!", data, res, 200);
+//   } catch (error) {
+//     console.error("Attendance calculation error:", error);
+//     return Helper.response(false, error?.message, [], res, 500);
+//   }
+// };
+
+
+
 
 exports.calculateSalaryComponent = async (req, res) => {
   try {
@@ -1701,6 +1786,7 @@ exports.calculateSalaryComponent = async (req, res) => {
       totalDeduction,
       year,
       month,
+      penaltyAmount,
     } = req.body;
 
     const tenantId = req.users?.tenantId;
@@ -1812,6 +1898,41 @@ exports.calculateSalaryComponent = async (req, res) => {
       startDate: `${year}-${month}-01`,
       endDate: `${year}-${month}-${endOfMonth.date()}`,
     });
+
+    // ============================
+    // PENALTY DEDUCTION
+    // ============================
+    await deductionS.update(
+      { status: "inactive" },
+      {
+        where: {
+          tenantId,
+          branchId,
+          employeeId,
+          name: "Penalty",
+          status: "active",
+        },
+      },
+    );
+
+    if (penaltyAmount && Number(penaltyAmount) > 0) {
+      await deductionS.create({
+        id: Helper.generateUUID().toString(),
+        tenantId,
+        employeeId,
+        branchId,
+        name: "Penalty",
+        type: "deduction",
+        dependent: null,
+        amount: parseFloat(penaltyAmount),
+        typeValue: null,
+        finalAmount: parseFloat(penaltyAmount),
+        finalCTC: null,
+        status: "active",
+        startDate: `${year}-${month}-01`,
+        endDate: `${year}-${month}-${endOfMonth.date()}`,
+      });
+    }
 
     // ============================
     // FETCH COMPONENTS
@@ -2472,7 +2593,7 @@ exports.generateSalary = async (req, res) => {
       const leaveUsageMap = {};
 
       (emp.applysandwitchleave || []).forEach((lv) => {
-        if (lv.status == "approved") {
+        if (lv.status == "approved" && !lv.compOffId) {
           if (!leaveUsageMap[lv.leaveTypeId]) leaveUsageMap[lv.leaveTypeId] = 0;
           leaveUsageMap[lv.leaveTypeId] += Number(lv.days || 0);
         }
@@ -2482,7 +2603,7 @@ exports.generateSalary = async (req, res) => {
       for (const leaveTypeId of Object.keys(leaveUsageMap)) {
         const usedDays = leaveUsageMap[leaveTypeId];
         const balance = emp.leavebalance.find(
-          (l) => l.leaveTypeId === leaveTypeId,
+          (l) => l.leaveTypeId == leaveTypeId,
         );
 
         if (balance) {
@@ -2495,6 +2616,72 @@ exports.generateSalary = async (req, res) => {
             {
               usedLeaves: newUsed.toFixed(1),
               remainingLeaves: 0,
+            },
+            {
+              where: {
+                employeeId: emp.employeeId,
+                tenantId,
+                branchId,
+                year: emp.year,
+                month: emp.month,
+                leaveTypeId,
+              },
+              transaction: t,
+            },
+          );
+        }
+      }
+
+      // --- Deduct comp-off balance for approved comp-off leaves ---
+      const compOffUsageMap = {};
+      (emp.applysandwitchleave || []).forEach((lv) => {
+        if (lv.status == "approved" && lv.compOffId) {
+          if (!compOffUsageMap[lv.compOffId]) compOffUsageMap[lv.compOffId] = 0;
+          compOffUsageMap[lv.compOffId] += Number(lv.days || 0);
+        }
+      });
+
+      for (const compOffId of Object.keys(compOffUsageMap)) {
+        const daysUsed = compOffUsageMap[compOffId];
+        const record = await comp_off.findOne({
+          where: { id: compOffId, employeeId: emp.employeeId, tenantId },
+          transaction: t,
+        });
+        if (record) {
+          const newUsed = Number(record.usedDays || 0) + daysUsed;
+          const newRemaining = Math.max(Number(record.remainingDays || 0) - daysUsed, 0);
+          await comp_off.update(
+            {
+              usedDays: newUsed.toFixed(1),
+              remainingDays: newRemaining.toFixed(1),
+              status: newRemaining <= 0 ? "used" : "active",
+            },
+            { where: { id: compOffId }, transaction: t },
+          );
+        }
+      }
+
+      // --- Also update leave_balance for comp-off leave type ---
+      const compOffLeaveTypeUsage = {};
+      (emp.applysandwitchleave || []).forEach((lv) => {
+        if (lv.status == "approved" && lv.compOffId && lv.leaveTypeId) {
+          if (!compOffLeaveTypeUsage[lv.leaveTypeId]) compOffLeaveTypeUsage[lv.leaveTypeId] = 0;
+          compOffLeaveTypeUsage[lv.leaveTypeId] += Number(lv.days || 0);
+        }
+      });
+
+      for (const leaveTypeId of Object.keys(compOffLeaveTypeUsage)) {
+        const daysUsed = compOffLeaveTypeUsage[leaveTypeId];
+        const balance = (emp.leavebalance || []).find((l) => l.leaveTypeId === leaveTypeId);
+        if (balance) {
+          const prevUsed = Number(balance.usedLeaves || 0);
+          const prevRemaining = Number(balance.remainingLeaves || 0);
+          const newUsed = prevUsed + daysUsed;
+          const newRemaining = Math.max(prevRemaining - daysUsed, 0);
+          await leave_balance.update(
+            {
+              usedLeaves: newUsed.toFixed(1),
+              remainingLeaves: newRemaining.toFixed(1),
             },
             {
               where: {
@@ -2567,9 +2754,9 @@ exports.generateSalary = async (req, res) => {
 
       // --- Prepare next month ---
       const currentMonth = Number(emp.month);
-      const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+      const nextMonth = currentMonth == 12 ? 1 : currentMonth + 1;
       const nextYear =
-        currentMonth === 12 ? Number(emp.year) + 1 : Number(emp.year);
+        currentMonth == 12 ? Number(emp.year) + 1 : Number(emp.year);
 
       // --- Process next month leave for CL only ---
 
@@ -2597,13 +2784,33 @@ exports.generateSalary = async (req, res) => {
 
         // Calculate next month and year
         const currentMonth = Number(emp.month);
-        const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+        const nextMonth = currentMonth == 12 ? 1 : currentMonth + 1;
         const nextYear =
-          currentMonth === 12 ? Number(emp.year) + 1 : Number(emp.year);
+          currentMonth == 12 ? Number(emp.year) + 1 : Number(emp.year);
 
         // Policy: Add +2 CL each month
-        const monthlyCLAddition = 2;
-
+        // const monthlyCLAddition = 2;
+// Loop ke andar, nextYear / nextMonth calculate hone ke baad:
+let monthlyCLAddition = 2; // default — purana behavior
+const joiningDate =
+  emp.joiningDate ||
+  (await empPersonal.findOne({
+    where: { id: emp.employeeId, tenantId, branchId },
+    attributes: ["joiningDate"],
+    raw: true,
+    transaction: t,
+  }))?.joiningDate;
+if (joiningDate) {
+  const joiningMonthStart = moment(joiningDate).startOf("month");
+  const nextMonthStart = moment(
+    `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`,
+    "YYYY-MM-DD"
+  );
+  const monthsSinceJoining = nextMonthStart.diff(joiningMonthStart, "months");
+  // Joining month = 0, 2nd month = 1, 3rd month = 2 → 1 CL
+  // 4th month onwards (3+) → 2 CL
+  monthlyCLAddition = monthsSinceJoining < 3 ? 1 : 2;
+}
         // Find next month record
         const existingLeave = await leave_balance.findOne({
           where: {
@@ -2763,14 +2970,16 @@ exports.generateSalary = async (req, res) => {
     return Helper.response(false, error?.message, [], res, 500);
   }
 };
+
 const {  cast } = require("sequelize");
 const salarydoc = require("../../models/salarydoc");
+
 exports.GeneratedSalaryList = async (req, res) => {
   const tenantId = req.users?.tenantId;
   const createdBy = req.users?.id;
 
   try {
-    const { employeeId, month, year } = req.body;
+    const { employeeId, month, year, onlyDeductions } = req.body;
     const branchId = req.users && req.users.branchId;
     if (!branchId) {
       return Helper.response(false, "branchId is required!", {}, res, 200);
@@ -2786,7 +2995,7 @@ exports.GeneratedSalaryList = async (req, res) => {
       );
     }
     const result=await bill.findOne({
-  attributes: [
+    attributes: [
     [
       fn(
         "COALESCE",
@@ -2805,7 +3014,7 @@ exports.GeneratedSalaryList = async (req, res) => {
     year,
     branchId,
     tenantId,
-    status: "active"
+    // status: "active"
   },
   raw: true
 });
@@ -2828,7 +3037,7 @@ const finalTotal = parseFloat(totalSum) || 0;
 console.log("Total Salary:", finalTotal);
 
 
-    const GetSalaryList = await bill.findAll({
+    const GetSalaryListRaw = await bill.findAll({
       where: {
         employeeId: { [Op.in]: employeeId },
         month,
@@ -2840,6 +3049,15 @@ console.log("Total Salary:", finalTotal);
       order: [["createdAt", "desc"]],
       raw: true,
     });
+
+    const GetSalaryList = onlyDeductions
+      ? GetSalaryListRaw.filter(
+          (item) =>
+            parseFloat(item.absent_days) > 0 ||
+            parseFloat(item.late_attendance) > 3 ||
+            parseFloat(item.half_day) > 0,
+        )
+      : GetSalaryListRaw;
 
     if (GetSalaryList.length == 0) {
       return Helper.response(false, "No Data Found", {}, res, 200);
@@ -2854,7 +3072,7 @@ console.log("Total Salary:", finalTotal);
           where: {
             id: item?.employeeId,
             branchId,
-            status: "active",
+            // status: "active",
           },
         });
         let designation, department;
@@ -2971,6 +3189,7 @@ console.log("Total Salary:", finalTotal);
           email: personaldetail?.email,
           joiningDate: personaldetail?.joiningDate,
           phone: personaldetail?.mobile,
+          shift: personaldetail?.shift_id,
           designation: designation?.name,
           department: department?.name,
           bankAccount: bankDetails?.accountNumber,
@@ -3329,7 +3548,7 @@ exports.revertSalary = async (req, res) => {
     let nextMonth = parseInt(month);
     let nextYear = parseInt(year);
 
-    if (nextMonth === 12) {
+    if (nextMonth == 12) {
       nextMonth = 1;
       nextYear += 1;
     } else {
@@ -3377,6 +3596,7 @@ exports.revertSalary = async (req, res) => {
             usedLeaves: Number(prevusedLeaves || 0),
             remainingLeaves: Number(prevremainingLeaves || 0),
             usedLeaves: 0,
+            updatedBy: createdBy,
           },
           {
             where: {
@@ -3489,7 +3709,10 @@ exports.salarySetup = async (req, res) => {
 
         if (comp.component_name.toLowerCase() == "basic") {
           amount = (CTC * Number(comp.value)) / 100;
-        } else if (  comp.value_type === "percentage" && !comp.dependent_component ) {
+        } else if (comp.value_type === "basic_dependent") {
+          // All basic_dependent components (Basic+DA, HRA, etc.) are % of CTC
+          amount = (CTC * Number(comp.value)) / 100;
+        } else if (comp.value_type === "percentage" && !comp.dependent_component) {
           amount = (CTC * Number(comp.value)) / 100;
         } else if (comp.value_type === "fixed" && comp.amount) {
           amount = Number(comp.amount);
@@ -3503,10 +3726,17 @@ exports.salarySetup = async (req, res) => {
       let amount = 0;
       if (comp.value_type === "percentage") {
         if (Array.isArray(comp.dependent_component)) {
-          const baseSum = comp.dependent_component.reduce(
+          let baseSum = comp.dependent_component.reduce(
             (sum, depId) => sum + (computed[depId] || 0),
             0,
           );
+          // If dependent IDs are stale/unresolved, fall back to basic component value
+          if (baseSum === 0) {
+            const basicComp = salaryComponents.find(
+              (c) => c.value_type === "basic_dependent" && computed[c.id] > 0,
+            );
+            baseSum = basicComp ? computed[basicComp.id] : CTC;
+          }
           amount = (baseSum * Number(comp.value)) / 100;
         } else {
           const base = computed[comp.dependent_component] || CTC;
@@ -3575,10 +3805,10 @@ exports.salarySetup = async (req, res) => {
       records.push({
         employeeId,
         tenantId,
-        component_name: "Special Allowance",
+        component_name: "Misc. Allowance",
         component_type: "payable",
         value_type: "percentage",
-        value: 111,
+        value: 0,
         calculated_amount: miscAmount ? Number(miscAmount.toFixed(2)) : 0,
         dependent: "CTC",
         componentId: Helper.generateUUID(),
@@ -3616,6 +3846,49 @@ exports.salarySetup = async (req, res) => {
         componentId: Helper.generateUUID(),
       },
     );
+
+    // PF (Employee + Employer) – add only if not already in Salary Master
+    const hasPFInMaster = salaryComponents.some(
+      (c) =>
+        c.component_name.toLowerCase().includes("pf") ||
+        c.component_name.toLowerCase().includes("provident"),
+    );
+    if (!hasPFInMaster) {
+      const basicCompForPF = salaryComponents.find(
+        (c) => c.value_type === "basic_dependent" && computed[c.id] > 0,
+      );
+      const basicAnnual = basicCompForPF ? computed[basicCompForPF.id] : 0;
+      // 12% of monthly basic, capped at ₹1800/month
+      const pfMonthly = Math.min((basicAnnual / 12) * 0.12, 1800);
+      const pfEmployee = Math.round(pfMonthly * 12);
+      const pfEmployer = Math.round(pfMonthly * 12);
+      employerContribution += pfEmployer;
+      employerContribution = Math.round(employerContribution);
+      records.push(
+        {
+          employeeId,
+          tenantId,
+          component_name: "PF (Employee)",
+          component_type: "deductible",
+          value_type: "fixed",
+          calculated_amount: pfEmployee,
+          status: "active",
+          value: 12,
+          componentId: Helper.generateUUID(),
+        },
+        {
+          employeeId,
+          tenantId,
+          component_name: "PF (Employer)",
+          component_type: "deductible",
+          value_type: "employer",
+          calculated_amount: pfEmployer,
+          status: "active",
+          value: 12,
+          componentId: Helper.generateUUID(),
+        },
+      );
+    }
 
     //  Total deductions
     const totalDeductions = Math.round(
@@ -3972,6 +4245,7 @@ exports.getBillDetails = async (req, res) => {
   try {
     const tenantId = req.users && req.users.tenantId;
     const branchId = req.users && req.users.branchId;
+
     if (!branchId) {
       return Helper.response(false, "branchId is required!", {}, res, 200);
     }
@@ -4027,6 +4301,11 @@ exports.getBillDetails = async (req, res) => {
           where: { tenantId, branchId, id: item.pay_component_id },
           raw: true,
         });
+        
+        const employeeDetails=await empPersonal.findOne({
+          where:{tenantId, branchId, id:item.employeeId},
+          raw:true
+        })
 
         return {
           ...item,
@@ -4037,6 +4316,7 @@ exports.getBillDetails = async (req, res) => {
                 : allowances?.name
               : deductions?.name,
           finalAmount: item.amount,
+          shift: employeeDetails?.shift_id || null,
         };
       }),
     );
@@ -4083,6 +4363,13 @@ exports.employeeMonthlyLeaveAttendanceDetails = async (req, res) => {
 
     const startDate = moment(`${year}-${month}-01`, "YYYY-MM-DD");
     const endDate = startDate.clone().endOf("month");
+
+    // Fetch employee joining date
+    const empData = await empPersonal.findOne({
+      where: { id: employeeId, branchId },
+      attributes: ["joiningDate"],
+      raw: true,
+    });
 
     // =============================
     // FETCH DATA
@@ -4338,12 +4625,26 @@ exports.employeeMonthlyLeaveAttendanceDetails = async (req, res) => {
     // RESPONSE
     // =============================
 
+    // Determine if joining date falls in this month
+    const joiningDate = empData?.joiningDate || null;
+    const joiningInMonth = joiningDate
+      ? moment(joiningDate).isBetween(startDate, endDate, "day", "[]")
+      : false;
+
     return Helper.response(
       true,
       "Employee monthly details fetched",
       {
         attendanceList: attendanceData,
         leaveList: formattedLeaveList,
+        attendanceSetting: {
+          graceMinutes: AttendanceSettings?.graceMinutes || 0,
+          lateAllowanceMin: AttendanceSettings?.lateAllowanceMin || 0,
+          halfDayThreshold: AttendanceSettings?.halfDayThreshold || 0,
+          halfdayToAbsentMin: AttendanceSettings?.halfdayToAbsentMin || 0,
+        },
+        joiningDate,
+        joiningInMonth,
       },
       res,
       200,
@@ -4462,3 +4763,1739 @@ exports.saveSalaryDoc = async (req, res) => {
   }
 
 };
+
+exports.calculateAttendance = async (req, res) => {
+  let { employeeId, month, year } = req.body;
+  const tenantId = req.users && req.users.tenantId;
+  const branchId = req.users && req.users.branchId;
+
+  if (!branchId || branchId == "null") {
+    return Helper.response(false, "branchId is required!", {}, res, 200);
+  }
+
+  let leavebalance;
+  let data = [];
+  if (!tenantId || !employeeId) {
+    return Helper.response(
+      false,
+      "TenantId and employeeId required",
+      [],
+      res,
+      400,
+    );
+  }
+
+  try {
+    const empData = await empPersonal.findAll({
+      where: {
+        id: {
+          [Op.in]: employeeId,
+        },
+        branchId,
+      },
+      attributes: ["id", "shift_id", "joiningDate"],
+      raw: true,
+    });
+    if (!empData || empData.length == 0) {
+      return Helper.response(false, "Employee not found", [], res, 400);
+    }
+
+    const checkshift = await Shift.findAll({
+      where: {
+        tenantId,
+        branchId,
+        shift: {
+          [Op.ne]: empData.map((i) => i.shift_id).filter((s) => s != null)[0],
+        },
+      },
+      raw: true,
+    });
+    if (!checkshift) {
+      return Helper.response(false, "Create Shift First", [], res, 400);
+    }
+    // Attendance setting
+    const deduction = await attendanceSetting.findOne({
+      where: { tenantId, branchId },
+    });
+    const GRACE_MINUTES = deduction.graceMinutes;
+    const HALF_DAY_THRESHOLD = deduction.halfdayToAbsentMin; // hours
+    const HALF_DAY_CUTOFF_MINUTES = deduction.halfDayThreshold; // minutes
+    const lateAllowanceMin = deduction.lateAllowanceMin;
+
+    const employees = await bill.findAll({
+      where: {
+        employeeId: { [Op.in]: employeeId },
+        tenantId,
+        branchId,
+        month,
+        year,
+      },
+      raw: true,
+      attributes: ["employeeId"],
+    });
+
+    employeeId = employeeId.filter((item) => {
+      return !employees.some((emp) => emp.employeeId == item);
+    });
+    const attendanceEmployees = await attendance.findAll({
+      where: {
+        employeeId: { [Op.in]: employeeId },
+        month,
+        branchId,
+        year,
+        tenantId,
+      },
+      attributes: ["employeeId"],
+      raw: true,
+    });
+
+    const employeesWithAttendance = attendanceEmployees.map(
+      (emp) => emp.employeeId,
+    );
+
+    employeeId = employeeId.filter((id) =>
+      employeesWithAttendance.includes(id),
+    );
+
+    if (employeeId.length == 0) {
+      return Helper.response(
+        false,
+        "No attendance found for the selected month/year. Salary not generated.",
+        {},
+        res,
+        200,
+      );
+    }
+
+    // console.log("Proceeding salary generation for:", employeeId);
+    let absentdaysArr = [];
+    for (let i = 0; i < employeeId.length; i++) {
+      absentdaysArr = [];
+      let startDate = moment(
+        `${year}-${String(month).padStart(2, "0")}-01`,
+        "YYYY-MM-DD",
+      ).startOf("month");
+      let endDate = moment(startDate).endOf("month");
+      const employee = await empPersonal.findOne({
+        where: { id: employeeId[i], tenantId },
+        attributes: ["joiningDate", "exitDate"],
+        raw: true,
+      });
+      let newEnddate;
+      // Adjust end date based on exit date
+      if (employee?.exitDate) {
+        const exitMoment = moment(employee.exitDate);
+        // If exit is before month end, end at exit date
+        if (exitMoment.isBefore(endDate)) {
+          newEnddate = exitMoment.clone();
+        }
+      }
+
+      // Check if employee was active at all during this month
+      // if (startDate.isAfter(endDate)) {
+      //   console.log(`Skipping ${employeeId[i]} — not active in ${month}/${year}`);
+      //   continue;
+      // }
+
+      let effectiveStartDate = moment(startDate); // keep as Moment
+
+      if (employee && employee.joiningDate) {
+        const joiningMoment = moment(employee.joiningDate);
+
+        const sameMonth =
+          joiningMoment.month() == effectiveStartDate.month() &&
+          joiningMoment.year() == effectiveStartDate.year();
+
+        if (sameMonth && joiningMoment.isAfter(effectiveStartDate)) {
+          effectiveStartDate = joiningMoment.clone(); // keep as Moment
+          startDate = effectiveStartDate;
+        }
+      }
+      const CtcValue = await Basic.findOne({
+        where: {
+          tenantId,
+          branchId,
+          employeeId: employeeId[i],
+          dependent: "CTC",
+          status: "active",
+          startDate: {
+            [Op.lte]: effectiveStartDate,
+          },
+        },
+      });
+      if (!CtcValue) {
+        continue;
+        //  Helper.response(
+        //   false,
+        //   "Add Salary Component First",
+        //   [],
+        //   res,
+        //   400
+        // );
+      }
+      const PersonalInfo = await empPersonal.findOne({
+        where: {
+          id: employeeId[i],
+          branchId,
+        },
+      });
+      const empTypeData = await EmploymentType.findOne({
+        where: {
+          id: PersonalInfo?.empType,
+          status: "active",
+        },
+        raw: true,
+      });
+
+       const designationData=await Designation.findOne({
+          where:{
+            id:PersonalInfo?.designationId
+          },
+          raw:true
+        })
+
+      // Apply employment type rule on CTC
+      let totalCTC = CtcValue?.amount;
+
+      if (empTypeData?.duration_type == "half_paid") {
+        totalCTC = totalCTC / 2;
+      }
+      // const totalCTC = CtcValue?.amount;
+
+      const totalDaysInMonth = endDate.date();
+      const perMonthSalary = totalCTC / 12;
+      const perDaySalary = perMonthSalary / totalDaysInMonth;
+
+      // console.clear();
+      // Applied leaves are considered for sandwich detection; only approved
+      // leave is later treated as paid leave after balance adjustment.
+      let leaveRecords = await leave_application.findAll({
+        where: {
+          employeeId: employeeId[i],
+          branchId,
+          status: { [Op.in]: ["pending", "recommended", "approved"] },
+          [Op.or]: [
+            {
+              fromDate: {
+                [Op.between]: [
+                  startDate.format("YYYY-MM-DD"),
+                  endDate.format("YYYY-MM-DD"),
+                ],
+              },
+            },
+            {
+              toDate: {
+                [Op.between]: [
+                  startDate.format("YYYY-MM-DD"),
+                  endDate.format("YYYY-MM-DD"),
+                ],
+              },
+            },
+            {
+              fromDate: { [Op.lte]: startDate.format("YYYY-MM-DD") },
+              toDate: { [Op.gte]: endDate.format("YYYY-MM-DD") },
+            },
+          ],
+        },
+        raw: true,
+      });
+      const leaveTypeIds = [...new Set(leaveRecords.map((item) => item.leaveTypeId).filter(Boolean))];
+      const leaveTypeList = leaveTypeIds.length
+        ? await leaveMaster.findAll({
+            where: {
+              id: { [Op.in]: leaveTypeIds },
+              branchId,
+            },
+            attributes: ["id", "leaveName", "leaveCode"],
+            raw: true,
+          })
+        : [];
+      const leaveTypeMap = Object.fromEntries(
+        leaveTypeList.map((item) => [item.id, item]),
+      );
+      leaveRecords = leaveRecords.map((item) => {
+        const leaveTypeInfo = leaveTypeMap[item.leaveTypeId] || {};
+        const leaveName = String(leaveTypeInfo.leaveName || "").trim().toLowerCase();
+        const leaveCode = String(leaveTypeInfo.leaveCode || "").trim().toLowerCase();
+        const normalizedLeaveName = leaveName.replace(/\s+/g, " ");
+        return {
+          ...item,
+          leave_name: leaveTypeInfo.leaveName || null,
+          leave_code: leaveTypeInfo.leaveCode || null,
+          isRestrictedHolidayLeave:
+            normalizedLeaveName.includes("restricted") || leaveCode.startsWith("rh"),
+        };
+      });
+      leavebalance = await leave_balance.findAll({
+        where: {
+          employeeId: employeeId[i],
+          branchId,
+          tenantId,
+          year,
+          month,
+        },
+        raw: true,
+      });
+      leavebalance = await Promise.all(
+        leavebalance.map(async (item) => {
+          const leaveName = await leaveMaster.findOne({
+            where: {
+              id: item?.leaveTypeId,
+              branchId,
+            },
+          });
+          return {
+            ...item,
+            leave_name: leaveName?.leaveName,
+          };
+        }),
+      );
+
+      // Collect all holidays for tenant
+      const holidayList = await holiday.findAll({
+        where: {
+          tenantId,
+          branchId,
+          date: {
+            [Op.between]: [
+              startDate.format("YYYY-MM-DD"),
+              endDate.format("YYYY-MM-DD"),
+            ],
+          },
+        },
+        raw: true,
+      });
+      const holidayTypeIds = [...new Set(holidayList.map((item) => item.holiday_type).filter(Boolean))];
+      const holidayTypeList = holidayTypeIds.length
+        ? await HolidayType.findAll({
+            where: {
+              id: { [Op.in]: holidayTypeIds },
+              tenantId,
+              branchId,
+              status: "active",
+            },
+            attributes: ["id", "name"],
+            raw: true,
+          })
+        : [];
+      const holidayTypeMap = Object.fromEntries(
+        holidayTypeList.map((item) => [item.id, item.name]),
+      );
+      const holidayMap = Object.fromEntries(
+        holidayList.map((item) => {
+          const typeName = String(holidayTypeMap[item.holiday_type] || "").trim().toLowerCase();
+          return [
+            item.date,
+            {
+              ...item,
+              holiday_type_name: holidayTypeMap[item.holiday_type] || null,
+              isRestrictedHoliday: typeName.includes("restricted"),
+            },
+          ];
+        }),
+      );
+      leaveRecords = leaveRecords.map((item) => {
+        if (item.isRestrictedHolidayLeave) {
+          return item;
+        }
+        const fromDate = item.fromDate;
+        const toDate = item.toDate || item.fromDate;
+        const isSingleDayRestrictedHoliday =
+          fromDate &&
+          toDate &&
+          fromDate === toDate &&
+          holidayMap[fromDate]?.isRestrictedHoliday;
+        return {
+          ...item,
+          isRestrictedHolidayLeave: !!isSingleDayRestrictedHoliday,
+        };
+      });
+      // Restricted holiday dates should only be treated as a sandwich-bridging
+      // non-working day when the employee has actually applied leave for that
+      // restricted holiday, and only if they were not present (attended) on it.
+      const restrictedHolidayAppliedDates = new Set();
+      leaveRecords
+        .filter((item) => item.isRestrictedHolidayLeave)
+        .forEach((item) => {
+          const leaveStart = moment(item.fromDate);
+          const leaveEnd = item.toDate ? moment(item.toDate) : moment(item.fromDate);
+          for (
+            let d = moment(leaveStart);
+            d.isSameOrBefore(leaveEnd);
+            d.add(1, "days")
+          ) {
+            restrictedHolidayAppliedDates.add(d.format("YYYY-MM-DD"));
+          }
+        });
+
+      const restrictedHolidayDates = Object.keys(holidayMap).filter(
+        (date) => holidayMap[date]?.isRestrictedHoliday,
+      );
+      const presentRestrictedHolidayDates = new Set();
+      if (restrictedHolidayDates.length) {
+        const restrictedHolidayAttendance = await attendance.findAll({
+          where: {
+            employeeId: employeeId[i],
+            branchId,
+            check_in_time: { [Op.ne]: null },
+            check_out_time: { [Op.ne]: null },
+          },
+          raw: true,
+        });
+        restrictedHolidayAttendance.forEach((att) => {
+          const dateKey = moment(att.check_in_time).format("YYYY-MM-DD");
+          if (restrictedHolidayDates.includes(dateKey)) {
+            presentRestrictedHolidayDates.add(dateKey);
+          }
+        });
+      }
+
+      const holidays = holidayList
+        .filter((item) => {
+          if (!holidayMap[item.date]?.isRestrictedHoliday) return true;
+          return (
+            restrictedHolidayAppliedDates.has(item.date) &&
+            !presentRestrictedHolidayDates.has(item.date)
+          );
+        })
+        .map((item) => item.date);
+
+      const shiftWeekOffDates = [];
+      for (let d = moment(startDate); d.isSameOrBefore(endDate); d.add(1, "days")) {
+
+        console.log(d.format("dddd"));
+        
+        const shift = await Shift.findOne({
+          where: {
+            day_of_week: d.format("dddd"),
+            branchId,
+            // status: "active",
+            shift: PersonalInfo?.shift_id,
+            tenantId,
+          },
+          raw: true,
+        });
+        if (shift?.is_week_off) {
+          shiftWeekOffDates.push(d.format("YYYY-MM-DD"));
+        }
+      }
+      const sandwichNonWorkingDays = [...new Set([...holidays, ...shiftWeekOffDates])];
+
+      // Apply sandwich rule
+      let applysandwitchleave = Helper.applySandwichRule(
+        leaveRecords.filter((item) => !item.isRestrictedHolidayLeave),
+        sandwichNonWorkingDays,
+        startDate,
+        endDate,
+      );
+      applysandwitchleave = [
+        ...applysandwitchleave,
+        ...leaveRecords
+          .filter((item) => item.isRestrictedHolidayLeave)
+          .map((item) => ({
+            ...item,
+            leavestatus: item.status === "approved" ? "approved" : "unpaid",
+          })),
+      ];
+      const leaveDateMap1 = {};
+      for (const leave of applysandwitchleave) {
+        const leaveStart = moment(leave.fromDate);
+
+        // Handle case when toDate is null → treat as single-day leave
+        const leaveEnd = leave.toDate
+          ? moment(leave.toDate)
+          : moment(leave.fromDate);
+
+        for (
+          let d = moment(leaveStart);
+          d.isSameOrBefore(leaveEnd);
+          d.add(1, "days")
+        ) {
+          const dateKey = d.format("YYYY-MM-DD");
+          leaveDateMap1[dateKey] = leave.duration_type || "full"; // full, first_half, second_half
+        }
+      }
+
+      // Adjust leave records
+      const nonRestrictedLeaves = applysandwitchleave.filter(
+        (item) => !item.isRestrictedHolidayLeave,
+      );
+      const restrictedHolidayLeaves = applysandwitchleave
+        .filter((item) => item.isRestrictedHolidayLeave)
+        .map((item) => ({
+          ...item,
+          leavestatus: item.status === "approved" ? "approved" : "unpaid",
+        }));
+
+      // Comp-off leaves use comp_off balance, not regular leave_balance
+      const compOffLeaveIds = nonRestrictedLeaves
+        .filter((r) => r.compOffId)
+        .map((r) => r.compOffId);
+      const compOffRecords = compOffLeaveIds.length
+        ? await comp_off.findAll({
+            where: { id: { [Op.in]: compOffLeaveIds } },
+            raw: true,
+          })
+        : [];
+      const compOffMap = Object.fromEntries(
+        compOffRecords.map((r) => [r.id, r]),
+      );
+      const compOffLeaves = nonRestrictedLeaves
+        .filter((r) => r.compOffId)
+        .map((r) => {
+          const compOffRecord = compOffMap[r.compOffId];
+          const isValid =
+            compOffRecord &&
+            (compOffRecord.status === "used" ||
+              compOffRecord.status === "active");
+          return {
+            ...r,
+            leavestatus:
+              r.status === "approved" && isValid ? "approved" : "unpaid",
+            isCompOff: true,
+          };
+        });
+      const normalLeaves = nonRestrictedLeaves.filter((r) => !r.compOffId);
+
+      leaveRecords = [
+        ...Helper.adjustLeaveRecords(leavebalance, normalLeaves),
+        ...compOffLeaves,
+        ...restrictedHolidayLeaves,
+      ];
+
+      const leaveDateMap = {};
+      for (const leave of leaveRecords) {
+        const leaveStart = moment(leave.fromDate);
+
+        // Handle null toDate safely again
+        const leaveEnd = leave.toDate
+          ? moment(leave.toDate)
+          : moment(leave.fromDate);
+
+        for (
+          let d = moment(leaveStart);
+          d.isSameOrBefore(leaveEnd);
+          d.add(1, "days")
+        ) {
+          const dateKey = d.format("YYYY-MM-DD");
+          leaveDateMap[dateKey] = {
+            duration_type: leave.duration_type || "full", // full, first_half, second_half
+            leavestatus: leave.leavestatus,
+            isRestrictedHolidayLeave: !!leave.isRestrictedHolidayLeave,
+            isSandwich: !!leave.isSandwich,
+            isCompOff: !!leave.isCompOff,
+          };
+        }
+      }
+
+      // Collect working days with shifts
+      const workingDays = [];
+      let dynamicWorkingDays = 0;
+
+      for (let d = moment(startDate); d <= endDate; d.add(1, "days")) {
+        const dayName = d.format("dddd");
+        const shift = await Shift.findOne({
+          where: {
+            day_of_week: dayName,
+            branchId,
+            status: "active",
+            shift: PersonalInfo?.shift_id,
+            tenantId,
+          },
+          raw: true,
+        });
+
+        workingDays.push({ date: d.clone(), shift });
+        dynamicWorkingDays++;
+      }
+
+      let fullDays = 0;
+      let halfDays = 0;
+      let lateDays = 0;
+      let graceLateCount = 0;
+      let absentDays = 0;
+
+      for (let entry of workingDays) {
+        const date = entry.date;
+        const shift = entry.shift;
+        const dayStr = date.format("YYYY-MM-DD");
+
+        const startOfDayUTC = `${dayStr} 00:00:00`;
+        const endOfDayUTC = `${dayStr} 23:59:59`;
+        if (new Date(newEnddate) < new Date(date)) {
+          absentdaysArr.push({
+            date: dayStr,
+            reason: "Left Employee",
+          });
+          absentDays++;
+          continue;
+        }
+        if (!shift || shift.is_week_off) {
+          const sandwichLeave = leaveDateMap[dayStr];
+          if (sandwichLeave?.isSandwich && sandwichLeave?.leavestatus === "unpaid") {
+            absentdaysArr.push({ date: dayStr, reason: "Sandwich leave unpaid" });
+            absentDays++;
+          } else {
+            fullDays++;
+          }
+          continue;
+        }
+        const getMonthlyAttendance = await attendance.findAll({
+          where: {
+            employeeId: employeeId[i],
+            tenantId,
+            branchId,
+            month,
+            year,
+          },
+          raw: true,
+        });
+        if (getMonthlyAttendance && getMonthlyAttendance.length > 0) {
+          if (!shift || shift.is_week_off) {
+            fullDays++;
+            continue;
+          }
+        }
+        // else if(getMonthlyAttendance.length == 0)
+        //   {
+        //         absentDays++;
+        //     continue;
+        // }
+        
+       
+
+        const attendances = await attendance.findOne({
+          where: {
+            employeeId: employeeId[i],
+            branchId,
+            check_in_time: {
+              [Op.between]: [startOfDayUTC, endOfDayUTC],
+            },
+          },
+          raw: true,
+        });
+        // console.log(attendances,"attendance data")
+        // console.log(startOfDayUTC,endOfDayUTC)
+        if (
+          !attendances ||
+          !attendances.check_in_time ||
+          !attendances.check_out_time
+        ) {
+          const leaveType = leaveDateMap[dayStr];
+          const holidaydata = holidayMap[dayStr];
+
+          // if(holidaydata){
+          //   fullDays++
+          // }
+
+          // else
+          if (
+            holidaydata?.isRestrictedHoliday &&
+            leaveType?.isRestrictedHolidayLeave &&
+            leaveType?.leavestatus == "approved"
+          ) {
+            fullDays++;
+          } else if (leaveType?.leavestatus == "approved") {
+            if (
+              leaveType?.duration_type == "first_half" ||
+              leaveType?.duration_type == "second_half"
+            ) {
+              halfDays++;
+            } else {
+              fullDays++;
+            }
+          } else if (
+            leaveType?.duration_type == "full" &&
+            leaveType?.leavestatus == "unpaid"
+          ) {
+            absentdaysArr.push({
+              date: dayStr,
+              reason: "Leave Not Available",
+            });
+            absentDays++;
+          } else if (
+            leaveType?.duration_type == "first_half" ||
+            leaveType?.duration_type == "second_half"
+          ) {
+            absentdaysArr.push({
+              date: dayStr,
+              reason: "halfDays applied",
+            });
+            halfDays++;
+          }
+          //  else if (
+          //   getMonthlyAttendance &&
+          //   getMonthlyAttendance.length > 0
+          // ) {
+
+          //   fullDays++;
+          // }
+          else if (holidaydata && !holidaydata.isRestrictedHoliday) {
+            fullDays++;
+          } else if (leaveType?.duration_type == "half_full") {
+            absentdaysArr.push({
+              date: dayStr,
+              reason: "halfDays applied",
+            });
+            halfDays++;
+          } else if (leaveType?.leavestatus == "approved") {
+            fullDays++;
+          } else {
+            absentdaysArr.push({
+              date: dayStr,
+              reason: "Attendance and Leave not available",
+            });
+            // console.log("absentdayasss");
+            absentDays++;
+          }
+          continue;
+        }
+
+        // const shiftStart = moment(
+        //   `${dayStr} ${shift.startTime}`,
+        //   "YYYY-MM-DD HH:mm:ss"
+        // );
+        const shiftStart = moment(
+          `${dayStr} ${shift.startTime}`,
+          "YYYY-MM-DD HH:mm:ss",
+        )
+          .seconds(0)
+          .milliseconds(0);
+
+        const checkIn = moment(attendances.check_in_time)
+          .seconds(0)
+          .milliseconds(0);
+        // const checkIn = moment(attendances.check_in_time);
+        const checkOut = moment(attendances.check_out_time);
+
+        const workedHours = moment.duration(checkOut.diff(checkIn)).asHours();
+        const graceTime = shiftStart.clone().add(GRACE_MINUTES, "minutes");
+        const halfDayTime = shiftStart
+          .clone()
+          .add(HALF_DAY_CUTOFF_MINUTES, "minutes");
+
+        if (workedHours < HALF_DAY_THRESHOLD) {
+          absentdaysArr.push({
+            date: dayStr,
+            reason: "Late Attendance",
+          });
+          absentDays++;
+          continue;
+        }
+        const leaveType = leaveDateMap[dayStr];
+
+        if (checkIn.isAfter(halfDayTime)) {
+          if (leaveType && leaveType.leavestatus == "approved") {
+            fullDays++;
+          } else {
+            absentdaysArr.push({
+              date: dayStr,
+              reason: "late Attendance halfDays",
+            });
+            halfDays++;
+          }
+          // halfDays++;
+        } else if (checkIn.isAfter(graceTime)) {
+          lateDays++;
+          if (graceLateCount < lateAllowanceMin) {
+            graceLateCount++;
+            fullDays++;
+          } else {
+            if (leaveType && leaveType.leavestatus == "approved") {
+              fullDays++;
+            } else {
+              absentdaysArr.push({
+                date: dayStr,
+                reason: "late attendance halfDays",
+              });
+              halfDays++;
+            }
+            // halfDays++;
+          }
+        } else {
+          // Early checkout check
+          const shiftEnd = moment(
+            `${dayStr} ${shift.endTime}`,
+            "YYYY-MM-DD HH:mm:ss",
+          ).seconds(0).milliseconds(0);
+          // Handle overnight shift (end < start means next day)
+          if (shiftEnd.isBefore(shiftStart)) shiftEnd.add(1, "day");
+
+          if (checkOut.isBefore(shiftEnd)) {
+            // Checkout before shift end
+            // If leave is approved AND balance available → no deduction (full day)
+            // Otherwise (no leave / not approved / no balance) → half day deduct
+            if (leaveType && leaveType.leavestatus === "approved") {
+              fullDays++;
+            } else {
+              absentdaysArr.push({
+                date: dayStr,
+                reason: "Early checkout - no approved leave",
+              });
+              halfDays++;
+            }
+          } else {
+            fullDays++;
+          }
+        }
+      }
+
+      const totalLeaveDays = Object.values(leaveDateMap1).reduce(
+        (acc, type) => {
+          return acc + (type == "full" ? 1 : 0.5);
+        },
+        0,
+      );
+
+      const bonusallowanceamount = await allowance.findOne({
+        where: {
+          employeeId: employeeId[i],
+          branchId,
+          status: "active",
+          type: "is_special",
+          [Op.and]: [
+            { startDate: { [Op.lte]: endDate } }, // record starts before your range ends
+            {
+              [Op.or]: [
+                { endDate: { [Op.gte]: startDate } }, // record ends after your range starts
+                { endDate: null }, // OR no endDate (open-ended)
+              ],
+            },
+          ],
+        },
+        raw: true,
+        attributes: [[fn("SUM", col("finalAmount")), "totalBonus"]],
+      });
+      const bonusdedamount = await deductionS.findOne({
+        where: {
+          employeeId: employeeId[i],
+          branchId,
+          status: "active",
+          type: "is_special",
+          [Op.and]: [
+            { startDate: { [Op.lte]: endDate } }, // record starts before your range ends
+            {
+              [Op.or]: [
+                { endDate: { [Op.gte]: startDate } }, // record ends after your range starts
+                { endDate: null }, // OR no endDate (open-ended)
+              ],
+            },
+          ],
+        },
+        raw: true,
+        attributes: [[fn("SUM", col("finalAmount")), "totalBonus"]],
+      });
+      let bonusamount =
+        Number(bonusallowanceamount?.totalBonus) +
+        Number(bonusdedamount?.totalBonus);
+
+      const allowedLeave = leavebalance.reduce((acc, remainingLeaves) => {
+        return acc + Number(remainingLeaves.remainingLeaves);
+      }, 0);
+
+      // let basePay = (
+      //   fullDays * perDaySalary +
+      //   halfDays * perDaySalary * 0.5
+      // ).toFixed(2);
+      let basePay = fullDays * perDaySalary + halfDays * perDaySalary * 0.5;
+      basePay = Math.round(basePay);
+      fullDays = fullDays + halfDays * 0.5;
+
+      const TotalSalary = totalDaysInMonth * perDaySalary;
+
+      const shiftName = await Shift.findOne({
+        where: {
+          shift: PersonalInfo?.shift_id,
+        },
+        raw: true,
+      });
+
+      data.push({
+        employeeId: employeeId[i],
+        employeeName: `${PersonalInfo?.firstName} ${PersonalInfo?.lastName}`,
+        empCode: PersonalInfo?.empCode,
+        month,
+        year,
+        fullDays,
+        halfDays,
+        lateDays,
+        graceLateUsed: graceLateCount,
+        absentDays,
+        absentdaysArr,
+        allowedLeave,
+        bonusamount,
+        leavebalance,
+        empType: empTypeData?.duration_type,
+        totalWorkingDays: dynamicWorkingDays,
+        TotalSalary: Math.round(TotalSalary),
+        totalDaysInMonth,
+        perDaySalary: Math.round(perDaySalary),
+        totalLeaveDays,
+        applysandwitchleave,
+        basePay: basePay + bonusamount,
+        totalDeduction: Math.round(perMonthSalary - basePay),
+        shift_id: shiftName?.id,
+        shift_name: shiftName?.shift,
+        designation_name: designationData?.name,
+      });
+    }
+    if (data.length == 0) {
+      return Helper.response(
+        false,
+        "Salary already generated for all selected employees",
+        [],
+        res,
+        400,
+      );
+    }
+    return Helper.response(true, "Record Found Successfully!", data, res, 200);
+  } catch (error) {
+    console.error("Attendance calculation error:", error);
+    return Helper.response(false, error?.message, [], res, 500);
+  }
+};
+
+// commented by 4may-2024 as this is not in use and also the logic is not correct as we are calculating attendance based on check-in and check-out time but we should calculate based on shift timings and also we are not considering the holidays and week offs
+// exports.calculateAttendance = async (req, res) => {
+//   let { employeeId, month, year } = req.body;
+//   const tenantId = req.users && req.users.tenantId;
+//   const branchId = req.users && req.users.branchId;
+
+//   if (!branchId || branchId == "null") {
+//     return Helper.response(false, "branchId is required!", {}, res, 200);
+//   }
+
+//   let leavebalance;
+//   let data = [];
+//   if (!tenantId || !employeeId) {
+//     return Helper.response(
+//       false,
+//       "TenantId and employeeId required",
+//       [],
+//       res,
+//       400,
+//     );
+//   }
+
+//   try {
+//     const empData = await empPersonal.findAll({
+//       where: {
+//         id: {
+//           [Op.in]: employeeId,
+//         },
+//         branchId,
+//       },
+//       attributes: ["id", "shift_id", "joiningDate"],
+//       raw: true,
+//     });
+//     if (!empData || empData.length == 0) {
+//       return Helper.response(false, "Employee not found", [], res, 400);
+//     }
+
+//     const checkshift = await Shift.findAll({
+//       where: {
+//         tenantId,
+//         branchId,
+//         shift: {
+//           [Op.ne]: empData.map((i) => i.shift_id).filter((s) => s != null)[0],
+//         },
+//       },
+//       raw: true,
+//     });
+//     if (!checkshift) {
+//       return Helper.response(false, "Create Shift First", [], res, 400);
+//     }
+//     // Attendance setting
+//     const deduction = await attendanceSetting.findOne({
+//       where: { tenantId, branchId },
+//     });
+//     const GRACE_MINUTES = deduction.graceMinutes;
+//     const HALF_DAY_THRESHOLD = deduction.halfdayToAbsentMin; // hours
+//     const HALF_DAY_CUTOFF_MINUTES = deduction.halfDayThreshold; // minutes
+//     const lateAllowanceMin = deduction.lateAllowanceMin;
+
+//     const employees = await bill.findAll({
+//       where: {
+//         employeeId: { [Op.in]: employeeId },
+//         tenantId,
+//         branchId,
+//         month,
+//         year,
+//       },
+//       raw: true,
+//       attributes: ["employeeId"],
+//     });
+
+//     employeeId = employeeId.filter((item) => {
+//       return !employees.some((emp) => emp.employeeId == item);
+//     });
+//     const attendanceEmployees = await attendance.findAll({
+//       where: {
+//         employeeId: { [Op.in]: employeeId },
+//         month,
+//         branchId,
+//         year,
+//         tenantId,
+//       },
+//       attributes: ["employeeId"],
+//       raw: true,
+//     });
+
+//     const employeesWithAttendance = attendanceEmployees.map(
+//       (emp) => emp.employeeId,
+//     );
+
+//     employeeId = employeeId.filter((id) =>
+//       employeesWithAttendance.includes(id),
+//     );
+
+//     if (employeeId.length == 0) {
+//       return Helper.response(
+//         false,
+//         "No attendance found for the selected month/year. Salary not generated.",
+//         {},
+//         res,
+//         200,
+//       );
+//     }
+
+//     // console.log("Proceeding salary generation for:", employeeId);
+//     let absentdaysArr = [];
+//     for (let i = 0; i < employeeId.length; i++) {
+//       absentdaysArr = [];
+//       let startDate = moment(
+//         `${year}-${String(month).padStart(2, "0")}-01`,
+//         "YYYY-MM-DD",
+//       ).startOf("month");
+//       let endDate = moment(startDate).endOf("month");
+//       const employee = await empPersonal.findOne({
+//         where: { id: employeeId[i], tenantId },
+//         attributes: ["joiningDate", "exitDate"],
+//         raw: true,
+//       });
+//       let newEnddate;
+//       // Adjust end date based on exit date
+//       if (employee?.exitDate) {
+//         const exitMoment = moment(employee.exitDate);
+//         // If exit is before month end, end at exit date
+//         if (exitMoment.isBefore(endDate)) {
+//           newEnddate = exitMoment.clone();
+//         }
+//       }
+
+//       // Check if employee was active at all during this month
+//       // if (startDate.isAfter(endDate)) {
+//       //   console.log(`Skipping ${employeeId[i]} — not active in ${month}/${year}`);
+//       //   continue;
+//       // }
+
+//       let effectiveStartDate = moment(startDate); // keep as Moment
+
+//       if (employee && employee.joiningDate) {
+//         const joiningMoment = moment(employee.joiningDate);
+
+//         const sameMonth =
+//           joiningMoment.month() == effectiveStartDate.month() &&
+//           joiningMoment.year() == effectiveStartDate.year();
+
+//         if (sameMonth && joiningMoment.isAfter(effectiveStartDate)) {
+//           effectiveStartDate = joiningMoment.clone(); // keep as Moment
+//           startDate = effectiveStartDate;
+//         }
+//       }
+//       const CtcValue = await Basic.findOne({
+//         where: {
+//           tenantId,
+//           branchId,
+//           employeeId: employeeId[i],
+//           dependent: "CTC",
+//           status: "active",
+//           startDate: {
+//             [Op.lte]: effectiveStartDate,
+//           },
+//         },
+//       });
+//       if (!CtcValue) {
+//         continue;
+//         //  Helper.response(
+//         //   false,
+//         //   "Add Salary Component First",
+//         //   [],
+//         //   res,
+//         //   400
+//         // );
+//       }
+//       const PersonalInfo = await empPersonal.findOne({
+//         where: {
+//           id: employeeId[i],
+//           branchId,
+//         },
+//       });
+//       const empTypeData = await EmploymentType.findOne({
+//         where: {
+//           id: PersonalInfo?.empType,
+//           status: "active",
+//         },
+//         raw: true,
+//       });
+
+//        const designationData=await Designation.findOne({
+//           where:{
+//             id:PersonalInfo?.designationId
+//           },
+//           raw:true
+//         })
+
+//       // Apply employment type rule on CTC
+//       let totalCTC = CtcValue?.amount;
+
+//       if (empTypeData?.duration_type == "half_paid") {
+//         totalCTC = totalCTC / 2;
+//       }
+//       // const totalCTC = CtcValue?.amount;
+
+//       const totalDaysInMonth = endDate.date();
+//       const perMonthSalary = totalCTC / 12;
+//       const perDaySalary = perMonthSalary / totalDaysInMonth;
+
+//       // console.clear();
+//       // Applied leaves are considered for sandwich detection; only approved
+//       // leave is later treated as paid leave after balance adjustment.
+//       let leaveRecords = await leave_application.findAll({
+//         where: {
+//           employeeId: employeeId[i],
+//           branchId,
+//           status: { [Op.in]: ["pending", "recommended", "approved"] },
+//           [Op.or]: [
+//             {
+//               fromDate: {
+//                 [Op.between]: [
+//                   startDate.format("YYYY-MM-DD"),
+//                   endDate.format("YYYY-MM-DD"),
+//                 ],
+//               },
+//             },
+//             {
+//               toDate: {
+//                 [Op.between]: [
+//                   startDate.format("YYYY-MM-DD"),
+//                   endDate.format("YYYY-MM-DD"),
+//                 ],
+//               },
+//             },
+//             {
+//               fromDate: { [Op.lte]: startDate.format("YYYY-MM-DD") },
+//               toDate: { [Op.gte]: endDate.format("YYYY-MM-DD") },
+//             },
+//           ],
+//         },
+//         raw: true,
+//       });
+//       const leaveTypeIds = [...new Set(leaveRecords.map((item) => item.leaveTypeId).filter(Boolean))];
+//       const leaveTypeList = leaveTypeIds.length
+//         ? await leaveMaster.findAll({
+//             where: {
+//               id: { [Op.in]: leaveTypeIds },
+//               branchId,
+//             },
+//             attributes: ["id", "leaveName", "leaveCode"],
+//             raw: true,
+//           })
+//         : [];
+//       const leaveTypeMap = Object.fromEntries(
+//         leaveTypeList.map((item) => [item.id, item]),
+//       );
+//       leaveRecords = leaveRecords.map((item) => {
+//         const leaveTypeInfo = leaveTypeMap[item.leaveTypeId] || {};
+//         const leaveName = String(leaveTypeInfo.leaveName || "").trim().toLowerCase();
+//         const leaveCode = String(leaveTypeInfo.leaveCode || "").trim().toLowerCase();
+//         const normalizedLeaveName = leaveName.replace(/\s+/g, " ");
+//         return {
+//           ...item,
+//           leave_name: leaveTypeInfo.leaveName || null,
+//           leave_code: leaveTypeInfo.leaveCode || null,
+//           isRestrictedHolidayLeave:
+//             normalizedLeaveName.includes("restricted") || leaveCode.startsWith("rh"),
+//         };
+//       });
+//       leavebalance = await leave_balance.findAll({
+//         where: {
+//           employeeId: employeeId[i],
+//           branchId,
+//           tenantId,
+//           year,
+//           month,
+//         },
+//         raw: true,
+//       });
+//       leavebalance = await Promise.all(
+//         leavebalance.map(async (item) => {
+//           const leaveName = await leaveMaster.findOne({
+//             where: {
+//               id: item?.leaveTypeId,
+//               branchId,
+//             },
+//           });
+//           return {
+//             ...item,
+//             leave_name: leaveName?.leaveName,
+//           };
+//         }),
+//       );
+
+//       // Collect all holidays for tenant
+//       const holidayList = await holiday.findAll({
+//         where: {
+//           tenantId,
+//           branchId,
+//           date: {
+//             [Op.between]: [
+//               startDate.format("YYYY-MM-DD"),
+//               endDate.format("YYYY-MM-DD"),
+//             ],
+//           },
+//         },
+//         raw: true,
+//       });
+//       const holidayTypeIds = [...new Set(holidayList.map((item) => item.holiday_type).filter(Boolean))];
+//       const holidayTypeList = holidayTypeIds.length
+//         ? await HolidayType.findAll({
+//             where: {
+//               id: { [Op.in]: holidayTypeIds },
+//               tenantId,
+//               branchId,
+//               status: "active",
+//             },
+//             attributes: ["id", "name"],
+//             raw: true,
+//           })
+//         : [];
+//       const holidayTypeMap = Object.fromEntries(
+//         holidayTypeList.map((item) => [item.id, item.name]),
+//       );
+//       const holidayMap = Object.fromEntries(
+//         holidayList.map((item) => {
+//           const typeName = String(holidayTypeMap[item.holiday_type] || "").trim().toLowerCase();
+//           return [
+//             item.date,
+//             {
+//               ...item,
+//               holiday_type_name: holidayTypeMap[item.holiday_type] || null,
+//               isRestrictedHoliday: typeName === "restricted holiday",
+//             },
+//           ];
+//         }),
+//       );
+//       leaveRecords = leaveRecords.map((item) => {
+//         if (item.isRestrictedHolidayLeave) {
+//           return item;
+//         }
+//         const fromDate = item.fromDate;
+//         const toDate = item.toDate || item.fromDate;
+//         const isSingleDayRestrictedHoliday =
+//           fromDate &&
+//           toDate &&
+//           fromDate === toDate &&
+//           holidayMap[fromDate]?.isRestrictedHoliday;
+//         return {
+//           ...item,
+//           isRestrictedHolidayLeave: !!isSingleDayRestrictedHoliday,
+//         };
+//       });
+//       const holidays = holidayList
+//         .filter((item) => !holidayMap[item.date]?.isRestrictedHoliday)
+//         .map((item) => item.date);
+
+//       const shiftWeekOffDates = [];
+//       for (let d = moment(startDate); d.isSameOrBefore(endDate); d.add(1, "days")) {
+
+//         console.log(d.format("dddd"));
+        
+//         const shift = await Shift.findOne({
+//           where: {
+//             day_of_week: d.format("dddd"),
+//             branchId,
+//             // status: "active",
+//             shift: PersonalInfo?.shift_id,
+//             tenantId,
+//           },
+//           raw: true,
+//         });
+//         if (shift?.is_week_off) {
+//           shiftWeekOffDates.push(d.format("YYYY-MM-DD"));
+//         }
+//       }
+//       const sandwichNonWorkingDays = [...new Set([...holidays, ...shiftWeekOffDates])];
+
+//       // Apply sandwich rule
+//       let applysandwitchleave = Helper.applySandwichRule(
+//         leaveRecords.filter((item) => !item.isRestrictedHolidayLeave),
+//         sandwichNonWorkingDays,
+//         startDate,
+//         endDate,
+//       );
+//       applysandwitchleave = [
+//         ...applysandwitchleave,
+//         ...leaveRecords
+//           .filter((item) => item.isRestrictedHolidayLeave)
+//           .map((item) => ({
+//             ...item,
+//             leavestatus: item.status === "approved" ? "approved" : "unpaid",
+//           })),
+//       ];
+//       const leaveDateMap1 = {};
+//       for (const leave of applysandwitchleave) {
+//         const leaveStart = moment(leave.fromDate);
+
+//         // Handle case when toDate is null → treat as single-day leave
+//         const leaveEnd = leave.toDate
+//           ? moment(leave.toDate)
+//           : moment(leave.fromDate);
+
+//         for (
+//           let d = moment(leaveStart);
+//           d.isSameOrBefore(leaveEnd);
+//           d.add(1, "days")
+//         ) {
+//           const dateKey = d.format("YYYY-MM-DD");
+//           leaveDateMap1[dateKey] = leave.duration_type || "full"; // full, first_half, second_half
+//         }
+//       }
+
+//       // Adjust leave records
+//       const nonRestrictedLeaves = applysandwitchleave.filter(
+//         (item) => !item.isRestrictedHolidayLeave,
+//       );
+//       const restrictedHolidayLeaves = applysandwitchleave
+//         .filter((item) => item.isRestrictedHolidayLeave)
+//         .map((item) => ({
+//           ...item,
+//           leavestatus: item.status === "approved" ? "approved" : "unpaid",
+//         }));
+
+//       // Comp-off leaves use comp_off balance, not regular leave_balance
+//       const compOffLeaveIds = nonRestrictedLeaves
+//         .filter((r) => r.compOffId)
+//         .map((r) => r.compOffId);
+//       const compOffRecords = compOffLeaveIds.length
+//         ? await comp_off.findAll({
+//             where: { id: { [Op.in]: compOffLeaveIds } },
+//             raw: true,
+//           })
+//         : [];
+//       const compOffMap = Object.fromEntries(
+//         compOffRecords.map((r) => [r.id, r]),
+//       );
+//       const compOffLeaves = nonRestrictedLeaves
+//         .filter((r) => r.compOffId)
+//         .map((r) => {
+//           const compOffRecord = compOffMap[r.compOffId];
+//           const isValid =
+//             compOffRecord &&
+//             (compOffRecord.status === "used" ||
+//               compOffRecord.status === "active");
+//           return {
+//             ...r,
+//             leavestatus:
+//               r.status === "approved" && isValid ? "approved" : "unpaid",
+//             isCompOff: true,
+//           };
+//         });
+//       const normalLeaves = nonRestrictedLeaves.filter((r) => !r.compOffId);
+
+//       leaveRecords = [
+//         ...Helper.adjustLeaveRecords(leavebalance, normalLeaves),
+//         ...compOffLeaves,
+//         ...restrictedHolidayLeaves,
+//       ];
+
+//       const leaveDateMap = {};
+//       for (const leave of leaveRecords) {
+//         const leaveStart = moment(leave.fromDate);
+
+//         // Handle null toDate safely again
+//         const leaveEnd = leave.toDate
+//           ? moment(leave.toDate)
+//           : moment(leave.fromDate);
+
+//         for (
+//           let d = moment(leaveStart);
+//           d.isSameOrBefore(leaveEnd);
+//           d.add(1, "days")
+//         ) {
+//           const dateKey = d.format("YYYY-MM-DD");
+//           const existing = leaveDateMap[dateKey];
+//           const newType = leave.duration_type || "full";
+
+//           // If same date already has a half-day leave and new one is the other half
+//           // → treat as full day (both halves covered = full day absent/deduct)
+//           let resolvedType = newType;
+//           if (existing) {
+//             const prev = existing.duration_type;
+//             if (
+//               (prev === "first_half" && newType === "second_half") ||
+//               (prev === "second_half" && newType === "first_half")
+//             ) {
+//               resolvedType = "full";
+//             }
+//           }
+
+//           leaveDateMap[dateKey] = {
+//             duration_type: resolvedType,
+//             leavestatus: leave.leavestatus,
+//             isRestrictedHolidayLeave: !!leave.isRestrictedHolidayLeave,
+//             isSandwich: !!leave.isSandwich,
+//             isCompOff: !!leave.isCompOff,
+//           };
+//         }
+//       }
+
+//       // Collect working days with shifts
+//       const workingDays = [];
+//       let dynamicWorkingDays = 0;
+
+//       for (let d = moment(startDate); d <= endDate; d.add(1, "days")) {
+//         const dayName = d.format("dddd");
+//         const shift = await Shift.findOne({
+//           where: {
+//             day_of_week: dayName,
+//             branchId,
+//             status: "active",
+//             shift: PersonalInfo?.shift_id,
+//             tenantId,
+//           },
+//           raw: true,
+//         });
+
+//         workingDays.push({ date: d.clone(), shift });
+//         dynamicWorkingDays++;
+//       }
+
+//       let fullDays = 0;
+//       let halfDays = 0;
+//       let lateDays = 0;
+//       let graceLateCount = 0;
+//       let absentDays = 0;
+
+//       for (let entry of workingDays) {
+//         const date = entry.date;
+//         const shift = entry.shift;
+//         const dayStr = date.format("YYYY-MM-DD");
+
+//         const startOfDayUTC = `${dayStr} 00:00:00`;
+//         const endOfDayUTC = `${dayStr} 23:59:59`;
+//         if (new Date(newEnddate) < new Date(date)) {
+//           absentdaysArr.push({
+//             date: dayStr,
+//             reason: "Left Employee",
+//           });
+//           absentDays++;
+//           continue;
+//         }
+//         if (!shift || shift.is_week_off) {
+//           const sandwichLeave = leaveDateMap[dayStr];
+//           if (sandwichLeave?.isSandwich && sandwichLeave?.leavestatus === "unpaid") {
+//             absentdaysArr.push({ date: dayStr, reason: "Sandwich leave unpaid" });
+//             absentDays++;
+//           } else {
+//             fullDays++;
+//           }
+//           continue;
+//         }
+//         const getMonthlyAttendance = await attendance.findAll({
+//           where: {
+//             employeeId: employeeId[i],
+//             tenantId,
+//             branchId,
+//             month,
+//             year,
+//           },
+//           raw: true,
+//         });
+//         if (getMonthlyAttendance && getMonthlyAttendance.length > 0) {
+//           if (!shift || shift.is_week_off) {
+//             fullDays++;
+//             continue;
+//           }
+//         }
+//         // else if(getMonthlyAttendance.length == 0)
+//         //   {
+//         //         absentDays++;
+//         //     continue;
+//         // }
+        
+       
+
+//         const attendances = await attendance.findOne({
+//           where: {
+//             employeeId: employeeId[i],
+//             branchId,
+//             check_in_time: {
+//               [Op.between]: [startOfDayUTC, endOfDayUTC],
+//             },
+//           },
+//           raw: true,
+//         });
+//         // console.log(attendances,"attendance data")
+//         // console.log(startOfDayUTC,endOfDayUTC)
+//         if (
+//           !attendances ||
+//           !attendances.check_in_time ||
+//           !attendances.check_out_time
+//         ) {
+//           const leaveType = leaveDateMap[dayStr];
+//           const holidaydata = holidayMap[dayStr];
+
+//           // if(holidaydata){
+//           //   fullDays++
+//           // }
+
+//           // else
+//           if (
+//             holidaydata?.isRestrictedHoliday &&
+//             leaveType?.isRestrictedHolidayLeave &&
+//             leaveType?.leavestatus == "approved"
+//           ) {
+//             fullDays++;
+//           } else if (leaveType?.leavestatus == "approved") {
+//             if (
+//               leaveType?.duration_type == "first_half" ||
+//               leaveType?.duration_type == "second_half"
+//             ) {
+//               fullDays++;
+//             } else {
+//               fullDays++;
+//             }
+//           } else if (
+//             leaveType?.duration_type == "full" &&
+//             leaveType?.leavestatus == "unpaid"
+//           ) {
+//             absentdaysArr.push({
+//               date: dayStr,
+//               reason: "Leave Not Available",
+//             });
+//             absentDays++;
+//           } else if (
+//             leaveType?.duration_type == "first_half" ||
+//             leaveType?.duration_type == "second_half"
+//           ) {
+//             absentdaysArr.push({
+//               date: dayStr,
+//               reason: "halfDays applied",
+//             });
+//             halfDays++;
+//           }
+//           //  else if (
+//           //   getMonthlyAttendance &&
+//           //   getMonthlyAttendance.length > 0
+//           // ) {
+
+//           //   fullDays++;
+//           // }
+//           else if (holidaydata && !holidaydata.isRestrictedHoliday) {
+//             fullDays++;
+//           } else if (leaveType?.duration_type == "half_full") {
+//             absentdaysArr.push({
+//               date: dayStr,
+//               reason: "halfDays applied",
+//             });
+//             halfDays++;
+//           } else if (leaveType?.leavestatus == "approved") {
+//             fullDays++;
+//           } else {
+//             absentdaysArr.push({
+//               date: dayStr,
+//               reason: "Attendance and Leave not available",
+//             });
+//             // console.log("absentdayasss");
+//             absentDays++;
+//           }
+//           continue;
+//         }
+
+//         // const shiftStart = moment(
+//         //   `${dayStr} ${shift.startTime}`,
+//         //   "YYYY-MM-DD HH:mm:ss"
+//         // );
+//         const shiftStart = moment(
+//           `${dayStr} ${shift.startTime}`,
+//           "YYYY-MM-DD HH:mm:ss",
+//         )
+//           .seconds(0)
+//           .milliseconds(0);
+
+//         const checkIn = moment(attendances.check_in_time)
+//           .seconds(0)
+//           .milliseconds(0);
+//         // const checkIn = moment(attendances.check_in_time);
+//         const checkOut = moment(attendances.check_out_time);
+
+//         const workedHours = moment.duration(checkOut.diff(checkIn)).asHours();
+//         const graceTime = shiftStart.clone().add(GRACE_MINUTES, "minutes");
+//         const halfDayTime = shiftStart
+//           .clone()
+//           .add(HALF_DAY_CUTOFF_MINUTES, "minutes");
+
+//         if (workedHours < HALF_DAY_THRESHOLD) {
+//           absentdaysArr.push({
+//             date: dayStr,
+//             reason: "Late Attendance",
+//           });
+//           absentDays++;
+//           continue;
+//         }
+//         const leaveType = leaveDateMap[dayStr];
+
+//         if (checkIn.isAfter(halfDayTime)) {
+//           if (leaveType && leaveType.leavestatus == "approved") {
+//             fullDays++;
+//           } else {
+//             absentdaysArr.push({
+//               date: dayStr,
+//               reason: "late Attendance halfDays",
+//             });
+//             halfDays++;
+//           }
+//           // halfDays++;
+//         } else if (checkIn.isAfter(graceTime)) {
+//           lateDays++;
+//           if (graceLateCount < lateAllowanceMin) {
+//             graceLateCount++;
+//             fullDays++;
+//           } else {
+//             if (leaveType && leaveType.leavestatus == "approved") {
+//               fullDays++;
+//             } else {
+//               absentdaysArr.push({
+//                 date: dayStr,
+//                 reason: "late attendance halfDays",
+//               });
+//               halfDays++;
+//             }
+//             // halfDays++;
+//           }
+//         } else {
+//           // if (workedHours < parseFloat(shift.workingHours)) {
+//           //   halfDays++;
+//           // } else {
+//           //   fullDays++;
+//           // }
+//           fullDays++;
+//           //console.log("Full day for", halfDays,"Worked Hours:", workedHours,"Working Hours:",shift.workingHours);
+//         }
+//       }
+
+//       const totalLeaveDays = Object.values(leaveDateMap1).reduce(
+//         (acc, type) => {
+//           return acc + (type == "full" ? 1 : 0.5);
+//         },
+//         0,
+//       );
+
+//       const bonusallowanceamount = await allowance.findOne({
+//         where: {
+//           employeeId: employeeId[i],
+//           branchId,
+//           status: "active",
+//           type: "is_special",
+//           [Op.and]: [
+//             { startDate: { [Op.lte]: endDate } }, // record starts before your range ends
+//             {
+//               [Op.or]: [
+//                 { endDate: { [Op.gte]: startDate } }, // record ends after your range starts
+//                 { endDate: null }, // OR no endDate (open-ended)
+//               ],
+//             },
+//           ],
+//         },
+//         raw: true,
+//         attributes: [[fn("SUM", col("finalAmount")), "totalBonus"]],
+//       });
+//       const bonusdedamount = await deductionS.findOne({
+//         where: {
+//           employeeId: employeeId[i],
+//           branchId,
+//           status: "active",
+//           type: "is_special",
+//           [Op.and]: [
+//             { startDate: { [Op.lte]: endDate } }, // record starts before your range ends
+//             {
+//               [Op.or]: [
+//                 { endDate: { [Op.gte]: startDate } }, // record ends after your range starts
+//                 { endDate: null }, // OR no endDate (open-ended)
+//               ],
+//             },
+//           ],
+//         },
+//         raw: true,
+//         attributes: [[fn("SUM", col("finalAmount")), "totalBonus"]],
+//       });
+//       let bonusamount =
+//         Number(bonusallowanceamount?.totalBonus) +
+//         Number(bonusdedamount?.totalBonus);
+
+//       const allowedLeave = leavebalance.reduce((acc, remainingLeaves) => {
+//         return acc + Number(remainingLeaves.remainingLeaves);
+//       }, 0);
+
+//       // let basePay = (
+//       //   fullDays * perDaySalary +
+//       //   halfDays * perDaySalary * 0.5
+//       // ).toFixed(2);
+//       let basePay = fullDays * perDaySalary + halfDays * perDaySalary * 0.5;
+//       basePay = Math.round(basePay);
+//       fullDays = fullDays + halfDays * 0.5;
+
+//       const TotalSalary = totalDaysInMonth * perDaySalary;
+
+//       const shiftName = await Shift.findOne({
+//         where: {
+//           shift: PersonalInfo?.shift_id,
+//         },
+//         raw: true,
+//       });
+
+//       data.push({
+//         employeeId: employeeId[i],
+//         employeeName: `${PersonalInfo?.firstName} ${PersonalInfo?.lastName}`,
+//         empCode: PersonalInfo?.empCode,
+//         month,
+//         year,
+//         fullDays,
+//         halfDays,
+//         lateDays,
+//         graceLateUsed: graceLateCount,
+//         absentDays,
+//         absentdaysArr,
+//         allowedLeave,
+//         bonusamount,
+//         leavebalance,
+//         empType: empTypeData?.duration_type,
+//         totalWorkingDays: dynamicWorkingDays,
+//         TotalSalary: Math.round(TotalSalary),
+//         totalDaysInMonth,
+//         perDaySalary: Math.round(perDaySalary),
+//         totalLeaveDays,
+//         applysandwitchleave,
+//         basePay: basePay + bonusamount,
+//         totalDeduction: Math.round(perMonthSalary - basePay),
+//         shift_id: shiftName?.id,
+//         shift_name: shiftName?.shift,
+//         designation_name: designationData?.name,
+//       });
+//     }
+//     if (data.length == 0) {
+//       return Helper.response(
+//         false,
+//         "Salary already generated for all selected employees",
+//         [],
+//         res,
+//         400,
+//       );
+//     }
+//     return Helper.response(true, "Record Found Successfully!", data, res, 200);
+//   } catch (error) {
+//     console.error("Attendance calculation error:", error);
+//     return Helper.response(false, error?.message, [], res, 500);
+//   }
+// };

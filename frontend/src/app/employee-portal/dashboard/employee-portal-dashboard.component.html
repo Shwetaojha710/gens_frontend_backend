@@ -390,22 +390,45 @@
                 <i class="icon-base ri ri-team-line me-1" aria-hidden="true"></i> Team upcoming
               </h6>
               <ul class="list-unstyled mb-0 ep-dash-upcoming-card__list">
-                <li *ngFor="let row of upcomingTeamLeaves; trackBy: trackLeaveRow" class="ep-dash-upcoming-card__item">
-                  <div class="d-flex gap-2 align-items-start">
-                    <span class="ep-dash-upcoming-card__mini-avatar" aria-hidden="true">{{
-                      upcomingTeamApplicantInitials(row)
-                    }}</span>
-                    <div class="flex-grow-1 min-w-0">
-                      <span class="ep-dash-upcoming-card__name d-block text-truncate">{{
-                        upcomingTeamApplicantLabel(row)
-                      }}</span>
-                      <strong class="ep-dash-upcoming-card__type d-block">{{ upcomingLeaveTypeLabel(row) }}</strong>
-                      <span class="ep-dash__muted small d-block">
-                        {{ $any(row).fromDate | date : 'mediumDate' }} – {{ $any(row).toDate | date : 'mediumDate' }}
-                        <span *ngIf="$any(row).days != null && $any(row).days !== ''" class="ms-1">· {{ $any(row).days }} d</span>
+                <li *ngFor="let row of upcomingTeamLeaves; trackBy: trackLeaveRow" class="ep-dash-leave-req">
+                  <div class="ep-dash-leave-req__row">
+
+                    <!-- LEFT: avatar + name + dates -->
+                    <div class="ep-dash-leave-req__left">
+                      <span class="ep-dash-upcoming-card__mini-avatar flex-shrink-0" aria-hidden="true">
+                        {{ upcomingTeamApplicantInitials(row) }}
                       </span>
+                      <div class="ep-dash-leave-req__info min-w-0">
+                        <span class="ep-dash-leave-req__name text-truncate d-block">{{ upcomingTeamApplicantLabel(row) }}</span>
+                        <span class="ep-dash__muted small">
+                          <strong class="text-body">{{ upcomingLeaveTypeLabel(row) }}</strong>
+                          &nbsp;·&nbsp;{{ $any(row).fromDate | date:'dd MMM' }} – {{ $any(row).toDate | date:'dd MMM yyyy' }}
+                          <span *ngIf="$any(row).days != null && $any(row).days !== ''"> · {{ $any(row).days }}d</span>
+                        </span>
+                      </div>
                     </div>
-                    <span [class]="leaveStatusPillClass($any(row).status)">{{ $any(row).status }}</span>
+
+                    <!-- CENTRE: status badge -->
+                    <div class="ep-dash-leave-req__centre">
+                      <span [class]="leaveStatusPillClass($any(row).status)">{{ $any(row).status }}</span>
+                    </div>
+
+                    <!-- RIGHT: icon action buttons -->
+                    <div class="ep-dash-leave-req__right">
+                      <ng-container *ngIf="showManagerActions && isLeaveActionable(row)">
+                        <button type="button" class="ep-dash-icon-btn ep-dash-icon-btn--approve"
+                          [disabled]="isLeaveActionLoading(row)" title="Approve"
+                          (click)="approveTeamLeave(row)">
+                          <i class="ri ri-check-line"></i>
+                        </button>
+                        <button type="button" class="ep-dash-icon-btn ep-dash-icon-btn--reject"
+                          [disabled]="isLeaveActionLoading(row)" title="Reject"
+                          (click)="rejectTeamLeave(row)">
+                          <i class="ri ri-close-line"></i>
+                        </button>
+                      </ng-container>
+                    </div>
+
                   </div>
                 </li>
                 <li *ngIf="upcomingTeamLeaves.length === 0" class="ep-dash-upcoming-card__empty">
@@ -415,6 +438,319 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Team Reimbursements — visible for manager / director -->
+  <div class="row g-4 mb-4" *ngIf="showManagerActions">
+    <div class="col-12">
+      <div class="card ep-glass-card border-0 ep-dash-upcoming-card h-100">
+        <div class="card-header border-0 pb-0">
+          <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+            <div>
+              <p class="ep-dash-section__eyebrow mb-1">Finance</p>
+              <h5 class="mb-0 ep-dash-upcoming-card__title">Team reimbursements</h5>
+              <p class="ep-dash__muted small mb-0">All branch reimbursement requests · approve or reject</p>
+            </div>
+            <a routerLink="/employee-portal/reimbursement" class="btn btn-sm btn-outline-primary rounded-pill">Open reimbursements</a>
+          </div>
+        </div>
+        <div class="card-body pt-3">
+
+          <!-- Loading -->
+          <div *ngIf="teamReimbLoading" class="ep-dash-panel-loading py-4 text-center">
+            <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading</span></div>
+            <p class="small ep-dash__muted mt-2 mb-0">Loading reimbursements…</p>
+          </div>
+
+          <ng-container *ngIf="!teamReimbLoading">
+            <ul class="list-unstyled mb-0 ep-dash-upcoming-card__list">
+              <li *ngFor="let row of teamReimbursements" class="ep-dash-leave-req">
+                <div class="ep-dash-leave-req__row">
+
+                  <!-- LEFT: avatar + name + amount + dates -->
+                  <div class="ep-dash-leave-req__left">
+                    <span class="ep-dash-upcoming-card__mini-avatar flex-shrink-0"
+                      style="background:linear-gradient(145deg,#0284c7,#7c3aed);" aria-hidden="true">
+                      {{ teamMemberInitials($any(row).employee_name || '') }}
+                    </span>
+                    <div class="ep-dash-leave-req__info min-w-0">
+                      <span class="ep-dash-leave-req__name text-truncate d-block">{{ $any(row).employee_name || '—' }}</span>
+                      <span class="ep-dash__muted small">
+                        <strong class="text-body">₹{{ $any(row).amount }}</strong>
+                        &nbsp;·&nbsp;{{ $any(row).fromDate | date:'dd MMM' }} – {{ $any(row).toDate | date:'dd MMM yyyy' }}
+                        <span *ngIf="$any(row).remark" class="ms-1 text-truncate" style="max-width:120px; display:inline-block; vertical-align:bottom;" [title]="$any(row).remark">· {{ $any(row).remark }}</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- CENTRE: status badge -->
+                  <div class="ep-dash-leave-req__centre">
+                    <span [class]="reimbStatusPillClass($any(row).status)">{{ $any(row).status }}</span>
+                  </div>
+
+                  <!-- RIGHT: icon action buttons -->
+                  <div class="ep-dash-leave-req__right">
+                    <ng-container *ngIf="isReimbActionable(row)">
+                      <button type="button" class="ep-dash-icon-btn ep-dash-icon-btn--approve"
+                        [disabled]="isReimbActionLoading(row)" title="Approve"
+                        (click)="approveTeamReimb(row)">
+                        <i class="ri ri-check-line"></i>
+                      </button>
+                      <button type="button" class="ep-dash-icon-btn ep-dash-icon-btn--reject"
+                        [disabled]="isReimbActionLoading(row)" title="Reject"
+                        (click)="rejectTeamReimb(row)">
+                        <i class="ri ri-close-line"></i>
+                      </button>
+                    </ng-container>
+                  </div>
+
+                </div>
+              </li>
+              <li *ngIf="teamReimbursements.length === 0" class="ep-dash-upcoming-card__empty">
+                No reimbursement requests found
+              </li>
+            </ul>
+          </ng-container>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Team Attendance — visible for manager / director / teamLeader -->
+  <div class="row g-4 mb-4" *ngIf="showTeamAttendance">
+    <div class="col-12">
+      <div class="card ep-glass-card border-0 ep-dash-upcoming-card h-100">
+
+        <!-- Header — same structure as upcoming leave card -->
+        <div class="card-header border-0 pb-0">
+          <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+            <div>
+              <p class="ep-dash-section__eyebrow mb-1">Attendance</p>
+              <h5 class="mb-0 ep-dash-upcoming-card__title">
+                <ng-container *ngIf="isBranchView">Team attendance · Branch-wise</ng-container>
+                <ng-container *ngIf="!isBranchView">Team attendance</ng-container>
+              </h5>
+              <p class="ep-dash__muted small mb-0">Today's check-in status · your team members</p>
+            </div>
+            <!-- Branch filter pills (manager / director only) -->
+            <div *ngIf="isBranchView" class="d-flex align-items-center gap-1 flex-wrap">
+              <button *ngFor="let bn of teamBranchNames" type="button"
+                class="btn btn-sm rounded-pill"
+                [class.btn-primary]="teamBranchFilter === bn"
+                [class.btn-outline-secondary]="teamBranchFilter !== bn"
+                style="font-size:.72rem; padding:3px 12px;"
+                (click)="onTeamBranchFilterChange(bn)">
+                {{ bn }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div class="card-body pt-3">
+
+          <!-- Loading -->
+          <div *ngIf="teamAttendanceLoading" class="ep-dash-panel-loading py-4 text-center">
+            <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading</span></div>
+            <p class="small ep-dash__muted mt-2 mb-0">Loading team attendance…</p>
+          </div>
+
+          <ng-container *ngIf="!teamAttendanceLoading">
+
+            <!-- ── Manager / Director: branch-wise accordion ── -->
+            <ng-container *ngIf="isBranchView">
+
+              <!-- No data -->
+              <div *ngIf="teamBranchGroups.length === 0"
+                class="ep-dash-upcoming-card__empty">No team attendance data found.</div>
+
+              <!-- One block per branch -->
+              <div *ngFor="let bg of teamBranchGroups; let last = last"
+                [class.mb-3]="!last">
+
+                <!-- Branch row: click to expand / collapse -->
+                <div class="ep-dash-upcoming-card__item d-flex align-items-center justify-content-between"
+                  style="cursor:pointer;"
+                  (click)="toggleTeamBranch(bg.branchName)">
+                  <div class="d-flex align-items-center gap-2 min-w-0">
+                    <span class="ep-dash-upcoming-card__mini-avatar"
+                      style="background:linear-gradient(145deg,#0ea5e9,#3b82f6);" aria-hidden="true">
+                      <i class="icon-base ri ri-building-line" style="font-size:.75rem;"></i>
+                    </span>
+                    <div class="min-w-0">
+                      <span class="ep-dash-upcoming-card__name d-block text-truncate">{{ bg.branchName }}</span>
+                      <span class="ep-dash__muted small">
+                        {{ bg.total }} members &nbsp;·&nbsp;
+                        <span class="text-success fw-medium"
+                          style="cursor:pointer; text-decoration:underline dotted;"
+                          (click)="showPresentDetail(bg, $event)"
+                          title="Click to see who is present">{{ bg.presentCount }} present</span>
+                        <ng-container *ngIf="bg.lateCount > 0"> &nbsp;·&nbsp;
+                          <span style="color:#b45309; cursor:pointer; text-decoration:underline dotted;" class="fw-medium"
+                            (click)="showLateDetail(bg, $event)" title="Click to see who is late">
+                            {{ bg.lateCount }} late
+                          </span>
+                        </ng-container>
+                        <ng-container *ngIf="bg.leaveCount > 0"> &nbsp;·&nbsp;
+                          <span style="color:#6d28d9; cursor:pointer; text-decoration:underline dotted;" class="fw-medium"
+                            (click)="showLeaveDetail(bg, $event)" title="Click to see who is on leave">
+                            {{ bg.leaveCount }} on leave
+                          </span>
+                        </ng-container>
+                        <ng-container *ngIf="bg.absentCount > 0"> &nbsp;·&nbsp;
+                          <span class="text-danger fw-medium" style="cursor:pointer; text-decoration:underline dotted;"
+                            (click)="showAbsentDetail(bg, $event)" title="Click to see who is absent">
+                            {{ bg.absentCount }} absent
+                          </span>
+                        </ng-container>
+                      </span>
+                    </div>
+                  </div>
+                  <i class="icon-base ri ms-2 flex-shrink-0"
+                    [class.ri-arrow-up-s-line]="isTeamBranchExpanded(bg.branchName)"
+                    [class.ri-arrow-down-s-line]="!isTeamBranchExpanded(bg.branchName)"></i>
+                </div>
+
+                <!-- Expanded departments -->
+                <div *ngIf="isTeamBranchExpanded(bg.branchName)" class="mt-2">
+                  <div *ngFor="let dept of bg.departments" class="mb-3">
+
+                    <!-- Department column-title -->
+                    <h6 class="ep-dash-upcoming-card__col-title mb-2 ps-1">
+                      <i class="icon-base ri ri-group-line me-1" aria-hidden="true"></i>
+                      {{ dept.departmentName }}
+                      <span class="ep-dash__muted fw-normal ms-1">({{ dept.members.length }})</span>
+                    </h6>
+
+                    <!-- Member list -->
+                    <ul class="list-unstyled mb-0 ep-dash-upcoming-card__list">
+                      <li *ngFor="let m of dept.members" class="ep-dash-upcoming-card__item">
+                        <div class="d-flex gap-2 align-items-start">
+                          <span class="ep-dash-upcoming-card__mini-avatar" aria-hidden="true">
+                            {{ teamMemberInitials(m.employee_name) }}
+                          </span>
+                          <div class="flex-grow-1 min-w-0">
+                            <span class="ep-dash-upcoming-card__name d-block text-truncate">{{ m.employee_name }}</span>
+                            <strong class="ep-dash-upcoming-card__type d-block">{{ m.designation || m.department || '—' }}</strong>
+                            <span class="ep-dash__muted small d-block">
+                              <ng-container *ngIf="m.checkIn">In {{ m.checkIn }}</ng-container>
+                              <ng-container *ngIf="m.checkIn && m.checkOut"> &nbsp;·&nbsp; </ng-container>
+                              <ng-container *ngIf="m.checkOut">Out {{ m.checkOut }}</ng-container>
+                              <ng-container *ngIf="!m.checkIn && !m.checkOut">No check-in</ng-container>
+                            </span>
+                          </div>
+                          <span [class]="teamMemberStatusClass(m.status)">{{ m.status }}</span>
+                        </div>
+                      </li>
+                    </ul>
+
+                  </div><!-- /dept -->
+                </div><!-- /expanded -->
+
+              </div><!-- /branch -->
+            </ng-container>
+
+            <!-- Detail panel: on-leave / absent list -->
+            <div *ngIf="teamDetailPanel" class="mt-3 p-3 rounded border" style="background:#f8fafc;">
+              <div class="d-flex align-items-center justify-content-between mb-3">
+                <h6 class="mb-0 fw-bold">{{ teamDetailPanel.title }}</h6>
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center"
+                  style="width:28px;height:28px;padding:0;line-height:1;"
+                  (click)="closeTeamDetail()" aria-label="Close">
+                  <i class="ri ri-close-line" style="font-size:1rem;"></i>
+                </button>
+              </div>
+              <ul class="list-unstyled mb-0 ep-dash-upcoming-card__list">
+                <li *ngFor="let m of teamDetailPanel.members" class="ep-dash-upcoming-card__item">
+                  <div class="d-flex gap-2 align-items-center">
+                    <span class="ep-dash-upcoming-card__mini-avatar"
+                      [style.background]="m.status === 'Absent' ? 'linear-gradient(145deg,#f87171,#dc2626)' : m.status.toLowerCase().startsWith('late') ? 'linear-gradient(145deg,#fbbf24,#b45309)' : 'linear-gradient(145deg,#a78bfa,#7c3aed)'"
+                      aria-hidden="true">
+                      {{ teamMemberInitials(m.employee_name) }}
+                    </span>
+                    <div class="flex-grow-1 min-w-0">
+                      <span class="ep-dash-upcoming-card__name d-block text-truncate fw-medium">{{ m.employee_name }}</span>
+                      <span class="ep-dash__muted small">{{ m.designation || m.department || '—' }}</span>
+                    </div>
+                    <span [class]="teamMemberStatusClass(m.status)">{{ m.status }}</span>
+                  </div>
+                </li>
+                <li *ngIf="teamDetailPanel.members.length === 0" class="ep-dash-upcoming-card__empty">
+                  No employees in this category.
+                </li>
+              </ul>
+            </div>
+
+            <!-- ── Team Leader: two-column split (present | absent+leave) ── -->
+            <ng-container *ngIf="!isBranchView">
+
+              <div *ngIf="teamBranchGroups.length === 0"
+                class="ep-dash-upcoming-card__empty">No team members found for today.</div>
+
+              <div *ngIf="teamBranchGroups.length > 0" class="row g-4 ep-dash-upcoming-card__cols">
+
+                <!-- Left: present / on time / late -->
+                <div class="col-md-6">
+                  <h6 class="ep-dash-upcoming-card__col-title">
+                    <i class="icon-base ri ri-checkbox-circle-line me-1" aria-hidden="true"></i> Present
+                  </h6>
+                  <ul class="list-unstyled mb-0 ep-dash-upcoming-card__list">
+                    <li *ngFor="let m of teamPresentMembers" class="ep-dash-upcoming-card__item">
+                      <div class="d-flex gap-2 align-items-start">
+                        <span class="ep-dash-upcoming-card__mini-avatar" aria-hidden="true">
+                          {{ teamMemberInitials(m.employee_name) }}
+                        </span>
+                        <div class="flex-grow-1 min-w-0">
+                          <span class="ep-dash-upcoming-card__name d-block text-truncate">{{ m.employee_name }}</span>
+                          <strong class="ep-dash-upcoming-card__type d-block">{{ m.designation || m.department || '—' }}</strong>
+                          <span class="ep-dash__muted small d-block">
+                            <ng-container *ngIf="m.checkIn">In {{ m.checkIn }}</ng-container>
+                            <ng-container *ngIf="m.checkIn && m.checkOut"> · Out {{ m.checkOut }}</ng-container>
+                            <ng-container *ngIf="!m.checkIn">No check-in recorded</ng-container>
+                          </span>
+                        </div>
+                        <span [class]="teamMemberStatusClass(m.status)">{{ m.status }}</span>
+                      </div>
+                    </li>
+                    <li *ngIf="teamPresentMembers.length === 0" class="ep-dash-upcoming-card__empty">
+                      No one checked in yet
+                    </li>
+                  </ul>
+                </div>
+
+                <!-- Right: absent / leave -->
+                <div class="col-md-6">
+                  <h6 class="ep-dash-upcoming-card__col-title">
+                    <i class="icon-base ri ri-user-unfollow-line me-1" aria-hidden="true"></i> Absent / Leave
+                  </h6>
+                  <ul class="list-unstyled mb-0 ep-dash-upcoming-card__list">
+                    <li *ngFor="let m of teamAbsentLeaveMembers" class="ep-dash-upcoming-card__item">
+                      <div class="d-flex gap-2 align-items-start">
+                        <span class="ep-dash-upcoming-card__mini-avatar"
+                          style="background:linear-gradient(145deg,#94a3b8,#64748b);" aria-hidden="true">
+                          {{ teamMemberInitials(m.employee_name) }}
+                        </span>
+                        <div class="flex-grow-1 min-w-0">
+                          <span class="ep-dash-upcoming-card__name d-block text-truncate">{{ m.employee_name }}</span>
+                          <strong class="ep-dash-upcoming-card__type d-block">{{ m.designation || m.department || '—' }}</strong>
+                        </div>
+                        <span [class]="teamMemberStatusClass(m.status)">{{ m.status }}</span>
+                      </div>
+                    </li>
+                    <li *ngIf="teamAbsentLeaveMembers.length === 0" class="ep-dash-upcoming-card__empty">
+                      Everyone is in today
+                    </li>
+                  </ul>
+                </div>
+
+              </div>
+            </ng-container>
+
+          </ng-container><!-- /!loading -->
+        </div><!-- /card-body -->
       </div>
     </div>
   </div>
@@ -454,6 +790,23 @@
               <dd class="col-7 mb-1">{{ daily['check_out_time'] || '—' }}</dd>
             </dl>
             <div class="d-flex flex-wrap gap-2">
+              <ng-container *ngIf="canMarkWebAttendance(); else webAttOff">
+                <button *ngIf="canCheckIn()" type="button" class="btn btn-primary ep-dash-mark-btn" (click)="mark()" [disabled]="marking">
+                  {{ marking ? 'Please wait…' : 'Check in' }}
+                </button>
+                <button *ngIf="canCheckOut()" type="button" class="btn btn-outline-primary ep-dash-mark-btn" (click)="mark()" [disabled]="marking">
+                  {{ marking ? 'Please wait…' : 'Check out' }}
+                </button>
+                <span *ngIf="!canCheckIn() && !canCheckOut() && daily['check_in_time']" class="ep-dash-done-pill">
+                  <i class="icon-base ri ri-check-line me-1"></i> Day complete
+                </span>
+              </ng-container>
+
+              <ng-template #webAttOff>
+                <span class="text-muted small">Web attendance not enabled for your account.</span>
+              </ng-template>
+            </div>
+            <!-- <div class="d-flex flex-wrap gap-2">
               <button *ngIf="canCheckIn()" type="button" class="btn btn-primary ep-dash-mark-btn" (click)="mark()" [disabled]="marking">
                 {{ marking ? 'Please wait…' : 'Check in' }}
               </button>
@@ -463,7 +816,11 @@
               <span *ngIf="!canCheckIn() && !canCheckOut() && daily['check_in_time']" class="ep-dash-done-pill">
                 <i class="icon-base ri ri-check-line me-1"></i> Day complete
               </span>
-            </div>
+            </div> -->
+            <!-- <div *ngIf="!canMarkWebAttendance()" class="ep-dash-attendance-card__alert">
+              <i class="icon-base ri ri-alert-line me-1"></i>
+              <span>Web attendance is not enabled for your account. Contact HR.</span>
+            </div> -->
           </ng-container>
         </div>
       </div>
@@ -669,6 +1026,7 @@
                 <th scope="col">To</th>
                 <th scope="col" class="text-end">Days</th>
                 <th scope="col">Status</th>
+                <th scope="col" *ngIf="showManagerActions">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -686,9 +1044,26 @@
                 <td>
                   <span [class]="leaveStatusPillClass($any(row).status)">{{ $any(row).status }}</span>
                 </td>
+                <td *ngIf="showManagerActions">
+                  <div class="d-flex gap-1" *ngIf="isLeaveActionable(row); else noAction">
+                    <button type="button" class="btn btn-xs rounded-pill"
+                      style="font-size:.68rem;padding:2px 9px;background:#dcfce7;color:#15803d;border:1px solid #86efac;"
+                      [disabled]="isLeaveActionLoading(row)"
+                      (click)="approveTeamLeave(row)">
+                      <i class="ri ri-check-line"></i>
+                    </button>
+                    <button type="button" class="btn btn-xs rounded-pill"
+                      style="font-size:.68rem;padding:2px 9px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;"
+                      [disabled]="isLeaveActionLoading(row)"
+                      (click)="rejectTeamLeave(row)">
+                      <i class="ri ri-close-line"></i>
+                    </button>
+                  </div>
+                  <ng-template #noAction><span class="ep-dash__muted small">—</span></ng-template>
+                </td>
               </tr>
               <tr *ngIf="leavesAll.length === 0">
-                <td colspan="6" class="ep-dash-leave-empty text-center py-5">
+                <td [attr.colspan]="showManagerActions ? 7 : 6" class="ep-dash-leave-empty text-center py-5">
                   <i class="icon-base ri ri-inbox-line d-block mb-2"></i>
                   No leave rows this month
                 </td>
@@ -735,4 +1110,91 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- ── Chatbot Widget ── -->
+<div class="ep-chat-widget">
+  <!-- Chat Panel -->
+  <div class="ep-chat-panel " [class.ep-chat-panel--open]="isChatOpen">
+    <div class="ep-chat-panel__header">
+      <div class="d-flex align-items-center gap-2">
+        <span class="ep-chat-avatar"><i class="ri ri-robot-2-line"></i></span>
+        <div>
+          <div class="ep-chat-panel__title">GENS Assistant</div>
+          <div class="ep-chat-panel__subtitle">{{ micLang === 'hi-IN' ? 'मुझसे कुछ भी पूछें' : 'Ask me anything' }}</div>
+        </div>
+      </div>
+      <button class="ep-chat-close-btn" (click)="toggleChat()" title="Close">
+        <i class="ri ri-close-line"></i>
+      </button>
+    </div>
+
+    <!-- <div class="ep-chat-panel__body" #chatBody>
+      <div *ngFor="let msg of chatMessages" class="ep-chat-msg" [class.ep-chat-msg--user]="msg.role === 'user'" [class.ep-chat-msg--bot]="msg.role === 'bot'">
+        <span class="ep-chat-bubble">{{ msg.text }}</span>
+      </div>
+      <div *ngIf="chatLoading" class="ep-chat-msg ep-chat-msg--bot">
+        <span class="ep-chat-bubble ep-chat-bubble--typing">
+          <span></span><span></span><span></span>
+        </span>
+      </div>
+    </div> -->
+
+
+
+    <div class="ep-chat-panel__body" #chatBody>
+      <div *ngFor="let msg of chatMessages" class="ep-chat-msg" [class.ep-chat-msg--user]="msg.role == 'user'" [class.ep-chat-msg--bot]="msg.role == 'bot'">
+        <span class="ep-chat-bubble" [innerHTML]="formatText(msg.text)"></span>
+      </div>
+      <div *ngIf="chatLoading" class="ep-chat-msg ep-chat-msg--bot">
+        <span class="ep-chat-bubble ep-chat-bubble--typing">
+          <span></span><span></span><span></span>
+        </span>
+      </div>
+    </div>
+
+    <div *ngIf="isListening" class="ep-chat-recording-bar">
+      <span class="ep-chat-recording-bar__waves">
+        <span></span><span></span><span></span><span></span><span></span>
+      </span>
+      <span class="ep-chat-recording-bar__text">{{ recordingLabel }}</span>
+      <span class="ep-chat-recording-bar__hint">Mic band karo → text aayega</span>
+    </div>
+
+    <div class="ep-chat-panel__footer">
+      <button
+        class="ep-chat-mic-btn"
+        [class.ep-chat-mic-btn--active]="isListening"
+        (click)="toggleMic()"
+        [title]="isListening ? 'Stop & transcribe' : 'Speak a message'"
+        [disabled]="chatLoading"
+      >
+        <i class="ri" [class.ri-mic-fill]="!isListening" [class.ri-mic-off-line]="isListening"></i>
+      </button>
+      <button
+        class="ep-chat-lang-btn"
+        (click)="switchLang()"
+        [title]="'Switch to ' + (micLang === 'hi-IN' ? 'English' : 'Hindi')"
+        [disabled]="isListening"
+      >{{ micLang === 'hi-IN' ? 'EN' : 'HI' }}</button>
+      <input
+        #chatInputEl
+        type="text"
+        class="ep-chat-input"
+        [placeholder]="isListening ? (micLang === 'hi-IN' ? 'सुन रहा हूँ…' : 'Listening…') : (micLang === 'hi-IN' ? 'संदेश लिखें…' : 'Type a message…')"
+        [(ngModel)]="chatInput"
+        (input)="preserveCaret(chatInputEl)"
+        (keydown)="onChatKeydown($event)"
+        [disabled]="chatLoading"
+      />
+      <button class="ep-chat-send-btn" (click)="sendChatMessage()" [disabled]="chatLoading || !chatInput.trim()">
+        <i class="ri ri-send-plane-fill"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Floating Toggle Button -->
+  <button class="ep-chat-fab" (click)="toggleChat()" [title]="isChatOpen ? 'Close chat' : 'Open chat'">
+    <i class="ri" [class.ri-message-3-fill]="!isChatOpen" [class.ri-close-line]="isChatOpen"></i>
+  </button>
 </div>

@@ -58,18 +58,40 @@ export class EmployeePortalLeaveComponent implements OnInit {
     'Dec',
   ];
 
-  types: { value: string; label: string; allowedPerYear?: number }[] = [];
+  types: { value: string; label: string; leaveCode?: string; allowedPerYear?: number }[] = [];
+  compOffList: { id: string; earnedDate: string; remainingDays: number }[] = [];
+  compOffListLoading = false;
+  selectedCompOffId: string | null = null;
+  leaveBalances: { name: string; code: string; available_leave: number; total_leave: number; used_leave?: number }[] = [];
+  leaveBalanceLoading = false;
   /** Full list from API (self + team rows when the user is a lead/manager). */
   leavesAll: unknown[] = [];
   /** Which slice of {@link leavesAll} the table shows. */
   listTab: 'my' | 'team' = 'my';
-  month = new Date().getMonth() + 1;
-  year = new Date().getFullYear();
+  month: string = String(new Date().getMonth() + 1);
+  year: string = String(new Date().getFullYear());
+  readonly yearOptions: number[] = (() => {
+    const cur = new Date().getFullYear();
+    return Array.from({ length: cur - 2019 }, (_, i) => cur - i);
+  })();
   loading = false;
   pageSize = 5;
   currentPage = 1;
   searchQuery = '';
   readonly pageSizeOptions = [5, 10, 25, 50];
+  selectedLeaveTypeFilter = '';
+  historyLeaveTypeId = '';
+  historyMonth = '';
+  historyYear = '';
+  historyResults: unknown[] = [];
+  historyLoading = false;
+  historySearched = false;
+  historyPage = 1;
+  historyPageSize = 5;
+  readonly historyYearOptions: number[] = (() => {
+    const cur = new Date().getFullYear();
+    return Array.from({ length: cur - 2019 }, (_, i) => cur - i);
+  })();
   submitting = false;
   decliningId: string | null = null;
   recommendingId: string | null = null;
@@ -127,6 +149,8 @@ export class EmployeePortalLeaveComponent implements OnInit {
       error: (e: Error) => this.notyf.error(e.message || 'Could not load leave types'),
     });
 
+    this.loadLeaveBalance();
+
     console.log(this.isDirectorOrManager);
 
 
@@ -151,6 +175,14 @@ export class EmployeePortalLeaveComponent implements OnInit {
       this.form.updateValueAndValidity({ emitEvent: false });
     });
     this.form.get('duration_type')?.valueChanges.subscribe(() => this.syncHalfDayWhenSingle());
+
+    this.form.get('leaveTypeId')?.valueChanges.subscribe((id) => {
+      this.selectedCompOffId = null;
+      this.compOffList = [];
+      if (id && this.isCompOffType(id)) {
+        this.loadCompOffList();
+      }
+    });
   }
 
   /** Today YYYY-MM-DD (local). */
@@ -215,6 +247,47 @@ export class EmployeePortalLeaveComponent implements OnInit {
     return label.includes('restricted');
   }
 
+  isCompOffType(leaveTypeId: string): boolean {
+    const t = this.types.find((x) => String(x.value) === String(leaveTypeId));
+    if (!t) return false;
+    const label = String(t.label ?? '').toLowerCase();
+    const code = String(t.leaveCode ?? '').toLowerCase();
+    return label.includes('comp') || code.startsWith('co');
+  }
+
+  get isCompOffSelected(): boolean {
+    const id = this.form.get('leaveTypeId')?.value;
+    return !!id && this.isCompOffType(id);
+  }
+
+  loadCompOffList(): void {
+    this.compOffListLoading = true;
+    this.api.getCompOffList().subscribe({
+      next: (data) => {
+        this.compOffListLoading = false;
+        this.compOffList = data || [];
+      },
+      error: () => {
+        this.compOffListLoading = false;
+        this.compOffList = [];
+      },
+    });
+  }
+
+  loadLeaveBalance(): void {
+    this.leaveBalanceLoading = true;
+    this.api.getLeaveBalanceList().subscribe({
+      next: (data) => {
+        this.leaveBalanceLoading = false;
+        this.leaveBalances = (data || []) as { name: string; code: string; available_leave: number; total_leave: number; used_leave?: number }[];
+      },
+      error: () => {
+        this.leaveBalanceLoading = false;
+        this.leaveBalances = [];
+      },
+    });
+  }
+
   private clampToAfterFrom(): void {
     const from = this.form.get('fromDate')?.value as string;
     const to = this.form.get('toDate')?.value as string;
@@ -236,14 +309,72 @@ export class EmployeePortalLeaveComponent implements OnInit {
     }
   }
 
-  /** Rows for the active tab, filtered by search query. */
+  get historyTotalDays(): number {
+    return this.historyResults.reduce(
+      (sum: number, r: any) => sum + Number(r['days'] || 0),
+      0,
+    );
+  }
+
+  get historyTotalPages(): number {
+    return Math.max(1, Math.ceil(this.historyResults.length / this.historyPageSize));
+  }
+
+  get historyPageNumbers(): number[] {
+    return Array.from({ length: this.historyTotalPages }, (_, i) => i + 1);
+  }
+
+  get historyPageEnd(): number {
+    return Math.min(this.historyPage * this.historyPageSize, this.historyResults.length);
+  }
+
+  get historyPaged(): unknown[] {
+    const start = (this.historyPage - 1) * this.historyPageSize;
+    return this.historyResults.slice(start, start + this.historyPageSize);
+  }
+
+  historyGoToPage(page: number): void {
+    if (page < 1 || page > this.historyTotalPages) return;
+    this.historyPage = page;
+  }
+
+  searchLeaveHistory(): void {
+    this.historyLoading = true;
+    this.historySearched = false;
+    this.historyPage = 1;
+    this.api
+      .getMyLeaveHistory({
+        leaveTypeId: this.historyLeaveTypeId || undefined,
+        month: this.historyMonth ? Number(this.historyMonth) : undefined,
+        year: this.historyYear ? Number(this.historyYear) : undefined,
+      })
+      .subscribe({
+        next: (data) => {
+          this.historyLoading = false;
+          this.historySearched = true;
+          this.historyResults = data || [];
+        },
+        error: () => {
+          this.historyLoading = false;
+          this.historySearched = true;
+          this.historyResults = [];
+        },
+      });
+  }
+
+  /** Rows for the active tab, filtered by leave type and search query. */
   get displayLeaves(): unknown[] {
     if (!this.empId) return [];
     const isMine = (row: unknown) =>
       String((row as Record<string, unknown>)['employeeId']) === this.empId;
-    const tabFiltered = this.listTab === 'my'
+    let tabFiltered = this.listTab === 'my'
       ? this.leavesAll.filter(isMine)
       : this.leavesAll.filter((r) => !isMine(r));
+    if (this.selectedLeaveTypeFilter) {
+      tabFiltered = tabFiltered.filter(
+        (r) => String((r as Record<string, unknown>)['leaveTypeId'] ?? '') === this.selectedLeaveTypeFilter,
+      );
+    }
     const q = this.searchQuery.trim().toLowerCase();
     if (!q) return tabFiltered;
     return tabFiltered.filter((row) => {
@@ -400,6 +531,7 @@ export class EmployeePortalLeaveComponent implements OnInit {
     this.listTab = tab;
     this.currentPage = 1;
     this.searchQuery = '';
+    this.selectedLeaveTypeFilter = '';
   }
 
   onBranchChange(): void {
@@ -437,6 +569,10 @@ export class EmployeePortalLeaveComponent implements OnInit {
       }
       return;
     }
+    if (this.isCompOffSelected && !this.selectedCompOffId) {
+      this.notyf.error('Please select a comp-off earned date.');
+      return;
+    }
     const v = this.form.getRawValue();
     this.submitting = true;
     this.api
@@ -448,11 +584,14 @@ export class EmployeePortalLeaveComponent implements OnInit {
         reason: v.reason!,
         duration_type: v.duration_type,
         to_duration_type: v.to_duration_type,
+        compOffId: this.isCompOffSelected ? this.selectedCompOffId : null,
       })
       .subscribe({
         next: () => {
           this.submitting = false;
           this.notyf.success('Leave submitted.');
+          this.selectedCompOffId = null;
+          this.compOffList = [];
           this.form.reset({
             leaveTypeId: '',
             fromDate: '',

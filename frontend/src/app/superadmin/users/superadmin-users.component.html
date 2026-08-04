@@ -206,6 +206,39 @@
               <i class="ri ri-save-3-line me-1"></i> Save changes
             </button>
           </form>
+
+          <hr class="my-3" />
+
+          <div class="sa-form-section">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <label class="form-label mb-0" style="font-weight:600;">
+                <i class="ri ri-lock-password-line me-1"></i> Change Password
+              </label>
+            </div>
+            <form [formGroup]="pwForm" (ngSubmit)="updatePassword()">
+              <div class="position-relative mb-3">
+                <input
+                  [type]="pwVisible ? 'text' : 'password'"
+                  class="form-control"
+                  formControlName="newPassword"
+                  placeholder="New password (min. 6 chars)"
+                  [ngClass]="{ 'is-invalid': pwForm.get('newPassword')?.invalid && pwForm.get('newPassword')?.touched }"
+                />
+                <span
+                  class="ri"
+                  [ngClass]="pwVisible ? 'ri-eye-off-line' : 'ri-eye-line'"
+                  (click)="pwVisible = !pwVisible"
+                  style="cursor:pointer;position:absolute;top:50%;right:12px;transform:translateY(-50%);z-index:5;"
+                ></span>
+                <div class="invalid-feedback">Password must be at least 6 characters.</div>
+              </div>
+              <button class="btn btn-outline-primary w-100" type="submit" [disabled]="pwForm.invalid || pwLoading">
+                <span *ngIf="pwLoading" class="spinner-border spinner-border-sm me-1" role="status"></span>
+                <i *ngIf="!pwLoading" class="ri ri-lock-line me-1"></i>
+                Update Password
+              </button>
+            </form>
+          </div>
         </div>
 
         <ng-template #emptyState>

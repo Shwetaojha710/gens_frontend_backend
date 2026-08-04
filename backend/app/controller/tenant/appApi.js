@@ -28,7 +28,7 @@ const bills = require("../../models/bill");
 const base_url = process.env.BASE_URL;
 const sequelize = require("../../connection/connection");
 const { v4: uuidv4 } = require("uuid");
-
+const notification_reads = require("../../models/notification_reads");
 const PdfPrinter = require("pdfmake");
 const dayMap = {
   Sunday: 0,
@@ -533,23 +533,32 @@ exports.upcomingLeave = async (req, res) => {
       return Helper.response(false, "No Data Found", [], res, 200);
     }
 
-    // 👇 Add approver & leave type info
+    // 👇 Add employee name, approver & leave type info
     const data = await Promise.all(
       leaveData.map(async (item) => {
-        const approver = await empPersonal.findOne({
-          where: { branchId, id: item.approverId },
-          attributes: ["firstName", "lastName"],
-          raw: true,
-        });
-
-        const leaveType = await leaveMaster.findOne({
-          where: { branchId, id: item.leaveTypeId },
-          attributes: ["leaveName"],
-          raw: true,
-        });
+        const [employee, approver, leaveType] = await Promise.all([
+          empPersonal.findOne({
+            where: { id: item.employeeId },
+            attributes: ["firstName", "lastName"],
+            raw: true,
+          }),
+          empPersonal.findOne({
+            where: { branchId, id: item.approverId },
+            attributes: ["firstName", "lastName"],
+            raw: true,
+          }),
+          leaveMaster.findOne({
+            where: { branchId, id: item.leaveTypeId },
+            attributes: ["leaveName"],
+            raw: true,
+          }),
+        ]);
 
         return {
           ...item,
+          employeeName: employee
+            ? `${employee.firstName} ${employee.lastName}`.trim()
+            : null,
           approvedBy: approver
             ? `${approver.firstName} ${approver.lastName}`
             : null,
@@ -1660,7 +1669,8 @@ exports.TeamsAttendance = async (req, res) => {
     let branchIds = [];
     const userBranchId = req.users?.branchId;
 
-    if (!userBranchId) {
+    // Director may not have a specific branchId assigned — allow them through
+    if (!userBranchId && role !== "director") {
       return Helper.response(false, "branchId is required!", {}, res, 200);
     }
 
@@ -1672,13 +1682,20 @@ exports.TeamsAttendance = async (req, res) => {
           attributes: ["id"],
           raw: true,
         });
-
         branchIds = branches.map((b) => b.id);
       } else {
         branchIds = [req.query.branchId];
       }
-    } else {
+    } else if (userBranchId) {
       branchIds = [userBranchId];
+    } else {
+      // Director with no branchId and no query param → fetch all branches
+      const branches = await branch.findAll({
+        where: { tenantId, status: "active" },
+        attributes: ["id"],
+        raw: true,
+      });
+      branchIds = branches.map((b) => b.id);
     }
 
     // ✅ Fetch Employees
@@ -1688,7 +1705,13 @@ exports.TeamsAttendance = async (req, res) => {
       status: "active",
     };
 
-    if (role !== "manager" && role !== "director") {
+    if (role == "director") {
+      // Director sees all employees across fetched branches — no hierarchy filter
+    } else if (role == "manager") {
+      const branchFilter = req.query.branchId === "All" ? "All" : (req.query.branchId || userBranchId);
+      const subordinateIds = await Helper.getAllSubordinates(reportingPersonId, branchFilter, tenantId);
+      employeeWhere.id = { [Op.in]: [...subordinateIds, reportingPersonId] };
+    } else {
       employeeWhere.reportingPersonId = reportingPersonId;
     }
 
@@ -1712,11 +1735,11 @@ exports.TeamsAttendance = async (req, res) => {
 
     if (!teamEmployees.length) {
       return Helper.response(
-        false,
+        true,
         "No Employee is present in the team",
         [],
         res,
-        404,
+        200,
       );
     }
 
@@ -1724,170 +1747,144 @@ exports.TeamsAttendance = async (req, res) => {
     const today = moment().format("YYYY-MM-DD");
     const currentDay = moment().format("dddd");
 
-    // ✅ Fetch today's attendance
-    const records = await attendance.findAll({
-      where: {
-        employeeId: { [Op.in]: employeeIds },
-        tenantId,
-        branchId: { [Op.in]: branchIds },
-        date: today,
-      },
-      attributes: [
-        "employeeId",
-        "check_in_time",
-        "check_out_time",
-        "is_present",
-      ],
-      raw: true,
-    });
+    // Collect unique IDs for batch fetching
+    const uniqueBranchIds  = [...new Set(teamEmployees.map((e) => e.branchId).filter(Boolean))];
+    const uniqueDesigIds   = [...new Set(teamEmployees.map((e) => e.designationId).filter(Boolean))];
+    const uniqueDeptIds    = [...new Set(teamEmployees.map((e) => e.departmentId).filter(Boolean))];
+    const uniqueShiftIds   = [...new Set(teamEmployees.map((e) => e.shift_id).filter(Boolean))];
 
-    const data = await Promise.all(
-      teamEmployees.map(async (emp) => {
-        const record = records.find((r) => r.employeeId == emp.id);
+    // Single round-trip: fetch everything in parallel
+    const [
+      records,
+      allSettings,
+      allDesignations,
+      allBranches,
+      allDepartments,
+      allShifts,
+      todayHoliday,
+      allLeaves,
+    ] = await Promise.all([
+      attendance.findAll({
+        where: { employeeId: { [Op.in]: employeeIds }, tenantId, date: today },
+        attributes: ["employeeId", "check_in_time", "check_out_time", "is_present"],
+        raw: true,
+      }),
+      attendanceSetting.findAll({
+        where: { branchId: { [Op.in]: uniqueBranchIds }, tenantId },
+        raw: true,
+      }),
+      Designation.findAll({
+        where: { id: { [Op.in]: uniqueDesigIds } },
+        attributes: ["id", "name", "branchId"],
+        raw: true,
+      }),
+      branch.findAll({
+        where: { id: { [Op.in]: uniqueBranchIds }, tenantId },
+        attributes: ["id", "name"],
+        raw: true,
+      }),
+      Department.findAll({
+        where: { id: { [Op.in]: uniqueDeptIds } },
+        attributes: ["id", "name", "branchId"],
+        raw: true,
+      }),
+      Shift.findAll({
+        where: { shift: { [Op.in]: uniqueShiftIds }, tenantId, status: "active" },
+        raw: true,
+      }),
+      holiday.findOne({ where: { date: today } }),
+      leave_application.findAll({
+        where: {
+          employeeId: { [Op.in]: employeeIds },
+          fromDate: { [Op.lte]: today },
+          toDate:   { [Op.gte]: today },
+        },
+        raw: true,
+      }),
+    ]);
 
-        const attendanceSettings = await attendanceSetting.findOne({
-          where: { branchId: emp.branchId, tenantId },
-          raw: true,
-        });
+    // Build lookup maps
+    const settingsMap   = new Map(allSettings.map((s) => [s.branchId, s]));
+    const designMap     = new Map(allDesignations.map((d) => [d.id, d]));
+    const branchMapLkp  = new Map(allBranches.map((b) => [b.id, b]));
+    const deptMap       = new Map(allDepartments.map((d) => [d.id, d]));
+    const leaveMap      = new Map(allLeaves.map((l) => [l.employeeId, l]));
 
-        const designation = await Designation.findOne({
-          where: {
-            id: emp.designationId,
-            branchId: emp.branchId,
-          },
-          attributes: ["name"],
-          raw: true,
-        });
+    // Synchronous map — zero per-employee DB calls
+    const data = teamEmployees.map((emp) => {
+      const record            = records.find((r) => r.employeeId == emp.id);
+      const attendanceSettings = settingsMap.get(emp.branchId);
+      const designation       = designMap.get(emp.designationId);
+      const branchDetails     = branchMapLkp.get(emp.branchId);
+      const department        = deptMap.get(emp.departmentId);
+      const empShifts         = allShifts.filter((s) => s.shift === emp.shift_id && s.branchId === emp.branchId);
+      const todayShift        = empShifts.find((s) => s.day_of_week == currentDay);
 
-        const branchDetails = await branch.findOne({
-          where: {
-            id: emp.branchId,
-            tenantId,
-          },
-          attributes: ["name"],
-          raw: true,
-        });
+      let status  = "Absent";
+      let checkIn  = null;
+      let checkOut = null;
 
-        const department = await Department.findOne({
-          where: {
-            id: emp.departmentId,
-            branchId: emp.branchId, // ✅ fixed
-          },
-          attributes: ["name"],
-          raw: true,
-        });
+      if (record) {
+        checkIn  = record.check_in_time  ? record.check_in_time.split(" ")[1]  : null;
+        checkOut = record.check_out_time ? record.check_out_time.split(" ")[1] : null;
 
-        const shiftMap = await Shift.findAll({
-          where: {
-            shift: emp.shift_id,
-            branchId: emp.branchId,
-            tenantId,
-            status: "active",
-          },
-          raw: true,
-        });
+        if (checkIn && todayShift) {
+          const allowedTime  = moment(todayShift.startTime, "HH:mm:ss");
+          const actualCheckIn = moment(checkIn, "HH:mm:ss");
+          const graceMinutes = attendanceSettings?.graceMinutes || 0;
+          const graceLimit   = allowedTime.clone().add(graceMinutes, "minutes");
 
-        const todayShift = shiftMap.find((s) => s.day_of_week == currentDay);
-
-        let status = "Absent";
-        let checkIn = null;
-        let checkOut = null;
-
-        if (record) {
-          checkIn = record.check_in_time
-            ? record.check_in_time.split(" ")[1]
-            : null;
-
-          checkOut = record.check_out_time
-            ? record.check_out_time.split(" ")[1]
-            : null;
-
-          if (checkIn && todayShift) {
-            const allowedTime = moment(todayShift.startTime, "HH:mm:ss");
-            const actualCheckIn = moment(checkIn, "HH:mm:ss");
-            const graceMinutes = attendanceSettings?.graceMinutes || 0;
-
-            const graceLimit = allowedTime.clone().add(graceMinutes, "minutes");
-
-            if (actualCheckIn.isAfter(graceLimit)) {
-              const minutesLate = actualCheckIn.diff(graceLimit, "minutes");
-
-              if (minutesLate >= 60) {
-                const hoursLate = Math.floor(minutesLate / 60);
-                const remainingMins = minutesLate % 60;
-                status = `Late by ${hoursLate} hr ${remainingMins} min`;
-              } else {
-                status = `Late by ${minutesLate} min`;
-              }
+          if (actualCheckIn.isAfter(graceLimit)) {
+            const minutesLate = actualCheckIn.diff(graceLimit, "minutes");
+            if (minutesLate >= 60) {
+              const hoursLate     = Math.floor(minutesLate / 60);
+              const remainingMins = minutesLate % 60;
+              status = `Late by ${hoursLate} hr ${remainingMins} min`;
             } else {
-              status = "On Time";
+              status = `Late by ${minutesLate} min`;
             }
-          }
-        } else {
-          const holidaydata = await holiday.findOne({
-            where: {
-              date: today,
-            },
-          });
-          if (holidaydata) {
-            status = "holiday";
           } else {
-            const leaveData = await leave_application.findOne({
-              where: {
-                employeeId: emp.id,
-                fromDate: {
-                  [Op.lte]: today,
-                },
-                toDate: {
-                  [Op.gte]: today,
-                },
-              },
-            });
-            if (leaveData) {
-              if (leaveData.fromDate == today && leaveData.toDate == today) {
-                if (leaveData.duration_type == "first_half") {
-                  status = "First Half Leave";
-                } else if (leaveData.duration_type == "second_half") {
-                  status = "Second Half Leave";
-                } else {
-                  status = "Full Day Leave";
-                }
-              } else if (leaveData.fromDate == today) {
-                if (leaveData.duration_type == "second_half") {
-                  status = "Second Half Leave";
-                } else {
-                  status = "Full Day Leave";
-                }
-              } else if (leaveData.toDate == today) {
-                if (leaveData.to_duration_type == "first_half") {
-                  status = "First Half Leave";
-                } else {
-                  status = "Full Day Leave";
-                }
-              } else {
-                status = "Full Day Leave";
-              }
+            status = "On Time";
+          }
+        }
+      } else {
+        if (todayHoliday) {
+          status = "holiday";
+        } else {
+          const leaveData = leaveMap.get(emp.id);
+          if (leaveData) {
+            if (leaveData.fromDate == today && leaveData.toDate == today) {
+              if (leaveData.duration_type == "first_half")       status = "First Half Leave";
+              else if (leaveData.duration_type == "second_half") status = "Second Half Leave";
+              else                                                status = "Full Day Leave";
+            } else if (leaveData.fromDate == today) {
+              status = leaveData.duration_type == "second_half" ? "Second Half Leave" : "Full Day Leave";
+            } else if (leaveData.toDate == today) {
+              status = leaveData.to_duration_type == "first_half" ? "First Half Leave" : "Full Day Leave";
+            } else {
+              status = "Full Day Leave";
             }
           }
         }
+      }
 
-        return {
-          employeeId: emp.id,
-          employee_name: `${emp.firstName} ${emp.lastName}`,
-          date: today,
-          checkIn,
-          checkOut,
-          status,
-          branchName: branchDetails?.name ?? null,
-          designation: designation?.name ?? null,
-          department: department?.name ?? null,
-          day: currentDay,
-          joiningDate: emp.joiningDate,
-          dateOfBirth: emp.dateOfBirth,
-          profileImage: emp.profileImage ?? null,
-        };
-      }),
-    );
+      return {
+        employeeId:   emp.id,
+        employee_name: `${emp.firstName} ${emp.lastName}`,
+        date:         today,
+        checkIn,
+        checkOut,
+        status,
+        branchId:     emp.branchId,
+        branchName:   branchDetails?.name  ?? null,
+        designation:  designation?.name    ?? null,
+        department:   department?.name     ?? null,
+        day:          currentDay,
+        joiningDate:  emp.joiningDate,
+        dateOfBirth:  emp.dateOfBirth,
+        profileImage: emp.profileImage     ?? null,
+      };
+    });
 
     return Helper.response(
       true,
@@ -2223,6 +2220,7 @@ exports.EmployeeDetails = async (req, res) => {
         "adhaarNo",
         "martialStatus",
         "gender",
+        "role",
         "isofflineAtt",
         "isLocation",
         "isofflineAllTimeAtt",
@@ -2293,25 +2291,25 @@ exports.EmployeeDetails = async (req, res) => {
       }),
       isStateInt
         ? State.findOne({
-            where: { id: employee?.state, branchId },
+            where: { id: employee?.state },
             attributes: ["name"],
             raw: true,
           })
-        : Promise.resolve(null),
+        : employee?.state,
       isCountryInt
         ? Country.findOne({
-            where: { id: employee?.country, branchId },
+            where: { id: employee?.country },
             attributes: ["name"],
             raw: true,
           })
-        : Promise.resolve(null),
+        :employee?.country,
       isCityInt
         ? City.findOne({
-            where: { id: employee?.city, branchId },
+            where: { id: employee?.city},
             attributes: ["name"],
             raw: true,
           })
-        : Promise.resolve(null),
+        : employee?.city,
       EmploymentType.findOne({
         where: {
           id: employee?.empType,
@@ -2325,7 +2323,7 @@ exports.EmployeeDetails = async (req, res) => {
       empPersonal.findOne({
         where: {
           id: employee?.reportingPersonId,
-          branchId,
+          // branchId,
         },
       }),
     ]);
@@ -2345,7 +2343,7 @@ exports.EmployeeDetails = async (req, res) => {
       ...employee,
       bank_account,
       department: department?.name || null,
-      designation: designation?.name || null,
+       designation: employee?.role == 'teamLeader' ? 'team lead' : designation?.name || null,
       state: isStateInt ? (state?.name || null) : (employee?.state || null),
       country: isCountryInt ? (country?.name || null) : (employee?.country || null),
       city: isCityInt ? (city?.name || null) : (employee?.city || null),
@@ -2354,7 +2352,7 @@ exports.EmployeeDetails = async (req, res) => {
       // check_out_flag: true ,
       check_in_time: empAttendance?.check_in_time ?? "",
       check_out_time: empAttendance?.check_out_time ?? "",
-      profileImage: empAttendance?.profileImage ?? "",
+      profileImage: (employee?.profileImage && String(employee.profileImage).trim()) || (empAttendance?.profileImage && String(empAttendance.profileImage).trim()) || "",
       reportingPersonName: `${reportingPerson?.firstName} ${reportingPerson?.lastName} `,
     };
 
@@ -2391,6 +2389,7 @@ exports.getAppLeaveTypes = async (req, res) => {
       const value = {
         value: r.id,
         label: r.leaveName,
+        leaveCode: r.leaveCode,
         allowedPerYear: r.allowedPerYear,
       };
       data.push(value);
@@ -2455,6 +2454,27 @@ exports.EmployeeLeaveList = async (req, res) => {
 
     const leaveData = await Promise.all(
       LeaveMaster.map(async (item) => {
+        const isCompOff =
+          String(item?.leaveCode || "").toLowerCase().startsWith("co") ||
+          String(item?.leaveName || "").toLowerCase().includes("comp");
+
+        if (isCompOff) {
+          const compOffRecords = await comp_off.findAll({
+            where: { tenantId, employeeId, branchId },
+            raw: true,
+          });
+          const total_leave = compOffRecords.reduce((s, r) => s + Number(r.totalDays || 0), 0);
+          const used_leave = compOffRecords.reduce((s, r) => s + Number(r.usedDays || 0), 0);
+          const available_leave = compOffRecords.reduce((s, r) => s + Number(r.remainingDays || 0), 0);
+          return {
+            name: item?.leaveName,
+            code: item?.leaveCode,
+            available_leave,
+            used_leave,
+            total_leave,
+          };
+        }
+
         const leavebal = await leave_balance.findOne({
           where: { tenantId, employeeId, leaveTypeId: item?.id, branchId },
           order: [["createdAt", "desc"]],
@@ -2463,6 +2483,7 @@ exports.EmployeeLeaveList = async (req, res) => {
           name: item?.leaveName,
           code: item?.leaveCode,
           available_leave: leavebal?.remainingLeaves ?? 0,
+          used_leave: leavebal?.usedLeaves ?? 0,
           total_leave:
             leavebal?.totalAssigned < leavebal?.remainingLeaves
               ? (leavebal?.remainingLeaves ?? 0)
@@ -2595,13 +2616,16 @@ exports.AppapplyForLeave = async (req, res) => {
   const {
     employeeId,
     leaveTypeId,
-    compOffId,
     fromDate,
     toDate,
     reason,
     duration_type = "full", // from duration type
     to_duration_type = "full", // to duration type
   } = req.body;
+
+  // compOffId array aa sakta hai frontend se, string mein convert karo
+  const rawCompOffId = req.body.compOffId;
+  const compOffId = Array.isArray(rawCompOffId) ? rawCompOffId[0] : rawCompOffId ?? null;
 
   const tenantId = req.users && req.users.tenantId;
   const createdBy = req.users && req.users.id;
@@ -2635,6 +2659,40 @@ exports.AppapplyForLeave = async (req, res) => {
         days -= 0.5;
       }
     }
+    // =============================================
+    // COMP-OFF VALIDATION (only when compOffId sent)
+    // =============================================
+    if (compOffId) {
+      const compOffRecord = await comp_off.findOne({
+        where: { id: compOffId, employeeId, tenantId, branchId },
+      });
+
+      if (!compOffRecord) {
+        return Helper.response(false, "Comp-off record not found", {}, res, 200);
+      }
+      if (compOffRecord.approval_status !== "approved") {
+        return Helper.response(false, "Comp-off is not approved yet", {}, res, 200);
+      }
+      if (compOffRecord.status === "used") {
+        return Helper.response(false, "Comp-off is already fully used", {}, res, 200);
+      }
+      // if (compOffRecord.status === "expired") {
+        // return Helper.response(false, "Comp-off has expired", {}, res, 200);
+      // }
+      // if (compOffRecord.expiryDate && moment().isAfter(moment(compOffRecord.expiryDate), "day")) {
+      //   return Helper.response(false, "Comp-off has expired", {}, res, 200);
+      // }
+      if (Number(compOffRecord.remainingDays) < days) {
+        return Helper.response(
+          false,
+          `Insufficient comp-off balance. Available: ${compOffRecord.remainingDays} day(s), Requested: ${days} day(s)`,
+          {},
+          res,
+          200,
+        );
+      }
+    }
+
     const existsLeave = await leave_application.findOne({
       where: {
         employeeId,
@@ -2646,10 +2704,8 @@ exports.AppapplyForLeave = async (req, res) => {
         days,
         branchId,
         tenantId,
-        status:{
-        [Op.ne]: 'self_declined'
-        }
-
+        status: { [Op.ne]: "self_declined" },
+        ...(compOffId ? { compOffId } : {}),
       },
     });
     if (existsLeave) {
@@ -2666,10 +2722,27 @@ exports.AppapplyForLeave = async (req, res) => {
       days,
       reason,
       tenantId,
-      compOffId:compOffId??null,
+      compOffId: compOffId ?? null,
       branchId,
       createdBy,
     });
+
+    // =============================================
+    // UPDATE COMP-OFF BALANCE after leave applied
+    // =============================================
+    if (compOffId) {
+      const compOffRecord = await comp_off.findOne({ where: { id: compOffId } });
+      const newUsed = Number(compOffRecord.usedDays) + days;
+      const newRemaining = Number(compOffRecord.remainingDays) - days;
+      await comp_off.update(
+        {
+          usedDays: newUsed,
+          remainingDays: newRemaining,
+          status: newRemaining <= 0 ? "used" : "active",
+        },
+        { where: { id: compOffId } },
+      );
+    }
 
     return Helper.response(
       true,
@@ -2800,25 +2873,60 @@ exports.AppupdatedApplyLeaveStatus = async (req, res) => {
 
     let remainingLeaves;
     if (await existingLeave.save()) {
-      if (leaveBalances?.remainingLeaves < Number(days)) {
-        remainingLeaves = 0;
-      } else {
-        remainingLeaves = leaveBalances?.remainingLeaves - Number(days);
-        days = Number(leaveBalances?.usedLeaves) + Number(days);
-      }
+      if (status == "approved") {
+        const fromDate = new Date(existingLeave.fromDate);
+        const fromMonth = fromDate.getMonth() + 1;
+        const fromYear = fromDate.getFullYear();
+        const leaveDays = Number(existingLeave.days || 0);
 
-      //     const updateleavebalance= await leave_balance.update({
-      //            usedLeaves:days,
-      //            remainingLeaves,
-      //            updatedBy:req.users?.id
-      //     },{
-      //    where:{
-      //        tenantId,
-      //         leaveTypeId:leaveTypeId,
-      //         employeeId,
-      //         year
-      //    }
-      //     })
+        const balanceRecord = await LeaveBalance.findOne({
+          where: { tenantId, branchId, leaveTypeId: existingLeave.leaveTypeId, employeeId: existingLeave.employeeId, year: fromYear, month: fromMonth },
+        });
+        // if (balanceRecord) {
+        //   const newUsed = Number(balanceRecord.usedLeaves || 0) + leaveDays;
+        //   const newRemaining = Math.max(Number(balanceRecord.remainingLeaves || 0) - leaveDays, 0);
+        //   // await LeaveBalance.update(
+        //   //   { usedLeaves: newUsed.toFixed(1), remainingLeaves: newRemaining.toFixed(1), updatedBy: req.users?.id },
+        //   //   { where: { id: balanceRecord.id } },
+        //   // );
+        // }
+
+        if (existingLeave.compOffId) {
+          const compOffRecord = await comp_off.findOne({ where: { id: existingLeave.compOffId } });
+          if (compOffRecord) {
+            const newUsed = Number(compOffRecord.usedDays || 0) + leaveDays;
+            const newRemaining = Math.max(Number(compOffRecord.remainingDays || 0) - leaveDays, 0);
+            await comp_off.update(
+              { usedDays: newUsed.toFixed(1), remainingDays: newRemaining.toFixed(1), status: newRemaining <= 0 ? "used" : "active" },
+              { where: { id: existingLeave.compOffId } },
+            );
+          }
+        }
+    
+
+      }
+      // Fetch user device token
+      // const deviceInfo = await empPersonal.findOne({
+      //   where: { id: employeeId },
+      //   raw: true,
+      // });
+  
+      // // If user has FCM token, send push notification
+      // if (deviceInfo?.deviceToken) {
+      //   const leaveCount = data.length;
+      //   // await Helper.sendNotification(
+      //   //   deviceInfo.deviceId,
+      //   //   "Leave Approval Updates",
+      //   //   `${leaveCount} leave(s) have been approved in your team.`
+      //   // );
+      //   const response = await Helper.sendNotification(
+      //     deviceInfo.deviceToken,
+      //     "Leave Approval Updates",
+      //     `${leaveCount} leave(s) have been approved in your team.`,
+      //   );
+      //   // console.log(response, "response");
+      // }
+
       return Helper.response(
         true,
         "Leave updated successfully.",
@@ -3147,7 +3255,7 @@ exports.PrintBill = async (req, res) => {
                 italics: true,
               },
               {
-                text: Helper.convertNumberToWords(netSalary).toUpperCase(),
+                text: Helper.convertNumberToWords(Math.floor(netSalary)).toUpperCase(),
                 alignment: "right",
                 bold: true,
                 italics: true,
@@ -3234,7 +3342,8 @@ exports.PrintBill = async (req, res) => {
                     `${employee?.firstName} ${employee?.lastName}` || "NA"
                   }`,
                 },
-                { text: `Department : ${employee.department || "NA"}` },
+                 { text: "" },
+                // { text: `Department : ${employee.department || "NA"}` },
               ],
               [
                 { text: `Employee Code : ${employee.empCode || "NA"}` },
@@ -3601,7 +3710,7 @@ exports.notification = async (req, res) => {
       //   `${leaveCount} leave(s) have been approved in your team.`
       // );
       const response = await Helper.sendNotification(
-        deviceInfo.deviceId,
+        deviceInfo.deviceToken,
         "Leave Approval Updates",
         `${leaveCount} leave(s) have been approved in your team.`,
       );
@@ -3625,29 +3734,67 @@ exports.notification = async (req, res) => {
             })
           : null;
 
-        const creator = await empPersonal.findOne({
-          where: { id: item.createdBy },
-          raw: true,
-        });
+        const recommender = item?.recommendedId
+          ? await empPersonal.findOne({
+              where: { id: item.recommendedId },
+              raw: true,
+            })
+          : null;
+
+        const employee = item?.employeeId
+          ? await empPersonal.findOne({
+              where: { id: item.employeeId },
+              raw: true,
+            })
+          : null;
+
+        const creator = item?.createdBy
+          ? await empPersonal.findOne({
+              where: { id: item.createdBy },
+              raw: true,
+            })
+          : null;
+
+        const fullName = (p) =>
+          p ? `${p.firstName || ""} ${p.lastName || ""}`.trim() : null;
 
         return {
           ...item,
           leaveType: leaveType?.leaveName ?? null,
-          approvedBy: approver
-            ? `${approver.firstName} ${approver.lastName}`
-            : null,
-          createdBy: creator
-            ? `${creator.firstName} ${creator.lastName}`
-            : null,
+          employeeName: fullName(employee),
+          approvedBy: fullName(approver),
+          recommendedBy: fullName(recommender),
+          createdBy: fullName(creator),
           createdAt: Helper.dateFormat(item.createdAt),
           updatedAt: Helper.dateFormat(item.updatedAt),
         };
       }),
     );
-    const mergedData = [
-      ...finalData, // leave data (with detailed info)
-      ...Attendacedata, // today's attendance
-    ];
+
+    // Mark leave rows as read/unread from notification_reads (per user + status snapshot)
+    const reads = await notification_reads.findAll({
+      where: { userId, tenantId, refType: "leave" },
+      attributes: ["refId", "status", "updatedAtSnapshot"],
+      raw: true,
+    });
+    const normalizeSnap = (v) => String(v || "").split(",")[0].trim();
+    // const readKey = (id, status, updatedAt) =>
+    //   `${id}|${String(status || "").toLowerCase()}|${String(updatedAt || "")}`;
+    const readKey = (id, status, updatedAt) =>
+      `${id}|${String(status || "").toLowerCase()}|${normalizeSnap(updatedAt)}`;
+    const readSet = new Set(
+      reads.map((r) => readKey(r.refId, r.status, r.updatedAtSnapshot)),
+    );
+    const leavesWithRead = finalData.map((item) => ({
+      ...item,
+      isRead: readSet.has(readKey(item.id, item.status, item.updatedAt)),
+    }));
+
+    // Portal / feed: only unread leave notifications (+ today's attendance)
+    // const unreadLeaves = leavesWithRead.filter((item) => !item.isRead);
+    // const mergedData = [...unreadLeaves, ...Attendacedata];
+    // ab:
+    const mergedData = [...leavesWithRead, ...Attendacedata];
 
     return Helper.response(
       true,
@@ -3677,11 +3824,7 @@ exports.getAppAppliedLeaves = async (req, res) => {
       return Helper.response(false, "BranchId is required!", [], res, 400);
     }
 
-    const currentDate = new Date();
-    const currentMonth = currentDate.getMonth() + 1;
-    const currentYear = currentDate.getFullYear();
-
-    const { month = currentMonth, year = currentYear } = req.body || {};
+    const { month, year } = req.body || {};
 
     let employeeIds = [];
 
@@ -3735,8 +3878,9 @@ exports.getAppAppliedLeaves = async (req, res) => {
       );
 
       employeeIds = [...new Set([...directIds, ...subordinateIds])];
-    } else if (role === "manager") {
+    } else if (role == "manager") {
       let directReportees;
+      branchId = req.body.branchId ? req.body.branchId : branchId;
       if (branchId == "All") {
         directReportees = await empPersonal.findAll({
           where: {
@@ -3798,15 +3942,16 @@ exports.getAppAppliedLeaves = async (req, res) => {
         FETCH LEAVES
     ===================================================== */
 
+    const andClauses = [];
+    if (month) andClauses.push(where(fn("EXTRACT", literal('MONTH FROM "fromDate"')), month));
+    if (year) andClauses.push(where(fn("EXTRACT", literal('YEAR FROM "fromDate"')), year));
+
     const leaveApplications = await leave_application.findAll({
       where: {
         tenantId,
         branchId: branchId == "All" ? { [Op.ne]: null } : branchId,
         employeeId: { [Op.in]: employeeIds },
-        [Op.and]: [
-          where(fn("EXTRACT", literal('MONTH FROM "fromDate"')), month),
-          where(fn("EXTRACT", literal('YEAR FROM "fromDate"')), year),
-        ],
+        ...(andClauses.length > 0 && { [Op.and]: andClauses }),
       },
       order: [["appliedOn", "DESC"]],
       raw: true,
@@ -3870,6 +4015,56 @@ exports.getAppAppliedLeaves = async (req, res) => {
     );
   } catch (error) {
     console.error("Error fetching leave list:", error);
+    return Helper.response(false, error.message, [], res, 500);
+  }
+};
+
+exports.getMyLeaveHistory = async (req, res) => {
+  const tenantId = req.users?.tenantId;
+  const employeeId = req.users?.id;
+  const branchId = req.users?.branchId;
+
+  if (!tenantId || !branchId || branchId === "null") {
+    return Helper.response(false, "Required fields missing", [], res, 400);
+  }
+
+  try {
+    const { leaveTypeId, month, year } = req.body || {};
+
+    const andClauses = [];
+    if (year) andClauses.push(where(fn("EXTRACT", literal('YEAR FROM "fromDate"')), year));
+    if (month) andClauses.push(where(fn("EXTRACT", literal('MONTH FROM "fromDate"')), month));
+
+    const whereClause = {
+      tenantId,
+      employeeId,
+      branchId,
+      ...(leaveTypeId && { leaveTypeId }),
+      ...(andClauses.length > 0 && { [Op.and]: andClauses }),
+    };
+
+    const leaves = await leave_application.findAll({
+      where: whereClause,
+      order: [["fromDate", "DESC"]],
+      raw: true,
+    });
+
+    const leaveTypes = await leaveMaster.findAll({
+      where: { tenantId },
+      attributes: ["id", "leaveName", "leaveCode"],
+      raw: true,
+    });
+    const ltMap = Object.fromEntries(leaveTypes.map((l) => [l.id, l]));
+
+    const data = leaves.map((l) => ({
+      ...l,
+      leaveName: ltMap[l.leaveTypeId]?.leaveName ?? null,
+      leaveCode: ltMap[l.leaveTypeId]?.leaveCode ?? null,
+    }));
+
+    return Helper.response(true, "Leave history fetched", data, res, 200);
+  } catch (error) {
+    console.error("Error fetching leave history:", error);
     return Helper.response(false, error.message, [], res, 500);
   }
 };
@@ -4156,8 +4351,7 @@ exports.getAppAppliedLeaves = async (req, res) => {
 exports.applyRegularization = async (req, res) => {
   const t = await sequelize.transaction();
   try {
-    const { attendanceDate, inTimeRequested, outTimeRequested, reason } =
-      req.body;
+    const { attendanceDate, inTimeRequested, outTimeRequested, reason } = req.body;
 
     const employeeId = req.users?.id;
     const tenantId = req.users?.tenantId;
@@ -4187,20 +4381,58 @@ exports.applyRegularization = async (req, res) => {
       );
     }
 
+    // const today = new Date();
+    // const attDate = new Date(attendanceDate);
+
+    // today.setHours(0, 0, 0, 0);
+    // attDate.setHours(0, 0, 0, 0);
+
+    // const diffTime = today.getTime() - attDate.getTime();
+    // const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+    // if (diffDays > 2) {
+    //   await t.rollback();
+    //   return Helper.response(
+    //     false,
+    //     "Regularization allowed only within 2 days from attendance date",
+    //     {},
+    //     res,
+    //     200,
+    //   );
+    // }
+
+
     const today = new Date();
     const attDate = new Date(attendanceDate);
 
     today.setHours(0, 0, 0, 0);
     attDate.setHours(0, 0, 0, 0);
 
-    const diffTime = today.getTime() - attDate.getTime();
-    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    if (attDate > today) {
+      await t.rollback();
+      return Helper.response(false, "Attendance date cannot be in the future", {}, res, 200);
+    }
 
-    if (diffDays > 2) {
+    // Count weekdays after attendance date up to today (Sat/Sun skipped)
+    const countWorkingDaysBetween = (from, to) => {
+      let count = 0;
+      const d = new Date(from);
+      d.setDate(d.getDate() + 1); // start from next day
+      while (d <= to) {
+        const day = d.getDay(); // 0 = Sun, 6 = Sat
+        if (day !== 0 && day !== 6) count++;
+        d.setDate(d.getDate() + 1);
+      }
+      return count;
+    };
+
+    const workingDiff = countWorkingDaysBetween(attDate, today);
+
+    if (workingDiff > 2) {
       await t.rollback();
       return Helper.response(
         false,
-        "Regularization allowed only within 2 days from attendance date",
+        "Regularization allowed only within 2 working days from attendance date (weekends excluded)",
         {},
         res,
         200,
@@ -4446,7 +4678,6 @@ exports.updateRegularizationStatus = async (req, res) => {
       request.status = status;
       request.approverId = approverId;
       request.approvedAt = new Date();
-      await request.save({ transaction: t });
 
       // Only process attendance if approved
       if (status == "approved") {
@@ -4485,6 +4716,11 @@ exports.updateRegularizationStatus = async (req, res) => {
         });
 
         if (existingAttendance) {
+          // Store originals so they can be restored if this approval is reverted
+          request.originalCheckIn = existingAttendance.check_in_time;
+          request.originalCheckOut = existingAttendance.check_out_time;
+          request.wasNewAttendance = false;
+
           await attendance.update(
             {
               check_in_time: checkIn || existingAttendance.check_in_time,
@@ -4502,6 +4738,11 @@ exports.updateRegularizationStatus = async (req, res) => {
             },
           );
         } else {
+          // No prior attendance record — we are creating one fresh
+          request.originalCheckIn = null;
+          request.originalCheckOut = null;
+          request.wasNewAttendance = true;
+
           await attendance.create(
             {
               id: uuidv4(),
@@ -4521,6 +4762,8 @@ exports.updateRegularizationStatus = async (req, res) => {
           );
         }
       }
+
+      await request.save({ transaction: t });
     }
 
     await t.commit();
@@ -4535,16 +4778,45 @@ exports.updateRegularizationStatus = async (req, res) => {
 exports.markattendance = async (req, res) => {
   try {
     const { tenantId, id: employeeId } = req.users;
+    const branchId = req.users?.branchId || null;
 
     if (!tenantId || !employeeId) {
       return Helper.response(false, "User not found", {}, res, 404);
     }
 
+    const emp = await empPersonal.findOne({
+      where: { id: employeeId, tenantId, status: "active" },
+      attributes: ["id", "isofflineAtt", "isofflineAllTimeAtt", "shift_id", "branchId"],
+      raw: true,
+    });
+    
+    if (!emp) {
+      return Helper.response(false, "Employee not found", {}, res, 404);
+    }
+    
+    // Web / offline attendance must be enabled
+    if (!emp.isofflineAtt) {
+      return Helper.response(
+        false,
+        "Web attendance is not enabled for your account. Contact HR.",
+        {},
+        res,
+        403,
+      );
+    }
+    
+    // Optional: if NOT all-time, you can later add shift-window check here
+    // if (!emp.isofflineAllTimeAtt) { ... shift start/end validation ... }
+
     const today = new Date();
     const date = today.toISOString().split("T")[0];
     const month = today.getMonth() + 1;
     const year = today.getFullYear();
-    const time = today.toLocaleTimeString();
+
+    // Format: YYYY-MM-DD HH:mm:ss  e.g. 2026-06-01 09:30:50
+    const pad = (n) => String(n).padStart(2, "0");
+    const datetime = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())} ${pad(today.getHours())}:${pad(today.getMinutes())}:${pad(today.getSeconds())}`;
+
     const ip_address =
       req.headers["x-forwarded-for"] || req.socket.remoteAddress;
 
@@ -4557,13 +4829,14 @@ exports.markattendance = async (req, res) => {
       attendanceRecord = await attendance.create({
         tenantId,
         employeeId,
+        branchId,
         date,
         month,
         year,
         ip_address,
         Inlatitude: req.body.latitude || null,
         Inlongitude: req.body.longitude || null,
-        check_in_time: time,
+        check_in_time: datetime,
         is_present: true,
         createdBy: employeeId,
         check_in_img: req.files?.[0]?.filename || null,
@@ -4588,7 +4861,7 @@ exports.markattendance = async (req, res) => {
     //   );
     // }
 
-    attendanceRecord.check_out_time = time;
+    attendanceRecord.check_out_time = datetime;
     attendanceRecord.check_out_img = req.files?.[0]?.filename || null;
     attendanceRecord.updatedBy = employeeId;
     attendanceRecord.Outlatitude = req.body.latitude || null;
@@ -4833,6 +5106,132 @@ exports.reimbursementList = async (req, res) => {
     return Helper.response(false, error.message, [], res, 500);
   }
 };
+
+/** Team reimbursements — manager/director/teamleader/Senior Accountant: all branch records; others: own only.
+ *  Accepts optional body param `status` (e.g. "pending", "recommended", "approved", "rejected") for filtering.
+ */
+exports.getTeamReimbursements = async (req, res) => {
+  try {
+    const tenantId = req.users?.tenantId;
+    const employeeId = req.users?.id;
+    const branchId = req.users?.branchId;
+    const role = (req.users?.role || '').toLowerCase();
+    const statusFilter = req.body?.status || req.query?.status || null;
+
+    if (!branchId || branchId === 'null') {
+      return Helper.response(false, 'branchId is required!', {}, res, 200);
+    }
+    if (!tenantId) {
+      return Helper.response(false, 'User Not Found', [], res, 404);
+    }
+
+    // Check if the employee holds a "Senior Accountant" designation
+    let isSeniorAccountant = false;
+    const empInfo = await empPersonal.findByPk(employeeId, { attributes: ['designationId'], raw: true });
+    if (empInfo?.designationId) {
+      const desig = await Designation.findByPk(empInfo.designationId, { attributes: ['name'], raw: true });
+      isSeniorAccountant = (desig?.name || '').toLowerCase().trim() === 'senior accountant';
+    }
+
+    const isTeamRole = role === 'manager' || role === 'director' || role === 'teamleader' || isSeniorAccountant;
+    const where = isTeamRole
+      ? { tenantId, branchId }
+      : { tenantId, branchId, employeeId };
+
+    if (statusFilter && statusFilter !== 'all') {
+      where.status = statusFilter;
+    }
+
+    const rows = await reimbursement.findAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      raw: true,
+    });
+
+    const data = await Promise.all(
+      rows.map(async (item) => {
+        const emp = await empPersonal.findOne({
+          where: { id: item.employeeId, tenantId },
+          attributes: ['firstName', 'lastName'],
+          raw: true,
+        });
+        const files = await ReimbursementFile.findAll({
+          where: { reimbursementId: item.id, tenantId, branchId },
+          attributes: ['id', 'image', 'doc_type'],
+          raw: true,
+        });
+        return {
+          ...item,
+          employee_name: emp ? `${emp.firstName} ${emp.lastName}` : '—',
+          files,
+        };
+      }),
+    );
+
+    return Helper.response(true, 'Team Reimbursements Found', data, res, 200);
+  } catch (error) {
+    console.error('getTeamReimbursements error:', error);
+    return Helper.response(false, error.message, [], res, 500);
+  }
+};
+
+/** Update reimbursement status with role-based restrictions.
+ *  Senior Accountant  → can only set status to "recommended"
+ *  Manager / Director → can set status to "approved" or "rejected"
+ */
+exports.updateAppReimbursementStatus = async (req, res) => {
+  try {
+    const { id, status } = req.body;
+    const tenantId = req.users?.tenantId;
+    const approverId = req.users?.id;
+    const branchId = req.users?.branchId;
+    const role = (req.users?.role || '').toLowerCase();
+
+    const validStatuses = ['approved', 'rejected', 'recommended'];
+    if (!id || !validStatuses.includes(status)) {
+      return Helper.response(false, "id and valid status (approved/rejected/recommended) are required", null, res, 400);
+    }
+
+    // Determine if caller is Senior Accountant
+    let isSeniorAccountant = false;
+    const empInfo = await empPersonal.findByPk(approverId, { attributes: ['designationId'], raw: true });
+    if (empInfo?.designationId) {
+      const desig = await Designation.findByPk(empInfo.designationId, { attributes: ['name'], raw: true });
+      isSeniorAccountant = (desig?.name || '').toLowerCase().trim() === 'senior accountant';
+    }
+
+    const isManagerOrDirector = role === 'manager' || role === 'director' || role === 'teamleader';
+
+    // Role-based permission check
+    if (isSeniorAccountant && status !== 'recommended') {
+      return Helper.response(false, 'Senior Accountant can only recommend reimbursements', null, res, 403);
+    }
+    if (!isSeniorAccountant && !isManagerOrDirector) {
+      return Helper.response(false, 'You do not have permission to update reimbursement status', null, res, 403);
+    }
+    if (isManagerOrDirector && status === 'recommended') {
+      return Helper.response(false, 'Manager/Director cannot set status to recommended', null, res, 403);
+    }
+
+    const record = await reimbursement.findOne({ where: { id, tenantId, branchId } });
+    if (!record) {
+      return Helper.response(false, 'Reimbursement not found', null, res, 404);
+    }
+
+    // Senior Accountant can only recommend pending records
+    if (isSeniorAccountant && record.status !== 'pending') {
+      return Helper.response(false, 'Only pending reimbursements can be recommended', null, res, 400);
+    }
+
+    await record.update({ status, updatedBy: approverId, updatedAt: new Date() });
+
+    return Helper.response(true, `Reimbursement ${status} successfully`, record, res, 200);
+  } catch (error) {
+    console.error('updateAppReimbursementStatus error:', error);
+    return Helper.response(false, error.message, null, res, 500);
+  }
+};
+
 const comp_off=require('../../models/comp_off')
 
 exports.CompoffData=async(req,res)=>{
@@ -4849,10 +5248,12 @@ exports.CompoffData=async(req,res)=>{
 
     const data=await comp_off.findAll({
       where:{
-        employeeId,tenantId,branchId
+        employeeId,tenantId,branchId,
+        status: "active",
+        remainingDays: { [require('sequelize').Op.gt]: 0 },
       },
       raw:true,
-      attributes:["earnedDate","id","branchId","employeeId","tenantId"]
+      attributes:["earnedDate","id","branchId","employeeId","tenantId","remainingDays","totalDays","status"]
     })
     
     if(data.length==0){
@@ -5139,6 +5540,21 @@ exports.getEmpLetterDocs = async (req, res) => {
   }
 };
 
+exports.getAppHandbook = async (req, res) => {
+  try {
+    const tenantId = req.users && req.users.tenantId;
+    if (!tenantId) return Helper.response(false, 'User Not Found', {}, res, 404);
+
+    const tenant = await Tenant.findOne({ where: { id: tenantId }, attributes: ['handbook'], raw: true });
+    const handbook = tenant?.handbook || null;
+    const url = handbook ? `${process.env.BASE_URL}/upload/${handbook}` : null;
+    return Helper.response(true, 'Handbook fetched', { url, filename: handbook }, res, 200);
+  } catch (error) {
+    console.error('getAppHandbook error:', error);
+    return Helper.response(false, error?.message, [], res, 500);
+  }
+};
+
 exports.saveEmpLetterSignature = async (req, res) => {
   try {
     const employeeId = req.users.id;
@@ -5155,5 +5571,186 @@ exports.saveEmpLetterSignature = async (req, res) => {
   } catch (error) {
     console.error('saveEmpLetterSignature error:', error);
     return Helper.response(false, error?.message, [], res, 500);
+  }
+};
+
+
+exports.uploadEmpImage = async (req, res) => {
+  // const { id } = req.body;
+  const tenantId = req.users && req.users.tenantId;
+  const image = req.file ? req.file.filename : null;
+  const branchId = req.users && req.users.branchId;
+  if (!tenantId || !branchId) {
+    if (image) {
+      const filePath = path.join(__dirname, "../../../upload", image);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+    return Helper.response(
+      false,
+      "Branch Id ,Tenant ID and Employee ID are required",
+      [],
+      res,
+      400,
+    );
+  }
+ const employeeId = req.users.id;
+  if (!image) {
+    return Helper.response(false, "No image uploaded", [], res, 400);
+  }
+
+  try {
+    const emp = await empPersonal.findOne({
+      where: { id:employeeId},
+    });
+    if (!emp) {
+      const filePath = path.join(__dirname, "../../../upload", image);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      return Helper.response(false, "Employee not found", [], res, 404);
+    }
+
+    if (emp) {
+      const oldImagePath = path.join(
+        __dirname,
+        "../../../upload",
+        emp.profileImage,
+      );
+      if (fs.existsSync(oldImagePath)) {
+        try {
+          fs.unlinkSync(oldImagePath);
+        } catch (err) {
+          /* ignore */
+        }
+      }
+    }
+
+    emp.profileImage = image;
+    emp.updatedBy = req.users && req.users.id;
+    await emp.save();
+
+    return Helper.response(
+      true,
+      "Profile image updated successfully",
+      emp,
+      res,
+      200,
+    );
+  } catch (error) {
+    console.error("Error uploading profile image:", error);
+
+    if (image) {
+      const filePath = path.join(__dirname, "../../../upload", image);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+    return Helper.response(false, "Internal server error", [], res, 500);
+  }
+};
+
+exports.getEmployeeUploadedImage = async (req, res) => {
+  const { id } = req.body;
+  const tenantId = req.users && req.users.tenantId;
+  const branchId = req.users && req.users.branchId;
+  if (!tenantId || !id || !branchId) {
+    return Helper.response(
+      false,
+      "branch Id,Tenant ID and Employee ID are required",
+      [],
+      res,
+      400,
+    );
+  }
+
+  try {
+    const emp = await empPersonal.findOne({
+      where: { id, tenantId, status: "active", branchId },
+    });
+    if (!emp) {
+      return Helper.response(false, "Employee not found", [], res, 404);
+    }
+
+    if (!emp.profileImage) {
+      return Helper.response(
+        false,
+        "No profile image found for this employee",
+        [],
+        res,
+        404,
+      );
+    }
+
+    const imagePath = path.join(__dirname, "../../../upload", emp.profileImage);
+    if (fs.existsSync(imagePath)) {
+      return Helper.response(
+        true,
+        "Profile image fetched successfully",
+        emp.profileImage,
+        res,
+        200,
+      );
+    } else {
+      return Helper.response(
+        false,
+        "Profile image file does not exist",
+        [],
+        res,
+        404,
+      );
+    }
+  } catch (error) {
+    console.error("Error fetching profile image:", error);
+    return Helper.response(false, "Internal server error", [], res, 500);
+  }
+};
+
+exports.markNotificationsRead = async (req, res) => {
+  try {
+    const userId = req.users?.id;
+    const tenantId = req.users?.tenantId;
+    const branchId = req.users?.branchId;
+    const items = Array.isArray(req.body?.items) ? req.body.items : [];
+
+    if (!userId || !tenantId) {
+      return Helper.response(false, "User Not Found", {}, res, 404);
+    }
+    if (!items.length) {
+      return Helper.response(false, "items required", {}, res, 400);
+    }
+
+    // Always same format (date-only) — avoid "27/02/2026, 07:55 PM" vs "27/02/2026"
+    const normalizeSnap = (v) =>
+      String(v || "")
+        .split(",")[0]
+        .trim();
+
+    for (const it of items) {
+      const snap = normalizeSnap(it.updatedAt);
+
+      const existing = await notification_reads.findOne({
+        where: {
+          userId,
+          tenantId,
+          refType: "leave",
+          refId: it.id,
+          status: String(it.status || "").toLowerCase(),
+          updatedAtSnapshot: snap,
+        },
+      });
+
+      if (!existing) {
+        await notification_reads.create({
+          userId,
+          tenantId,
+          branchId,
+          refType: "leave",
+          refId: it.id,
+          status: String(it.status || "").toLowerCase(),
+          updatedAtSnapshot: snap,
+          readAt: new Date(),
+        });
+      }
+    }
+
+    return Helper.response(true, "Marked as read", {}, res, 200);
+  } catch (e) {
+    return Helper.response(false, e.message, {}, res, 500);
   }
 };

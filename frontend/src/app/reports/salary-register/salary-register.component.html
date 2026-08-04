@@ -1,0 +1,230 @@
+<div class="container-fluid mt-2 sr-page">
+  <div class="row mb-3">
+    <div class="col-md">
+      <div class="card">
+        <h5 class="card-header">Salary Register</h5>
+        <div class="card-body">
+          <div class="row g-3 align-items-end">
+            <div class="col-12 col-sm-6 col-md-3">
+              <label class="form-label">Select Month</label>
+              <ng-select
+                [items]="monthList"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="selectedMonth"
+                (ngModelChange)="onFilterChange()"
+                [clearable]="false"
+                placeholder="Select Month"
+              >
+              </ng-select>
+            </div>
+            <div class="col-12 col-sm-6 col-md-3">
+              <label class="form-label">Select Year</label>
+              <ng-select
+                [items]="yearList"
+                [(ngModel)]="selectedYear"
+                (ngModelChange)="onFilterChange()"
+                [clearable]="false"
+                placeholder="Select Year"
+              >
+              </ng-select>
+            </div>
+            <div class="col-12 col-md-6">
+              <div class="sr-summary">
+                <div class="sr-summary__item">
+                  <span class="sr-summary__label">Employees</span>
+                  <strong>{{ summary.employeeCount }}</strong>
+                </div>
+                <div class="sr-summary__item">
+                  <span class="sr-summary__label">Gross</span>
+                  <strong>{{ summary.totalGross | number: '1.2-2' }}</strong>
+                </div>
+                <div class="sr-summary__item">
+                  <span class="sr-summary__label">Net Payable</span>
+                  <strong>{{ summary.totalNetPayable | number: '1.2-2' }}</strong>
+                </div>
+                <div class="sr-summary__item">
+                  <span class="sr-summary__label">CTC</span>
+                  <strong>{{ summary.totalCtc | number: '1.2-2' }}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <div>
+        <h6 class="mb-0">
+          {{ monthLabel }}, {{ selectedYear }}
+          <span class="text-muted fw-normal ms-1" *ngIf="loading">· Loading…</span>
+        </h6>
+      </div>
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <input
+          type="search"
+          class="form-control form-control-sm sr-search"
+          placeholder="Search employee"
+          [value]="searchText"
+          (input)="applyFilter($event)"
+        />
+        <button
+          class="btn btn-sm btn-label-primary"
+          type="button"
+          (click)="exportExcel()"
+          [disabled]="!filteredRows.length"
+        >
+          <i class="icon-base ri ri-file-excel-2-line me-1"></i>
+          Excel
+        </button>
+      </div>
+    </div>
+
+    <div class="card-body p-0">
+      <div class="table-responsive sr-table-wrap">
+        <table class="table table-bordered table-sm mb-0 sr-table">
+          <thead>
+            <tr>
+              <th
+                *ngFor="let col of columns"
+                [ngClass]="cellClass(col)"
+                class="sr-th"
+              >
+                {{ col.label }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="!loading && !filteredRows.length">
+              <td [attr.colspan]="columns.length" class="text-center text-muted py-4">
+                No generated salary found for this month.
+              </td>
+            </tr>
+            <tr *ngFor="let row of filteredRows">
+              <td *ngFor="let col of columns" [ngClass]="cellClass(col)">
+                <ng-container [ngSwitch]="col.key">
+                  <ng-container *ngSwitchCase="'sno'">{{ row.sno }}</ng-container>
+                  <ng-container *ngSwitchCase="'name'">{{ row.name }}</ng-container>
+                  <ng-container *ngSwitchCase="'empCode'">{{ row.empCode }}</ng-container>
+                  <ng-container *ngSwitchCase="'appraisalPercent'">{{ row.appraisalPercent | number: '1.2-2' }}</ng-container>
+                  <ng-container *ngSwitchDefault>{{ row[col.key] | number: '1.2-2' }}</ng-container>
+                </ng-container>
+              </td>
+            </tr>
+          </tbody>
+          <tfoot *ngIf="filteredRows.length">
+            <tr class="sr-total-row">
+              <td *ngFor="let col of columns" [ngClass]="cellClass(col)">
+                <ng-container *ngIf="col.key === 'sno'">TOTAL</ng-container>
+                <ng-container *ngIf="col.key === 'name' || col.key === 'empCode' || col.key === 'appraisalPercent'"></ng-container>
+                <ng-container *ngIf="isMoney(col.key)">
+                  {{ totals[col.key] | number: '1.2-2' }}
+                </ng-container>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mt-1 mb-4" *ngIf="!loading">
+    <div class="col-lg-4">
+      <div class="card sr-section-card sr-section-card--leave h-100">
+        <div class="card-header sr-section-head sr-section-head--leave">
+          Leave Deduction Details
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-sm mb-0 sr-detail-table">
+              <thead>
+                <tr>
+                  <th>Employee Name</th>
+                  <th>Amount (₹)</th>
+                  <th>No. of Day</th>
+                  <th>Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of leaveDeductionDetails">
+                  <td>{{ item.employeeName }}</td>
+                  <td>{{ item.amount | number: '1.2-2' }}</td>
+                  <td>{{ item.daysLabel || item.days }}</td>
+                  <td>{{ item.reason }}</td>
+                </tr>
+                <tr *ngIf="!leaveDeductionDetails.length">
+                  <td colspan="4" class="text-muted text-center py-3">No leave deductions</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card sr-section-card sr-section-card--other h-100">
+        <div class="card-header sr-section-head sr-section-head--other">
+          Deductions
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-sm mb-0 sr-detail-table">
+              <thead>
+                <tr>
+                  <th>Employee Name</th>
+                  <th>Amount (₹)</th>
+                  <th>Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of otherDeductionDetails">
+                  <td>{{ item.employeeName }}</td>
+                  <td>{{ item.amount | number: '1.2-2' }}</td>
+                  <td>{{ item.reason }}</td>
+                </tr>
+                <tr *ngIf="!otherDeductionDetails.length">
+                  <td colspan="3" class="text-muted text-center py-3">No other deductions</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card sr-section-card sr-section-card--other h-100">
+        <div class="card-header sr-section-head sr-section-head--other">
+          Reimbursement
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-sm mb-0 sr-detail-table">
+              <thead>
+                <tr>
+                  <th>Employee Name</th>
+                  <th>Amount (₹)</th>
+                  <th>Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of reimbursementDetails">
+                  <td>{{ item.employeeName }}</td>
+                  <td>{{ item.amount | number: '1.2-2' }}</td>
+                  <td>{{ item.reason }}</td>
+                </tr>
+                <tr *ngIf="!reimbursementDetails.length">
+                  <td colspan="3" class="text-muted text-center py-3">No reimbursements</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -169,6 +169,10 @@ const empPersonal = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    webToken: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
     deviceId: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -191,6 +195,15 @@ const empPersonal = sequelize.define(
       type: DataTypes.BOOLEAN,
       allowNull: true,
       defaultValue: false,
+    },
+    isContractual: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: false,
+    },
+    hourlyRate: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
     },
   },
 

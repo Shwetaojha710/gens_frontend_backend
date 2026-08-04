@@ -7,10 +7,9 @@ import { EmployeeService } from '../../../services/employee.service';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DatePipe } from '@angular/common';
 @Component({
   selector: 'app-appointment-letter',
-  imports: [CommonModule,FormsModule,DatePipe],
+  imports: [CommonModule,FormsModule],
   templateUrl: './appointment-letter.component.html',
   styleUrl: './appointment-letter.component.css'
 })
@@ -193,7 +192,7 @@ public payrollService: PayrollService, private router: Router, public statusServ
   netSalary: 0
 };
   convertNumberToWords(amount: number): string {
-    if (amount === 0) return 'zero';
+    if (amount == 0) return 'zero';
     const a = [
       '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
       'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'
@@ -273,8 +272,27 @@ masterSelected:any
   toggleEdit() {
     this.isEdit = !this.isEdit;
   }
+
+  formatOrdinalDate(dateValue: string | Date): string {
+    if (!dateValue) return '';
+
+    const date = typeof dateValue === 'string'
+      ? new Date(`${dateValue}T00:00:00`)
+      : dateValue;
+
+    if (Number.isNaN(date.getTime())) return '';
+
+    const day = date.getDate();
+    const suffix = day % 100 >= 11 && day % 100 <= 13
+      ? 'th'
+      : ['th', 'st', 'nd', 'rd'][day % 10] || 'th';
+    const month = date.toLocaleString('en-US', { month: 'short' });
+
+    return `${day}<sup>${suffix}</sup> ${month}, ${date.getFullYear()}`;
+  }
 isDownload:any=false
 downloadDoc() {
+  console.log('Downloading document...',this.data);
 this.isDownload=true
   const element = document.getElementById('appointment-doc');
   if (!element) return;
@@ -287,22 +305,34 @@ this.isDownload=true
   const inputs = cloned.querySelectorAll('input');
 
   inputs.forEach((input: any) => {
-    const value = input.value || '';
+    const value = input.type == 'date'
+      ? this.formatOrdinalDate(input.value)
+      : input.value || '';
     const span = document.createElement('span');
-    span.innerText = value;
+    span.innerHTML = value;
     input.parentNode.replaceChild(span, input);
   });
+
+  cloned.querySelectorAll('br[style*="page-break-before"]').forEach((br: any) => {
+    const div = document.createElement('div');
+    div.className = 'page-break-spacer';
+    br.parentNode.replaceChild(div, br);
+  });
+
   const html = `
   <html xmlns:o='urn:schemas-microsoft-com:office:office'
         xmlns:w='urn:schemas-microsoft-com:office:word'>
   <head>
     <meta charset='utf-8'>
     <style>
-      body { font-family: 'Times New Roman'; line-height:1.6; }
+      body { font-family: 'Calibri'; line-height:1.6; }
       table { border-collapse: collapse; width:100%; }
       th, td { border:1px solid black; padding:5px; }
       .highlight { background: yellow; font-weight: bold; }
       .page-break { page-break-before: always; }
+      .page-break-spacer { page-break-before: always; height: 16px; margin-top: 16px; }
+      .force-page-break { page-break-before: always; mso-page-break-before: always; break-before: page; padding-top: 16px; }
+      h4.force-page-break { page-break-before: always; mso-page-break-before: always; break-before: page; }
     </style>
   </head>
   <body>
@@ -319,7 +349,7 @@ this.isDownload=true
 
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Appointment_${this.data.employeeName}.doc`;
+  a.download = `Appointment_${this.personalDetails.firstName}${this.personalDetails.lastName}.doc`;
   a.click();
 
   URL.revokeObjectURL(url);
@@ -336,7 +366,10 @@ printDoc() {
   // Replace inputs with their typed values
   cloned.querySelectorAll('input').forEach((input: any) => {
     const span = document.createElement('span');
-    span.innerText = input.value || '';
+    const value = input.type === 'date'
+      ? this.formatOrdinalDate(input.value)
+      : input.value || '';
+    span.innerHTML = value;
     input.parentNode.replaceChild(span, input);
   });
 
@@ -344,14 +377,14 @@ printDoc() {
   // iframe rendering. Replace each with a proper block-level div page-break.
   cloned.querySelectorAll('br[style*="page-break-before"]').forEach((br: any) => {
     const div = document.createElement('div');
-    div.style.cssText = 'page-break-before:always;break-before:page;height:0;';
+    div.className = 'page-break-spacer';
     br.parentNode.replaceChild(div, br);
   });
 
   const content = `<!DOCTYPE html><html><head><title>Appointment Letter</title><style>
     @page { margin: 0; }
     * { box-sizing: border-box; }
-    body { font-family: 'Times New Roman'; font-size: 14px; line-height: 1.6; padding: 15mm 20mm; color: #000; background: #fff; }
+    body { font-family: 'Calibri'; font-size: 11px; line-height: 1.6; padding: 15mm 20mm; color: #000; background: #fff; }
     h3 { text-align: center; font-weight: bold; text-decoration: underline; margin-bottom: 30px; }
     h4 { text-align: center; }
     h4 + *, h4 + table { page-break-before: avoid; }
@@ -360,8 +393,10 @@ printDoc() {
     .salary-table th, .salary-table td { border: 1px solid black; padding: 4px; font-size: 12px; }
     .salary-table tr { page-break-inside: avoid; }
     ol { padding-left: 20px; margin-top: 10px; }
-    li { font-size: 14px; margin-bottom: 6px; page-break-inside: avoid; }
-    p { font-size: 12px; margin: 6px 0; }
+    li { font-size: 11px; margin-bottom: 6px; page-break-inside: avoid; }
+    p { font-size: 11px; margin: 6px 0; }
+    .page-break-spacer { page-break-before: always; break-before: page; height: 16px; margin-top: 16px; }
+    .force-page-break { page-break-before: always; break-before: page; padding-top: 16px; }
     @media print {
       .salary-table th, .salary-table td { border: 1px solid black; }
       .salary-table tr { page-break-inside: avoid; }
@@ -379,5 +414,47 @@ printDoc() {
     iframe.contentWindow?.print();
     setTimeout(() => document.body.removeChild(iframe), 1000);
   };
+}
+
+isGeneratingPdf = false;
+isGeneratingAllPdf = false;
+allLettersResult: any = null;
+
+generateServerPdf(): void {
+  this.isGeneratingPdf = true;
+  this.employeeService.generateLetterPdf(this.personalDetails.id, 'appointment').subscribe({
+    next: (res: any) => {
+      if (res.status && res.data?.downloadUrl) {
+        window.open(res.data.downloadUrl, '_blank');
+      } else {
+        this.notyf.error(res.message || 'Failed to generate PDF.');
+      }
+      this.isGeneratingPdf = false;
+    },
+    error: () => {
+      this.notyf.error('Server error. Please try again.');
+      this.isGeneratingPdf = false;
+    }
+  });
+}
+
+generateAllLettersPdf(): void {
+  this.isGeneratingAllPdf = true;
+  this.allLettersResult = null;
+  this.employeeService.generateAllLettersPdf().subscribe({
+    next: (res: any) => {
+      if (res.status) {
+        this.allLettersResult = res.data;
+        this.notyf.success('All available letters generated successfully.');
+      } else {
+        this.notyf.error(res.message || 'No letter data found.');
+      }
+      this.isGeneratingAllPdf = false;
+    },
+    error: () => {
+      this.notyf.error('Server error. Please try again.');
+      this.isGeneratingAllPdf = false;
+    }
+  });
 }
 }

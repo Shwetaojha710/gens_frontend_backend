@@ -15,7 +15,7 @@
 }
 
 .employee-list-card .card-header {
-  background: linear-gradient(89.79deg, #209AF7 0.92%, #025A9D 99.82%);
+  background: linear-gradient(90deg, #0081c9 0%, #00d2b4 100%);
   color: #fff;
   padding: 1rem 1.25rem;
   border-bottom: none;
@@ -173,7 +173,7 @@
 
 .view-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, .35);
+  box-shadow: 0 4px 12px rgba(0, 129, 201, .35);
 }
 
 .btn-go-live {
@@ -238,7 +238,7 @@
 .live-page-wrap {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   overflow: hidden;
   background: #0f172a;
 }
@@ -300,7 +300,7 @@
 }
 
 .live-page-wrap app-live-tracking .lv-root {
-  height: calc(100vh - 50px);
+  height: calc(100% - 50px);
 }
 
 .live-page-wrap app-live-tracking .lv-topbar {
@@ -311,7 +311,7 @@
 .tracking-root {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   overflow: hidden;
   background: #0f172a;
 }
@@ -1354,7 +1354,8 @@
 }
 
 #map {
-  width: 100%;
+  position: absolute;
+  inset: 0;
   background: #1a2332;
 }
 

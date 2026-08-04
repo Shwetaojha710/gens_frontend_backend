@@ -375,6 +375,7 @@ exports.createEmp = async (req, res) => {
       shift_id,
       branchId,
       guarantorName,
+      emp_status:'approved',
       deviceId: Helper.getIpAddress(req),
     });
 
@@ -393,7 +394,10 @@ exports.createEmp = async (req, res) => {
 
 exports.getEmp = async (req, res) => {
   const tenantId = req.users && req.users.tenantId;
-  const branchId = req.users && req.users.branchId;
+  // Prefer branchId from request body (dropdown-selected), fallback to JWT branchId
+  const branchId = (req.body && req.body.branchId && req.body.branchId !== 'null' && req.body.branchId !== '')
+    ? req.body.branchId
+    : (req.users && req.users.branchId);
   const { email } = req.body || {};
 
   try {
@@ -710,7 +714,9 @@ exports.updateEmp = async (req, res) => {
     role,
     guarantorName,
     type,
-    emp_status
+    emp_status,
+    isContractual,
+    hourlyRate
   } = req.body;
 
   // const image = req.file ? req.file.filename : null;
@@ -880,6 +886,8 @@ exports.updateEmp = async (req, res) => {
     updateData.updatedBy = req.users && req.users.id;
     updateData.deviceId = Helper.getIpAddress(req);
     updateData.role = role;
+    if (isContractual !== undefined) updateData.isContractual = isContractual;
+    if (hourlyRate !== undefined) updateData.hourlyRate = hourlyRate;
 
     await existingEmp.update(updateData);
     if (
@@ -1096,13 +1104,18 @@ exports.employeeList = async (req, res) => {
       return Helper.response(false, "branchId is required!", {}, res, 200);
     }
 
+    // If the caller passes includeInactive:true, return all statuses
+    // (used by Generated Salary page so inactive-employee slips are visible).
+    // Every other caller omits this flag and still gets active-only.
+    const includeInactive = req.body && req.body.includeInactive === true;
+
+    const whereClause = includeInactive
+      ? { tenantId, branchId }
+      : { tenantId, branchId, status: "active" };
+
     const employees = await empPersonal.findAll({
-      where: {
-        tenantId,
-        branchId,
-        status: "active",
-      },
-      attributes: ["id", "firstName", "lastName", "empCode"],
+      where: whereClause,
+      attributes: ["id", "firstName", "lastName", "empCode", "status"],
       order: [["firstName", "ASC"]],
       raw: true,
     });
@@ -1110,7 +1123,9 @@ exports.employeeList = async (req, res) => {
     const dropdown = [
       { label: "All", value: "All" },
       ...employees.map((emp) => ({
-        label: `${emp.firstName} ${emp.lastName}-${emp.empCode}`,
+        label: includeInactive && emp.status === "inactive"
+          ? `${emp.firstName} ${emp.lastName}-${emp.empCode} (Inactive)`
+          : `${emp.firstName} ${emp.lastName}-${emp.empCode}`,
         value: emp.id,
       })),
     ];

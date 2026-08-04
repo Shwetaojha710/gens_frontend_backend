@@ -131,7 +131,7 @@ export class LocationService {
   getVisitReport(obj: any): Observable<any> {
     return this.http.post(`${this.baseUrl}visit-report`, obj);
   }
-  VisitPlaceDD(): Observable<any> {
-    return this.http.get(`${this.baseUrl}getVisitPlaceDD`, {});
+  VisitPlaceDD(obj:any): Observable<any> {
+    return this.http.post(`${this.baseUrl}getVisitPlaceDD`, obj);
   }
 }

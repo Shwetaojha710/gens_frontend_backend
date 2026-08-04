@@ -127,13 +127,13 @@
                     <span class="align-middle">NDA</span>
                   </button>
                 </li>
-                <li class="nav-item" role="presentation">
+                <!-- <li class="nav-item" role="presentation">
                   <button class="nav-link tab-link waves-effect waves-light" data-bs-toggle="tab"
                     data-bs-target="#offer_letter" aria-selected="false" role="tab" tabindex="-1">
                     <i class="icon-base ri ri-inbox-archive-line icon-sm me-2"></i>
                     <span class="align-middle">Offer Letter</span>
                   </button>
-                </li>
+                </li> -->
                 <li class="nav-item" role="presentation">
                   <button class="nav-link tab-link waves-effect waves-light" data-bs-toggle="tab"
                     data-bs-target="#service_agreement" aria-selected="false" role="tab" tabindex="-1">
@@ -368,14 +368,7 @@
                       name="country" id="select2Danger" (change)="getstates($event)" disabled>
                     </ng-select>
                   </div>
-                  <div class="col-md-3">
-                    <label class="col-form-label fw-bold">State</label>
-                    <ng-select [items]="states" bindLabel="label" bindValue="value"
-                      [(ngModel)]="personalDetails['state']" [multiple]="false" placeholder="Select state" name="state"
-                      id="select2Danger" (change)="getcity($event)" disabled>
-                    </ng-select>
-                  </div>
-                  <div class="col-md-3">
+                    <div class="col-md-3">
                     <label class="col-form-label fw-bold">PIN Code</label>
                     <input type="number" class="form-control" placeholder="Enter PIN Code"
                       [(ngModel)]="personalDetails.pinCode" name="pinCode" required #pinCodeRef="ngModel" disabled />
@@ -384,11 +377,23 @@
                     </small>
                   </div>
                   <div class="col-md-3">
+                    <label class="col-form-label fw-bold">State</label>
+                        <input type="text" class="form-control" placeholder="Enter state"
+                  [(ngModel)]="personalDetails['state']" name="state"  #stateRef="ngModel" disabled="true"/>
+                    <!-- <ng-select [items]="states" bindLabel="label" bindValue="value"
+                      [(ngModel)]="personalDetails['state']" [multiple]="false" placeholder="Select state" name="state"
+                      id="select2Danger" (change)="getcity($event)" disabled>
+                    </ng-select> -->
+                  </div>
+
+                  <div class="col-md-3">
                     <label class="col-form-label fw-bold">City</label>
-                    <ng-select [items]="cities" bindLabel="label" bindValue="value"
+                     <input type="text" class="form-control" placeholder="Enter City"
+                  [(ngModel)]="personalDetails['city']" name="city"  #cityRef="ngModel"  disabled="true" />
+                    <!-- <ng-select [items]="cities" bindLabel="label" bindValue="value"
                       [(ngModel)]="personalDetails['city']" [multiple]="false" placeholder="Select City" name="city"
                       id="select2Danger" disabled>
-                    </ng-select>
+                    </ng-select> -->
                   </div>
 
                   <div class="col-md-6">
@@ -447,9 +452,9 @@
 
                 <app-nda></app-nda>
               </div>
-              <div class="tab-pane fade" id="offer_letter" role="tabpanel">
+              <!-- <div class="tab-pane fade" id="offer_letter" role="tabpanel">
                 <app-offer-letter></app-offer-letter>
-              </div>
+              </div> -->
               <div class="tab-pane fade" id="service_agreement" role="tabpanel">
                 <app-service-agreement></app-service-agreement>
               </div>

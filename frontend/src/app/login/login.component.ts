@@ -56,8 +56,10 @@ export class LoginComponent {
   }
 
   // ─── Employee Login ───────────────────────────────────────────────────────
+  submitted = false;
 
   login() {
+    this.submitted = true;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.notyf.error('Please fill in all required fields.');
@@ -81,6 +83,12 @@ export class LoginComponent {
           localStorage.setItem('tenant', JSON.stringify(data.data.tenant));
           localStorage.setItem('branch', JSON.stringify(data.data.branch));
           localStorage.setItem('currency', JSON.stringify(data.data.currencyList));
+          // Save user-specific custom permissions if set by admin (null = use role defaults)
+          if (data.data.customPermissions) {
+            localStorage.setItem('custom_user_permissions', JSON.stringify(data.data.customPermissions));
+          } else {
+            localStorage.removeItem('custom_user_permissions');
+          }
           this.notyf.success(data.message);
           const returnUrl = sessionStorage.getItem('returnUrl');
           sessionStorage.removeItem('returnUrl');
@@ -92,6 +100,7 @@ export class LoginComponent {
       error: (err) => this.notyf.error(err?.error?.message || 'Server error. Please try again.')
     });
   }
+
 
   // ─── Interviewer OTP Login ────────────────────────────────────────────────
 
@@ -144,12 +153,13 @@ export class LoginComponent {
         if (data.status) {
           localStorage.setItem('panelToken', data.data.token);
           localStorage.setItem('panelUser', JSON.stringify(data.data.user));
+          localStorage.setItem('user', JSON.stringify(data.data.user));
           localStorage.setItem('tenant', JSON.stringify(data.data.tenant));
           localStorage.setItem('branch', JSON.stringify(data.data.branch));
           localStorage.setItem('base_url', data.data.baseUrl);
           localStorage.setItem('PORT', data.data.PORT);
           this.notyf.success('Welcome, ' + data.data.user.first_name + '!');
-          this.router.navigate(['interview']);
+          this.router.navigate(['/interview/interviewer-dashboard']);
         } else {
           this.notyf.error(data.message || 'Invalid OTP');
         }
@@ -167,6 +177,10 @@ export class LoginComponent {
   }
 
   // ─── Toggle between Employee form and Interviewer OTP form ───────────────
+
+  loginWithGoogle() {
+    this.notyf.error('Google sign-in is not available yet.');
+  }
 
   loginWithMobile() {
     this.showMobileLogin = !this.showMobileLogin;
@@ -209,6 +223,6 @@ export class LoginComponent {
 
   isInvalid(form: FormGroup, controlName: string): boolean {
     const control = form.get(controlName);
-    return !!control && control.invalid && (control.dirty || control.touched);
+    return !!control && control.invalid && this.submitted && (control.dirty || control.touched);
   }
 }

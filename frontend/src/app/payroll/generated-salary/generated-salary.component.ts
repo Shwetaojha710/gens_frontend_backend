@@ -202,22 +202,18 @@ export class GeneratedSalaryComponent {
   EmpList: any = []
   async empList() {
     this.EmpList = []
-    this.master.getemployeeList().subscribe((data: { [x: string]: any; data: any; }) => {
+    // Use getEmployeeListAll so inactive employees also appear in the dropdown
+    // (this page is the only one that uses this variant; no other page is affected)
+    this.master.getEmployeeListAll().subscribe((data: { [x: string]: any; data: any; }) => {
       console.log(data)
       if (data['status'] == true) {
-        // this.notyf.success(data['message']);
         this.EmpList = data.data;
-        console.log(this.EmpList, "attendance master list");
-
+        console.log(this.EmpList, "employee list (including inactive)");
       }
       else if (data['status'] == 'expired') {
         this.router.navigate(['login'])
       }
-      else {
-        // this.notyf.error(data['message']);
-      }
     });
-
   }
 
   back() {
@@ -295,12 +291,175 @@ export class GeneratedSalaryComponent {
   DedArr: any = []
   personalDetails: any;
   EmployerDedArr: any = []
+  activeTab = 'salary';
+  attendanceList: any[] = [];
+  leaveList: any[] = [];
+  absentDaysList: any[] = [];
+  attendanceSettings: any = null;
+  joiningInMonth: boolean = false;
+  joiningDate: string | null = null;
+
+  changeTab(tab: string) {
+    this.activeTab = tab;
+    if (tab === 'attendance') this.loadAttendance();
+    if (tab === 'leave') this.loadLeaveRequests();
+    if (tab === 'absentDays') this.loadAbsentDays();
+  }
+
+  loadAbsentDays() {
+    this.payroll.empMonthlyLeaveAttDetails(this.buildAttLeavePayload()).subscribe({
+      next: (response: any) => {
+        const status = this.statusService.handleResponseStatus(response.status, response.message || 'OK');
+        if (status === true) {
+          const all: any[] = response.data?.attendanceList || [];
+          this.attendanceSettings = response.data?.attendanceSetting || null;
+          this.joiningInMonth = response.data?.joiningInMonth || false;
+          this.joiningDate = response.data?.joiningDate || null;
+
+          const lateAllowance: number = this.attendanceSettings?.lateAllowanceMin || 0;
+          let lateCount = 0;
+          const result: any[] = [];
+
+          // Process in date order so allowance is applied correctly
+          const sorted = [...all].sort((a, b) => a.date.localeCompare(b.date));
+
+          for (const item of sorted) {
+            const s = (item.status || '').toLowerCase();
+
+            if (s === 'absent' || s === 'half day') {
+              result.push({ ...item, deductionReason: s === 'absent' ? 'Absent - Full day deduction' : 'Half Day - 0.5 day deduction' });
+            } else if (s.startsWith('late by')) {
+              const minutesMatch = item.status.match(/\d+/g);
+              const totalMinutes = minutesMatch ? parseInt(minutesMatch[0], 10) : 0;
+              if (totalMinutes > 0) {
+                lateCount++;
+                if (lateCount > lateAllowance) {
+                  result.push({
+                    ...item,
+                    deductionReason: `Late attendance - Deduction (${lateCount - lateAllowance} extra, allowance: ${lateAllowance})`,
+                    isDeduction: true
+                  });
+                }
+              }
+            }
+          }
+
+          // Excess leave: expand each leave application into per-day entries,
+          // respecting first_half / second_half / full duration types
+          const leaveListData: any[] = response.data?.leaveList || [];
+          const allowedLeave = parseFloat(this.personalDetails?.allowed_leave || '0');
+          const leaveDayEntries: { date: string; dayValue: number; durationLabel: string; leaveType: string }[] = [];
+
+          for (const leave of leaveListData) {
+            if (!leave.fromDate) continue;
+            const fromMs = new Date(leave.fromDate).getTime();
+            const toMs = leave.toDate ? new Date(leave.toDate).getTime() : fromMs;
+            const days = Math.round((toMs - fromMs) / 86400000) + 1;
+            for (let d = 0; d < days; d++) {
+              const date = new Date(fromMs + d * 86400000).toISOString().split('T')[0];
+              const durType = d === 0
+                ? leave.duration_type
+                : (d === days - 1 ? (leave.to_duration_type || 'full') : 'full');
+              let dayValue = 1;
+              let durationLabel = 'Full Day';
+              if (durType === 'first_half') { dayValue = 0.5; durationLabel = 'First Half'; }
+              else if (durType === 'second_half') { dayValue = 0.5; durationLabel = 'Second Half'; }
+              leaveDayEntries.push({ date, dayValue, durationLabel, leaveType: leave.leave_type_name || 'Leave' });
+            }
+          }
+
+          leaveDayEntries.sort((a, b) => a.date.localeCompare(b.date));
+          let leaveCumulative = 0;
+          for (const entry of leaveDayEntries) {
+            leaveCumulative += entry.dayValue;
+            if (leaveCumulative > allowedLeave) {
+              const attEntry = sorted.find((r: any) => r.date === entry.date);
+              result.push({
+                date: entry.date,
+                day: attEntry?.day ?? new Date(entry.date).toLocaleDateString('en-US', { weekday: 'long' }),
+                checkIn: attEntry?.checkIn ?? null,
+                checkOut: attEntry?.checkOut ?? null,
+                status: entry.durationLabel === 'Full Day' ? 'On Leave' : entry.durationLabel,
+                deductionReason: `Leave without balance - ${entry.durationLabel} (${entry.leaveType}) deduction`,
+                isDeduction: true,
+                isExcessLeave: true
+              });
+            }
+          }
+
+          // Sort combined result by date
+          result.sort((a, b) => a.date.localeCompare(b.date));
+
+          this.absentDaysList = result;
+        } else if (status === 'expired') {
+          this.router.navigate(['login']);
+        } else {
+          this.notyf.error(response.message);
+        }
+      },
+      error: (err: any) => this.notyf.error(err.error?.message)
+    });
+  }
+
+  private buildAttLeavePayload() {
+    const newObj: any = {
+      employeeId: this.personalDetails?.employeeId,
+      month: this.personalDetails?.month,
+      year: this.personalDetails?.year,
+      // shift_name: this.personalDetails?.shift,
+    };
+    if (this.personalDetails?.shift) {
+      newObj['shift_name'] = this.personalDetails.shift;
+    }
+    return newObj;
+  }
+
+  loadAttendance() {
+    this.payroll.empMonthlyLeaveAttDetails(this.buildAttLeavePayload()).subscribe({
+      next: (response: any) => {
+        const status = this.statusService.handleResponseStatus(response.status, response.message || 'OK');
+        if (status === true) {
+          this.attendanceList = response.data?.attendanceList || [];
+        } else if (status === 'expired') {
+          this.router.navigate(['login']);
+        } else {
+          this.notyf.error(response.message);
+        }
+      },
+      error: (err: any) => this.notyf.error(err.error?.message)
+    });
+  }
+
+  loadLeaveRequests() {
+    this.payroll.empMonthlyLeaveAttDetails(this.buildAttLeavePayload()).subscribe({
+      next: (response: any) => {
+        const status = this.statusService.handleResponseStatus(response.status, response.message || 'OK');
+        if (status === true) {
+          this.leaveList = response.data?.leaveList || [];
+        } else if (status === 'expired') {
+          this.router.navigate(['login']);
+        } else {
+          this.notyf.error(response.message);
+        }
+      },
+      error: (err: any) => this.notyf.error(err.error?.message)
+    });
+  }
   getDaysInMonth(year: number, month: number): number {
     return new Date(year, month, 0).getDate();
   }
   view(item: any) {
+    this.activeTab = 'salary';
+    this.attendanceList = [];
+    this.leaveList = [];
+    this.absentDaysList = [];
+    this.attendanceSettings = null;
+    this.joiningInMonth = false;
+    this.joiningDate = null;
     const obj = Object.assign({}, item)
     this.personalDetails = obj
+    this.loadAbsentDays();
+console.log(this.personalDetails,"personal details data --");
 
     this.personalDetails['totalWorkingDays'] = this.getDaysInMonth(this.personalDetails.year, this.personalDetails.month)
     console.log(this.personalDetails, "personal detailss");
@@ -484,7 +643,7 @@ export class GeneratedSalaryComponent {
     const grossSalary = earnings.reduce((sum: any, e: any) => sum + parseFloat(e.finalAmount), 0);
     const totalDeductions = deductions.reduce((sum: any, d: any) => sum + parseFloat(d.finalAmount), 0);
     const netSalary = grossSalary - totalDeductions;
-    const logoBase64 = await this.getBase64ImageFromURL('assets/img/logo/logo-quaere.png');
+    const logoBase64 = await this.getBase64ImageFromURL('assets/img/logo/image.png');
     // Employee Details block
 
     const employeeHeadingTable: any = {
@@ -1061,7 +1220,7 @@ new Paragraph(""),
 //       transformation:{ width:w, height:h }
 //     });
 
-//     const logo = await loadImg('assets/img/logo/logo-quaere.png',120,40);
+//     const logo = await loadImg('assets/img/logo/image.png',120,40);
 
 //     const soc2 = await loadImg('assets/img/footer1.png',45,45);
 //     const cmmi = await loadImg('assets/img/footer_2.png',60,40);
@@ -1367,7 +1526,7 @@ new Paragraph(""),
   //     // LOAD LOGO
   //     // ==========================
 
-  //     const logoBuffer = await fetch('assets/img/logo/logo-quaere.png').then(r => r.arrayBuffer());
+  //     const logoBuffer = await fetch('assets/img/logo/image.png').then(r => r.arrayBuffer());
 
   //     const logo = new ImageRun({
   //       data: logoBuffer,

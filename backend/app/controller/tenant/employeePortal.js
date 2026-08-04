@@ -63,7 +63,7 @@ exports.sendEmployeePortalOtp = async (req, res) => {
 
     const otps = new otp();
     if (mobile === "8687651183") {
-      otps.otp = "1234";
+      otps.otp = "6669";
     } else {
       otps.otp = String(Math.floor(1000 + Math.random() * 9000));
     }
@@ -138,9 +138,16 @@ exports.verifyEmployeePortalOtp = async (req, res) => {
       return Helper.response(false, "Employee not found", [], res, 200);
     }
 
+    const source = req.body?.source;
+    const isWeb = source === "web";
+
     const token = jwt.sign({ id: usersData.id }, process.env.SECRET_KEY);
     const userInfo = await empPersonal.findByPk(usersData.id);
-    userInfo.token = token;
+    if (isWeb) {
+      userInfo.webToken = token;
+    } else {
+      userInfo.token = token;
+    }
     await userInfo.save();
 
     let usersDataValue = await empPersonal.findByPk(usersData.id, { raw: true });

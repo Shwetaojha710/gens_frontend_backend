@@ -1,0 +1,307 @@
+<div class="container-fluid mt-5">
+  <div class="row mb-6">
+    <div class="col-md">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center">
+          <span>Employee Appraisal</span>
+          <button type="button" class="btn btn-sm btn-outline-primary" (click)="loadEmployees()" [disabled]="isLoading">
+            <i class="fas fa-sync-alt" [class.fa-spin]="isLoading"></i> Refresh
+          </button>
+        </h5>
+        <div class="card-body py-2">
+          <p class="text-muted mb-0 small">
+            Select an employee, enter increment %, review salary heads, and close heads that should not increase.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mb-6">
+    <div class="col-md">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <span>
+            Employee List
+            <span class="badge bg-primary ms-2">{{ filteredEmployees.length }}</span>
+            <span class="badge bg-success ms-1" *ngIf="selectedEmployeeIds.size">
+              {{ selectedEmployeeIds.size }} selected
+            </span>
+          </span>
+          <button
+            type="button"
+            class="btn btn-sm btn-primary"
+            [disabled]="selectedEmployeeIds.size === 0 || isBulkSaving"
+            (click)="openBulkAppraise()">
+            <i class="fas fa-percentage"></i>
+            Apply Appraisal to Selected ({{ selectedEmployeeIds.size }})
+          </button>
+        </h5>
+
+        <div *ngIf="isLoading" class="text-center py-5 text-muted">Loading employees…</div>
+        <label class="small me-2">Effective date</label>
+        <input type="date" class="form-control form-control-sm d-inline-block w-auto"
+               [(ngModel)]="listEffectiveDate" />
+        <app-search-pagination
+          *ngIf="!isLoading"
+          [totalItems]="filteredEmployees.length"
+          [pageSize]="pageSize"
+          [currentPage]="currentPage"
+          (search)="onSearch($event)"
+          (pageChange)="onPageChange($event)"
+          (pageSizeChange)="onPageSizeChange($event)">
+
+          <div class="table-responsive">
+            <table class="table table-striped text-nowrap dataTable bg-white mb-0">
+              <thead>
+                <tr>
+                  <th>
+                    <input
+                      type="checkbox"
+                      class="form-check-input"
+                      [checked]="allPageSelected()"
+                      (change)="toggleSelectAllPage($event)" />
+                  </th>
+                  <th>SI.No</th>
+                  <th>Emp Code</th>
+                  <th>Employee Name</th>
+                  <th>Department</th>
+                  <th>Designation</th>
+                  <th>Current CTC</th>
+                  <th style="min-width:110px">Increment %</th>
+                  <th >New CTC</th>
+                  <th>Last Salary Date</th>
+                  <th>Appraise</th>
+                  <th>Apply From List</th>
+                </tr>
+              </thead>
+              <tbody class="table-border-bottom-0">
+                <tr *ngFor="let item of pagedEmployees; let i = index">
+                  <td>
+                    <input
+                      type="checkbox"
+                      class="form-check-input"
+                      [disabled]="!item.hasSalary"
+                      [checked]="isSelected(item.id)"
+                      (change)="toggleEmployee(item)" />
+                  </td>
+                  <th scope="row">{{ (currentPage - 1) * pageSize + i + 1 }}</th>
+                  <td>{{ item.empCode || '—' }}</td>
+                  <td>{{ item.employeeName }}</td>
+                  <td>{{ item.department || '—' }}</td>
+                  <td>{{ item.designation || '—' }}</td>
+                  <td>
+                    <span *ngIf="item.hasSalary">{{ formatAmt(item.currentCTC) }}</span>
+                    <span class="text-muted" *ngIf="!item.hasSalary">No salary setup</span>
+                  </td>
+                  <td>
+                    <input
+                      *ngIf="item.hasSalary"
+                      type="number"
+                      class="form-control form-control-sm"
+                      style="width: 90px"
+                      min="0"
+                      step="0.01"
+                      placeholder="%"
+                      [ngModel]="item.listPercent"
+                      (ngModelChange)="onListPercentChange(item, $event)"
+                    />
+                    <span *ngIf="!item.hasSalary" class="text-muted">—</span>
+                  </td>
+                  <td>
+                    <ng-container *ngIf="item.hasSalary && item.listPercent != null && item.listPercent !== ''">
+                      <strong class="text-success">{{ formatAmt(calcNewCtc(item)) }}</strong>
+                      <small class="d-block text-muted">+{{ formatAmt(calcIncrease(item)) }}</small>
+                    </ng-container>
+                    <span *ngIf="!item.hasSalary || item.listPercent == null || item.listPercent === ''" class="text-muted">—</span>
+                  </td>
+                  <td>{{ item.lastSalaryStartDate || '—' }}</td>
+                  <td>
+                    <button
+                      type="button"
+                      class="btn btn-outline-primary btn-sm"
+                      [disabled]="!item.hasSalary"
+                      (click)="openAppraise(item)">
+                      <i class="fas fa-percentage"></i> Appraise
+                    </button>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="btn btn-outline-primary btn-sm"
+                      [disabled]="selectedEmployeeIds.size === 0 || isBulkSaving"
+                          (click)="applySelectedFromList()">
+                      <i class="fas fa-percentage"></i> Apply Selected From List
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="pagedEmployees.length === 0">
+                  <td colspan="8" class="text-center text-muted py-4">No employees found</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </app-search-pagination>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Appraisal modal -->
+<div class="modal fade" id="appraisalModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          Appraisal — {{ selectedEmp?.employeeName }}
+          <small class="text-muted ms-2" *ngIf="selectedEmp?.empCode">({{ selectedEmp?.empCode }})</small>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="row g-3 mb-4">
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Increment %</label>
+            <input
+              type="number"
+              class="form-control"
+              min="0"
+              step="0.01"
+              placeholder="e.g. 10"
+              [(ngModel)]="percent"
+              (ngModelChange)="onPercentChange()"
+              name="percent" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Effective Date</label>
+            <input type="date" class="form-control" [(ngModel)]="effectiveDate" name="effectiveDate" />
+          </div>
+          <div class="col-md-6 d-flex align-items-end gap-2 flex-wrap">
+            <div class="summary-chip">
+              <span class="label">Current CTC</span>
+              <strong>{{ formatAmt(summary.currentCTC) }}</strong>
+            </div>
+            <div class="summary-chip accent">
+              <span class="label">New CTC</span>
+              <strong>{{ formatAmt(summary.newCTC) }}</strong>
+            </div>
+            <div class="summary-chip">
+              <span class="label">Increase</span>
+              <strong class="text-success">+{{ formatAmt(summary.totalIncrease) }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="mb-0">Salary Heads</h6>
+          <div class="btn-group btn-group-sm">
+            <button type="button" class="btn btn-outline-secondary" (click)="openAllPayables()">Include all payables</button>
+            <button type="button" class="btn btn-outline-secondary" (click)="closeAllPayables()">Close all payables</button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-bordered align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Head</th>
+                <th>Type</th>
+                <th class="text-end">Current</th>
+                <th class="text-end">Increase</th>
+                <th class="text-end">New Amount</th>
+                <th class="text-center">Include in %</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let head of heads" [class.row-closed]="head.closed">
+                <td>
+                  {{ head.name }}
+                  <span class="badge bg-label-secondary ms-1" *ngIf="head.componentType === 'deductible'">Deduction</span>
+                </td>
+                <td>
+                  <small class="text-muted">{{ head.type || '—' }}</small>
+                </td>
+                <td class="text-end">{{ formatAmt(head.currentAmount) }}</td>
+                <td class="text-end">
+                  <span *ngIf="head.increase > 0" class="text-success">+{{ formatAmt(head.increase) }}</span>
+                  <span *ngIf="!head.increase || head.increase === 0" class="text-muted">—</span>
+                </td>
+                <td class="text-end fw-semibold">{{ formatAmt(head.newAmount) }}</td>
+                <td class="text-center">
+                  <ng-container *ngIf="head.componentType === 'payable'">
+                    <div class="form-check form-switch d-inline-flex justify-content-center m-0">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        [checked]="!head.closed"
+                        (change)="toggleHead(head)"
+                        [id]="'sw-' + head.key" />
+                    </div>
+                    <div *ngIf="head.closed">
+                      <small class="text-muted">Closed</small>
+                    </div>
+                  </ng-container>
+                  <span class="badge bg-label-warning" *ngIf="head.componentType === 'deductible'">Excluded</span>
+                </td>
+              </tr>
+              <tr *ngIf="heads.length === 0">
+                <td colspan="6" class="text-center text-muted py-3">No salary heads</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="small text-muted mt-3 mb-0">
+          Closed heads keep their current amount. Deductions are not increased by appraisal %.
+          Saving creates a new salary version from the effective date (same as Salary Setup).
+        </p>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          [disabled]="isSaving || percent === null || percent === undefined"
+          (click)="applyAppraisal()">
+          <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1"></span>
+          Apply Appraisal
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="bulkAppraisalModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Bulk Appraisal — {{ selectedEmployeeIds.size }} employees</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Increment %</label>
+          <input type="number" class="form-control" min="0" step="0.01"
+            [(ngModel)]="bulkPercent" placeholder="e.g. 10" />
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Effective Date</label>
+          <input type="date" class="form-control" [(ngModel)]="effectiveDate" />
+        </div>
+        <p class="small text-muted mb-0">
+          Same % will apply to all selected employees. All payable heads increase; deductions stay unchanged.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary"
+          [disabled]="isBulkSaving || bulkPercent === null"
+          (click)="applyBulkAppraisal()">
+          <span *ngIf="isBulkSaving" class="spinner-border spinner-border-sm me-1"></span>
+          Apply to All Selected
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

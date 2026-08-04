@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Notyf } from 'notyf';
 import { JobService } from '../../../services/job.service';
+import { MasterService } from '../../../services/master.service';
 import { StatusService } from '../../../services/status.service';
 import { SearchPaginationComponent } from '../../../master/search-pagination/search-pagination.component';
 
@@ -24,6 +25,7 @@ export class RecruitmentOfferLetterComponent implements OnInit {
   tenant: any = {};
 
   branchOffices = ['Lucknow', 'Jaunpur', 'Kanpur', 'Varanasi'];
+  departmentOptions: any[] = [];
 
   details: any = {
     firstName: '',
@@ -53,6 +55,7 @@ export class RecruitmentOfferLetterComponent implements OnInit {
   offerLetterList: any[] = [];
   displayList: any[] = [];
   isLoadingList = false;
+  generatingPdfId = '';
   showForm = false;
   searchTerm = '';
   currentPage = 1;
@@ -61,6 +64,7 @@ export class RecruitmentOfferLetterComponent implements OnInit {
 
   constructor(
     private jobService: JobService,
+    private masterService: MasterService,
     private statusService: StatusService,
     private router: Router
   ) {
@@ -71,6 +75,7 @@ export class RecruitmentOfferLetterComponent implements OnInit {
     this.getBase64ImageFromUrl('/assets/img/Letterhead-2.png')
       .then(base64 => { this.letterheadImage = base64; })
       .catch(() => {});
+    this.loadDepartments();
     this.loadOfferLetterList();
   }
 
@@ -114,11 +119,22 @@ export class RecruitmentOfferLetterComponent implements OnInit {
   }
 
   validateDepartment(): boolean {
-    const val = this.details.department.trim();
+    const val = String(this.details.department || '').trim();
     if (!val) { this.errors.department = 'Department is required.'; return false; }
     if (val.length < 2) { this.errors.department = 'Department must be at least 2 characters.'; return false; }
     this.errors.department = '';
     return true;
+  }
+
+  loadDepartments(): void {
+    this.masterService.Departmentsdd({}).subscribe({
+      next: (res: any) => {
+        this.departmentOptions = res.status ? (res.data || []) : [];
+      },
+      error: () => {
+        this.departmentOptions = [];
+      }
+    });
   }
 
   validateAadhaar(): boolean {
@@ -216,12 +232,12 @@ export class RecruitmentOfferLetterComponent implements OnInit {
   }
 
   private getOrdinalSuffix(day: number): string {
-    if (day >= 11 && day <= 13) return 'TH';
+    if (day >= 11 && day <= 13) return 'th';
     switch (day % 10) {
-      case 1: return 'ST';
-      case 2: return 'ND';
-      case 3: return 'RD';
-      default: return 'TH';
+      case 1: return 'st';
+      case 2: return 'nd';
+      case 3: return 'rd';
+      default: return 'th';
     }
   }
 
@@ -229,7 +245,7 @@ export class RecruitmentOfferLetterComponent implements OnInit {
     const d = this.details;
     return !!(d.firstName && d.lastName && d.fatherName && d.gender &&
               d.mobileNo && d.email && d.permanentAddress &&
-              d.designation && d.department && d.joiningDate && d.offerDate);
+              d.designation && d.department && d.headOffice && d.joiningDate && d.offerDate);
   }
 
   saveOfferLetter(): void {
@@ -248,6 +264,21 @@ export class RecruitmentOfferLetterComponent implements OnInit {
       next: (res: any) => {
         const status = this.statusService.handleResponseStatus(res.status, 'OK');
         if (status === true) {
+          const savedLetter = res.data;
+          if (savedLetter?.id) {
+            this.generateAndStorePdf(savedLetter.id, () => {
+              this.notyf.success('Offer letter saved and PDF generated successfully.');
+              this.showForm = false;
+              this.loadOfferLetterList();
+              this.isSaving = false;
+            }, () => {
+              this.notyf.success('Offer letter saved. PDF can be generated from the list.');
+              this.showForm = false;
+              this.loadOfferLetterList();
+              this.isSaving = false;
+            });
+            return;
+          }
           this.notyf.success('Offer letter saved successfully.');
           this.showForm = false;
           this.loadOfferLetterList();
@@ -263,6 +294,48 @@ export class RecruitmentOfferLetterComponent implements OnInit {
         this.isSaving = false;
       }
     });
+  }
+
+  downloadSavedPdf(item: any): void {
+    if (item?.pdfUrl) {
+      this.openPdfUrl(item.pdfUrl);
+      return;
+    }
+
+    if (!item?.id) {
+      this.notyf.error('Offer letter id not found.');
+      return;
+    }
+
+    this.generateAndStorePdf(item.id, (downloadUrl) => {
+      item.pdfUrl = downloadUrl;
+      this.openPdfUrl(downloadUrl);
+      this.loadOfferLetterList();
+    });
+  }
+
+  private generateAndStorePdf(id: string, onSuccess?: (downloadUrl: string) => void, onError?: () => void): void {
+    this.generatingPdfId = id;
+    this.jobService.generateRecruitmentOfferLetterPdf(id).subscribe({
+      next: (res: any) => {
+        this.generatingPdfId = '';
+        if (res.status && (res.data?.pdfUrl || res.data?.downloadUrl)) {
+          onSuccess?.(res.data.pdfUrl || res.data.downloadUrl);
+        } else {
+          this.notyf.error(res.message || 'PDF generation failed.');
+          onError?.();
+        }
+      },
+      error: () => {
+        this.generatingPdfId = '';
+        this.notyf.error('Server error while generating PDF.');
+        onError?.();
+      }
+    });
+  }
+
+  private openPdfUrl(url: string): void {
+    window.open(url, '_blank');
   }
 
   printDoc(): void {

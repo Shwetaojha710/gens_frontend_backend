@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const cryptoJs = require("crypto-js");
+const nodemailer = require("nodemailer");
 require("dotenv").config();
 
 const Helper = require("../../helper/helper");
@@ -92,6 +93,91 @@ exports.login = async (req, res) => {
       res,
       200,
     );
+  } catch (err) {
+    return Helper.response(false, err?.message || "Server error.", {}, res, 500);
+  }
+};
+
+const createMailTransporter = () =>
+  nodemailer.createTransport({
+    host: process.env.MAIL_HOST || "smtp.gmail.com",
+    port: parseInt(process.env.MAIL_PORT || "587"),
+    secure: false,
+    auth: { user: process.env.MAIL_USER, pass: process.env.MAIL_PASS },
+  });
+
+exports.forgotPassword = async (req, res) => {
+  try {
+    let { email } = req.body;
+    email = email ? String(email).trim() : "";
+    if (!email) return Helper.response(false, "Email is required.", {}, res, 200);
+
+    const systemTenant = await Tenant.findOne({
+      where: { companyCode: SYSTEM_TENANT_CODE, status: "active" },
+    });
+    if (!systemTenant) return Helper.response(false, "System error.", {}, res, 200);
+
+    const user = await User.findOne({
+      where: { email, tenantId: systemTenant.id, role: "superadmin", status: "active" },
+    });
+
+    const genericMsg = "If the email is registered, a reset link has been sent.";
+    if (!user) return Helper.response(true, genericMsg, {}, res, 200);
+
+    const resetToken = jwt.sign(
+      { id: user.id, purpose: "password-reset" },
+      process.env.SECRET_KEY,
+      { expiresIn: "15m" }
+    );
+
+    const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:4200").replace(/\/$/, "");
+    const resetLink = `${frontendUrl}/superadmin/reset-password?token=${resetToken}`;
+
+    const transporter = createMailTransporter();
+    await transporter.sendMail({
+      from: process.env.MAIL_FROM || `"GENS HR" <${process.env.MAIL_USER}>`,
+      to: email,
+      subject: "SuperAdmin – Password Reset Request",
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:32px;border:1px solid #e5e7eb;border-radius:8px;">
+          <h2 style="color:#2563eb;margin-bottom:8px;">Password Reset</h2>
+          <p>You requested a password reset for your SuperAdmin account.</p>
+          <p>Click the button below to set a new password. <strong>This link expires in 15 minutes.</strong></p>
+          <a href="${resetLink}" style="display:inline-block;margin:16px 0;padding:12px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">Reset Password</a>
+          <p style="color:#6b7280;font-size:13px;">If you did not request this, you can safely ignore this email.</p>
+        </div>`,
+    });
+
+    return Helper.response(true, genericMsg, {}, res, 200);
+  } catch (err) {
+    return Helper.response(false, err?.message || "Server error.", {}, res, 500);
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    let { token, newPassword } = req.body;
+    if (!token || !newPassword)
+      return Helper.response(false, "Token and new password are required.", {}, res, 200);
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.SECRET_KEY);
+    } catch {
+      return Helper.response(false, "Reset link is invalid or has expired.", {}, res, 200);
+    }
+
+    if (decoded.purpose !== "password-reset")
+      return Helper.response(false, "Invalid reset token.", {}, res, 200);
+
+    const user = await User.findOne({
+      where: { id: decoded.id, role: "superadmin", status: "active" },
+    });
+    if (!user) return Helper.response(false, "User not found.", {}, res, 200);
+
+    await user.update({ password: hashPassword(newPassword), token: null });
+
+    return Helper.response(true, "Password reset successfully!", {}, res, 200);
   } catch (err) {
     return Helper.response(false, err?.message || "Server error.", {}, res, 500);
   }
@@ -416,7 +502,7 @@ exports.listUsers = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const { userId } = req.params;
-    const { status, role, name } = req.body;
+    const { status, role, name, newPassword } = req.body;
 
     if (!userId) return Helper.response(false, "userId is required.", {}, res, 200);
 
@@ -444,6 +530,14 @@ exports.updateUser = async (req, res) => {
         return Helper.response(false, "Invalid role.", {}, res, 200);
       }
       patch.role = String(role);
+    }
+    if (newPassword !== undefined) {
+      const trimmed = String(newPassword).trim();
+      if (trimmed.length < 6) {
+        return Helper.response(false, "Password must be at least 6 characters.", {}, res, 200);
+      }
+      patch.password = hashPassword(trimmed);
+      patch.token = null; // invalidate existing session
     }
 
     await user.update(patch);

@@ -1,0 +1,246 @@
+﻿.ep-notif-page__back {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0081c9;
+  text-decoration: none;
+}
+
+.ep-notif-page__back:hover {
+  color: #024a82;
+}
+
+.ep-notif-page__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.15rem;
+}
+
+.ep-notif-page__title {
+  font-weight: 700;
+  color: #0f2942;
+  margin-bottom: 0.25rem;
+}
+
+.ep-notif-page__sub {
+  font-size: 0.9rem;
+  color: #647896;
+  margin: 0;
+  max-width: 36rem;
+}
+
+.ep-notif-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ep-notif-page__refresh,
+.ep-notif-page__mark {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(0, 129, 201, 0.25);
+  background: #fff;
+  color: #0081c9;
+  border-radius: 0.55rem;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ep-notif-page__mark {
+  background: rgba(0, 129, 201, 0.08);
+}
+
+.ep-notif-page__refresh:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ep-notif-row--unread {
+  background: #f0f7ff;
+}
+
+.ep-notif-row--unread .ep-notif-emp::before {
+  content: '';
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-right: 0.4rem;
+  border-radius: 50%;
+  background: #0081c9;
+  vertical-align: middle;
+}
+
+.ep-notif-card {
+  border-radius: 1rem;
+  background: #fff;
+  border: 1px solid rgba(0, 129, 201, 0.1);
+  box-shadow: 0 10px 36px rgba(15, 41, 66, 0.06);
+  overflow: hidden;
+}
+
+.ep-notif-card__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding: 0.9rem 1.1rem;
+  background: #f0f4fb;
+  border-bottom: 1px solid rgba(0, 129, 201, 0.08);
+}
+
+.ep-notif-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid rgba(0, 129, 201, 0.22);
+  background: #fff;
+  color: #4e6b8a;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ep-notif-chip--active {
+  background: #0081c9;
+  border-color: #0081c9;
+  color: #fff;
+}
+
+.ep-notif-chip__count {
+  min-width: 1.15rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-align: center;
+  background: rgba(15, 23, 42, 0.08);
+  color: inherit;
+}
+
+.ep-notif-chip--active .ep-notif-chip__count {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.ep-notif-card__loading {
+  padding: 2.5rem 1.25rem;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.ep-notif-table-wrap {
+  overflow-x: auto;
+}
+
+.ep-notif-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+
+.ep-notif-table th,
+.ep-notif-table td {
+  padding: 0.85rem 1rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  font-size: 0.84rem;
+  color: #334155;
+}
+
+.ep-notif-table th {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  background: #f8fafc;
+  white-space: nowrap;
+}
+
+.ep-notif-table tbody tr:hover {
+  background: #f8fbff;
+}
+
+.ep-notif-emp {
+  display: block;
+  color: #0f2942;
+  font-size: 0.88rem;
+}
+
+.ep-notif-meta {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.ep-notif-status {
+  display: inline-block;
+  max-width: 7.5rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.ep-notif-status[data-tone='ok'] {
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
+}
+
+.ep-notif-status[data-tone='warn'] {
+  background: rgba(217, 119, 6, 0.12);
+  color: #b45309;
+}
+
+.ep-notif-status[data-tone='bad'] {
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
+}
+
+.ep-notif-empty {
+  color: #94a3b8;
+}
+
+.ep-notif-reason {
+  max-width: 12rem;
+  word-break: break-word;
+  color: #475569;
+}
+
+.ep-notif-empty-state {
+  padding: 2.75rem 1.25rem;
+  text-align: center;
+  color: #64748b;
+}
+
+.ep-notif-empty-state i {
+  display: block;
+  font-size: 1.75rem;
+  margin-bottom: 0.5rem;
+  color: #94a3b8;
+}
+
+.ep-notif-empty-state p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 767.98px) {
+  .ep-notif-page__header {
+    flex-direction: column;
+  }
+}

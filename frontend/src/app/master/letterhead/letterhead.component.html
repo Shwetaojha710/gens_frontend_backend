@@ -1,0 +1,86 @@
+<div class="container-fluid py-4">
+
+  <!-- Hero header -->
+  <div class="lh-hero card mb-4">
+    <div class="card-body py-4 px-4">
+      <p class="lh-hero-kicker">Settings</p>
+      <div class="lh-hero-title">Company Letterhead</div>
+      <div class="lh-hero-subtitle">Upload your company letterhead image. It will appear as the background on Offer, Relieving, and NDA letters.</div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status" style="width:2rem;height:2rem;">
+      <span class="visually-hidden">Loading…</span>
+    </div>
+  </div>
+
+  <div *ngIf="!loading" class="row g-4">
+
+    <!-- Left: Upload control -->
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h6 class="fw-bold mb-3" style="color:#1e3a5f;">Upload Letterhead</h6>
+
+          <div class="lh-drop-zone" (click)="fileInput.click()">
+            <i class="ri ri-image-add-line lh-drop-icon"></i>
+            <p class="mb-1 fw-semibold">Click to select image</p>
+            <p class="text-muted small mb-0">PNG, JPG, JPEG &mdash; recommended A4 size (2480 × 3508 px)</p>
+            <input #fileInput type="file" accept="image/*" class="d-none" (change)="onFileChange($event)" />
+          </div>
+
+          <div *ngIf="selectedFile" class="mt-3 d-flex align-items-center gap-2">
+            <i class="ri ri-file-image-line text-primary"></i>
+            <span class="small text-truncate" style="max-width:200px;">{{ selectedFile.name }}</span>
+            <button class="btn btn-sm btn-outline-danger ms-auto" (click)="remove()">
+              <i class="ri ri-close-line"></i>
+            </button>
+          </div>
+
+          <div class="d-flex gap-2 mt-4 pt-3 border-top">
+            <button class="btn btn-primary px-4" [disabled]="saving || !selectedFile" (click)="save()">
+              <span *ngIf="!saving"><i class="ri ri-upload-2-line me-2"></i>Save Letterhead</span>
+              <span *ngIf="saving"><i class="fas fa-circle-notch fa-spin me-2"></i>Saving…</span>
+            </button>
+          </div>
+
+          <p class="small text-muted mt-3 mb-0">
+            <i class="fas fa-info-circle me-1"></i>
+            The letterhead is used as a full-page background image on letters. Use a high-resolution image with your company name, address, and logo pre-printed.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Preview -->
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <h6 class="fw-bold mb-3" style="color:#1e3a5f;">Preview</h6>
+
+          <!-- New selection preview -->
+          <div *ngIf="previewUrl" class="lh-preview-wrap">
+            <div class="lh-preview-badge">New — not saved yet</div>
+            <img [src]="previewUrl" alt="New letterhead preview" class="lh-preview-img" />
+          </div>
+
+          <!-- Saved letterhead -->
+          <div *ngIf="!previewUrl && currentUrl" class="lh-preview-wrap">
+            <div class="lh-preview-badge lh-preview-badge--saved">Current letterhead</div>
+            <img [src]="currentUrl" alt="Current letterhead" class="lh-preview-img" />
+          </div>
+
+          <!-- No letterhead yet -->
+          <div *ngIf="!previewUrl && !currentUrl" class="lh-no-preview">
+            <i class="ri ri-image-2-line lh-no-preview-icon"></i>
+            <p class="text-muted mb-0">No letterhead uploaded yet.</p>
+            <p class="text-muted small">Upload an image to see a preview here.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

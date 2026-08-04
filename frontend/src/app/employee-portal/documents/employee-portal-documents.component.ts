@@ -20,6 +20,9 @@ export class EmployeePortalDocumentsComponent implements OnInit, AfterViewChecke
   notyf = new Notyf();
   downloading: string | null = null;
 
+  isLoadingPdfs = false;
+  letterPdfUrls: Record<string, string | null> | null = null;
+
   // ─── signature ────────────────────────────────────────────────────────────
   showSignPanel = false;
   sigPad: SignaturePad | null = null;
@@ -410,6 +413,31 @@ ${annexure}`;
       return n2w(Math.floor(n / 10000000)) + ' crore' + (n % 10000000 ? ' ' + n2w(n % 10000000) : '');
     };
     return n2w(Math.floor(amount));
+  }
+
+  downloadAllServerPdfs(): void {
+    this.isLoadingPdfs = true;
+    this.letterPdfUrls = null;
+    this.portalService.getAppLetterPdfs().subscribe({
+      next: (res: any) => {
+        if (res.status && res.data) {
+          this.letterPdfUrls = res.data;
+          const count = Object.values(res.data).filter(Boolean).length;
+          if (count === 0) {
+            this.notyf.error('No letters have been generated yet.');
+          } else {
+            this.notyf.success(`${count} letter PDF(s) ready for download.`);
+          }
+        } else {
+          this.notyf.error(res.message || 'Could not generate PDFs.');
+        }
+        this.isLoadingPdfs = false;
+      },
+      error: () => {
+        this.notyf.error('Server error. Please try again.');
+        this.isLoadingPdfs = false;
+      }
+    });
   }
 
   private getBase64FromSrc(src: string): Promise<string> {

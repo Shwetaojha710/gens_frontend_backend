@@ -43,7 +43,7 @@
 
         <div class="card-body d-flex justify-content-between flex-wrap gap-4">
           <div class="d-flex align-items-center gap-3" routerLink="/layout/attendance/date-wise-attendance"
-            routerLinkActive="true" style="cursor: pointer" [queryParams]="{ fromDashboard: true }">
+            routerLinkActive="true" style="cursor: pointer" [queryParams]="{ fromDashboard: true, status: 'present' }">
             <div class="avatar">
               <div class="avatar-initial bg-label-success rounded">
                 <i class="icon-base ri ri-user-star-line icon-24px"></i>
@@ -61,6 +61,21 @@
             </div>
           </div>
 
+          <div class="d-flex align-items-center gap-3" routerLink="/layout/attendance/date-wise-attendance"
+            routerLinkActive="true" style="cursor: pointer" [queryParams]="{ fromDashboard: true, status: 'absent' }">
+            <div class="avatar">
+              <div class="avatar-initial bg-label-danger rounded">
+                <i class="icon-base ri ri-user-unfollow-line icon-24px"></i>
+              </div>
+            </div>
+            <div class="card-info">
+              <div class="d-flex align-items-center text-danger">
+                <h5 class="mb-0">{{ attendanceChart?.absentCount || '0' }}</h5>
+              </div>
+              <p class="mb-0">Absent Today</p>
+            </div>
+          </div>
+
           <div class="d-flex align-items-center gap-3" routerLink="/layout/employee/apply-leave" routerLinkActive="true"
             style="cursor: pointer" [queryParams]="{ fromDashboard: true }">
             <div class="avatar">
@@ -68,12 +83,13 @@
                 <i class="icon-base ri ri-pie-chart-2-line icon-24px"></i>
               </div>
             </div>
-            <div class="card-info">
+            <div class="card-info" routerLink="/layout/employee/apply-leave" routerLinkActive="true"
+              style="cursor: pointer" [queryParams]="{ fromDashboard: true }">
               <div class="d-flex align-items-center text-warning">
                 <h5 class="mb-0">{{ attendanceChart?.todayLeaveCount || '0' }}</h5>
                 <div class="d-flex align-items-center text-warning mx-1">
-                  <p class="mb-0 fw-medium">{{ getAttendanceBreakdown('On Leave') }} {{ getAttendanceTrendLabel('On
-                    Leave') }}</p>
+                  <p class="mb-0 fw-medium">{{ getAttendanceBreakdown('On Leave') }} {{
+                    getAttendanceTrendLabel('OnLeave') }}</p>
                 </div>
               </div>
               <p class="mb-0">On Leave</p>
@@ -87,7 +103,7 @@
               </div>
             </div>
             <div class="card-info" routerLink="/layout/employee/apply-leave" routerLinkActive="true"
-              style="cursor: pointer" [queryParams]="{ fromDashboard: true }">
+              style="cursor: pointer" [queryParams]="{ fromDashboard: true, emergencyOnly: true }">
               <div class="d-flex align-items-center text-danger">
                 <h5 class="mb-0">{{ attendanceChart?.emergencyCount || '0' }}</h5>
                 <div class="d-flex align-items-center text-danger mx-1">
@@ -283,15 +299,29 @@
           <h5 class="mb-0 ml-2">Celebrations</h5>
           <ul class="nav nav-pills bg-white p-1" style="border-radius: 5px;" role="tablist">
             <li class="nav-item" role="presentation">
-              <button type="button" class="nav-link active waves-effect waves-light">All</button>
+              <button
+                type="button"
+                class="nav-link waves-effect waves-light"
+                [class.active]="celebrationTab === 'all'"
+                (click)="setCelebrationTab('all')"
+              >
+                All
+              </button>
             </li>
             <li class="nav-item" role="presentation">
-              <button type="button" class="nav-link waves-effect waves-light">Upcoming</button>
+              <button
+                type="button"
+                class="nav-link waves-effect waves-light"
+                [class.active]="celebrationTab === 'upcoming'"
+                (click)="setCelebrationTab('upcoming')"
+              >
+                Upcoming
+              </button>
             </li>
           </ul>
         </div>
 
-        <div class="card-body">
+        <div class="card-body" style="overflow-y:scroll;height: 195px;">
           <div class="row">
             <div class="col-6" *ngFor="let item of celebrationsList">
               <div class="birthday-card"
@@ -302,15 +332,17 @@
                   <p class="mb-0">{{ item.dateLabel }}</p>
                   <h4>{{ item.firstName }} {{ item.lastName }}</h4>
                   <h2>{{ item.cardTitle }}</h2>
+                  <small class="celebration-when" *ngIf="celebrationTab === 'upcoming' && item.daysUntil != null">
+                    {{ item.daysUntil === 0 ? 'Today' : (item.daysUntil === 1 ? 'Tomorrow' : 'In ' + item.daysUntil + ' days') }}
+                  </small>
                 </div>
               </div>
             </div>
             <div class="col-12" *ngIf="!celebrationsList.length">
-              <div class="text-center text-muted py-4">No celebrations available.</div>
+              <div class="text-center text-muted py-4">
+                {{ celebrationTab === 'upcoming' ? 'No upcoming celebrations.' : 'No celebrations available.' }}
+              </div>
             </div>
-            <!-- <div class="col-12 d-flex justify-content-end mt-2">
-              <button type="button" class="btn btn-sm approve view-all-btn" (click)="openCelebrationPage()">View All</button>
-            </div> -->
           </div>
         </div>
       </div>
@@ -372,19 +404,19 @@
                   </button>
                 </li>
                 <li class="employee-table-header-bottom">
-                  <button *ngIf="activeEmployeeSectionTab === 'employee'" type="button"
+                  <button *ngIf="activeEmployeeSectionTab == 'employee'" type="button"
                     class="btn btn-sm approve view-all-btn" (click)="openEmployeeListPage()">
                     View All Employee
                   </button>
 
-                  <button *ngIf="activeEmployeeSectionTab === 'leave'" type="button"
+                  <button *ngIf="activeEmployeeSectionTab == 'leave'" type="button"
                     class="btn btn-sm approve view-all-btn" (click)="openLeaveListPage()">
                     View All Leave
                   </button>
                 </li>
               </ul>
 
-              <div class="dropdown table-range-dropdown" *ngIf="activeEmployeeSectionTab === 'leave'">
+              <div class="dropdown table-range-dropdown" *ngIf="activeEmployeeSectionTab == 'leave'">
                 <button class="btn table-range-btn dropdown-toggle" type="button"
                   (click)="toggleEmployeeTableRangeDropdown($event)" [attr.aria-expanded]="isEmployeeTableRangeOpen">
                   {{ selectedEmployeeTableRange }}
@@ -482,8 +514,7 @@
                     </td>
                     <td class="text-truncate">{{ item.mobile }} <br> {{ item.email }}</td>
 
-                    <td class="text-truncate">{{ item.fromDate | date:'dd MMM yyyy' }} To {{ item.toDate | date:'dd MMM
-                      yyyy' }} <br>
+                    <td class="text-truncate">{{ item.fromDate | date:'dd MMM yyyy' }} To {{ item.toDate | date:'dd MMM yyyy' }} <br>
                       {{ item.type }} - {{ item.days }} days</td>
                     <!-- <td class="text-truncate">{{ item.type }}</td> -->
                     <td class="text-truncate">
@@ -504,6 +535,189 @@
                   </tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Team-wise Attendance: visible for admin / hr / superadmin (director & manager roles) -->
+  <div class="row g-3 mt-1" *ngIf="isManagerRole">
+    <div class="col-12">
+      <div class="card dashboard-glass-card tw-attendance-panel">
+        <div class="card-header border-0 tw-attendance-header">
+          <div class="tw-attendance-title-wrap">
+            <div class="tw-attendance-icon-badge">
+              <i class="ri ri-organization-chart"></i>
+            </div>
+            <div>
+              <h5 class="mb-0 tw-attendance-title">Team-wise Attendance</h5>
+              <small class="text-muted">{{ teamwiseDate | date:'dd MMM yyyy' }}</small>
+            </div>
+          </div>
+          <div class="d-flex gap-2 align-items-center flex-wrap">
+            <ng-select *ngIf="isManagerDirectorRole" [items]="teamBranchItems" bindLabel="name" bindValue="id"
+              [(ngModel)]="selectedTeamBranch" (ngModelChange)="setTeamBranch($event)" [clearable]="false"
+              class="tw-branch-select">
+            </ng-select>
+            <div class="tw-legend">
+              <span class="tw-legend-item tw-legend-present"><i class="ri ri-checkbox-circle-fill"></i> Present</span>
+              <span class="tw-legend-item tw-legend-leave"><i class="ri ri-time-fill"></i> On Leave</span>
+              <span class="tw-legend-item tw-legend-absent"><i class="ri ri-close-circle-fill"></i> Absent</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body pt-0">
+          <div *ngIf="teamwiseAttendance.length === 0" class="tw-empty-state">
+            <i class="ri ri-team-line"></i>
+            <p class="mb-0">No team data available for today</p>
+          </div>
+
+          <!-- Multi-branch view -->
+          <ng-container *ngIf="teamwiseIsMultiBranch">
+            <ng-container *ngFor="let branchName of teamwiseBranches">
+              <div class="tw-branch-label">
+                <i class="ri ri-building-2-line"></i>
+                <span>{{ branchName }}</span>
+              </div>
+              <div class="tw-dept-grid">
+                <div class="tw-dept-card" *ngFor="let dept of getDeptsByBranch(branchName)"
+                  [class.tw-dept-card--open]="isDepartmentExpanded(dept.departmentId)">
+                  <button type="button" class="tw-dept-card__head" (click)="toggleDepartment(dept.departmentId)">
+                    <div class="tw-dept-card__identity">
+                      <span class="tw-dept-avatar" [style.background]="dept.color || '#0d9488'">
+                        <i class="ri ri-team-line"></i>
+                      </span>
+                      <div class="tw-dept-meta">
+                        <span class="tw-dept-name">{{ dept.departmentName }}</span>
+                        <span class="tw-dept-count">{{ dept.total }} members</span>
+                      </div>
+                    </div>
+
+                    <div class="tw-dept-stats">
+                      <div class="tw-stat tw-stat--present" title="Present">
+                        <span class="tw-stat__value">{{ dept.presentCount }}</span>
+                        <span class="tw-stat__label">Present</span>
+                      </div>
+                      <div class="tw-stat tw-stat--leave" title="On Leave">
+                        <span class="tw-stat__value">{{ dept.onLeaveCount }}</span>
+                        <span class="tw-stat__label">Leave</span>
+                      </div>
+                      <div class="tw-stat tw-stat--absent" title="Absent">
+                        <span class="tw-stat__value">{{ dept.absentCount }}</span>
+                        <span class="tw-stat__label">Absent</span>
+                      </div>
+                    </div>
+
+                    <div class="tw-dept-ring-wrap">
+                      <div class="tw-dept-ring"
+                        [style.background]="'conic-gradient(#10b981 ' + (dept.presentPercent || 0) + '%, #e5e7eb 0)'">
+                        <span>{{ dept.presentPercent || 0 }}%</span>
+                      </div>
+                      <i class="ri tw-dept-chevron"
+                        [ngClass]="isDepartmentExpanded(dept.departmentId) ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
+                    </div>
+                  </button>
+
+                  <div class="tw-dept-card__body" *ngIf="isDepartmentExpanded(dept.departmentId)">
+                    <div class="tw-member-list" *ngIf="dept.members?.length; else noMembers">
+                      <div class="tw-member-row" *ngFor="let member of dept.members">
+                        <div class="tw-member-info">
+                          <img
+                            [src]="member.profileImage || (member.gender === 'Male' ? 'assets/img/avatars/5.png' : 'assets/img/avatars/4.png')"
+                            class="tw-member-avatar" alt=""
+                            (error)="onImageError($event, member, 'avatar')">
+                          <div>
+                            <div class="tw-member-name">{{ member.name }}</div>
+                            <div class="tw-member-sub">{{ member.empCode }} · {{ member.designation || '—' }}</div>
+                          </div>
+                        </div>
+                        <div class="tw-member-times">
+                          <span><i class="ri ri-login-box-line"></i> {{ member.checkIn || '—' }}</span>
+                          <span><i class="ri ri-logout-box-r-line"></i> {{ member.checkOut || '—' }}</span>
+                        </div>
+                        <span class="tw-member-badge" [ngClass]="getMemberStatusBadge(member.status)">
+                          {{ member.status }}
+                        </span>
+                      </div>
+                    </div>
+                    <ng-template #noMembers>
+                      <p class="tw-no-members mb-0">No members in this department</p>
+                    </ng-template>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+          </ng-container>
+
+          <!-- Single-branch view -->
+          <div class="tw-dept-grid" *ngIf="!teamwiseIsMultiBranch">
+            <div class="tw-dept-card" *ngFor="let dept of teamwiseAttendance"
+              [class.tw-dept-card--open]="isDepartmentExpanded(dept.departmentId)">
+              <button type="button" class="tw-dept-card__head" (click)="toggleDepartment(dept.departmentId)">
+                <div class="tw-dept-card__identity">
+                  <span class="tw-dept-avatar" [style.background]="dept.color || '#0d9488'">
+                    <i class="ri ri-team-line"></i>
+                  </span>
+                  <div class="tw-dept-meta">
+                    <span class="tw-dept-name">{{ dept.departmentName }}</span>
+                    <span class="tw-dept-count">{{ dept.total }} members</span>
+                  </div>
+                </div>
+
+                <div class="tw-dept-stats">
+                  <div class="tw-stat tw-stat--present" title="Present">
+                    <span class="tw-stat__value">{{ dept.presentCount }}</span>
+                    <span class="tw-stat__label">Present</span>
+                  </div>
+                  <div class="tw-stat tw-stat--leave" title="On Leave">
+                    <span class="tw-stat__value">{{ dept.onLeaveCount }}</span>
+                    <span class="tw-stat__label">Leave</span>
+                  </div>
+                  <div class="tw-stat tw-stat--absent" title="Absent">
+                    <span class="tw-stat__value">{{ dept.absentCount }}</span>
+                    <span class="tw-stat__label">Absent</span>
+                  </div>
+                </div>
+
+                <div class="tw-dept-ring-wrap">
+                  <div class="tw-dept-ring"
+                    [style.background]="'conic-gradient(#10b981 ' + (dept.presentPercent || 0) + '%, #e5e7eb 0)'">
+                    <span>{{ dept.presentPercent || 0 }}%</span>
+                  </div>
+                  <i class="ri tw-dept-chevron"
+                    [ngClass]="isDepartmentExpanded(dept.departmentId) ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
+                </div>
+              </button>
+
+              <div class="tw-dept-card__body" *ngIf="isDepartmentExpanded(dept.departmentId)">
+                <div class="tw-member-list" *ngIf="dept.members?.length; else noMembersSingle">
+                  <div class="tw-member-row" *ngFor="let member of dept.members">
+                    <div class="tw-member-info">
+                      <img
+                        [src]="member.profileImage || (member.gender === 'Male' ? 'assets/img/avatars/5.png' : 'assets/img/avatars/4.png')"
+                        class="tw-member-avatar" alt=""
+                        (error)="onImageError($event, member, 'avatar')">
+                      <div>
+                        <div class="tw-member-name">{{ member.name }}</div>
+                        <div class="tw-member-sub">{{ member.empCode }} · {{ member.designation || '—' }}</div>
+                      </div>
+                    </div>
+                    <div class="tw-member-times">
+                      <span><i class="ri ri-login-box-line"></i> {{ member.checkIn || '—' }}</span>
+                      <span><i class="ri ri-logout-box-r-line"></i> {{ member.checkOut || '—' }}</span>
+                    </div>
+                    <span class="tw-member-badge" [ngClass]="getMemberStatusBadge(member.status)">
+                      {{ member.status }}
+                    </span>
+                  </div>
+                </div>
+                <ng-template #noMembersSingle>
+                  <p class="tw-no-members mb-0">No members in this department</p>
+                </ng-template>
+              </div>
             </div>
           </div>
         </div>

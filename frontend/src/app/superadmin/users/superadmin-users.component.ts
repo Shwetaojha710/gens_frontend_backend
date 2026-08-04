@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Notyf } from 'notyf';
 import { SuperadminService } from '../superadmin.service';
 
@@ -23,6 +23,9 @@ export class SuperadminUsersComponent implements OnInit {
 
   selected: UserRow | null = null;
   editForm: FormGroup;
+  pwForm: FormGroup;
+  pwVisible = false;
+  pwLoading = false;
 
   filterForm: FormGroup;
 
@@ -41,6 +44,10 @@ export class SuperadminUsersComponent implements OnInit {
       name: [''],
       role: ['employee'],
       status: ['active'],
+    });
+
+    this.pwForm = this.fb.group({
+      newPassword: ['', [Validators.required, Validators.minLength(6)]],
     });
   }
 
@@ -97,6 +104,8 @@ export class SuperadminUsersComponent implements OnInit {
 
   clearSelected() {
     this.selected = null;
+    this.pwForm.reset();
+    this.pwVisible = false;
   }
 
   quickToggleStatus(u: UserRow) {
@@ -133,6 +142,31 @@ export class SuperadminUsersComponent implements OnInit {
         this.search();
       },
       error: () => this.notyf.error('Server error while updating user.'),
+    });
+  }
+
+  updatePassword() {
+    if (!this.selected || this.pwForm.invalid) {
+      this.pwForm.markAllAsTouched();
+      return;
+    }
+    this.pwLoading = true;
+    this.api.updateUser(this.selected.id, { newPassword: this.pwForm.value.newPassword }).subscribe({
+      next: (res) => {
+        this.pwLoading = false;
+        const data = JSON.parse(res);
+        if (!data.status) {
+          this.notyf.error(data.message || 'Password update failed.');
+          return;
+        }
+        this.notyf.success('Password updated successfully.');
+        this.pwForm.reset();
+        this.pwVisible = false;
+      },
+      error: () => {
+        this.pwLoading = false;
+        this.notyf.error('Server error while updating password.');
+      },
     });
   }
 }

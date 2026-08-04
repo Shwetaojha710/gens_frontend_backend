@@ -1,12 +1,51 @@
 <header class="top-header">
   <div class="top-header-inner">
+
+    <!-- Mobile hamburger — visible only on mobile (<992px) -->
+    <button type="button" class="hamburger-btn d-lg-none" (click)="mobileMenu.toggle()" aria-label="Open menu">
+      <i class="ri ri-menu-line"></i>
+    </button>
+
     <div class="header-search-shell">
-      <button type="button" class="search-icon-btn" aria-label="Search">
+      <button type="button" class="search-icon-btn" aria-label="Search" (click)="searchInputRef.focus()">
         <i class="ri ri-search-line"></i>
       </button>
-      <div class="search-copy">
-        <span class="search-placeholder">Search</span>
-        <span class="search-shortcut">CTRL + K</span>
+      <input
+        #searchInputRef
+        type="text"
+        class="search-input"
+        placeholder="Search pages e.g. payroll, attendance..."
+        [(ngModel)]="searchQuery"
+        (input)="onSearchInput()"
+        (focus)="onSearchFocus()"
+        (keydown)="onSearchKeydown($event)"
+        autocomplete="off"
+      />
+      <span class="search-shortcut" *ngIf="!searchQuery">CTRL + K</span>
+      <button *ngIf="searchQuery" type="button" class="search-clear-btn" aria-label="Clear search" (click)="clearSearch()">
+        <i class="ri ri-close-line"></i>
+      </button>
+
+      <div class="search-results-panel" *ngIf="showResults">
+        <ng-container *ngIf="searchResults.length; else noResults">
+          <button
+            type="button"
+            class="search-result-item"
+            *ngFor="let result of searchResults; let i = index"
+            [class.active]="i === activeResultIndex"
+            (mouseenter)="activeResultIndex = i"
+            (click)="selectResult(result)"
+          >
+            <i class="ri" [ngClass]="result.icon"></i>
+            <span class="result-text">
+              <span class="result-title">{{ result.title }}</span>
+              <span class="result-group" *ngIf="result.group">{{ result.group }}</span>
+            </span>
+          </button>
+        </ng-container>
+        <ng-template #noResults>
+          <div class="search-no-results">No pages found for "{{ searchQuery }}"</div>
+        </ng-template>
       </div>
     </div>
 
@@ -50,7 +89,7 @@
       <div class="profile-shell" (click)="toggleshow()">
         <button type="button" class="profile-trigger">
           <div class="profile-avatar">
-            <img src="../../assets/img/avatars/1.png" alt="avatar" class="rounded-circle" />
+            <img src="assets/img/logo/quaere_logo_1.PNG" alt="avatar" class="rounded-circle" />
             <span class="profile-status"></span>
           </div>
         </button>
@@ -58,7 +97,7 @@
         <div class="profile-dropdown" [class.show]="isDropdownOpen">
           <div class="profile-dropdown-head">
             <div class="profile-avatar large">
-              <img src="../../assets/img/avatars/1.png" alt="alt" class="rounded-circle" />
+              <img src="assets/img/logo/quaere_logo_1.PNG" alt="alt" class="rounded-circle" />
               <span class="profile-status"></span>
             </div>
             <div class="profile-meta">

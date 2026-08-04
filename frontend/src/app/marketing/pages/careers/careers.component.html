@@ -1,0 +1,46 @@
+<app-page-hero
+  badge="Careers"
+  title="Join Our Team"
+  subtitle="Help us build the future of HR technology. We're always looking for talented people."
+/>
+
+<section class="section-padding">
+  <div class="container-gens max-w-4xl">
+    <div appScrollReveal class="text-center mb-12">
+      <p class="text-[var(--text-secondary)] leading-relaxed max-w-2xl mx-auto">
+        At GENS.Ai, we believe great products are built by great teams. We offer a collaborative,
+        remote-friendly culture, room to grow, and the chance to make a real impact on how organizations
+        across India manage their people.
+      </p>
+    </div>
+
+    <div class="space-y-4">
+      @for (job of careers; track job.title) {
+        <div appScrollReveal class="glass-card p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 card-hover">
+          <div>
+            <h3 class="font-display font-semibold text-lg text-navy dark:text-white">{{ job.title }}</h3>
+            <div class="flex flex-wrap gap-4 mt-2 text-sm text-[var(--text-muted)]">
+              <span class="flex items-center gap-1.5">
+                <i class="ri ri-building-line"></i> {{ job.department }}
+              </span>
+              <span class="flex items-center gap-1.5">
+                <i class="ri ri-map-pin-line"></i> {{ job.location }}
+              </span>
+              <span class="flex items-center gap-1.5">
+                <i class="ri ri-time-line"></i> {{ job.type }}
+              </span>
+            </div>
+          </div>
+          <a routerLink="/contact" class="btn-primary !py-2 !px-5 !text-sm shrink-0 text-center">Apply Now</a>
+        </div>
+      }
+    </div>
+  </div>
+</section>
+
+<app-cta-banner
+  title="Don't See Your Role?"
+  subtitle="We're always looking for talented people. Send us your resume anyway."
+  primaryCtaLabel="Get in Touch"
+  primaryCtaLink="/contact"
+/>

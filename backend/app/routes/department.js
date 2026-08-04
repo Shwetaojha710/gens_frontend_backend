@@ -5,7 +5,7 @@ const {createDepartment, getDepartments, updateDepartment, deleteDepartment, dep
 const { createPrefix, getPrefixs, updatePrefix, deletePrefix } = require('../controller/tenant/prefix');
 const { createCurrency,getCurrency,deleteCurrency,updateCurrency } = require('../controller/tenant/currency');
 const { getDesignationDD } = require('../controller/tenant/designation');
-const { createBranch, getBranch, updateBranch, deleteBranch, branchDD } = require('../controller/tenant/branch');
+const { createBranch, getBranch, updateBranch, deleteBranch, branchDD, copyBranchMasterData } = require('../controller/tenant/branch');
 const upload = require('../middleware/upload');
 
 router.post('/createDepartment', Admin, createDepartment);
@@ -30,6 +30,7 @@ router.post('/createBranch', Admin,upload.any(), createBranch);
 router.post('/getBranch', Admin, getBranch);
 router.post('/updateBranch', Admin,upload.any(), updateBranch);
 router.post('/deleteBranch', Admin, deleteBranch);
-router.post('/branch-dd',Admin, branchDD); 
+router.post('/branch-dd',Admin, branchDD);
+router.post('/copy-branch-master-data', Admin, copyBranchMasterData);
 
 module.exports= router;

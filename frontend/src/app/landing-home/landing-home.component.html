@@ -1,182 +1,451 @@
-<!-- <div class="authentication-wrapper authentication-basic container-p-y p-4 p-sm-0"
-  style="background-image: url('/assets/img/logo/abstract-background_1409-897.jpg');background-size: cover;background-repeat: no-repeat;">
-  <div class="py-6">
-    <div class="container p-md-7 p-1">
-      <div class="app-brand justify-content-center mt-5">
-        <a href="/" class="app-brand-link gap-2">
-          <img src="/assets/img/logo/logo-quaere.png" width="250">
-        </a>
+<!-- ─── Floating settings button ─── -->
+<button class="lh-settings-fab" (click)="openSettings()" title="Brand & Colors">
+  <i class="ri ri-palette-line"></i>
+</button>
 
+<!-- ─── Module Access FAB (admin/superadmin only) ─── -->
+<button class="lh-perm-fab" *ngIf="isAdmin" (click)="openPermDrawer()" title="Module Access Control">
+  <i class="ri ri-shield-keyhole-line"></i>
+</button>
+
+<!-- ─── Permission Drawer Overlay ─── -->
+<div class="lh-perm-overlay" [class.lh-perm-overlay--open]="permDrawerOpen" (click)="closePermDrawer()"></div>
+
+<!-- ─── Permission Drawer ─── -->
+<div class="lh-perm-drawer" [class.lh-perm-drawer--open]="permDrawerOpen">
+
+  <!-- Header -->
+  <div class="lh-perm-head">
+    <div>
+      <p class="lh-drawer-eyebrow">Admin Control</p>
+      <h6 class="lh-drawer-title">
+        <i class="ri ri-shield-keyhole-line me-1"></i>Module Access
+      </h6>
+    </div>
+    <button class="lh-drawer-close" (click)="closePermDrawer()">
+      <i class="ri ri-close-line"></i>
+    </button>
+  </div>
+
+  <!-- Body: left = user list | right = portal + detail -->
+  <div class="lh-perm-body">
+
+    <!-- ── LEFT: User list ── -->
+    <div class="lh-perm-users">
+      <div class="lh-perm-search">
+        <i class="ri ri-search-line lh-perm-search-icon"></i>
+        <input type="text" class="lh-perm-search-input" placeholder="Search users..."
+          [(ngModel)]="permSearchQuery" (input)="searchPermUsers()" />
       </div>
-      <div class="app-brand justify-content-center mb-10 mt-5">
-        <div class="text-center">
-          <h4 style="    font-size: 32px;
-    color: #005495;
-    font-weight: 900;">
-            {{tenantDetails?.companyName}}
-          </h4>
-          <p>
-            {{tenantDetails?.companyAddress}}
+
+      <div class="lh-perm-user-list">
+        <div *ngIf="permLoadingUsers" class="lh-perm-empty">
+          <span class="spinner-border spinner-border-sm text-primary me-1"></span> Loading…
+        </div>
+        <div *ngIf="!permLoadingUsers && permFilteredUsers.length === 0" class="lh-perm-empty">
+          No users found
+        </div>
+        <div *ngFor="let user of permFilteredUsers"
+          class="lh-perm-user-row"
+          [class.lh-perm-user-row--active]="permSelectedUser?.id === user.id"
+          (click)="selectPermUser(user)">
+          <div class="lh-perm-avatar"
+            [style.background]="getPermRoleColor(user.role) + '22'"
+            [style.color]="getPermRoleColor(user.role)">
+            {{ getPermInitial(user.name) }}
+          </div>
+          <div class="lh-perm-uinfo">
+            <div class="lh-perm-uname">{{ user.name }}</div>
+            <div class="lh-perm-uemail">{{ user.email }}</div>
+            <div class="lh-perm-urole">{{ user.role }}</div>
+          </div>
+          <i class="ri ri-arrow-right-s-line lh-perm-arrow"
+            *ngIf="permSelectedUser?.id === user.id"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── RIGHT: Portal/Detail panel ── -->
+    <div class="lh-perm-right">
+
+      <!-- Placeholder: no user selected -->
+      <div *ngIf="!permSelectedUser" class="lh-perm-placeholder">
+        <i class="ri ri-user-3-line"></i>
+        <p>Select a user to manage<br>their module access</p>
+      </div>
+
+      <!-- Loading -->
+      <div *ngIf="permSelectedUser && permLoadingModules" class="lh-perm-placeholder">
+        <span class="spinner-border text-primary"></span>
+        <p class="mt-2 mb-0">Loading permissions…</p>
+      </div>
+
+      <!-- ── User bar ── -->
+      <div *ngIf="permSelectedUser && !permLoadingModules" class="lh-perm-user-bar">
+        <div class="lh-perm-avatar lh-perm-avatar--lg"
+          [style.background]="getPermRoleColor(permSelectedUser.role) + '22'"
+          [style.color]="getPermRoleColor(permSelectedUser.role)">
+          {{ getPermInitial(permSelectedUser.name) }}
+        </div>
+        <div class="flex-1" style="min-width:0">
+          <div class="fw-semibold" style="font-size:.88rem;color:#1f2937">{{ permSelectedUser.name }}</div>
+          <div style="font-size:.7rem;color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ permSelectedUser.email }}</div>
+        </div>
+        <span class="lh-perm-role-badge"
+          [style.background]="getPermRoleColor(permSelectedUser.role) + '22'"
+          [style.color]="getPermRoleColor(permSelectedUser.role)">
+          {{ permSelectedUser.role }}
+        </span>
+        <span *ngIf="permHasCustom" class="lh-perm-custom-badge">Custom</span>
+      </div>
+
+      <!-- ══ VIEW 1: 3 Portal cards ══ -->
+      <ng-container *ngIf="permSelectedUser && !permLoadingModules && permView === 'portals'">
+
+        <div class="lh-portal-grid">
+          <div class="lh-portal-card"
+            *ngFor="let portal of permPortals"
+            [class.lh-portal-card--clickable]="portal.sections.length > 0"
+            [style.backgroundImage]="'url(' + portal.bgImg + ')'"
+            (click)="openPortalDetail(portal)">
+
+            <div class="lh-portal-glass"
+              [class.lh-portal-glass--off]="portalStatus(portal) === 'none'">
+
+              <h2 class="lh-portal-name">{{ portal.label | uppercase }}</h2>
+
+              <p class="lh-portal-meta">
+                {{ portal.sections.length > 0 ? (portalTotalMenus(portal) + ' menus') : 'Not configured' }}
+              </p>
+
+              <span class="lh-portal-pill lh-portal-pill--full"
+                *ngIf="portalStatus(portal) === 'full'">
+                <i class="ri ri-checkbox-circle-fill me-1"></i>Full Access
+              </span>
+              <span class="lh-portal-pill lh-portal-pill--partial"
+                *ngIf="portalStatus(portal) === 'partial'">
+                <i class="ri ri-error-warning-fill me-1"></i>Partial
+              </span>
+              <span class="lh-portal-pill lh-portal-pill--none"
+                *ngIf="portalStatus(portal) === 'none'">
+                <i class="ri ri-forbid-line me-1"></i>No Access
+              </span>
+
+              <button class="lh-portal-btn" *ngIf="portal.sections.length > 0">
+                Manage &rarr;
+              </button>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="lh-perm-footer">
+          <button class="lh-perm-save-btn" [disabled]="permSaving" (click)="saveModulePermissions()">
+            <span *ngIf="permSaving" class="spinner-border spinner-border-sm me-1"></span>
+            <i *ngIf="!permSaving" class="ri ri-save-line me-1"></i>
+            {{ permSaving ? 'Saving…' : 'Save All Access' }}
+          </button>
+          <p class="lh-perm-note">
+            <i class="ri ri-information-line me-1"></i>
+            User will be auto-logged out to apply changes.
           </p>
+        </div>
+      </ng-container>
+
+      <!-- ══ VIEW 2: Portal detail ══ -->
+      <ng-container *ngIf="permSelectedUser && !permLoadingModules && permView === 'detail' && permActivePortal">
+
+        <div class="lh-perm-detail-head">
+          <button class="lh-perm-back-btn" (click)="backToPortals()">
+            <i class="ri ri-arrow-left-s-line"></i> Back
+          </button>
+          <i [class]="permActivePortal.icon + ' lh-perm-detail-icon'"></i>
+          <span class="lh-perm-detail-name">{{ permActivePortal.label }}</span>
+          <div class="form-check form-switch mb-0 ms-auto">
+            <input class="form-check-input lh-perm-switch" type="checkbox" role="switch"
+              [id]="'portal-master-' + permActivePortal.key"
+              [checked]="isPortalAllOn(permActivePortal)"
+              (change)="togglePortalAll(permActivePortal)" />
+          </div>
+        </div>
+
+        <div class="lh-perm-detail-scroll">
+          <ng-container *ngFor="let section of permActivePortal.sections">
+
+            <div class="lh-perm-section-head"
+              [class.lh-perm-section-head--off]="!section.enabled">
+              <div class="lh-perm-section-icon"
+                [style.background]="section.enabled ? '#dbeafe' : '#f3f4f6'"
+                [style.color]="section.enabled ? '#0d5f9d' : '#9ca3af'">
+                <i [class]="section.icon"></i>
+              </div>
+              <div class="lh-perm-section-info">
+                <span class="lh-perm-section-name">{{ section.label }}</span>
+                <span class="lh-perm-section-count">
+                  {{ section.children.length > 0 ? section.children.length + ' items' : 'Single page' }}
+                </span>
+              </div>
+              <div class="form-check form-switch mb-0 ms-auto">
+                <input class="form-check-input lh-perm-switch"
+                  type="checkbox" role="switch"
+                  [id]="'sec-' + section.key"
+                  [checked]="section.enabled"
+                  (change)="togglePermModule(section)" />
+              </div>
+            </div>
+
+            <div *ngIf="section.children.length === 0"
+              class="lh-perm-child-item lh-perm-child-item--indented lh-perm-child-item--single"
+              [class.lh-perm-child-item--off]="!section.enabled">
+              <i class="ri ri-layout-line lh-perm-child-arrow"></i>
+              <span class="lh-perm-child-label" style="color:#9ca3af;font-style:italic">
+                Single-page module
+              </span>
+            </div>
+
+            <div *ngFor="let child of section.children"
+              class="lh-perm-child-item lh-perm-child-item--indented"
+              [class.lh-perm-child-item--off]="!child.enabled || !section.enabled">
+              <i class="ri ri-corner-down-right-line lh-perm-child-arrow"></i>
+              <span class="lh-perm-child-label">{{ child.label }}</span>
+              <div class="form-check form-switch mb-0 ms-auto">
+                <input class="form-check-input lh-perm-switch"
+                  type="checkbox" role="switch"
+                  [id]="'ci-' + child.key"
+                  [checked]="child.enabled && section.enabled"
+                  [disabled]="!section.enabled"
+                  (change)="togglePermChild(section, child)" />
+              </div>
+            </div>
+
+          </ng-container>
+        </div>
+
+        <div class="lh-perm-footer">
+          <button class="lh-perm-save-btn" [disabled]="permSaving" (click)="saveModulePermissions()">
+            <span *ngIf="permSaving" class="spinner-border spinner-border-sm me-1"></span>
+            <i *ngIf="!permSaving" class="ri ri-save-line me-1"></i>
+            {{ permSaving ? 'Saving…' : 'Save Access' }}
+          </button>
+          <p class="lh-perm-note">
+            <i class="ri ri-information-line me-1"></i>
+            User will be auto-logged out to apply changes.
+          </p>
+        </div>
+
+      </ng-container>
+
+    </div><!-- /lh-perm-right -->
+  </div><!-- /lh-perm-body -->
+</div><!-- /lh-perm-drawer -->
+
+<!-- ─── Drawer overlay ─── -->
+<div class="lh-drawer-overlay" [class.lh-drawer-overlay--open]="settingsOpen" (click)="closeSettings()"></div>
+
+<!-- ─── Settings drawer ─── -->
+<div class="lh-settings-drawer" [class.lh-settings-drawer--open]="settingsOpen">
+  <div class="lh-drawer-head">
+    <div>
+      <p class="lh-drawer-eyebrow">Appearance</p>
+      <h6 class="lh-drawer-title">Brand &amp; Colors</h6>
+    </div>
+    <button class="lh-drawer-close" (click)="closeSettings()">
+      <i class="ri ri-close-line"></i>
+    </button>
+  </div>
+
+  <div class="lh-drawer-body">
+
+    <div class="lh-section mb-4">
+      <p class="lh-section-label">Apply colors to</p>
+      <div class="lh-module-list">
+        <label class="lh-module-item">
+          <input type="checkbox" [(ngModel)]="applyTo.hrAdmin" />
+          <span class="lh-module-icon"><i class="ri ri-briefcase-4-line"></i></span>
+          <span class="lh-module-text">Employee Management</span>
+        </label>
+        <label class="lh-module-item">
+          <input type="checkbox" [(ngModel)]="applyTo.recruitment" />
+          <span class="lh-module-icon"><i class="ri ri-group-line"></i></span>
+          <span class="lh-module-text">Recruitment</span>
+        </label>
+        <label class="lh-module-item">
+          <input type="checkbox" [(ngModel)]="applyTo.employeePortal" />
+          <span class="lh-module-icon"><i class="ri ri-user-smile-line"></i></span>
+          <span class="lh-module-text">Employee Portal</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="lh-divider"></div>
+
+    <div class="lh-section mt-4">
+      <p class="lh-section-label">Colors</p>
+
+      <div class="lh-color-row">
+        <div class="lh-color-info">
+          <span class="lh-color-label">Primary Color</span>
+          <span class="lh-color-hint">Buttons &amp; active nav</span>
+        </div>
+        <div class="lh-color-controls">
+          <input type="color" class="lh-color-swatch" [(ngModel)]="colors.primaryColor" (input)="previewColors()" />
+          <input type="text" class="lh-hex-field" [(ngModel)]="colors.primaryColor" (change)="previewColors()" maxlength="7" />
         </div>
       </div>
 
-      <div class="row g-3 mb-12">
-        <div class="col-md-12">
-          <div class="row justify-content-center g-3">
-            <div class="col">
-              <div class="card card-100 text-center" style="padding: 40px 20px;">
-                <div class="card-body">
-                  <div class="mb-4">
-                    <img src="/assets/img/logo/icomoon-free_office.svg" width="60">
-                  </div>
-                  <h5 class="card-title">Recruitment</h5>
-                  <p class="card-text">
-                    Central administration and monitoring access.
-                  </p>
+      <div class="lh-color-row">
+        <div class="lh-color-info">
+          <span class="lh-color-label">Sidebar</span>
+          <span class="lh-color-hint">Navigation background</span>
+        </div>
+        <div class="lh-color-controls">
+          <input type="color" class="lh-color-swatch" [(ngModel)]="colors.sidebarColor" (input)="previewColors()" />
+          <input type="text" class="lh-hex-field" [(ngModel)]="colors.sidebarColor" (change)="previewColors()" maxlength="7" />
+        </div>
+      </div>
 
-                  <button class="btn btn-primary waves-effect waves-light" (click)="goToOnboarding()">
-                    Go to Recruitment
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div class="col">
-              <div class="card card-100 text-center" style="padding: 40px 20px;">
-                <div class="card-body">
-                  <div class="mb-4">
-                    <img src="/assets/img/logo/icomoon-free_office.svg" width="60">
-                  </div>
-                  <h5 class="card-title">Employee Management</h5>
-                  <p class="card-text">
-                    Central administration and monitoring access.'
-                  </p>
-
-                  <button class="btn btn-primary waves-effect waves-light" (click)="goToEmployeeManagement()">
-                    Go to Employee Management
-                  </button>
-                </div>
-              </div>
-            </div>
-
-
+      <div class="lh-color-row">
+        <div class="lh-color-info">
+          <span class="lh-color-label">Page Background</span>
+          <span class="lh-color-hint">Top &amp; bottom gradient</span>
+        </div>
+        <div class="lh-color-controls gap-2">
+          <div class="d-flex align-items-center gap-1">
+            <input type="color" class="lh-color-swatch" [(ngModel)]="colors.pageBgEnd" (input)="previewColors()" />
+            <span class="lh-mini-label">Top</span>
+          </div>
+          <div class="d-flex align-items-center gap-1">
+            <input type="color" class="lh-color-swatch" [(ngModel)]="colors.pageBgStart" (input)="previewColors()" />
+            <span class="lh-mini-label">Bottom</span>
           </div>
         </div>
       </div>
 
+      <div class="lh-color-row">
+        <div class="lh-color-info">
+          <span class="lh-color-label">Hero Banner</span>
+          <span class="lh-color-hint">Dashboard banner gradient</span>
+        </div>
+        <div class="lh-color-controls gap-2">
+          <div class="d-flex align-items-center gap-1">
+            <input type="color" class="lh-color-swatch" [(ngModel)]="colors.heroBgStart" (input)="previewColors()" />
+            <span class="lh-mini-label">Left</span>
+          </div>
+          <div class="d-flex align-items-center gap-1">
+            <input type="color" class="lh-color-swatch" [(ngModel)]="colors.heroBgEnd" (input)="previewColors()" />
+            <span class="lh-mini-label">Right</span>
+          </div>
+        </div>
+      </div>
     </div>
+
+    <div class="lh-section mt-4">
+      <p class="lh-section-label">Preview</p>
+      <div class="lh-preview-wrap">
+        <div class="lh-preview-sidebar"
+          [style.background]="'linear-gradient(180deg,' + colors.sidebarColor + 'f5 0%,' + colors.sidebarColor + 'eb 100%)'">
+          <div class="lh-preview-nav-active" [style.background]="colors.primaryColor">Dashboard</div>
+          <div class="lh-preview-nav-item">Employees</div>
+          <div class="lh-preview-nav-item">Attendance</div>
+        </div>
+        <div class="lh-preview-content"
+          [style.background]="'linear-gradient(to top,' + colors.pageBgStart + ' 0%,' + colors.pageBgEnd + ' 100%)'">
+          <div class="lh-preview-hero"
+            [style.background]="'linear-gradient(90deg,' + colors.heroBgStart + ' 0%,' + colors.heroBgEnd + ' 100%)'">
+          </div>
+          <div class="lh-preview-btn" [style.background]="colors.primaryColor"></div>
+        </div>
+      </div>
+    </div>
+
   </div>
-</div> -->
+
+  <div class="lh-drawer-footer">
+    <button class="lh-btn-save" [disabled]="saving" (click)="saveSettings()">
+      <i class="fas fa-circle-notch fa-spin me-1" *ngIf="saving"></i>
+      <i class="ri ri-save-line me-1" *ngIf="!saving"></i>
+      {{ saving ? 'Saving…' : 'Save Colors' }}
+    </button>
+    <button class="lh-btn-reset" (click)="resetSettings()">
+      <i class="ri ri-refresh-line me-1"></i>Reset
+    </button>
+  </div>
+</div>
 
 
+<!-- ─── Main landing page ─── -->
 <div class="authentication-wrapper authentication-basic container-p-y p-4 p-sm-0"
-  style="background-image: url('/assets/img/bg-login/bg-branch.jpg');background-size: cover;background-repeat: no-repeat;">
+  style="background:
+    radial-gradient(ellipse 60% 50% at 15% 20%, rgba(0, 180, 166, 0.16) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 85% 15%, rgba(255, 140, 66, 0.14) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 50% 95%, rgba(126, 211, 33, 0.12) 0%, transparent 60%),
+    linear-gradient(180deg, #eaf6f5 0%, #f7fbfa 100%);
+  background-size: cover;background-repeat: no-repeat;">
   <div
-    style="border: 0px solid ;padding: 30px 30px;width: 1588px;background-image: linear-gradient(110.78deg, rgba(255, 255, 255, 0.41) 7.01%, rgba(255, 255, 255, 0.01) 106.22%), linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)), url('/assets/img/bg-login/bg-branch1.png');background-size: cover;background-position: center;border-radius: 32px;">
+    style="border: 0px solid ;padding: 30px 30px;width: 1588px;">
     <div class="py-6">
       <div
         style="border: 0px solid ;padding: 30px 30px;width: 1394px;height: 650px;background-image: url('/assets/img/bg-login/bg-branch1.png');background-size: cover;background-position: center;border-radius: 32px;margin: auto;background: linear-gradient(110.78deg, rgba(255, 255, 255, 0.41) 7.01%, rgba(255, 255, 255, 0.01) 106.22%),linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));">
         <div class="container p-md-7 p-1">
           <div class="row mb-6">
-            <div class="app-brand justify-content-center">
+            <!-- <div class="app-brand justify-content-center">
               <a href="/" class="app-brand-link gap-2 mb-2">
-                <img src="/assets/img/logo/logo-quaere.png" width="200">
+                <img src="/assets/img/marketing/gens-logo.png" width="260">
               </a>
-
-            </div>
+            </div> -->
             <div class="app-brand justify-content-center">
               <div class="text-center">
-                <h4 style="font-size: 32px; color: #005495; font-weight: 500;">
+                <h4 style="font-size: 32px; color: #0b2b3a; font-weight: 700; letter-spacing: -0.02em;">
                   {{tenantDetails?.companyName}}
                 </h4>
-                <p>
-                  {{tenantDetails?.companyAddress}}
-
-                </p>
+                <p style="color: #45606b;">{{tenantDetails?.companyAddress}}</p>
               </div>
             </div>
-
-
-
-
 
             <div class="row g-3 mb-8 justify-content-center">
               <div class="col-md-12">
                 <div class="row justify-content-center g-3">
-                  <div class="col-md-3">
+                  <div class="col-md-3" *ngIf="showRecruitment">
                     <div class="card-wrapper">
-                      <div class="city-card">
-
+                      <div class="reuc-city-card">
                         <div class="overlay">
                           <h2 class="text-white text-uppercase">Recruitment</h2>
                           <h4 class="text-white">OFFICE</h4>
-
-                          <p class="text-uppercase">
-                            Central administration and monitoring access.
-                          </p>
-
-                          <button class="btn-dashboard" (click)="goToOnboarding()" >Go To Dashboard</button>
+                          <p class="text-uppercase">Central administration and monitoring access.</p>
+                          <button class="btn-dashboard" (click)="goToOnboarding()">Go To Dashboard</button>
                         </div>
-
                       </div>
                     </div>
                   </div>
-                  <div class="col-md-3">
+                  <div class="col-md-3" *ngIf="showEmpManagement">
                     <div class="card-wrapper">
-                      <div class="city-card">
-
+                      <div class="emp-city-card">
                         <div class="overlay">
                           <h2 class="text-white text-uppercase">Employee Management</h2>
                           <h4 class="text-white">OFFICE</h4>
-
-                          <p class="text-uppercase">
-                           Central administration and monitoring access.
-                          </p>
-
-                          <button class="btn-dashboard" (click)="goToEmployeeManagement()"  >Go To Dashboard</button>
-                        </div>
-
-                      </div>
-                    </div>
-                  </div>
-
-
-                </div>
-              </div>
-            </div>
-
-
-            <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel"
-              aria-hidden="true">
-              <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                  <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel1">Search Branch</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                  </div>
-                  <div class="modal-body">
-                    <div class="row">
-                      <div class="col-12 mt-2">
-                        <div class="input-group">
-                          <input type="text" class="form-control" placeholder="Search Branch" aria-label="Search Branch"
-                            aria-describedby="button-addon2">
-                          <button class="btn btn-outline-primary waves-effect" type="button"
-                            id="button-addon2">Search</button>
+                          <p class="text-uppercase">Central administration and monitoring access.</p>
+                          <button class="btn-dashboard" (click)="goToEmployeeManagement()">Go To Dashboard</button>
                         </div>
                       </div>
                     </div>
-
                   </div>
-                  <div class="modal-footer">
-
+                  <div class="col-md-3" *ngIf="showTracking">
+                    <div class="card-wrapper">
+                      <div class="loc-city-card">
+                        <div class="overlay">
+                          <h2 class="text-white text-uppercase">Location Tracking</h2>
+                          <h4 class="text-white">Tracking</h4>
+                          <p class="text-uppercase">Central administration and monitoring access.</p>
+                          <button class="btn-dashboard" (click)="goToTracking()">Go To Tracking</button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-
 
           </div>
-
         </div>
       </div>
     </div>

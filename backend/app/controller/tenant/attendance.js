@@ -6,6 +6,7 @@ const deduction = require("../../models/deductions");
 const moment = require("moment");
 const Shift = require("../../models/shift");
 const empPersonal = require("../../models/empPersonal");
+const ContractualDayApproval = require("../../models/contractual_day_approval");
 const Holiday = require("../../models/holiday");
 const holiday = require("../../models/holiday");
 const path = require("path");
@@ -22,6 +23,7 @@ const sequelize = require("../../connection/connection");
 const reimbursement_file = require("../../models/reimbursementfile");
 const reimbursement = require("../../models/reimbursement");
 const comp_off = require("../../models/comp_off");
+const leave_application = require("../../models/leave_application");
 
 exports.attendanceMaster = async (req, res) => {
   const {
@@ -950,16 +952,6 @@ exports.getDateWiseAttendance = async (req, res) => {
       });
     }
 
-    // if (records.length === 0) {
-    //   return Helper.response(
-    //     false,
-    //     "No attendance records found for the given date.",
-    //     [],
-    //     res,
-    //     404
-    //   );
-    // }
-
     const groupedRecords = {};
     records.forEach((r) => {
       const day = moment(r.check_in_time).date();
@@ -968,7 +960,7 @@ exports.getDateWiseAttendance = async (req, res) => {
         id: r.id,
         checkIn: r.check_in_time || null,
         checkOut: r.check_out_time || null,
-        status: r.check_in_time && r.check_out_time ? "Present" : "Absent",
+        status: r.check_in_time ? "Present" : "Absent",
       };
     });
 
@@ -2744,7 +2736,7 @@ const mapLeaveData = (row, employeeMap, tenantId, createdBy) => {
 };
 
 const XLSX = require("xlsx");
-const leave_application = require("../../models/leave_application");
+// const leave_application = require("../../models/leave_application");
 // API route
 exports.uploadLeave = async (req, res) => {
   try {
@@ -3223,18 +3215,21 @@ exports.getReimbursement = async (req, res) => {
       return Helper.response(false, "Tenant Is not found", {}, res, 200);
     }
     const branchId = req.users && req.users.branchId;
+    const statusFilter = req.body?.status || null;
 
     if (!branchId || branchId == "null") {
       return Helper.response(false, "branchId is required!", {}, res, 200);
     }
 
+    const whereClause = { tenantId: req.users?.tenantId, branchId };
+    if (statusFilter && statusFilter !== 'all') {
+      whereClause.status = statusFilter;
+    }
+
     const ReimbursementData = await Reimbursement.findAll({
       raw: true,
       nest: true,
-      where: {
-        tenantId: req.users?.tenantId,
-        branchId,
-      },
+      where: whereClause,
     });
 
     const data = await Promise.all(
@@ -3858,3 +3853,146 @@ const data = await comp_off.findAll({
 };
 
 
+
+
+/* ─────────────────────────────────────────────────────────────
+   CONTRACTUAL EMPLOYEE ATTENDANCE APPROVAL
+   ───────────────────────────────────────────────────────────── */
+
+function timeDiffHours(inTime, outTime) {
+  try {
+    // values may be "HH:MM", "HH:MM:SS", or "YYYY-MM-DD HH:MM" / "YYYY-MM-DD HH:MM:SS"
+    const timePart = (t) => (t && t.includes(' ') ? t.trim().split(' ')[1] : t);
+    const [ih, im] = timePart(inTime).split(':').map(Number);
+    const [oh, om] = timePart(outTime).split(':').map(Number);
+    if (isNaN(ih) || isNaN(im) || isNaN(oh) || isNaN(om)) return 0;
+    const diff = (oh * 60 + om) - (ih * 60 + im);
+    return diff > 0 ? +(diff / 60).toFixed(2) : 0;
+  } catch { return 0; }
+}
+
+exports.getContractualAttendanceList = async (req, res) => {
+  try {
+    const tenantId = req.users?.tenantId;
+    const branchId = req.users?.branchId;
+    const { startDate, endDate, employeeId } = req.body;
+
+    if (!startDate || !endDate)
+      return Helper.response(false, 'startDate and endDate are required', [], res, 400);
+
+    const empWhere = { tenantId, isContractual: true };
+    if (branchId && branchId !== 'null') empWhere.branchId = branchId;
+    if (employeeId && employeeId !== 'All') empWhere.id = employeeId;
+
+    const employees = await empPersonal.findAll({
+      where: empWhere,
+      attributes: ['id', 'firstName', 'lastName', 'empCode', 'shift_id', 'hourlyRate', 'branchId'],
+      raw: true,
+    });
+
+    if (!employees.length)
+      return Helper.response(false, 'No contractual employees found', [], res, 200);
+
+    const empIds = employees.map((e) => e.id);
+    const empMap = Object.fromEntries(employees.map((e) => [e.id, e]));
+
+    const attRows = await attendance.findAll({
+      where: { tenantId, employeeId: { [Op.in]: empIds }, date: { [Op.between]: [startDate, endDate] } },
+      raw: true,
+      order: [['date', 'DESC']],
+    });
+
+    const result = await Promise.all(
+      attRows.map(async (att) => {
+        const emp = empMap[att.employeeId];
+        if (!emp) return null;
+
+        let requiredHours = 8;
+        if (emp.shift_id) {
+          const shift = await Shift.findOne({ where: { shift: emp.shift_id }, attributes: ['workingHours'], raw: true });
+          if (shift?.workingHours) requiredHours = parseFloat(shift.workingHours);
+        }
+
+        const totalHours = att.check_in_time && att.check_out_time
+          ? timeDiffHours(att.check_in_time, att.check_out_time) : null;
+
+        const [approval] = await ContractualDayApproval.findOrCreate({
+          where: { tenantId, employeeId: att.employeeId, date: att.date },
+          defaults: {
+            branchId: emp.branchId || branchId, checkIn: att.check_in_time,
+            checkOut: att.check_out_time, totalHours, requiredHours, status: 'pending',
+          },
+        });
+
+        if (att.check_in_time && approval.checkIn !== att.check_in_time)
+          await approval.update({ checkIn: att.check_in_time, checkOut: att.check_out_time, totalHours });
+
+        return {
+          approvalId: approval.id,
+          employeeId: att.employeeId,
+          employeeName: `${emp.firstName} ${emp.lastName}`,
+          empCode: emp.empCode,
+          hourlyRate: emp.hourlyRate,
+          date: att.date,
+          checkIn: att.check_in_time || '—',
+          checkOut: att.check_out_time || '—',
+          totalHours: totalHours ?? '—',
+          requiredHours,
+          hoursComplete: totalHours != null && totalHours >= requiredHours,
+          status: approval.status,
+          approverId: approval.approverId,
+          approvedAt: approval.approvedAt,
+          remark: approval.remark,
+        };
+      }),
+    );
+
+    return Helper.response(true, 'Contractual attendance list fetched', result.filter(Boolean), res, 200);
+  } catch (error) {
+    console.error('getContractualAttendanceList error:', error);
+    return Helper.response(false, error?.message, [], res, 500);
+  }
+};
+
+exports.approveContractualDay = async (req, res) => {
+  try {
+    const { approvalId, status, remark } = req.body;
+    const approverId = req.users?.id;
+    const tenantId = req.users?.tenantId;
+
+    if (!approvalId || !['approved', 'rejected'].includes(status))
+      return Helper.response(false, 'approvalId and valid status required', null, res, 400);
+
+    const record = await ContractualDayApproval.findOne({ where: { id: approvalId, tenantId } });
+    if (!record) return Helper.response(false, 'Record not found', null, res, 404);
+
+    await record.update({ status, approverId, approvedAt: new Date(), remark: remark || null });
+    return Helper.response(true, `Attendance ${status} successfully`, record, res, 200);
+  } catch (error) {
+    console.error('approveContractualDay error:', error);
+    return Helper.response(false, error?.message, null, res, 500);
+  }
+};
+
+exports.getContractualEmployees = async (req, res) => {
+  try {
+    const tenantId = req.users?.tenantId;
+    const branchId = req.users?.branchId;
+    const where = { tenantId, isContractual: true, status: 'active' };
+    if (branchId && branchId !== 'null') where.branchId = branchId;
+
+    const employees = await empPersonal.findAll({
+      where, attributes: ['id', 'firstName', 'lastName', 'empCode', 'hourlyRate'], raw: true,
+    });
+
+    return Helper.response(true, 'Contractual employees fetched',
+      employees.map((e) => ({
+        value: e.id,
+        label: `${e.firstName} ${e.lastName}${e.empCode ? ' (' + e.empCode + ')' : ''}`,
+        hourlyRate: e.hourlyRate,
+      })), res, 200);
+  } catch (error) {
+    console.error('getContractualEmployees error:', error);
+    return Helper.response(false, error?.message, [], res, 500);
+  }
+};

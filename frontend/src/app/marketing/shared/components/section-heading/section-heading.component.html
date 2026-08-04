@@ -1,0 +1,22 @@
+<div
+  class="max-w-3xl mb-12 md:mb-16 section-heading-wrap"
+  [class.text-center]="align === 'center'"
+  [class.mx-auto]="align === 'center'"
+  [class.text-left]="align === 'left'"
+>
+  @if (badge) {
+    <span class="section-badge inline-block px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-widest bg-gens-100 dark:bg-gens-900 text-gens-600 dark:text-gens-400 mb-4">
+      {{ badge }}
+    </span>
+  }
+  <h2 class="section-title font-display text-3xl md:text-4xl lg:text-5xl font-bold mb-4 tracking-tight">
+    @if (highlight) {
+      {{ titleBefore || title }} <span class="gradient-text">{{ highlight }}</span> {{ titleAfter }}
+    } @else {
+      {{ title }}
+    }
+  </h2>
+  @if (subtitle) {
+    <p class="section-sub text-lg text-[var(--text-secondary)] leading-relaxed">{{ subtitle }}</p>
+  }
+</div>

@@ -8,6 +8,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PageBreak } from 'docx';
 import { EmployeeService } from '../../../services/employee.service';
+import { MasterService } from '../../../services/master.service';
 
 
 @Component({
@@ -25,13 +26,15 @@ export class OfferLetterComponent implements OnInit {
   obj: any = {}
   isDownload: boolean = false
   letterheadImage: string = '/assets/img/Letterhead-1.png'
+  tenantLetterheadUrl: string | null = null
 
   constructor(
     public payrollService: PayrollService,
     private router: Router,
     public statusService: StatusService,
     public dataService: DataService,
-    private employeeService: EmployeeService
+    private employeeService: EmployeeService,
+    private masterService: MasterService
   ) {
     this.tenant = JSON.parse(localStorage.getItem('tenant') || '{}');
     this.notyf = new Notyf();
@@ -42,9 +45,26 @@ export class OfferLetterComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.getBase64ImageFromUrl('/assets/img/Letterhead-2.png')
-      .then(base64 => { this.letterheadImage = base64; })
-      .catch(() => {});
+    this.masterService.getLetterhead().subscribe({
+      next: (res: any) => {
+        const url = res?.data?.url;
+        if (url) {
+          this.tenantLetterheadUrl = url;
+          this.getBase64FromSrc(url)
+            .then(base64 => { this.letterheadImage = base64; })
+            .catch(() => {});
+        } else {
+          this.getBase64ImageFromUrl('/assets/img/Letterhead-2.png')
+            .then(base64 => { this.letterheadImage = base64; })
+            .catch(() => {});
+        }
+      },
+      error: () => {
+        this.getBase64ImageFromUrl('/assets/img/Letterhead-2.png')
+          .then(base64 => { this.letterheadImage = base64; })
+          .catch(() => {});
+      }
+    });
     this.loadData();
   }
 
@@ -274,6 +294,26 @@ printDoc() {
 
     html2pdf().set(opt).from(cloned).save().then(() => {
       this.isDownload = false;
+    });
+  }
+
+  isGeneratingPdf = false;
+
+  generateServerPdf(): void {
+    this.isGeneratingPdf = true;
+    this.employeeService.generateLetterPdf(this.personalDetails.id, 'offer').subscribe({
+      next: (res: any) => {
+        if (res.status && res.data?.downloadUrl) {
+          window.open(res.data.downloadUrl, '_blank');
+        } else {
+          this.notyf.error(res.message || 'Failed to generate PDF.');
+        }
+        this.isGeneratingPdf = false;
+      },
+      error: () => {
+        this.notyf.error('Server error. Please try again.');
+        this.isGeneratingPdf = false;
+      }
     });
   }
 }

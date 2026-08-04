@@ -1,0 +1,59 @@
+<div class="glass-card overflow-hidden max-w-lg mx-auto shadow-premium">
+  <!-- Chat header -->
+  <div class="flex items-center gap-3 px-5 py-4 border-b border-[var(--border-color)] bg-gradient-to-r from-gens-600/10 to-accent/10">
+    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-gens-600 to-accent flex items-center justify-center">
+      <i class="ri ri-robot-2-line text-white text-lg"></i>
+    </div>
+    <div>
+      <p class="font-semibold text-sm">GENS AI Assistant</p>
+      <p class="text-xs text-green-500 flex items-center gap-1">
+        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Online
+      </p>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div #scrollContainer class="p-5 space-y-4 min-h-[320px] max-h-[400px] overflow-y-auto">
+    @for (msg of visibleMessages(); track $index) {
+      <div class="flex" [class.justify-end]="msg.type === 'user'" [class.justify-start]="msg.type === 'ai'">
+        <div
+          class="chat-bubble max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed"
+          [class.bg-gens-600]="msg.type === 'user'"
+          [class.text-white]="msg.type === 'user'"
+          [class.rounded-br-md]="msg.type === 'user'"
+          [class.bg-[var(--bg-tertiary)]]="msg.type === 'ai'"
+          [class.text-[var(--text-primary)]]="msg.type === 'ai'"
+          [class.rounded-bl-md]="msg.type === 'ai'"
+          [class.border]="msg.type === 'ai'"
+          [class.border-[var(--border-color)]]="msg.type === 'ai'"
+        >
+          @if (msg.type === 'ai') {
+            <i class="ri ri-sparkling-2-fill text-base text-gens-500 inline mr-1 align-text-bottom"></i>
+          }
+          {{ msg.text }}
+        </div>
+      </div>
+    }
+    @if (typing()) {
+      <div class="flex justify-start">
+        <div class="px-4 py-3 rounded-2xl rounded-bl-md bg-[var(--bg-tertiary)] border border-[var(--border-color)]">
+          <div class="flex gap-1">
+            <span class="w-2 h-2 rounded-full bg-gens-400 animate-bounce" style="animation-delay: 0ms"></span>
+            <span class="w-2 h-2 rounded-full bg-gens-400 animate-bounce" style="animation-delay: 150ms"></span>
+            <span class="w-2 h-2 rounded-full bg-gens-400 animate-bounce" style="animation-delay: 300ms"></span>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Input mock -->
+  <div class="px-5 py-4 border-t border-[var(--border-color)]">
+    <div class="flex items-center gap-2 px-4 py-3 rounded-xl bg-[var(--bg-tertiary)] border border-[var(--border-color)]">
+      <span class="text-sm text-[var(--text-muted)] flex-1">Ask GENS AI anything...</span>
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-r from-gens-600 to-accent flex items-center justify-center">
+        <i class="ri ri-send-plane-fill text-white text-base"></i>
+      </div>
+    </div>
+  </div>
+</div>

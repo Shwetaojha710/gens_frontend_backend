@@ -50,7 +50,52 @@ export class FullTimeSalaryComponent {
   ];
   yearList: any = [];
   notyf: Notyf;
-  obj: any = {}
+  obj: any = {};
+
+  penaltyTypeOptions = [
+    { value: 'percentage', label: 'Percentage (Days to Deduct)' },
+    { value: 'amount', label: 'Fixed Amount (₹)' },
+  ];
+
+  onRowPenaltyToggle(item: any) {
+    if (!item['rowPenaltyEnabled']) {
+      item['rowPenaltyType'] = 'percentage';
+      item['rowPenaltyValue'] = null;
+      item['penaltyAmount'] = 0;
+      item['basePay'] = item['_basePayBeforeRowPenalty'];
+    }
+  }
+
+  onPenaltyTypeChange(item: any) {
+    item['rowPenaltyValue'] = null;
+    item['penaltyAmount'] = 0;
+    item['basePay'] = item['_basePayBeforeRowPenalty'];
+  }
+
+  applyRowPenalty(item: any) {
+    const base = item['_basePayBeforeRowPenalty'] ?? item['basePay'];
+    const type = item['rowPenaltyType'] || 'percentage';
+    let value = Number(item['rowPenaltyValue'] || 0);
+
+    let penalty = 0;
+    if (value > 0) {
+      if (type == 'percentage') {
+        const maxDays = item['totalWorkingDays'] || 30;
+        if (value > maxDays) {
+          value = maxDays;
+          item['rowPenaltyValue'] = maxDays;
+        }
+        const perDay = item['TotalSalary'] / (item['totalWorkingDays'] || 30);
+        penalty = Math.round(value * perDay);
+      } else {
+        penalty = Math.min(Math.round(value), base);
+      }
+    }
+
+    item['penaltyAmount'] = penalty;
+    item['basePay'] = Math.max(0, base - penalty);
+  }
+
   constructor(public attendanceService: AttendanceService, private master: MasterService, private router: Router, private payroll: PayrollService, private statusService: StatusService) {
     this.notyf = new Notyf();
   }
@@ -518,6 +563,12 @@ export class FullTimeSalaryComponent {
 
   }
 
+  clearSalaryList() {
+    this.SalaryArr = [];
+    this.originalList = [];
+    this.filteredSalary = [];
+  }
+
   back() {
 
   }
@@ -558,8 +609,14 @@ export class FullTimeSalaryComponent {
         if (status == true) {
 
           this.notyf.success(message)
-          this.SalaryArr = response.data
-          this.originalList = response.data
+          this.SalaryArr = response.data.map((emp: any) => ({
+            ...emp,
+            _basePayBeforeRowPenalty: emp.basePay,
+            rowPenaltyEnabled: false,
+            rowPenaltyType: 'percentage',
+            rowPenaltyValue: null,
+          }));
+          this.originalList = [...this.SalaryArr];
 
           // pagination
           const start = (this.currentPage - 1) * this.pageSize;

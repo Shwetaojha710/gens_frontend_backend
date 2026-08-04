@@ -1,0 +1,90 @@
+<app-page-hero
+  badge="Pricing"
+  title="Simple, Transparent Pricing"
+  subtitle="Pay per employee, per month. No hidden fees. Upgrade or downgrade anytime."
+/>
+
+<section class="section-padding">
+  <div class="container-gens">
+    <!-- Info chips -->
+    <div class="flex flex-wrap justify-center gap-4 mb-12 text-sm">
+      <div class="glass-card px-4 py-2 flex items-center gap-2">
+        <i class="ri ri-user-line text-gens-600"></i>
+        <span>Per-employee billing</span>
+      </div>
+      <div class="glass-card px-4 py-2 flex items-center gap-2">
+        <i class="ri ri-building-4-line text-gens-600"></i>
+        <span>Enterprise fixed pricing available</span>
+      </div>
+      <div class="glass-card px-4 py-2 flex items-center gap-2">
+        <i class="ri ri-time-line text-gens-600"></i>
+        <span>14-day free trial, no card required</span>
+      </div>
+    </div>
+
+    @if (plansLoading) {
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        @for (i of [1, 2, 3, 4]; track i) {
+          <div class="skeleton h-96 rounded-2xl"></div>
+        }
+      </div>
+    } @else if (plans.length) {
+      <!-- API plans -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+        @for (plan of plans; track plan.id) {
+          <app-pricing-card
+            [plan]="toPricingCardData(plan)"
+            (ctaClick)="registerWithPlan(plan.id)"
+          />
+        }
+      </div>
+    } @else if (staticCards.length) {
+      <!-- Static fallback from site-data.ts -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+        @for (plan of staticCards; track plan.name) {
+          <app-pricing-card
+            [plan]="plan"
+            (ctaClick)="goContact()"
+          />
+        }
+      </div>
+    } @else {
+      <div class="text-center py-12">
+        <p class="text-[var(--text-secondary)] mb-4">
+          Could not load pricing plans right now.
+        </p>
+        <button type="button" class="btn-secondary" (click)="retryLoad()">
+          <i class="ri ri-refresh-line"></i>
+          Try again
+        </button>
+        <p class="text-[var(--text-secondary)] mt-4">
+          Or
+          <a routerLink="/contact" class="text-gens-600 font-semibold">contact our sales team</a>
+          for pricing.
+        </p>
+      </div>
+    }
+  </div>
+</section>
+
+<!-- Pricing FAQ -->
+<section class="section-padding bg-[var(--bg-secondary)]">
+  <div class="container-gens max-w-3xl">
+    <app-section-heading
+      badge="FAQ"
+      title="Pricing questions,"
+      highlight="answered"
+      align="center"
+    />
+    <div class="mt-10">
+      <app-faq-accordion [items]="pricingFaqs" />
+    </div>
+  </div>
+</section>
+
+<app-cta-banner
+  title="Still not sure which plan fits?"
+  subtitle="Talk to our team — we'll help you pick the right plan for your team size and needs."
+  primaryCtaLabel="Book a Demo"
+  primaryCtaLink="/contact"
+/>

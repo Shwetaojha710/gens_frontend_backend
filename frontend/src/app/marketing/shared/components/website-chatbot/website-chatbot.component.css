@@ -1,0 +1,376 @@
+.wc-widget {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 1080;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.75rem;
+  pointer-events: none;
+}
+
+.wc-fab,
+.wc-prompt,
+.wc-panel--open {
+  pointer-events: auto;
+}
+
+.wc-fab {
+  width: 3.6rem;
+  height: 3.6rem;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(145deg, #0d9488 0%, #20b2aa 100%);
+  color: #fff;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 24px rgba(13, 148, 136, 0.45);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.wc-fab:hover {
+  transform: translateY(-2px) scale(1.05);
+}
+
+.wc-prompt {
+  position: relative;
+  width: min(340px, calc(100vw - 2rem));
+  background: #fff;
+  border-radius: 1rem;
+  padding: 1.15rem 1.1rem 1rem;
+  box-shadow: 0 16px 40px rgba(15, 41, 66, 0.16);
+  border: 1px solid #e2e8f0;
+  animation: wcPop 0.2s ease;
+}
+
+.wc-prompt__close {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  border: 0;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 1.15rem;
+  cursor: pointer;
+}
+
+.wc-prompt__avatar {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  background: rgba(32, 178, 170, 0.15);
+  color: #0d9488;
+  display: grid;
+  place-items: center;
+  font-size: 1.25rem;
+  margin-bottom: 0.65rem;
+}
+
+.wc-prompt__title {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.wc-prompt__text {
+  margin: 0 0 0.85rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.wc-prompt__cta {
+  width: 100%;
+  border: 1.5px dashed #99f6e4;
+  background: #f0fdfa;
+  color: #0f766e;
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  margin-bottom: 0.75rem;
+}
+
+.wc-prompt__cta:hover {
+  background: #ccfbf1;
+}
+
+.wc-prompt__hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.wc-chip {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.wc-chip:hover {
+  border-color: #20b2aa;
+  background: #f0fdfa;
+  color: #0f766e;
+}
+
+.wc-panel {
+  width: min(400px, calc(100vw - 2rem));
+  height: min(560px, calc(100vh - 7rem));
+  display: flex;
+  flex-direction: column;
+  border-radius: 1.1rem;
+  box-shadow: 0 16px 48px rgba(15, 41, 66, 0.2);
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  transform: scale(0.92) translateY(12px);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.22s ease, opacity 0.22s ease;
+  transform-origin: bottom right;
+  overflow: hidden;
+}
+
+.wc-panel--open {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.wc-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.95rem 1rem;
+  background: linear-gradient(125deg, #0d9488 0%, #20b2aa 100%);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.wc-panel__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.wc-avatar {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: grid;
+  place-items: center;
+  font-size: 1.25rem;
+}
+
+.wc-panel__title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.wc-panel__subtitle {
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
+.wc-close-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #fff;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 1.15rem;
+  cursor: pointer;
+}
+
+.wc-panel__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.wc-msg {
+  display: flex;
+}
+
+.wc-msg--user {
+  justify-content: flex-end;
+}
+
+.wc-msg--bot {
+  justify-content: flex-start;
+}
+
+.wc-bubble {
+  max-width: 85%;
+  padding: 0.65rem 0.85rem;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.wc-msg--user .wc-bubble {
+  background: #0d9488;
+  color: #fff;
+  border-bottom-right-radius: 0.3rem;
+}
+
+.wc-msg--bot .wc-bubble {
+  background: #fff;
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
+  border-bottom-left-radius: 0.3rem;
+}
+
+.wc-bubble__title {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.8rem;
+  color: #0d9488;
+}
+
+.wc-bubble--typing {
+  display: inline-flex;
+  gap: 0.28rem;
+  align-items: center;
+  min-width: 3rem;
+}
+
+.wc-bubble--typing span {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: #94a3b8;
+  animation: wcDot 1.1s infinite ease-in-out;
+}
+
+.wc-bubble--typing span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.wc-bubble--typing span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.wc-suggestions,
+.wc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.15rem;
+}
+
+.wc-action-btn {
+  border: none;
+  background: #0d9488;
+  color: #fff;
+  border-radius: 0.65rem;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wc-action-btn:hover {
+  background: #0f766e;
+}
+
+.wc-panel__footer {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.wc-input {
+  flex: 1;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 0.65rem 0.8rem;
+  font-size: 0.875rem;
+  outline: none;
+  color: #1e293b;
+}
+
+.wc-input:focus {
+  border-color: #20b2aa;
+  box-shadow: 0 0 0 3px rgba(32, 178, 170, 0.15);
+}
+
+.wc-send-btn {
+  width: 2.6rem;
+  height: 2.6rem;
+  border: none;
+  border-radius: 0.75rem;
+  background: #0d9488;
+  color: #fff;
+  font-size: 1.1rem;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.wc-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@keyframes wcPop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes wcDot {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+  40% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .wc-widget {
+    bottom: 1rem;
+    right: 1rem;
+  }
+
+  .wc-panel {
+    height: min(70vh, 520px);
+  }
+}

@@ -1,0 +1,114 @@
+<div class="wc-widget">
+  <!-- Step 1: prompt card -->
+  <div class="wc-prompt" *ngIf="stage === 'prompt'" role="dialog" aria-label="Chat prompt">
+    <button type="button" class="wc-prompt__close" (click)="closeAll()" aria-label="Close">
+      <i class="ri ri-close-line"></i>
+    </button>
+    <div class="wc-prompt__avatar"><i class="ri ri-robot-2-line"></i></div>
+    <p class="wc-prompt__title">Need help exploring GENS?</p>
+    <p class="wc-prompt__text">Write something below, or pick a quick option to start chatting.</p>
+    <button type="button" class="wc-prompt__cta" (click)="openChatFromPrompt()">
+      Write a message…
+    </button>
+    <div class="wc-prompt__hints">
+      <button
+        type="button"
+        class="wc-chip"
+        *ngFor="let hint of starterHints"
+        (click)="startWith(hint)"
+      >
+        {{ hint }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Step 2: full chat panel -->
+  <div class="wc-panel" [class.wc-panel--open]="stage === 'chat'">
+    <div class="wc-panel__header">
+      <div class="wc-panel__brand">
+        <span class="wc-avatar"><i class="ri ri-robot-2-line"></i></span>
+        <div>
+          <div class="wc-panel__title">GENS Assistant</div>
+          <div class="wc-panel__subtitle">Ask about product, pricing &amp; demos</div>
+        </div>
+      </div>
+      <button type="button" class="wc-close-btn" (click)="closeAll()" title="Close">
+        <i class="ri ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="wc-panel__body" #chatBody>
+      <div
+        *ngFor="let msg of chatMessages"
+        class="wc-msg"
+        [class.wc-msg--user]="msg.role === 'user'"
+        [class.wc-msg--bot]="msg.role === 'bot'"
+      >
+        <span class="wc-bubble">
+          <strong *ngIf="msg.title" class="wc-bubble__title">{{ msg.title }}</strong>
+          {{ msg.text }}
+        </span>
+      </div>
+
+      <div *ngIf="chatLoading" class="wc-msg wc-msg--bot">
+        <span class="wc-bubble wc-bubble--typing">
+          <span></span><span></span><span></span>
+        </span>
+      </div>
+
+      <div class="wc-suggestions" *ngIf="!chatLoading && suggestions.length">
+        <button
+          type="button"
+          class="wc-chip"
+          *ngFor="let s of suggestions"
+          (click)="onSuggestionClick(s)"
+        >
+          {{ s }}
+        </button>
+      </div>
+
+      <div class="wc-actions" *ngIf="!chatLoading && actions.length">
+        <button
+          type="button"
+          class="wc-action-btn"
+          *ngFor="let a of actions"
+          (click)="onActionClick(a)"
+        >
+          {{ a.label }}
+        </button>
+      </div>
+    </div>
+
+    <div class="wc-panel__footer">
+      <input
+        type="text"
+        class="wc-input"
+        placeholder="Type a message…"
+        [(ngModel)]="chatInput"
+        (keydown)="onChatKeydown($event)"
+        [disabled]="chatLoading"
+      />
+      <button
+        type="button"
+        class="wc-send-btn"
+        (click)="sendChatMessage()"
+        [disabled]="chatLoading || !chatInput.trim()"
+        aria-label="Send"
+      >
+        <i class="ri ri-send-plane-fill"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- FAB only when chat/prompt is open (close). Robot buddy opens chat. -->
+  <button
+    type="button"
+    class="wc-fab"
+    *ngIf="stage !== 'closed'"
+    (click)="closeAll()"
+    title="Close chat"
+    [attr.aria-expanded]="true"
+  >
+    <i class="ri ri-close-line"></i>
+  </button>
+</div>

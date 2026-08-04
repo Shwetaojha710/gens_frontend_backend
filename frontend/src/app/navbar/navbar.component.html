@@ -1,21 +1,25 @@
-<aside class="vertical-navbar" [class.collapsed]="isCollapsed">
+<!-- Mobile backdrop -->
+<div class="mobile-backdrop" [class.visible]="isMobileOpen" (click)="closeMobileMenu()"></div>
+
+<aside class="vertical-navbar" [class.collapsed]="isCollapsed" [class.mobile-open]="isMobileOpen">
   <div class="navbar-header">
-      <a class="brand-wrap"routerLink="/landing-home">
-       <img
+    <a class="brand-wrap" routerLink="/landing-home">
+      <img
         [src]="companyLogo"
         alt="Quaere"
         class="brand-logo"
         [class.brand-logo-collapsed]="isCollapsed"
-
       />
-        <!-- <div class="brand-copy" *ngIf="!isCollapsed">
-        <span class="brand-title">Quaere</span>
-        <span class="brand-subtitle">Human Resource</span>
-      </div> -->
     </a>
 
-    <button class="toggle-btn" type="button" (click)="isCollapsed = !isCollapsed">
+    <!-- Desktop collapse toggle -->
+    <button class="toggle-btn d-none d-lg-inline-flex" type="button" (click)="isCollapsed = !isCollapsed">
       <i class="ri" [ngClass]="isCollapsed ? 'ri-menu-unfold-line' : 'ri-menu-fold-line'"></i>
+    </button>
+
+    <!-- Mobile close button -->
+    <button class="toggle-btn d-lg-none" type="button" (click)="closeMobileMenu()">
+      <i class="ri ri-close-line"></i>
     </button>
   </div>
 
@@ -76,6 +80,7 @@
           *ngIf="!sub.children"
           class="menu-link"
           [routerLink]="sub.link"
+          [queryParams]="sub.queryParams || {}"
           routerLinkActive="active-link"
         >
           <span class="menu-icon-wrap">

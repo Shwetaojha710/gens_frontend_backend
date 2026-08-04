@@ -2,8 +2,8 @@
   width: 794px;
   margin: auto;
   padding: 40px;
-  font-family: "Times New Roman";
-  font-size: 14px;
+  font-family: "Calibri";
+  font-size: 11px;
   line-height: 1.6;
 }
 
@@ -53,6 +53,22 @@
 .page-break {
   page-break-before: always!important;
   page-break-after: always!important;
+}
+
+.page-break-spacer,
+br[style*="page-break-before"] {
+  display: block;
+  page-break-before: always !important;
+  break-before: page;
+  height: 16px;
+  margin-top: 16px;
+}
+
+.force-page-break {
+  page-break-before: always !important;
+  break-before: page;
+  padding-top: 48px;
+  margin-top: 0 !important;
 }
 
 .salary-table {

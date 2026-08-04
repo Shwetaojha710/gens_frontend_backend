@@ -156,49 +156,202 @@ Helper.newDateFormat = (date) => {
 
 Helper.applySandwichRule = (leaveRecords, holidays, startDate, endDate) => {
   let updatedRecords = [...leaveRecords];
+  if (!leaveRecords.length) return updatedRecords;
 
-  // Build a Set of all leave dates for quick lookup
+  const holidaySet = new Set(holidays || []);
+  const isNonWorkingDay = (date) => {
+    const dateKey = date.format("YYYY-MM-DD");
+    return holidaySet.has(dateKey) || date.day() == 0 || date.day() == 6;
+  };
+  const getSandwichStatus = (prevLeave, nextLeave) => {
+    if (prevLeave?.status == "approved" || nextLeave?.status == "approved") {
+      return "approved";
+    }
+    if (
+      prevLeave?.status == "recommended" ||
+      nextLeave?.status == "recommended"
+    ) {
+      return "recommended";
+    }
+    return "pending";
+  };
+  const getSandwichLeaveType = (prevLeave, nextLeave) => {
+    if (prevLeave?.leaveTypeId && prevLeave.leaveTypeId === nextLeave?.leaveTypeId) {
+      return prevLeave.leaveTypeId;
+    }
+    return prevLeave?.leaveTypeId || nextLeave?.leaveTypeId || leaveRecords[0].leaveTypeId;
+  };
+
+  // Build leave date indexes for quick lookup.
   let leaveDates = new Set();
+  let leaveByDate = new Map();
   for (const leave of leaveRecords) {
     let start = moment(leave.fromDate);
-    let end = moment(leave.toDate);
-    for (let d = moment(start); d <= end; d.add(1, "days")) {
-      leaveDates.add(d.format("YYYY-MM-DD"));
+    let end = leave.toDate ? moment(leave.toDate) : moment(leave.fromDate);
+    for (let d = moment(start); d.isSameOrBefore(end); d.add(1, "days")) {
+      const dateKey = d.format("YYYY-MM-DD");
+      leaveDates.add(dateKey);
+      leaveByDate.set(dateKey, leave);
     }
   }
 
-  for (let d = moment(startDate); d <= endDate; d.add(1, "days")) {
+  for (let d = moment(startDate); d.isSameOrBefore(endDate); d.add(1, "days")) {
     const dateKey = d.format("YYYY-MM-DD");
 
     // skip if already leave
     if (leaveDates.has(dateKey)) continue;
 
     // check if this day is a weekend or a tenant holiday
-    const isHoliday = holidays.includes(dateKey) || d.day() === 0 || d.day() === 6;
-    if (!isHoliday) continue;
+    if (!isNonWorkingDay(d)) continue;
 
     // sandwich condition → leave must exist just before & just after
-    const prevDay = moment(d).subtract(1, "days").format("YYYY-MM-DD");
-    const nextDay = moment(d).add(1, "days").format("YYYY-MM-DD");
-
-    if (leaveDates.has(prevDay) && leaveDates.has(nextDay)) {
-      updatedRecords.push({
-        id: uuidv4(),
-        employeeId: leaveRecords[0].employeeId,
-        leaveTypeId: leaveRecords[0].leaveTypeId,
-        fromDate: dateKey,
-        toDate: dateKey,
-        duration_type: "full",
-        isSandwich: true,
-        status: leaveRecords[0].status,
-        tenantId: leaveRecords[0].tenantId,
-      });
-      leaveDates.add(dateKey); // mark it as leave for further checks
+    let prev = moment(d).subtract(1, "days");
+    let prevLeave = null;
+    while (prev.isSameOrAfter(startDate)) {
+      const prevKey = prev.format("YYYY-MM-DD");
+      if (leaveDates.has(prevKey)) {
+        prevLeave = leaveByDate.get(prevKey);
+        break;
+      }
+      if (!isNonWorkingDay(prev)) break;
+      prev.subtract(1, "days");
     }
+
+    let next = moment(d).add(1, "days");
+    let nextLeave = null;
+    while (next.isSameOrBefore(endDate)) {
+      const nextKey = next.format("YYYY-MM-DD");
+      if (leaveDates.has(nextKey)) {
+        nextLeave = leaveByDate.get(nextKey);
+        break;
+      }
+      if (!isNonWorkingDay(next)) break;
+      next.add(1, "days");
+    }
+
+    if (!prevLeave || !nextLeave) continue;
+
+    const sandwichLeave = {
+      id: uuidv4(),
+      employeeId: prevLeave.employeeId || nextLeave.employeeId || leaveRecords[0].employeeId,
+      leaveTypeId: getSandwichLeaveType(prevLeave, nextLeave),
+      fromDate: dateKey,
+      toDate: dateKey,
+      duration_type: "full",
+      to_duration_type: "full",
+      days: 1,
+      isSandwich: true,
+      status: getSandwichStatus(prevLeave, nextLeave),
+      tenantId: prevLeave.tenantId || nextLeave.tenantId || leaveRecords[0].tenantId,
+      branchId: prevLeave.branchId || nextLeave.branchId || leaveRecords[0].branchId,
+    };
+
+    updatedRecords.push(sandwichLeave);
+    leaveDates.add(dateKey);
+    leaveByDate.set(dateKey, sandwichLeave);
   }
 
   return updatedRecords;
 };
+// Helper.applySandwichRule = (leaveRecords, holidays, startDate, endDate) => {
+//   let updatedRecords = [...leaveRecords];
+//   if (!leaveRecords.length) return updatedRecords;
+
+//   const holidaySet = new Set(holidays || []);
+//   const isNonWorkingDay = (date) => {
+//     const dateKey = date.format("YYYY-MM-DD");
+//     return holidaySet.has(dateKey) || date.day() == 0 || date.day() == 6;
+//   };
+//   const getSandwichStatus = (prevLeave, nextLeave) => {
+//     if (prevLeave?.status == "approved" || nextLeave?.status == "approved") {
+//       return "approved";
+//     }
+//     if (
+//       prevLeave?.status == "recommended" ||
+//       nextLeave?.status == "recommended"
+//     ) {
+//       return "recommended";
+//     }
+//     return "pending";
+//   };
+//   const getSandwichLeaveType = (prevLeave, nextLeave) => {
+//     if (prevLeave?.leaveTypeId && prevLeave.leaveTypeId === nextLeave?.leaveTypeId) {
+//       return prevLeave.leaveTypeId;
+//     }
+//     return prevLeave?.leaveTypeId || nextLeave?.leaveTypeId || leaveRecords[0].leaveTypeId;
+//   };
+
+//   // Build leave date indexes for quick lookup.
+//   let leaveDates = new Set();
+//   let leaveByDate = new Map();
+//   for (const leave of leaveRecords) {
+//     let start = moment(leave.fromDate);
+//     let end = leave.toDate ? moment(leave.toDate) : moment(leave.fromDate);
+//     for (let d = moment(start); d.isSameOrBefore(end); d.add(1, "days")) {
+//       const dateKey = d.format("YYYY-MM-DD");
+//       leaveDates.add(dateKey);
+//       leaveByDate.set(dateKey, leave);
+//     }
+//   }
+
+//   for (let d = moment(startDate); d.isSameOrBefore(endDate); d.add(1, "days")) {
+//     const dateKey = d.format("YYYY-MM-DD");
+
+//     // skip if already leave
+//     if (leaveDates.has(dateKey)) continue;
+
+//     // check if this day is a weekend or a tenant holiday
+//     if (!isNonWorkingDay(d)) continue;
+
+//     // sandwich condition → leave must exist just before & just after
+//     let prev = moment(d).subtract(1, "days");
+//     let prevLeave = null;
+//     while (prev.isSameOrAfter(startDate)) {
+//       const prevKey = prev.format("YYYY-MM-DD");
+//       if (leaveDates.has(prevKey)) {
+//         prevLeave = leaveByDate.get(prevKey);
+//         break;
+//       }
+//       if (!isNonWorkingDay(prev)) break;
+//       prev.subtract(1, "days");
+//     }
+
+//     let next = moment(d).add(1, "days");
+//     let nextLeave = null;
+//     while (next.isSameOrBefore(endDate)) {
+//       const nextKey = next.format("YYYY-MM-DD");
+//       if (leaveDates.has(nextKey)) {
+//         nextLeave = leaveByDate.get(nextKey);
+//         break;
+//       }
+//       if (!isNonWorkingDay(next)) break;
+//       next.add(1, "days");
+//     }
+
+//     if (!prevLeave || !nextLeave) continue;
+
+//     const sandwichLeave = {
+//       id: uuidv4(),
+//       employeeId: prevLeave.employeeId || nextLeave.employeeId || leaveRecords[0].employeeId,
+//       leaveTypeId: getSandwichLeaveType(prevLeave, nextLeave),
+//       fromDate: dateKey,
+//       toDate: dateKey,
+//       duration_type: "full",
+//       to_duration_type: "full",
+//       days: 1,
+//       isSandwich: true,
+//       status: getSandwichStatus(prevLeave, nextLeave),
+//       tenantId: prevLeave.tenantId || nextLeave.tenantId || leaveRecords[0].tenantId,
+//       branchId: prevLeave.branchId || nextLeave.branchId || leaveRecords[0].branchId,
+//     };
+
+//     updatedRecords.push(sandwichLeave);
+//     leaveDates.add(dateKey);
+//     leaveByDate.set(dateKey, sandwichLeave);
+//   }
+
+//   return updatedRecords;
+// };
 
 // Helper.applySandwichRule = (leaveRecords, holidays, startDate, endDate) => {
 //   let updatedRecords = [...leaveRecords];
@@ -352,7 +505,14 @@ const addDays = (dateStr, days) => {
   return d.toISOString().split("T")[0];
 };
 
+
 Helper.adjustLeaveRecords = (leaveBalanceArr, leaveRecordsArr) => {
+  leaveRecordsArr.forEach((rec) => {
+    if (rec.status !== "approved") {
+      rec.leavestatus = "unpaid";
+    }
+  });
+
   leaveBalanceArr.forEach((balance) => {
     const allowed = Number(balance.remainingLeaves ?? 0);
 
@@ -436,6 +596,118 @@ Helper.adjustLeaveRecords = (leaveBalanceArr, leaveRecordsArr) => {
 
   return leaveRecordsArr;
 };
+
+// Helper.adjustLeaveRecords = (leaveBalanceArr, leaveRecordsArr) => {
+//   leaveRecordsArr.forEach((rec) => {
+//     if (rec.status !== "approved") {
+//       rec.leavestatus = "unpaid";
+//     }
+//   });
+
+//   leaveBalanceArr.forEach((balance) => {
+//     const allowed = Number(balance.remainingLeaves ?? 0);
+
+//     const matchingRecords = leaveRecordsArr.filter(
+//       (rec) =>
+//         rec.employeeId === balance.employeeId &&
+//         rec.leaveTypeId === balance.leaveTypeId &&
+//         rec.status === "approved",
+//     );
+
+//     const appliedLeaveDays = matchingRecords.reduce(
+//       (total, rec) => total + Number(rec.days || 0),
+//       0,
+//     );
+
+//     if (appliedLeaveDays > allowed) {
+//       const sorted = [...matchingRecords].sort(
+//         (a, b) => new Date(a.fromDate) - new Date(b.fromDate),
+//       );
+
+//       let used = 0;
+
+//       for (const rec of sorted) {
+//         const originalDays = Number(rec.days || 0);
+//         const remaining = allowed - used;
+
+//         if (remaining <= 0) {
+//           rec.leavestatus = "unpaid";
+//           continue;
+//         }
+
+//         if (originalDays <= remaining) {
+//           rec.leavestatus = "approved";
+//           used += originalDays;
+//         } else {
+//           const approvedDays = remaining;
+//           const unpaidDays = originalDays - remaining;
+
+//           // -----------------------
+//           // APPROVED PART
+//           // toDate is inclusive, so for N full days: last day = fromDate + (N-1)
+//           // -----------------------
+//           rec.leavestatus = "approved";
+//           rec.days = approvedDays;
+//           rec.toDate = addDays(rec.fromDate, Math.max(0, Math.ceil(approvedDays) - 1));
+//           rec.to_duration_type =
+//             approvedDays % 1 === 0.5 ? "first_half" : "full";
+
+//           // -----------------------
+//           // UNPAID PART
+//           // Split into full-day record + optional half-day record so leaveDateMap
+//           // marks every date with the correct duration_type.
+//           // -----------------------
+//           const unpaidFromDate = addDays(rec.fromDate, Math.ceil(approvedDays));
+//           const unpaidFullDays = Math.floor(unpaidDays);
+//           const hasUnpaidHalf = unpaidDays % 1 === 0.5;
+
+//           if (unpaidFullDays > 0) {
+//             leaveRecordsArr.push({
+//               ...rec,
+//               id: crypto.randomUUID(),
+//               days: unpaidFullDays,
+//               fromDate: unpaidFromDate,
+//               toDate: addDays(unpaidFromDate, unpaidFullDays - 1),
+//               duration_type: "full",
+//               to_duration_type: "full",
+//               leavestatus: "unpaid",
+//             });
+//           }
+
+//           if (hasUnpaidHalf) {
+//             const halfDayDate = addDays(unpaidFromDate, unpaidFullDays);
+//             leaveRecordsArr.push({
+//               ...rec,
+//               id: crypto.randomUUID(),
+//               days: 0.5,
+//               fromDate: halfDayDate,
+//               toDate: halfDayDate,
+//               duration_type: "first_half",
+//               to_duration_type: "first_half",
+//               leavestatus: "unpaid",
+//             });
+//           }
+
+//           used += approvedDays;
+//         }
+//       }
+//     } else {
+//       matchingRecords.forEach((rec) => {
+//         rec.leavestatus = "approved";
+//       });
+//       matchingRecords.forEach((match) => {
+//         const index = leaveRecordsArr.findIndex((r) => r.id === match.id);
+
+//         if (index !== -1) {
+//           leaveRecordsArr[index].leavestatus = "approved";
+//         }
+//       });
+//       // leaveRecordsArr=matchingRecords
+//     }
+//   });
+
+//   return leaveRecordsArr;
+// };
 
 // Helper.adjustLeaveRecords = (leaveBalanceArr, leaveRecordsArr) => {
 //   leaveBalanceArr.forEach((balance) => {
@@ -773,6 +1045,115 @@ Helper.excelDateToJSDate = (serial) => {
 // };
 
 // commentedby_21_01_2026
+
+// commentedby_5_01_2026
+// Helper.calculateAttendanceSummary = (
+//   finalResult,
+//   shiftArray,
+//   AttendanceSettings,
+//   finalWorkingDays,
+// ) => {
+//   let totalWorkingHours = 0;
+//   let workingDays = 0;
+//   let onTimeArrivals = 0;
+//   let lateDays = 0;
+//   let earlyOutDays = 0;
+//   let absentDays = 0;
+
+//   const attendanceData = finalResult?.[0]?.data || [];
+
+//   attendanceData.forEach((day) => {
+//     const shift = shiftArray.find(
+//       (s) => s.day_of_week?.toLowerCase() === day.day?.toLowerCase(),
+//     );
+
+//     const hasCheckIn = day.checkIn && day.checkIn !== "00:00";
+//     const hasCheckOut = day.checkOut && day.checkOut !== "00:00";
+
+//     // ---------- PRESENT ----------
+//     if (hasCheckIn || hasCheckOut) {
+//       workingDays++;
+
+//       const shiftStart = shift?.startTime
+//         ? new Date(`1970-01-01T${shift.startTime}`)
+//         : null;
+
+//       const shiftEnd = shift?.endTime
+//         ? new Date(`1970-01-01T${shift.endTime}`)
+//         : null;
+
+//       const checkIn = day.checkIn
+//         ? new Date(`1970-01-01T${day.checkIn}`)
+//         : null;
+
+//       const checkOut = day.checkOut
+//         ? new Date(`1970-01-01T${day.checkOut}`)
+//         : null;
+
+//       // ---- Calculate worked hours safely ----
+//       let workedHours = 0;
+
+//       if (
+//         checkIn instanceof Date &&
+//         !isNaN(checkIn) &&
+//         checkOut instanceof Date &&
+//         !isNaN(checkOut)
+//       ) {
+//         workedHours = (checkOut - checkIn) / (1000 * 60 * 60);
+//         if (isNaN(workedHours)) workedHours = 0;
+//       }
+
+//       totalWorkingHours += workedHours;
+
+//       // ----- Late Check-In -----
+//       const graceMs = (AttendanceSettings?.graceMinutes || 0) * 60 * 1000;
+
+//       if (shiftStart && checkIn && !isNaN(shiftStart) && !isNaN(checkIn)) {
+//         if (checkIn - shiftStart > graceMs) lateDays++;
+//       }
+
+//       // ----- Early Check-Out -----
+//       if (shiftEnd && checkOut && !isNaN(shiftEnd) && !isNaN(checkOut)) {
+//         if (checkOut < shiftEnd) earlyOutDays++;
+//       }
+
+//       if (day.status?.toLowerCase().includes("on time")) {
+//         onTimeArrivals++;
+//       }
+//     } else {
+//       // ---------- ABSENT ----------
+//       if (!shift?.is_week_off) {
+//         absentDays++;
+//       }
+//     }
+//   });
+
+//   // ---------- SAFE AVERAGES ----------
+//   const averageWorkingHours =
+//     workingDays > 0
+//       ? Number(totalWorkingHours / workingDays).toFixed(2)
+//       : "0.00";
+
+//   const totalHours = Number(totalWorkingHours).toFixed(2);
+
+//   const onTimePercent =
+//     workingDays > 0
+//       ? ((onTimeArrivals / workingDays) * 100).toFixed(2)
+//       : "0.00";
+
+//   return {
+//     averageWorkingHours,
+//     totalWorkingHours: totalHours,
+//     onTimePercentage: `${onTimePercent}%`,
+//       lateDays:Object.keys(AttendanceSettings || {}).length ? lateDays : 0,
+//     earlyOutDays,
+//     presentDays: workingDays,
+//     absentDays,
+//     workingDays: finalWorkingDays,
+//   };
+// };
+
+// commentedby_5_01_2026
 Helper.calculateAttendanceSummary = (
   finalResult,
   shiftArray,
@@ -878,6 +1259,7 @@ Helper.calculateAttendanceSummary = (
     workingDays: finalWorkingDays,
   };
 };
+
 
 // Helper.calculateAttendanceSummary = (finalResult, shiftArray, AttendanceSettings,finalworkingDays) => {
 //   let totalWorkingHours = 0;

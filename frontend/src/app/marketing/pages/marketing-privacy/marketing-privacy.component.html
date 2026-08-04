@@ -1,0 +1,18 @@
+<app-page-hero
+  badge="Legal"
+  title="Privacy Policy"
+  subtitle="Last updated: July 1, 2026"
+/>
+
+<section class="section-padding">
+  <div class="container-gens max-w-3xl">
+    @for (section of sections; track section.title) {
+      <div class="mb-10">
+        <h2 class="font-display text-xl md:text-2xl font-bold mb-3 tracking-tight">{{ section.title }}</h2>
+        @for (paragraph of section.paragraphs; track paragraph) {
+          <p class="text-[var(--text-secondary)] leading-relaxed mb-4">{{ paragraph }}</p>
+        }
+      </div>
+    }
+  </div>
+</section>

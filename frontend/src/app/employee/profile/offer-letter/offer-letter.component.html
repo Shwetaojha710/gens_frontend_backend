@@ -10,11 +10,16 @@
     <button type="button" class="btn btn-outline-primary me-2" (click)="saveData(); printDoc()" [disabled]="isDownload">
       <i class="fa fa-print mx-1"></i> Print
     </button>
-    <button type="button" class="btn btn-primary" (click)="saveData(); downloadPDF()" [disabled]="isDownload">
+    <!-- <button type="button" class="btn btn-primary me-2" (click)="saveData(); downloadPDF()" [disabled]="isDownload">
       <i class="fa fa-download mx-1"></i>
       <span *ngIf="isDownload">Generating...</span>
       <span *ngIf="!isDownload">Download PDF</span>
     </button>
+    <button type="button" class="btn btn-danger" (click)="saveData(); generateServerPdf()" [disabled]="isGeneratingPdf">
+      <i class="ri ri-file-pdf-line mx-1"></i>
+      <span *ngIf="isGeneratingPdf">Generating...</span>
+      <span *ngIf="!isGeneratingPdf">Download PDF (Server)</span>
+    </button> -->
   </div>
 </div>
 

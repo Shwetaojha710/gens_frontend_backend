@@ -156,6 +156,17 @@ export class SalarySetupComponent {
   deductionArr: any = []
   EarningArr: any = []
   ctc:any=0
+  annexureRows: any[] = [];
+  showAnnexure: boolean = false;
+  listAnnexureRows: any[] = [];
+  showListAnnexure: boolean = false;
+  isMonthlyView: boolean = false;
+
+  getAmt(amount: any): number {
+    const val = Math.round(Number(amount || 0));
+    return this.isMonthlyView ? Math.round(val / 12) : val;
+  }
+
   getSalarySetUpList() {
     this.SalArr = []
     this.totalPayable = 0
@@ -204,6 +215,7 @@ export class SalarySetupComponent {
           }
 
           this.updateMasterSelected();
+          this.buildAnnexureFromList(response.data);
         }
         else if (status === "expired") {
           localStorage.clear()
@@ -231,6 +243,8 @@ export class SalarySetupComponent {
     this.obj['status'] = 'active'
     this.createFlag = false
     this.variableFlag = false
+    this.showAnnexure = false
+    this.annexureRows = []
   }
   status: any = [{ value: 'active', label: 'ACTIVE' }, { value: 'inactive', label: 'INACTIVE' }]
 
@@ -355,6 +369,7 @@ export class SalarySetupComponent {
           this.DedArr = this.DedArr.sort((a: any, b: any) => a.component_name.localeCompare(b.component_name))
           this.EarningMasterSelected = this.PayArr.every((item: any) => item.isSelected === true);
           this.DeductionMasterSelected = this.DedArr.every((item: any) => item.isSelected === true);
+          this.buildAnnexureFromCalculate();
 
         }
         else if (status === "expired") {
@@ -495,6 +510,7 @@ export class SalarySetupComponent {
       netPayableSalary: totalEarnings - totalEmployeeDeductions,
       netCTC: totalEarnings + employerContribution,
     };
+    this.buildAnnexureFromCalculate();
   }
 
   DeductionCheckUncheckAll() {
@@ -738,6 +754,107 @@ isEarningAllSelected() {
     this.obj['finalAmount'] = (this.obj['amount'] * this.obj['typeValue']) / 100
 
   }
+  buildAnnexureFromCalculate() {
+    if (!this.ComponentList || this.ComponentList.length === 0) {
+      this.showAnnexure = false;
+      return;
+    }
+    const earnings = this.ComponentList.filter((c: any) =>
+      c.component_type === 'payable' && c.isSelected);
+    const empDed = this.ComponentList.filter((c: any) =>
+      c.component_type === 'deductible' && c.isSelected &&
+      !c.component_name?.toLowerCase().includes('employer'));
+    const empContrib = this.ComponentList.filter((c: any) =>
+      c.component_type === 'deductible' && c.isSelected &&
+      c.component_name?.toLowerCase().includes('employer'));
+    const reimb = this.ComponentList.filter((c: any) =>
+      c.component_type === 'reimbursable' && c.isSelected);
+
+    const gross = earnings.reduce((s: number, c: any) => s + Math.round(Number(c.calculated_amount || 0)), 0);
+    const totalEmpDed = empDed.reduce((s: number, c: any) => s + Math.round(Number(c.calculated_amount || 0)), 0);
+    const totalEmpContrib = empContrib.reduce((s: number, c: any) => s + Math.round(Number(c.calculated_amount || 0)), 0);
+    const totalReimb = reimb.reduce((s: number, c: any) => s + Math.round(Number(c.calculated_amount || 0)), 0);
+
+    this.annexureRows = this.buildAnnexureRows(
+      earnings, empDed, empContrib, reimb,
+      gross, totalEmpDed, gross - totalEmpDed,
+      totalEmpContrib, totalReimb,
+      gross + totalEmpContrib + totalReimb,
+      Number(this.obj['CTC'] || 0)
+    );
+    this.showAnnexure = this.annexureRows.length > 0;
+  }
+
+  buildAnnexureFromList(data: any) {
+    if (!data) { this.showListAnnexure = false; return; }
+    const rawCTC = Number(data.basics?.[0]?.finalCTC || 0);
+    const earnings = [
+      ...(data.basics || []).map((c: any) => ({
+        component_name: c.name || c.component_name,
+        calculated_amount: Number(c.finalAmount || 0)
+      })),
+      ...(data.allowances || []).map((c: any) => ({
+        component_name: c.name || c.component_name,
+        calculated_amount: Number(c.finalAmount || 0)
+      })),
+    ];
+    const allDed = (data.deductions || []).map((c: any) => ({
+      component_name: c.name || c.component_name,
+      calculated_amount: Number(c.finalAmount || 0)
+    }));
+    const empDed = allDed.filter((c: any) => !c.component_name?.toLowerCase().includes('employer'));
+    const empContrib = allDed.filter((c: any) => c.component_name?.toLowerCase().includes('employer'));
+    const reimb: any[] = [];
+
+    const gross = earnings.reduce((s: number, c: any) => s + Math.round(c.calculated_amount), 0);
+    const totalEmpDed = empDed.reduce((s: number, c: any) => s + Math.round(c.calculated_amount), 0);
+    const totalEmpContrib = empContrib.reduce((s: number, c: any) => s + Math.round(c.calculated_amount), 0);
+
+    this.listAnnexureRows = this.buildAnnexureRows(
+      earnings, empDed, empContrib, reimb,
+      gross, totalEmpDed, gross - totalEmpDed,
+      totalEmpContrib, 0,
+      gross + totalEmpContrib,
+      rawCTC
+    );
+    this.showListAnnexure = this.listAnnexureRows.length > 0;
+  }
+
+  buildAnnexureRows(
+    earnings: any[], empDed: any[], empContrib: any[], reimb: any[],
+    gross: number, totalEmpDed: number, netPayable: number,
+    totalEmpContrib: number, totalReimb: number, totalCTC: number, ctcInput: number
+  ): any[] {
+    const rows: any[] = [];
+    rows.push({ label: '', yearly: Math.round(ctcInput), type: 'ctc-row' });
+    earnings.forEach((c: any) => rows.push({
+      label: c.component_name,
+      yearly: Math.round(Number(c.calculated_amount || 0)),
+      type: 'component'
+    }));
+    if (empDed.length > 0) {
+      rows.push({ label: 'Less : Deduction', type: 'section-header' });
+      empDed.forEach((c: any) => rows.push({
+        label: c.component_name,
+        yearly: Math.round(Number(c.calculated_amount || 0)),
+        type: 'component'
+      }));
+    }
+    rows.push({ label: 'Net Salary Payable', yearly: Math.round(netPayable), type: 'summary' });
+    empContrib.forEach((c: any) => rows.push({
+      label: c.component_name,
+      yearly: Math.round(Number(c.calculated_amount || 0)),
+      type: 'component'
+    }));
+    reimb.forEach((c: any) => rows.push({
+      label: c.component_name,
+      yearly: Math.round(Number(c.calculated_amount || 0)),
+      type: 'component'
+    }));
+    rows.push({ label: 'Total Cost to the Company (Annual)', yearly: Math.round(totalCTC), type: 'total' });
+    return rows;
+  }
+
   convertNumberToWords(amount: number): string {
     if (amount === 0) return 'Zero';
     const a = [

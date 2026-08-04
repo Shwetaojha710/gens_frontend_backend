@@ -15,6 +15,14 @@ const attendance = sequelize.define("attendance", {
     type: DataTypes.UUID,
     allowNull: true,
   },
+  empType: {
+    type: DataTypes.UUID,
+    allowNull: true,
+  },
+  shift_id: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
   employeeId: {
     type: DataTypes.UUID,
     allowNull: false,

@@ -49,6 +49,7 @@ export class EmployeePortalService {
       mobile,
       tenantId,
       otp,
+      source: 'web',
     });
   }
 
@@ -80,11 +81,19 @@ export class EmployeePortalService {
     );
   }
 
-  getLeaveTypes(): Observable<{ value: string; label: string }[]> {
+  getLeaveTypes(): Observable<{ value: string; label: string; leaveCode?: string }[]> {
     return this.unwrap(
-      this.http.post<{ status: unknown; data: { value: string; label: string }[] }>(
+      this.http.post<{ status: unknown; data: { value: string; label: string; leaveCode?: string }[] }>(
         `${this.base}get-app-leave-type-dd`,
         {},
+      ),
+    );
+  }
+
+  getCompOffList(): Observable<{ id: string; earnedDate: string; remainingDays: number }[]> {
+    return this.unwrap(
+      this.http.get<{ status: unknown; data: { id: string; earnedDate: string; remainingDays: number }[] }>(
+        `${this.base}comp-off-list`,
       ),
     );
   }
@@ -97,6 +106,7 @@ export class EmployeePortalService {
     reason: string;
     duration_type?: string;
     to_duration_type?: string;
+    compOffId?: string | null;
   }): Observable<unknown> {
     return this.unwrap(
       this.http.post<{ status: unknown; data: unknown }>(`${this.base}apply-leaves`, {
@@ -107,8 +117,21 @@ export class EmployeePortalService {
     );
   }
 
-  getAppliedLeaves(month: number, year: number, branchId?: string): Observable<Record<string, unknown>> {
-    const body: Record<string, unknown> = { month, year };
+  getMyLeaveHistory(filters: { leaveTypeId?: string; month?: number; year?: number }): Observable<unknown[]> {
+    return this.http
+      .post<{ status: unknown; message?: string; data: unknown[] }>(`${this.base}get-my-leave-history`, filters)
+      .pipe(
+        map((res) => {
+          if (res.status === true && Array.isArray(res.data)) return res.data;
+          return [];
+        }),
+      );
+  }
+
+  getAppliedLeaves(month: string, year: string, branchId?: string): Observable<Record<string, unknown>> {
+    const body: Record<string, unknown> = {};
+    if (month) body['month'] = Number(month);
+    if (year) body['year'] = Number(year);
     if (branchId) body['branchId'] = branchId;
     return this.http.post<Record<string, unknown>>(`${this.base}get-applied-leave-list`, body);
   }
@@ -208,7 +231,7 @@ export class EmployeePortalService {
   }
 
   logout(): Observable<unknown> {
-    return this.http.get(`${this.base}app-logout`, { responseType: 'text' });
+    return this.http.post(`${this.base}app-logout`, { source: 'web' }, { responseType: 'text' });
   }
 
   /** Submit attendance regularization (API uses token for employee). */
@@ -271,6 +294,32 @@ export class EmployeePortalService {
       );
   }
 
+  /** Team reimbursements — manager/director/Senior Accountant sees all branch records. Optional status filter. */
+  getTeamReimbursements(statusFilter?: string): Observable<Record<string, unknown>[]> {
+    const body: Record<string, string> = {};
+    if (statusFilter && statusFilter !== 'all') body['status'] = statusFilter;
+    return this.http
+      .post<{ status: unknown; data?: Record<string, unknown>[] }>(`${this.base}team-reimbursements`, body)
+      .pipe(
+        map((res) => {
+          if (res.status === true && Array.isArray(res.data)) return res.data;
+          return [];
+        }),
+      );
+  }
+
+  /** Update reimbursement status — recommend (SA), approve/reject (manager/director). */
+  updateAppReimbursementStatus(id: string, status: 'approved' | 'rejected' | 'recommended'): Observable<unknown> {
+    return this.http
+      .post<{ status: boolean; message?: string }>(`${this.base}update-app-reimbursement-status`, { id, status })
+      .pipe(
+        map((res) => {
+          if (!res.status) throw new Error(res.message || 'Could not update reimbursement');
+          return res;
+        }),
+      );
+  }
+
   /**
    * Leave / attendance notifications (same payload as mobile app feed).
    * May return status false when empty — handle in the caller.
@@ -278,6 +327,15 @@ export class EmployeePortalService {
   getNotifications(): Observable<{ status: unknown; message?: string; data?: unknown }> {
     return this.http.get<{ status: unknown; message?: string; data?: unknown }>(
       `${this.base}notification`,
+    );
+  }
+
+  markNotificationsRead(
+    items: { id: string; status: string; updatedAt?: string }[],
+  ): Observable<{ status: unknown; message?: string }> {
+    return this.http.post<{ status: unknown; message?: string }>(
+      `${this.base}mark-notifications-read`,
+      { items },
     );
   }
 
@@ -291,6 +349,50 @@ export class EmployeePortalService {
     return this.http.post<{ status: unknown; message?: string }>(
       `${this.base}save-emp-letter-signature`,
       { signature },
+    );
+  }
+
+  getAppLetterPdfs(): Observable<any> {
+    return this.http.post<any>(`${this.base}get-app-letter-pdfs`, {});
+  }
+
+  /** Company handbook (uploaded by HR/Admin) — view/download only from the employee portal. */
+  getAppHandbook(): Observable<{ status: unknown; message?: string; data?: { url: string | null; filename: string | null } }> {
+    return this.http.get<{ status: unknown; message?: string; data?: { url: string | null; filename: string | null } }>(
+      `${this.base}get-app-handbook`,
+    );
+  }
+
+  /** All active branches for the current tenant (used for branch filter pills). */
+  getTenantBranches(): Observable<{ id: string; name: string }[]> {
+    return this.http
+      .post<{ status: unknown; data: { id: string; name: string }[] }>(
+        `${this.base}app-branch-dd`,
+        {},
+      )
+      .pipe(
+        map((res) =>
+          res.status === true && Array.isArray(res.data) ? res.data : [],
+        ),
+      );
+  }
+
+  /**
+   * Today's team attendance.
+   * manager/director: all branch employees (filter by branchId or 'All').
+   * teamLeader: direct reports only.
+   */
+  getTeamsAttendance(branchId?: string): Observable<Record<string, unknown>[]> {
+    const url = branchId
+      ? `${this.base}team-attendances?branchId=${encodeURIComponent(branchId)}`
+      : `${this.base}team-attendances`;
+    return this.http.get<{ status: unknown; message?: string; data: unknown }>(url).pipe(
+      map((res) => {
+        if (res.status === true && Array.isArray(res.data)) {
+          return res.data as Record<string, unknown>[];
+        }
+        return [];
+      }),
     );
   }
 }

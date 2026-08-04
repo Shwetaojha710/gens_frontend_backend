@@ -1,0 +1,77 @@
+<div class="container-fluid mt-2 ai-page ai-page--green">
+  <header class="ai-hero ai-hero--green mb-4">
+    <div class="ai-hero__icon"><i class="ri ri-calendar-event-line"></i></div>
+    <div class="min-w-0">
+      <p class="ai-hero__eyebrow mb-1">AI Insights</p>
+      <h4 class="ai-hero__title mb-1">Leave Recommendations</h4>
+      <p class="ai-hero__sub mb-0">AI-suggested date windows for time off, scored against team coverage and balances.</p>
+    </div>
+  </header>
+
+  <div class="card ai-panel border-0 mb-4">
+    <div class="card-body p-3">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label">Employee</label>
+          <ng-select [items]="employeeOptions" bindLabel="label" bindValue="value" placeholder="Select employee"
+            [(ngModel)]="employeeId"></ng-select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Duration (days)</label>
+          <input type="number" min="1" class="form-control" [(ngModel)]="durationDays" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Preferred From</label>
+          <input type="date" class="form-control" [(ngModel)]="preferredFrom" />
+        </div>
+        <div class="col-md-3">
+          <button type="button" class="btn ai-run-btn w-100" [disabled]="loading" (click)="run()">
+            <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+            <i class="ri ri-magic-line me-1" *ngIf="!loading"></i>Recommend
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ai-loading-state" *ngIf="loading && !result">
+    <span class="spinner-border" role="status"></span>
+    <p>Finding the best leave windows…</p>
+  </div>
+
+  <ng-container *ngIf="result">
+    <div class="row g-3 mb-3" *ngIf="result.ai_recommendations?.length">
+      <div class="col-md-4" *ngFor="let s of sortedSlots(); let i = index">
+        <div class="card ai-slot-card p-3 h-100" [class.ai-slot-card--best]="i === 0">
+          <span class="ai-best-badge" *ngIf="i === 0"><i class="ri ri-star-fill me-1"></i>Best pick</span>
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h6 class="mb-0"><i class="ri ri-calendar-line me-1 text-muted"></i>{{ s.from_date }} &rarr; {{ s.to_date }}</h6>
+          </div>
+          <div class="ai-meter-row ai-meter-row--sm mb-2">
+            <span class="ai-meter-track">
+              <span class="ai-meter-fill ai-meter-fill--good" [style.width.%]="s.score"></span>
+            </span>
+            <span class="ai-meter-value">{{ s.score }}</span>
+          </div>
+          <p class="mb-0 text-muted small">{{ s.reason }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="ai-empty-state" *ngIf="!result.ai_recommendations?.length">
+      <i class="ri ri-calendar-close-line"></i>
+      <p>No recommended windows found for these inputs.</p>
+    </div>
+
+    <div class="card ai-panel border-0 mt-3" *ngIf="result.leave_balances?.length">
+      <div class="card-body p-3">
+        <p class="ai-panel__label mb-2"><i class="ri ri-wallet-3-line"></i>Leave balances</p>
+        <div class="ai-stat-row">
+          <span class="ai-stat-chip" *ngFor="let b of result.leave_balances">
+            <strong>{{ b.remainingLeaves }}</strong>
+            <span>{{ b.leaveName }}</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>

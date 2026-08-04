@@ -65,7 +65,7 @@ export class InterviewerNavbarComponent {
   constructor(private router: Router) {}
 
   get companyLogo(): string {
-    return 'assets/img/logo/logo-quaere.png';
+    return 'assets/img/logo/image.png';
   }
 
   ngOnInit(): void {

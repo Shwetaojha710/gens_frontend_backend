@@ -555,6 +555,170 @@ exports.checkDuplicateOfferLetter = async (req, res) => {
   }
 };
 
+const PdfPrinter = require("pdfmake");
+const path = require("path");
+const fs = require("fs");
+
+const pdfFonts = {
+  Roboto: { normal: "Helvetica", bold: "Helvetica-Bold", italics: "Helvetica-Oblique", bolditalics: "Helvetica-BoldOblique" }
+};
+const offerPrinter = new PdfPrinter(pdfFonts);
+
+const getBaseUrl = (req) => {
+  return process.env.BASE_URL || `${req.protocol}://${req.get("host")}`;
+};
+
+const safeFilePart = (value) => {
+  return String(value || "candidate").replace(/[^a-z0-9_-]+/gi, "_").replace(/^_+|_+$/g, "") || "candidate";
+};
+
+const getOfferLetterheadImage = () => {
+  const letterheadPath = path.resolve(__dirname, "../../../../frontend/assets/img/Letterhead-2.png");
+  if (!fs.existsSync(letterheadPath)) return null;
+  return `data:image/png;base64,${fs.readFileSync(letterheadPath).toString("base64")}`;
+};
+
+const formatLetterDatePdf = (dateStr) => {
+  if (!dateStr) return [{ text: '' }];
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return [{ text: '' }];
+  const day = date.getDate();
+  const month = date.toLocaleString('en-US', { month: 'long' });
+  const year = date.getFullYear();
+  const v = day % 100;
+  const suffixes = ['th','st','nd','rd'];
+  const suffix = (v >= 11 && v <= 13) ? 'th' : (suffixes[day % 10] || 'th');
+  return [
+    { text: String(day) },
+    { text: suffix, fontSize: 7, baseline: 4 },
+    { text: ` ${month}, ${year}` },
+  ];
+};
+
+exports.getOfferLetterByPhone = async (req, res) => {
+  try {
+    const { mobileNo } = req.body;
+    const tenantId = req.users?.tenantId;
+    const branchId = req.users?.branchId;
+
+    if (!mobileNo) return Helper.response(false, "Mobile number is required", {}, res, 400);
+
+    const letter = await OfferLetter.findOne({ where: { mobileNo, tenantId, branchId } });
+    if (!letter) return Helper.response(false, "No offer letter found for this mobile number", {}, res, 200);
+
+    return Helper.response(true, "Offer letter found", letter, res, 200);
+  } catch (error) {
+    console.error(error);
+    return Helper.response(false, error.message, {}, res, 500);
+  }
+};
+
+exports.generateOfferLetterPdf = async (req, res) => {
+  try {
+    const { id } = req.body;
+    const tenantId = req.users?.tenantId;
+    const branchId = req.users?.branchId;
+
+    if (!id) return Helper.response(false, "ID is required", {}, res, 400);
+
+    const d = await OfferLetter.findOne({ where: { id, tenantId, branchId } });
+    if (!d) return Helper.response(false, "Offer letter not found", {}, res, 404);
+
+    const salutationPrefix = d.gender == 'Male' ? 'S/O' : d.gender == 'Female' ? 'D/O' : 'C/O';
+    const refNo = d.refNo ? `Quaere/Emp/Offer/${d.refNo}` : 'Quaere/Emp/Offer/';
+    const offerDateNodes = formatLetterDatePdf(d.offerDate);
+    const joiningDateNodes = formatLetterDatePdf(d.joiningDate);
+    const letterheadImage = getOfferLetterheadImage();
+
+    const docDefinition = {
+      pageSize: 'A4',
+      pageMargins: [30, 110, 30, 55],
+      content: [
+        {
+          columns: [
+            { text: `Ref: ${refNo}`, bold: true, fontSize: 12 },
+            { text: ['Dated: ', ...offerDateNodes], bold: true, fontSize: 12, alignment: 'right' }
+          ],
+          margin: [0, 0, 0, 28]
+        },
+        {
+          stack: [
+            { text: `${d.firstName} ${d.lastName}`, bold: true },
+            { text: `${salutationPrefix} ${d.fatherName}` },
+            { text: d.permanentAddress || '' }
+          ],
+          margin: [0, 0, 0, 28]
+        },
+        { text: `Dear ${d.firstName},`, bold: true, margin: [0, 0, 0, 18] },
+        { text: `With reference to your application and subsequent interview with us, we are pleased to offer you employment in our Company as ${d.designation} in the ${d.department} at our Head Office - ${d.headOffice || ''}, as per the mutually agreed terms and conditions discussed with you at the time of interview.`, margin: [0, 0, 0, 8] },
+        { text: ['You are requested to report for joining on or before ', ...joiningDateNodes, '.'], margin: [0, 0, 0, 8] },
+        { text: 'You are advised to submit the following documents at the time of joining:', margin: [0, 0, 0, 5] },
+        {
+          ol: [
+            'Three Latest passport size color photographs.',
+            'Self-attested copy of address proof & ID proof.',
+            'One set of all credentials (mark sheet of 10th & 12th and pass certificate with Degree/Diploma).',
+            'Salary proof from previous Company.',
+            'Relieving Letter/ No dues/ Clearance Certificate from all previous employers.',
+            'Two references of immediate reporting person (one of current employer & one of previous employer, in case of one company need to give both references of same company).'
+          ],
+          margin: [0, 0, 0, 8]
+        },
+        { text: 'This offer would automatically stand revoked in the event of not reporting at the date specified above and / or you not complying with any other terms & conditions of employment or in case of a negative reference check received. At the time of joining, the formal appointment letter, containing detailed terms & conditions, will be issued to you.', margin: [0, 0, 0, 8] },
+        { text: 'We take this opportunity to welcome you to our Company and look forward to a long and mutually beneficial association with you.', margin: [0, 0, 0, 8] },
+        { text: 'Please confirm your acceptance of this offer by signing and returning a copy of this letter to us.', margin: [0, 0, 0, 30] },
+        {
+          columns: [
+            { width: '50%', stack: [{ text: 'Thanks & Regards' }, { text: '\n\n' }, { text: 'Human Resource Dept', bold: true }] },
+            { width: '50%', stack: [{ text: 'Agreed & Accepted', alignment: 'right' }, { text: '\n\n' }, { text: `${d.firstName} ${d.lastName}`, bold: true, alignment: 'right' }] }
+          ]
+        }
+      ],
+      defaultStyle: { font: 'Roboto', fontSize: 11, lineHeight: 1.2 }
+    };
+    if (letterheadImage) {
+      docDefinition.background = () => ({
+        image: letterheadImage,
+        width: 595.28,
+        height: 841.89,
+      });
+    }
+
+    const fileName = `offer_letter_${safeFilePart(d.firstName)}_${safeFilePart(d.lastName)}_${Date.now()}.pdf`;
+    const filePath = path.join(__dirname, "../../../uploads/pdfs", fileName);
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+
+    const pdfDoc = offerPrinter.createPdfKitDocument(docDefinition);
+    const writeStream = fs.createWriteStream(filePath);
+    pdfDoc.pipe(writeStream);
+    pdfDoc.end();
+
+    await new Promise((resolve, reject) => {
+      writeStream.on('finish', resolve);
+      writeStream.on('error', reject);
+    });
+
+    const downloadUrl = `${getBaseUrl(req)}/uploads/pdfs/${fileName}`;
+
+    const pdfGeneratedAt = new Date();
+    await d.update({
+      pdfUrl: downloadUrl,
+      pdfFileName: fileName,
+      pdfGeneratedAt,
+    });
+
+    return Helper.response(true, "PDF generated successfully", {
+      downloadUrl,
+      pdfUrl: downloadUrl,
+      pdfFileName: fileName,
+      pdfGeneratedAt,
+    }, res, 200);
+  } catch (error) {
+    console.error(error);
+    return Helper.response(false, error.message, {}, res, 500);
+  }
+};
+
 exports.saveOfferLetter = async (req, res) => {
   try {
     const {
@@ -569,6 +733,7 @@ exports.saveOfferLetter = async (req, res) => {
       permanentAddress,
       designation,
       department,
+      headOffice,
       joiningDate,
       offerDate,
       refNo,
@@ -579,7 +744,7 @@ exports.saveOfferLetter = async (req, res) => {
     const userId   = req.users?.id;
 
     if (!firstName || !lastName || !fatherName || !gender || !mobileNo || !email ||
-        !permanentAddress || !designation || !department || !joiningDate || !offerDate) {
+        !permanentAddress || !designation || !department || !headOffice || !joiningDate || !offerDate) {
       return Helper.response(false, "Required fields missing", {}, res, 400);
     }
 
@@ -610,6 +775,7 @@ exports.saveOfferLetter = async (req, res) => {
       permanentAddress,
       designation,
       department,
+      headOffice,
       joiningDate,
       offerDate,
       refNo: refNo || null,

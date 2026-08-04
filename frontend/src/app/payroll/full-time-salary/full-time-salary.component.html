@@ -20,7 +20,7 @@
               <label for="defaultFormControlInput" class="form-label">Select Employee</label>
               <ng-select [items]="EmpList" bindLabel="label" bindValue="value" [(ngModel)]="obj['employeeId']"
                 [multiple]="false" placeholder="Select Employee" name="state" id="select2Danger" required
-                #employeeRef="ngModel">
+                #employeeRef="ngModel" (ngModelChange)="clearSalaryList()">
               </ng-select>
               <small class="text-danger" *ngIf="employeeRef.invalid && employeeRef.touched">
                 Employee Is required
@@ -30,7 +30,7 @@
               <label for="defaultFormControlInput" class="form-label">Select Month</label>
               <ng-select [items]="monthList" bindLabel="label" bindValue="value" [(ngModel)]="obj['month']"
                 [multiple]="false" placeholder="Select Month" name="state" id="select2Danger" required
-                #monthRef="ngModel">
+                #monthRef="ngModel" (ngModelChange)="clearSalaryList()">
               </ng-select>
               <small class="text-danger" *ngIf="monthRef.invalid && monthRef.touched">
                 Month Is Required
@@ -40,7 +40,7 @@
               <label for="defaultFormControlInput" class="form-label">Select Year</label>
               <ng-select [items]="yearList" bindLabel="label" bindValue="value" [(ngModel)]="obj['year']"
                 [multiple]="false" placeholder="Select Year" name="state" id="select2Danger" required
-                #yearRef="ngModel">
+                #yearRef="ngModel" (ngModelChange)="clearSalaryList()">
               </ng-select>
               <small class="text-danger" *ngIf="yearRef.invalid && yearRef.touched">
                 Year Is Required
@@ -83,6 +83,7 @@
                   <th>Employee Id</th>
                   <th>Monthly Salary</th>
                   <th>Monthly Deduction</th>
+                  <th>Penalty</th>
                   <!-- <th>Bonus</th> -->
                   <th>Net Pay</th>
                   <!--
@@ -106,6 +107,25 @@
                   </td>
                   <td>{{ item["TotalSalary"] }}</td>
                   <td>{{ item["totalDeduction"] }}</td>
+                  <td>
+                    <div class="form-check form-switch mb-1">
+                      <input class="form-check-input" type="checkbox" [(ngModel)]="item['rowPenaltyEnabled']"
+                        (change)="onRowPenaltyToggle(item)">
+                    </div>
+                    <div *ngIf="item['rowPenaltyEnabled']" class="d-flex align-items-center gap-1 mt-1">
+                      <select class="form-select form-select-sm" style="width:75px;"
+                        [(ngModel)]="item['rowPenaltyType']" (change)="onPenaltyTypeChange(item)">
+                        <option value="percentage">Days</option>
+                        <option value="amount">₹</option>
+                      </select>
+                      <input type="number" class="form-control form-control-sm" style="width:70px;" min="0"
+                        [max]="item['rowPenaltyType'] == 'percentage' ? item['totalWorkingDays'] : item['_basePayBeforeRowPenalty']"
+                        [(ngModel)]="item['rowPenaltyValue']" (input)="applyRowPenalty(item)" placeholder="0">
+                      <small class="text-danger text-nowrap" *ngIf="item['penaltyAmount'] > 0">
+                        -{{ item['penaltyAmount'] }}
+                      </small>
+                    </div>
+                  </td>
                   <!-- <td>{{ item["bonusamount"] ||0 }}</td> -->
                   <td>{{ item["basePay"] }}</td>
                   <!-- <td>{{ item["totalLeaveDays"] }}</td>
@@ -345,6 +365,7 @@
                   <th>Half days</th>
                   <th>Late Attendance</th>
                   <th>Leave Deductions</th>
+                  <th>Penalty</th>
                   <th>Net Pay</th>
                 </tr>
               </thead>
@@ -358,6 +379,12 @@
                   <td>{{personalDetails['halfDays']}}</td>
                   <td>{{personalDetails['lateDays']}}</td>
                   <td>{{personalDetails['totalDeduction']}}</td>
+                  <td>
+                    <span *ngIf="personalDetails['penaltyAmount'] > 0" class="text-danger fw-semibold">
+                      -{{ personalDetails['penaltyAmount'] }}
+                    </span>
+                    <span *ngIf="!personalDetails['penaltyAmount'] || personalDetails['penaltyAmount'] == 0">0</span>
+                  </td>
                   <td>{{personalDetails['basePay']}}</td>
                 </tr>
               </tbody>

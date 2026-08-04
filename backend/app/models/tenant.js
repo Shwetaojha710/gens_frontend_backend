@@ -18,6 +18,14 @@ const Tenant = sequelize.define('tenant', {
         type: DataTypes.STRING,
         allowNull: true
     },
+    letterhead: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    handbook: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
     companyCode: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -40,6 +48,11 @@ const Tenant = sequelize.define('tenant', {
         type: DataTypes.UUID,
         allowNull: true,
         defaultValue: null
+    },
+    brandColors: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        defaultValue: null
     }
 });
 
@@ -50,11 +63,11 @@ Tenant.associate = models => {
     }
 };
 
-// Tenant.sync({ alter: true }).then(() => {
-//     console.log('User model synced successfully');
-// }).catch((error) => {
-//     console.error('Error syncing User model:', error);
-// });
+Tenant.sync({ alter: true }).then(() => {
+    console.log('Tenant model synced successfully');
+}).catch((error) => {
+    console.error('Error syncing Tenant model:', error);
+});
 
 
 module.exports = Tenant;

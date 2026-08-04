@@ -1,0 +1,159 @@
+<div class="container-fluid mt-5">
+  <div class="row mb-4">
+    <div class="col-md">
+      <div class="card">
+
+        <!-- Card Header -->
+        <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <span>
+            <i class="ri ri-user-settings-line me-1"></i>
+            Sidebar Access
+          </span>
+
+          <!-- Role selector — only admin/superadmin can switch -->
+          <div class="d-flex align-items-center gap-2" *ngIf="isAdmin()">
+            <small class="text-muted fw-semibold">Preview Role:</small>
+            <select class="form-select form-select-sm" style="width:auto"
+              [(ngModel)]="previewRole" (ngModelChange)="onRoleChange()">
+              <option *ngFor="let r of allRoles" [value]="r">
+                {{ roleLabels[r] }}{{ r === loggedInRole ? ' (You)' : '' }}
+              </option>
+            </select>
+          </div>
+        </h5>
+
+        <!-- User Info Banner -->
+        <div class="card-body border-bottom py-3">
+          <div class="d-flex align-items-center gap-3 flex-wrap">
+
+            <!-- Role pill -->
+            <span class="badge rounded-pill px-3 py-2 fs-6"
+              [style.background-color]="roleColor(previewRole) + '18'"
+              [style.color]="roleColor(previewRole)"
+              [style.border]="'1.5px solid ' + roleColor(previewRole) + '50'">
+              <i class="ri ri-shield-user-line me-1"></i>
+              {{ roleLabels[previewRole] }}
+              <span *ngIf="isOwnRole() && loggedInName"> — {{ loggedInName }}</span>
+            </span>
+
+            <!-- Summary counts -->
+            <div class="d-flex gap-3">
+              <span class="d-flex align-items-center gap-1 text-success fw-semibold">
+                <i class="fa-solid fa-circle-check"></i>
+                {{ allowedCount }} accessible
+              </span>
+              <span class="d-flex align-items-center gap-1 text-muted">
+                <i class="fa-solid fa-circle-xmark"></i>
+                {{ totalCount - allowedCount }} restricted
+              </span>
+            </div>
+
+            <span *ngIf="isOwnRole()" class="badge bg-label-info ms-auto">
+              <i class="ri ri-account-circle-line me-1"></i>Your current access
+            </span>
+            <span *ngIf="!isOwnRole()" class="badge bg-label-warning ms-auto">
+              <i class="ri ri-eye-line me-1"></i>Previewing {{ roleLabels[previewRole] }} access
+            </span>
+          </div>
+        </div>
+
+        <!-- Access Tree Table -->
+        <div class="table-responsive">
+          <table class="table table-hover dataTable mb-0">
+            <thead>
+              <tr>
+                <th style="min-width:240px">Menu / Section</th>
+                <th class="text-center" style="width:130px">Access</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+
+              <ng-container *ngFor="let section of sections">
+
+                <!-- Parent Section Row -->
+                <tr class="table-light" style="cursor:pointer" (click)="toggleExpand(section.key)">
+                  <td>
+                    <span class="me-2 text-muted" style="font-size:0.8rem">
+                      <i class="fa-solid"
+                        [class.fa-chevron-down]="isExpanded(section.key)"
+                        [class.fa-chevron-right]="!isExpanded(section.key)"></i>
+                    </span>
+                    <i class="ri {{ section.icon }} me-1"
+                      [class.text-primary]="section.allowed"
+                      [class.text-muted]="!section.allowed"></i>
+                    <strong [class.text-muted]="!section.allowed">{{ section.label }}</strong>
+                    <span class="badge bg-label-info ms-2" *ngIf="section.children.length">
+                      {{ section.children.length }} items
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <span *ngIf="section.allowed" class="badge bg-label-success px-2 py-1">
+                      <i class="fa-solid fa-circle-check me-1"></i>Allowed
+                    </span>
+                    <span *ngIf="!section.allowed" class="badge bg-label-secondary px-2 py-1">
+                      <i class="fa-solid fa-lock me-1"></i>Restricted
+                    </span>
+                  </td>
+                  <td class="text-muted" style="font-size:0.85rem; vertical-align:middle">
+                    <ng-container *ngIf="section.allowed">
+                      <ng-container *ngIf="section.children.length > 0">
+                        {{ countAllowed(section.children) }} of {{ section.children.length }} sub-items accessible
+                      </ng-container>
+                      <ng-container *ngIf="section.children.length === 0">
+                        Direct page access
+                      </ng-container>
+                    </ng-container>
+                    <span *ngIf="!section.allowed" class="fst-italic">
+                      No access — contact admin to enable
+                    </span>
+                  </td>
+                </tr>
+
+                <!-- Child Item Rows -->
+                <ng-container *ngIf="isExpanded(section.key) && section.children.length">
+                  <tr *ngFor="let child of section.children">
+                    <td style="padding-left:3rem">
+                      <span class="text-muted me-2">—</span>
+                      <span [class.text-muted]="!child.allowed">{{ child.label }}</span>
+                    </td>
+                    <td class="text-center">
+                      <span *ngIf="child.allowed" class="badge bg-label-success px-2 py-1">
+                        <i class="fa-solid fa-circle-check me-1"></i>Allowed
+                      </span>
+                      <span *ngIf="!child.allowed" class="badge bg-label-secondary px-2 py-1">
+                        <i class="fa-solid fa-lock me-1"></i>Restricted
+                      </span>
+                    </td>
+                    <td class="text-muted" style="font-size:0.85rem; vertical-align:middle">
+                      <span *ngIf="child.allowed">Visible in sidebar</span>
+                      <span *ngIf="!child.allowed && !section.allowed" class="fst-italic">Parent section also restricted</span>
+                      <span *ngIf="!child.allowed && section.allowed" class="fst-italic">Hidden for this role</span>
+                    </td>
+                  </tr>
+                </ng-container>
+
+              </ng-container>
+
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Footer Note -->
+        <div class="card-footer">
+          <small class="text-muted">
+            <i class="ri ri-information-line me-1"></i>
+            Shows which sidebar menus are accessible for the selected role.
+            <span *ngIf="isAdmin()">
+              To modify permissions, go to <strong>Setting → Role Permissions</strong>.
+            </span>
+            <span *ngIf="!isAdmin()">
+              Contact your administrator to update access.
+            </span>
+          </small>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
