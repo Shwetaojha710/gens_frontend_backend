@@ -330,6 +330,15 @@ export class EmployeePortalService {
     );
   }
 
+  markNotificationsRead(
+    items: { id: string; status: string; updatedAt?: string }[],
+  ): Observable<{ status: unknown; message?: string }> {
+    return this.http.post<{ status: unknown; message?: string }>(
+      `${this.base}mark-notifications-read`,
+      { items },
+    );
+  }
+
   getEmpLetterDocs(): Observable<{ status: unknown; message?: string; data?: unknown }> {
     return this.http.get<{ status: unknown; message?: string; data?: unknown }>(
       `${this.base}get-emp-letter-docs`,

@@ -4,10 +4,14 @@
 
   <aside class="ep-sidebar" [class.ep-sidebar--collapsed]="sidebarCollapsed" [class.ep-sidebar--mobile-open]="sidebarMobileOpen">
     <div class="ep-brand-row">
-      <div class="ep-brand">
-        <span class="ep-brand__title">Employee</span>
-        <span class="ep-brand__sub">Self‑service portal</span>
-      </div>
+      <a class="ep-brand" routerLink="/employee-portal/dashboard">
+        <img
+          [src]="companyLogo"
+          alt="Quaere"
+          class="ep-brand__logo"
+          [class.ep-brand__logo--collapsed]="sidebarCollapsed"
+        />
+      </a>
       <!-- Desktop collapse toggle -->
       <button
         type="button"
@@ -70,6 +74,12 @@
         <span class="ep-nav__label">Employee Handbook</span>
       </a>
     </nav>
+    <div class="ep-sidebar-footer" *ngIf="!sidebarCollapsed">
+      <button type="button" class="ep-logout-btn" (click)="logout()">
+        <i class="icon-base ri ri-logout-circle-r-line"></i>
+        <span>Logout</span>
+      </button>
+    </div>
   </aside>
   <div class="ep-main">
     <header class="ep-topbar">

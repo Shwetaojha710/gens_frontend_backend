@@ -62,15 +62,62 @@ export class EmployeePortalRegularizationComponent implements OnInit {
   }
 
   /** API allows regularization only for attendance date within the last 2 days. */
+  // get dateMin(): string {
+  //   const d = new Date();
+  //   d.setDate(d.getDate() - 2);
+  //   return toIsoDate(d);
+  // }
+
+  // get dateMax(): string {
+  //   return toIsoDate(new Date());
+  // }
+
+  /** Earliest date where working-day gap to today is still ≤ 2 (weekends skipped). */
   get dateMin(): string {
-    const d = new Date();
-    d.setDate(d.getDate() - 2);
-    return toIsoDate(d);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let earliest = new Date(today);
+    for (let i = 0; i < 14; i++) {
+      const candidate = new Date(today);
+      candidate.setDate(today.getDate() - i);
+      if (this.countWorkingDaysBetween(candidate, today) <= 2) {
+        earliest = candidate;
+      } else {
+        break;
+      }
+    }
+    return toIsoDate(earliest);
   }
 
   get dateMax(): string {
     return toIsoDate(new Date());
   }
+
+  /** Same as backend: weekdays after attendance date up to today (Sat/Sun skipped). */
+  countWorkingDaysBetween(from: Date, to: Date): number {
+    let count = 0;
+    const d = new Date(from);
+    d.setHours(0, 0, 0, 0);
+    const end = new Date(to);
+    end.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + 1);
+    while (d <= end) {
+      const day = d.getDay(); // 0 Sun, 6 Sat
+      if (day !== 0 && day !== 6) count++;
+      d.setDate(d.getDate() + 1);
+    }
+    return count;
+  }
+
+  isAttendanceDateAllowed(attendanceDate: string): boolean {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const att = new Date(attendanceDate);
+    att.setHours(0, 0, 0, 0);
+    if (Number.isNaN(att.getTime()) || att > today) return false;
+    return this.countWorkingDaysBetween(att, today) <= 2;
+  }
+
 
   loadList(): void {
     this.loadingList = true;

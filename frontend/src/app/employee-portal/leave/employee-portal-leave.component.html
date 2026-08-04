@@ -11,7 +11,7 @@
   <!-- Leave balance KPI cards -->
   <div class="row g-3 mb-4" *ngIf="leaveBalances.length > 0 || leaveBalanceLoading">
     <ng-container *ngIf="leaveBalanceLoading">
-      <div class="col-6 col-md-4 col-xl-2">
+      <div class="col-6 col-md-4 col-lg-3 col-xl-2">
         <div class="ep-leave__kpi">
           <p class="ep-leave__kpi-label">Loading…</p>
         </div>
@@ -19,7 +19,7 @@
     </ng-container>
     <ng-container *ngIf="!leaveBalanceLoading">
       <div
-        class="col-6 col-md-4 col-xl-2"
+        class="col-6 col-md-4 col-lg-3 col-xl-2"
         *ngFor="let b of leaveBalances; let i = index"
       >
         <div class="ep-leave__kpi">

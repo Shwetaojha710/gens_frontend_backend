@@ -15,6 +15,7 @@ interface AppraisalEmployee {
   currentCTC: number;
   lastSalaryStartDate: string | null;
   hasSalary: boolean;
+  listPercent?: any | null; // inline % on list
 }
 
 interface SalaryHead {
@@ -73,6 +74,21 @@ export class EmployeeAppraisalComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadEmployees();
+  }
+  onListPercentChange(item: AppraisalEmployee, value: string): void {
+    const n = Number(value);
+    item.listPercent = Number.isFinite(n) ? n : null;
+  }
+
+  /** New CTC = Current CTC + (Current CTC × % / 100) */
+  calcNewCtc(item: AppraisalEmployee): number {
+    const ctc = Number(item.currentCTC) || 0;
+    const pct = Number(item.listPercent) || 0;
+    return ctc + (ctc * pct) / 100;
+  }
+
+  calcIncrease(item: AppraisalEmployee): number {
+    return this.calcNewCtc(item) - (Number(item.currentCTC) || 0);
   }
 
   loadEmployees(): void {
@@ -150,7 +166,8 @@ export class EmployeeAppraisalComponent implements OnInit {
 
   openAppraise(item: AppraisalEmployee): void {
     this.selectedEmp = item;
-    this.percent = null;
+    // this.percent = null;
+    this.percent = item.listPercent || null;
     this.effectiveDate = new Date().toISOString().slice(0, 10);
     this.closedHeadKeys.clear();
     this.heads = [];
@@ -161,6 +178,7 @@ export class EmployeeAppraisalComponent implements OnInit {
         this.heads = res?.data?.heads || [];
         this.summary = res?.data?.summary || this.summary;
         this.showModal('appraisalModal');
+        this.onPercentChange();
       },
       error: (err) => {
         this.notyf.error(err?.error?.message || 'Failed to load salary heads');
@@ -188,6 +206,75 @@ export class EmployeeAppraisalComponent implements OnInit {
     if (this.closedHeadKeys.has(head.key)) this.closedHeadKeys.delete(head.key);
     else this.closedHeadKeys.add(head.key);
     this.refreshPreview();
+  }
+  listEffectiveDate: string = new Date().toISOString().slice(0, 10);
+  applyingId: any = null;
+
+  applyFromList(item: AppraisalEmployee): void {
+    if (!item.hasSalary) return;
+    if (item.listPercent === null || item.listPercent === undefined || item.listPercent === '') {
+      this.notyf.error('Enter increment % first');
+      return;
+    }
+    const percent = Number(item.listPercent);
+    if (!Number.isFinite(percent) || percent < 0) {
+      this.notyf.error('Enter a valid increment %');
+      return;
+    }
+
+    this.applyingId = item.id;
+    this.payrollService
+      .applyAppraisal({
+        employeeId: item.id,
+        percent,
+        closedHeadKeys: [], // list apply = all payable heads open
+        effectiveDate: this.listEffectiveDate,
+      })
+      .subscribe({
+        next: () => {
+          this.notyf.success(`Appraisal applied for ${item.employeeName}`);
+          this.applyingId = null;
+          item.listPercent = null;
+          this.loadEmployees();
+        },
+        error: (err) => {
+          this.notyf.error(err?.error?.message || 'Failed to apply appraisal');
+          this.applyingId = null;
+        },
+      });
+  }
+
+
+  applySelectedFromList(): void {
+    const rows = this.employees.filter(
+      (e) => this.selectedEmployeeIds.has(e.id) && e.hasSalary && e.listPercent != null,
+    );
+    if (!rows.length) {
+      this.notyf.error('Select employees and enter % on each row');
+      return;
+    }
+    this.isBulkSaving = true;
+    let done = 0;
+    let failed = 0;
+    const finish = () => {
+      done++;
+      if (done === rows.length) {
+        this.isBulkSaving = false;
+        this.selectedEmployeeIds.clear();
+        this.loadEmployees();
+        this.notyf.success(`Done. Failed: ${failed}`);
+      }
+    };
+    for (const item of rows) {
+      this.payrollService
+        .applyAppraisal({
+          employeeId: item.id,
+          percent: Number(item.listPercent),
+          closedHeadKeys: [],
+          effectiveDate: this.listEffectiveDate,
+        })
+        .subscribe({ next: finish, error: () => { failed++; finish(); } });
+    }
   }
 
   private refreshPreview(): void {

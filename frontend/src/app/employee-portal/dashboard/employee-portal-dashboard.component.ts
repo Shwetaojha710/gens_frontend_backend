@@ -240,6 +240,10 @@ export class EmployeePortalDashboardComponent implements OnInit, AfterViewChecke
     return this.micLang === 'hi-IN' ? 'नमस्ते! मैं आपकी कैसे मदद कर सकता हूँ?' : 'Hi! How can I help you today?';
   }
 
+  canMarkWebAttendance(): boolean {
+    return this.profile?.['isofflineAtt'] == true;
+  }
+
   toggleChat(): void {
     const wasOpen = this.isChatOpen;
     this.isChatOpen = !this.isChatOpen;

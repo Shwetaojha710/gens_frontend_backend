@@ -1,5 +1,5 @@
 <div class="gens-login">
-  <div class="gens-login__bg" aria-hidden="true"></div>
+  <!-- <div class="gens-login__bg" aria-hidden="true"></div> -->
 
   <div class="gens-login__wave" aria-hidden="true"></div>
   <div class="gens-login__shell">
@@ -56,11 +56,7 @@
     <!-- MIDDLE: girl image -->
     <div class="gens-login__center">
       <div class="gens-login__hero-wrap">
-        <img
-          class="gens-login__hero-img"
-          src="assets/img/bg-login/Hero.png"
-          alt="HR professional"
-        />
+        <img class="gens-login__hero-img" src="assets/img/bg-login/Hero.png" alt="HR professional" />
       </div>
     </div>
 
@@ -102,17 +98,10 @@
               <span>Password</span>
               <div class="gens-field__control" [class.is-invalid]="isInvalid(form, 'password')">
                 <i class="ri ri-lock-line"></i>
-                <input
-                  [type]="passwordVisible ? 'text' : 'password'"
-                  formControlName="password"
-                  placeholder="Enter your password"
-                />
-                <button
-                  type="button"
-                  class="gens-field__eye"
-                  (click)="passwordVisible = !passwordVisible"
-                  tabindex="-1"
-                >
+                <input [type]="passwordVisible ? 'text' : 'password'" formControlName="password"
+                  placeholder="Enter your password" />
+                <button type="button" class="gens-field__eye" (click)="passwordVisible = !passwordVisible"
+                  tabindex="-1">
                   <i class="ri" [ngClass]="passwordVisible ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
                 </button>
               </div>
@@ -174,12 +163,8 @@
               <span>Mobile Number</span>
               <div class="gens-field__control" [class.is-invalid]="isInvalid(phoneForm, 'phone')">
                 <i class="ri ri-smartphone-line"></i>
-                <input
-                  type="tel"
-                  [formControl]="phoneControl"
-                  placeholder="10-digit mobile"
-                  (input)="onInterviewerPhoneInput($event)"
-                />
+                <input type="tel" [formControl]="phoneControl" placeholder="10-digit mobile"
+                  (input)="onInterviewerPhoneInput($event)" />
               </div>
             </label>
 
