@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const {AppAdmin, Admin} = require('../middleware/auth');
-const {getDailyAttendance,getAttendance, employeeByDepartment, TeamsAttendance,EmployeeDetails, EmployeeLeaveList,getAppAppliedLeaves, AppupdatedApplyLeaveStatus,AppapplyForLeave, getAppLeaveTypes, AppgetHolidayList, upcomingLeave, AppgetBillDetails, PrintBill, TeamLeaderLeaveList, DirectorLeaveList, notification, applyRegularization, getMyRegularizations, getPendingApproverRequests, updateRegularizationStatus, markattendance, addAppReimbursement, reimbursementList, getTeamReimbursements, updateAppReimbursementStatus, updateAppEmp, getEmpLetterDocs, saveEmpLetterSignature, getMyLeaveHistory, uploadEmpImage, getEmployeeUploadedImage, getAppHandbook}=require("../controller/tenant/appApi");
+const {getDailyAttendance,getAttendance, employeeByDepartment, TeamsAttendance,EmployeeDetails, EmployeeLeaveList,getAppAppliedLeaves, AppupdatedApplyLeaveStatus,AppapplyForLeave, getAppLeaveTypes, AppgetHolidayList, upcomingLeave, AppgetBillDetails, PrintBill, TeamLeaderLeaveList, DirectorLeaveList, notification, applyRegularization, getMyRegularizations, getPendingApproverRequests, updateRegularizationStatus, markattendance, addAppReimbursement, reimbursementList, getTeamReimbursements, updateAppReimbursementStatus, updateAppEmp, getEmpLetterDocs, saveEmpLetterSignature, getMyLeaveHistory, uploadEmpImage, getEmployeeUploadedImage, getAppHandbook, markNotificationsRead}=require("../controller/tenant/appApi");
 const { trackLocation, getLatestLocation, PinnedtrackLocation, listVistData, updateTrackRemark } = require('../controller/tenant/tracking');
 const { generateAllLettersPdf } = require('../controller/tenant/letter_data');
 const upload = require('../middleware/upload');
@@ -63,4 +63,5 @@ router.get('/get-app-handbook', AppAdmin, getAppHandbook)
 router.post('/uploadEmpImage', Admin, upload.single('profileImage'), uploadEmpImage);
 router.post('/getEmployeeUploadedImage', Admin,getEmployeeUploadedImage );
 
+router.post('/mark-notifications-read', AppAdmin, markNotificationsRead);
 module.exports = router

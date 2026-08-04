@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { EmployeePortalService } from './services/employee-portal.service';
-import { EmployeePortalNotificationReadService } from './services/employee-portal-notification-read.service';
 
 interface LeaveNotificationItem {
   id: string;
@@ -18,6 +17,7 @@ interface LeaveNotificationItem {
   days: string;
   reason: string;
   updatedAt: string;
+  isRead: boolean;
 }
 
 interface LeaveStatusGroup {
@@ -43,9 +43,8 @@ export class EmployeePortalLayoutComponent implements OnInit, OnDestroy {
   userMenuOpen = false;
 
   private routerSub = new Subscription();
-  private readSub = new Subscription();
 
-  /** Notification bell */
+  /** Notification bell — unread only (from API) */
   notifMenuOpen = false;
   notifLoading = false;
   notificationCount = 0;
@@ -67,7 +66,6 @@ export class EmployeePortalLayoutComponent implements OnInit, OnDestroy {
 
   constructor(
     private empApi: EmployeePortalService,
-    private notifRead: EmployeePortalNotificationReadService,
     private router: Router,
   ) {
     try {
@@ -83,20 +81,15 @@ export class EmployeePortalLayoutComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadNotificationSummary();
-    this.readSub = this.notifRead.changed$.subscribe(() => this.refreshUnreadCount());
-    this.routerSub = this.router.events.subscribe(event => {
-      if (event instanceof NavigationEnd) {
-        if (window.innerWidth < 992) {
-          this.closeMobileSidebar();
-        }
-        this.refreshUnreadCount();
+    this.routerSub = this.router.events.subscribe((event) => {
+      if (event instanceof NavigationEnd && window.innerWidth < 992) {
+        this.closeMobileSidebar();
       }
     });
   }
 
   ngOnDestroy(): void {
     this.routerSub.unsubscribe();
-    this.readSub.unsubscribe();
     document.body.style.overflow = '';
   }
 
@@ -106,14 +99,14 @@ export class EmployeePortalLayoutComponent implements OnInit, OnDestroy {
       next: (res) => {
         this.notifLoading = false;
         const raw = res.status === true && Array.isArray(res.data) ? res.data : [];
-        this.leaveNotifications = raw
+        const all = raw
           .map((row) => this.normalizeLeaveNotification(row))
           .filter((row): row is LeaveNotificationItem => row != null);
 
-        this.refreshUnreadCount();
-        this.leaveStatusGroups = this.buildLeaveStatusGroups(
-          this.leaveNotifications.filter((n) => this.notifRead.isUnread(n)),
-        );
+        // Bell: sirf unread
+        this.leaveNotifications = all.filter((n) => !n.isRead);
+        this.notificationCount = this.leaveNotifications.length;
+        this.leaveStatusGroups = this.buildLeaveStatusGroups(this.leaveNotifications);
       },
       error: () => {
         this.notifLoading = false;
@@ -124,21 +117,35 @@ export class EmployeePortalLayoutComponent implements OnInit, OnDestroy {
     });
   }
 
-  private refreshUnreadCount(): void {
-    this.notificationCount = this.notifRead.unreadCount(this.leaveNotifications);
-    this.leaveStatusGroups = this.buildLeaveStatusGroups(
-      this.leaveNotifications.filter((n) => this.notifRead.isUnread(n)),
-    );
-  }
-
   markItemRead(n: LeaveNotificationItem): void {
-    this.notifRead.markRead([n]);
-    this.closeNotifMenu();
+    this.empApi
+      .markNotificationsRead([{ id: n.id, status: n.status, updatedAt: n.updatedAt }])
+      .subscribe({
+        next: () => {
+          this.loadNotificationSummary();
+          this.closeNotifMenu();
+        },
+        error: () => this.closeNotifMenu(),
+      });
   }
 
   markAllVisibleRead(): void {
-    this.notifRead.markAllRead(this.leaveNotifications);
-    this.closeNotifMenu();
+    const items = this.leaveNotifications.map((n) => ({
+      id: n.id,
+      status: n.status,
+      updatedAt: n.updatedAt,
+    }));
+    if (!items.length) {
+      this.closeNotifMenu();
+      return;
+    }
+    this.empApi.markNotificationsRead(items).subscribe({
+      next: () => {
+        this.loadNotificationSummary();
+        this.closeNotifMenu();
+      },
+      error: () => this.closeNotifMenu(),
+    });
   }
 
   private normalizeLeaveNotification(row: unknown): LeaveNotificationItem | null {
@@ -165,6 +172,7 @@ export class EmployeePortalLayoutComponent implements OnInit, OnDestroy {
       days: r['days'] != null ? String(r['days']) : '',
       reason: r['reason'] != null ? String(r['reason']) : '',
       updatedAt: r['updatedAt'] != null ? String(r['updatedAt']) : '',
+      isRead: r['isRead'] != null ? Boolean(r['isRead']) : false,
     };
   }
 
@@ -183,7 +191,6 @@ export class EmployeePortalLayoutComponent implements OnInit, OnDestroy {
         groups.push({ status, label: this.statusLabel(status), items: list });
       }
     }
-    // Any other leave statuses (e.g. escalate) not in the main order
     for (const [status, list] of byStatus) {
       if (!this.leaveStatusOrder.includes(status as (typeof this.leaveStatusOrder)[number]) && list.length) {
         groups.push({ status, label: this.statusLabel(status), items: list });
@@ -281,6 +288,10 @@ export class EmployeePortalLayoutComponent implements OnInit, OnDestroy {
 
   toggleSidebar(): void {
     this.sidebarCollapsed = !this.sidebarCollapsed;
+  }
+
+  get companyLogo(): string {
+    return 'assets/img/logo/image.png';
   }
 
   logout(): void {

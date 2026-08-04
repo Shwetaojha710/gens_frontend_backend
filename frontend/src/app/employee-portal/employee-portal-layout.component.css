@@ -14,14 +14,14 @@
   top: 0;
   bottom: 0;
   z-index: 1030;
-  width: 260px;
+  width: 248px;
   flex-shrink: 0;
   background: var(--ep-sidebar-bg);
   border-right: 1px solid rgba(0, 180, 166, 0.14);
-  box-shadow: 4px 0 20px rgba(15, 23, 42, 0.18);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.04);
   display: flex;
   flex-direction: column;
-  padding: 1.1rem 0.85rem 1rem;
+  padding: 10px 10px 14px;
   transition: width 0.22s ease;
   overflow-x: hidden;
   overflow-y: auto;
@@ -29,108 +29,127 @@
 }
 
 .ep-sidebar--collapsed {
-  width: 78px;
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
+  width: 84px;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 .ep-brand-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  padding-bottom: 0.85rem;
-  margin-bottom: 0.65rem;
+  gap: 10px;
+  padding: 4px 6px 14px;
+  margin-bottom: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .ep-brand {
   min-width: 0;
   flex: 1;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
 }
 
-.ep-sidebar--collapsed .ep-brand {
-  display: none;
+.ep-brand__logo {
+  width: 148px;
+  max-width: 100%;
+  height: 42px;
+  object-fit: contain;
+  object-position: left center;
+  flex-shrink: 0;
 }
 
-.ep-brand__title {
-  display: block;
-  font-weight: 800;
-  font-size: 1.05rem;
-  color: #fff;
-  letter-spacing: -0.02em;
-  line-height: 1.25;
-}
-
-.ep-brand__sub {
-  display: block;
-  margin-top: 0.2rem;
-  font-size: 0.68rem;
-  color: rgba(255, 255, 255, 0.65);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  line-height: 1.3;
+.ep-brand__logo--collapsed {
+  width: 42px;
+  height: 42px;
+  max-width: 42px;
+  max-height: 42px;
 }
 
 .ep-sidebar-toggle {
   flex-shrink: 0;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: 0.5rem;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.08);
-  color: var(--ep-sidebar-muted);
+  color: #9fb4bd;
   box-shadow: none;
   cursor: pointer;
   transition:
     color 0.15s ease,
-    box-shadow 0.15s ease;
+    background 0.15s ease;
 }
 
 .ep-sidebar-toggle:hover {
   color: #fff;
-  box-shadow: none;
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .ep-sidebar--collapsed .ep-brand-row {
   justify-content: center;
-  padding-bottom: 0.65rem;
+  padding-bottom: 10px;
+}
+
+.ep-sidebar--collapsed .ep-brand {
+  justify-content: center;
+  flex: 0;
 }
 
 .ep-nav {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 6px;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+  padding-top: 14px;
+  padding-right: 2px;
+}
+
+.ep-nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.ep-nav::-webkit-scrollbar-thumb {
+  background: rgba(0, 180, 166, 0.25);
+  border-radius: 999px;
 }
 
 .ep-nav a {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  padding: 0.62rem 0.8rem;
-  border-radius: 0.55rem;
+  gap: 10px;
+  min-height: 42px;
+  padding: 10px 12px;
+  border-radius: 10px;
   color: var(--ep-sidebar-muted);
   text-decoration: none;
   font-weight: 500;
-  font-size: 0.9rem;
+  font-size: 13px;
   transition:
-    background 0.18s ease,
-    color 0.18s ease,
-    box-shadow 0.18s ease;
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
   border: 1px solid transparent;
 }
 
 .ep-nav__icon {
   flex-shrink: 0;
-  font-size: 1.15rem;
-  color: inherit;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  color: #fff;
 }
 
 .ep-nav__label {
@@ -138,6 +157,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: #fff;
 }
 
 .ep-sidebar--collapsed .ep-nav__label {
@@ -154,13 +174,14 @@
 
 .ep-sidebar--collapsed .ep-nav a {
   justify-content: center;
-  padding-left: 0.65rem;
-  padding-right: 0.65rem;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 .ep-nav a:hover:not(.active) {
   background: rgba(255, 255, 255, 0.06);
   color: #fff;
+  transform: translateX(2px);
 }
 
 .ep-nav a.active {
@@ -175,12 +196,40 @@
   color: #fff;
 }
 
+.ep-sidebar-footer {
+  padding: 12px 4px 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: auto;
+}
+
+.ep-logout-btn {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #cfe0e5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.ep-logout-btn:hover {
+  background: rgba(0, 180, 166, 0.16);
+  color: #fff;
+}
+
 .ep-main {
   flex: 1;
   min-width: 0;
   min-height: 100vh;
-  margin-left: 260px;
-  width: calc(100% - 260px);
+  margin-left: 248px;
+  width: calc(100% - 248px);
   display: flex;
   flex-direction: column;
   transition:
@@ -189,15 +238,15 @@
 }
 
 .ep-shell:has(.ep-sidebar--collapsed) .ep-main {
-  margin-left: 78px;
-  width: calc(100% - 78px);
+  margin-left: 84px;
+  width: calc(100% - 84px);
 }
 
 .ep-topbar {
   position: fixed;
   top: 0;
   right: 0;
-  left: 260px;
+  left: 248px;
   z-index: 1020;
   height: 3.5rem;
   display: flex;
@@ -212,7 +261,7 @@
 }
 
 .ep-shell:has(.ep-sidebar--collapsed) .ep-topbar {
-  left: 78px;
+  left: 84px;
 }
 
 .ep-topbar__inner {
@@ -735,7 +784,7 @@
     height: 100dvh;
     min-height: 100dvh;
     z-index: 1050;
-    border-right: 1px solid rgba(0, 129, 201, 0.2);
+    border-right: 1px solid rgba(0, 180, 166, 0.2);
     box-shadow: 4px 0 24px rgba(15, 23, 42, 0.18);
     transition: left 0.28s cubic-bezier(0.4, 0, 0.2, 1);
     overflow-y: auto;
@@ -749,7 +798,14 @@
   }
 
   .ep-sidebar--collapsed .ep-brand {
-    display: block;
+    display: flex;
+  }
+
+  .ep-sidebar--collapsed .ep-brand__logo--collapsed {
+    width: 148px;
+    height: 42px;
+    max-width: 100%;
+    max-height: 42px;
   }
 
   .ep-sidebar--collapsed .ep-nav__label {
@@ -765,6 +821,10 @@
 
   .ep-sidebar--collapsed .ep-nav a {
     justify-content: flex-start;
+  }
+
+  .ep-sidebar--collapsed .ep-sidebar-footer {
+    display: block;
   }
 
   .ep-nav {
