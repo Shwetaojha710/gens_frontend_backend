@@ -11,7 +11,102 @@
       <span>Refresh</span>
     </button>
   </header>
-
+  <!-- <section class="ep-day" aria-label="Today">
+    <div class="ep-day__banner">
+      <div class="ep-day__grid">
+        <div>
+          <div class="ep-day__hello">
+            <div class="ep-day__avatar" [attr.aria-label]="displayName">{{ displayInitials }}</div>
+            <div class="min-w-0">
+              <h1 class="ep-day__greet">{{ greeting }}, {{ displayName }}</h1>
+              <p class="ep-day__meta">
+                <span *ngIf="profileLine('designation') !== '—'"><i class="ri ri-briefcase-line"></i>{{ profileLine('designation') }}</span>
+                <span *ngIf="profileLine('empCode') !== '—'"><i class="ri ri-id-card-line"></i>{{ profileLine('empCode') }}</span>
+                <span><i class="ri ri-calendar-line"></i>{{ todayLong }}</span>
+              </p>
+            </div>
+          </div>
+          <div class="ep-day__tools">
+            <button type="button" class="ep-day__chip-btn" (click)="refresh()" [disabled]="loading">
+              <i class="ri ri-refresh-line" [class.ep-dash-hero__spin]="loading"></i> Refresh
+            </button>
+            <button *ngIf="latePolicyVisible && !chartsLoading" type="button" class="ep-day__chip-btn" (click)="openLatePolicyModal()">
+              <i class="ri ri-scales-3-line"></i> Payroll preview
+            </button>
+          </div>
+        </div>
+        <div class="ep-day__punch">
+          <div *ngIf="loading" class="text-center py-3">
+            <div class="spinner-border spinner-border-sm text-light" role="status"></div>
+            <p class="small mb-0 mt-2" style="color: rgba(244,251,253,0.7)">Loading…</p>
+          </div>
+          <ng-container *ngIf="!loading && daily">
+            <div class="ep-day__punch-top">
+              <div>
+                <p class="ep-day__punch-label">Today’s attendance</p>
+                <p class="ep-day__punch-status">{{ daily['status'] || 'Not marked' }}</p>
+                <p class="ep-day__punch-date">{{ daily['date'] || todayLong }}</p>
+              </div>
+            </div>
+            <div class="ep-day__clocks">
+              <div class="ep-day__clock">
+                <span class="ep-day__clock-label">Check in</span>
+                <div class="ep-day__clock-val">{{ daily['check_in_time'] || '—' }}</div>
+              </div>
+              <div class="ep-day__clock">
+                <span class="ep-day__clock-label">Check out</span>
+                <div class="ep-day__clock-val">{{ daily['check_out_time'] || '—' }}</div>
+              </div>
+            </div>
+            <div class="ep-day__actions">
+              <ng-container *ngIf="canMarkWebAttendance(); else webAttOffDay">
+                <button *ngIf="canCheckIn()" type="button" class="ep-day__cta" (click)="mark()" [disabled]="marking">
+                  {{ marking ? 'Please wait…' : 'Check in' }}
+                </button>
+                <button *ngIf="canCheckOut()" type="button" class="ep-day__cta ep-day__cta--out" (click)="mark()" [disabled]="marking">
+                  {{ marking ? 'Please wait…' : 'Check out' }}
+                </button>
+                <span *ngIf="!canCheckIn() && !canCheckOut() && daily['check_in_time']" class="ep-day__done">
+                  <i class="ri ri-check-line"></i> Day complete
+                </span>
+              </ng-container>
+              <ng-template #webAttOffDay>
+                <p class="ep-day__off mb-0">Web attendance is not enabled for your account. Contact HR.</p>
+              </ng-template>
+            </div>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+    <div class="ep-day__stats">
+      <div class="ep-day__stat ep-day__stat--amber">
+        <p class="ep-day__stat-label">Pending leave</p>
+        <p class="ep-day__stat-value">{{ leavePendingCount }}</p>
+      </div>
+      <div class="ep-day__stat ep-day__stat--green">
+        <p class="ep-day__stat-label">Approved (month)</p>
+        <p class="ep-day__stat-value">{{ leaveApprovedCount }}</p>
+      </div>
+      <div class="ep-day__stat ep-day__stat--blue">
+        <p class="ep-day__stat-label">Leave days taken</p>
+        <p class="ep-day__stat-value">{{ leaveDaysApprovedThisMonth }}</p>
+      </div>
+      <div class="ep-day__stat ep-day__stat--teal">
+        <p class="ep-day__stat-label">Next holiday</p>
+        <p class="ep-day__stat-value ep-day__stat-value--sm" *ngIf="nextHolidaySummary as nh">{{ nh.name }}</p>
+        <p class="ep-day__stat-value" *ngIf="!nextHolidaySummary">—</p>
+      </div>
+    </div>
+    <nav class="ep-day__links" aria-label="Quick links">
+      <a routerLink="/employee-portal/attendance" class="ep-day__link"><i class="ri ri-calendar-line"></i> Attendance</a>
+      <a routerLink="/employee-portal/leave" class="ep-day__link"><i class="ri ri-calendar-event-line"></i> Leave</a>
+      <a routerLink="/employee-portal/regularization" class="ep-day__link"><i class="ri ri-time-line"></i> Regularize</a>
+      <a routerLink="/employee-portal/salary" class="ep-day__link"><i class="ri ri-file-text-line"></i> Salary</a>
+      <a routerLink="/employee-portal/reimbursement" class="ep-day__link"><i class="ri ri-refund-2-line"></i> Reimburse</a>
+      <a routerLink="/employee-portal/holidays" class="ep-day__link"><i class="ri ri-government-line"></i> Holidays</a>
+      <a routerLink="/employee-portal/reports" class="ep-day__link"><i class="ri ri-bar-chart-box-line"></i> Reports</a>
+    </nav>
+  </section> -->
   <!-- Payroll preview trigger button -->
   <div class="mb-4" *ngIf="latePolicyVisible && !chartsLoading">
     <button type="button" class="btn btn-sm ep-dash-late-policy__cta rounded-pill d-inline-flex align-items-center gap-2"
@@ -817,10 +912,12 @@
                 <i class="icon-base ri ri-check-line me-1"></i> Day complete
               </span>
             </div> -->
+
             <!-- <div *ngIf="!canMarkWebAttendance()" class="ep-dash-attendance-card__alert">
               <i class="icon-base ri ri-alert-line me-1"></i>
               <span>Web attendance is not enabled for your account. Contact HR.</span>
             </div> -->
+
           </ng-container>
         </div>
       </div>
