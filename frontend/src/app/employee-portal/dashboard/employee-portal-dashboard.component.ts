@@ -1000,9 +1000,7 @@ export class EmployeePortalDashboardComponent implements OnInit, AfterViewChecke
       return s === 'rejected' || s === 'self_declined';
     }).length;
   }
-  canMarkWebAttendance(): boolean {
-    return this.profile?.['isofflineAtt'] === true;
-  }
+
   get leaveDaysApprovedThisMonth(): number {
     return this.leavesAll
       .filter((r) => this.leaveStatus(r) === 'approved')
