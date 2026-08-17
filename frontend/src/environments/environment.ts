@@ -2,7 +2,7 @@ export const environment = {
   production: false,
   // apiUrl:  'http://192.168.23.11:3001/api/' //Arrhan
   //  apiUrl: 'https://gens.demoquaeretech.in/api/api/',
-  apiUrl: 'http://192.168.23.25:3002/api/', //self
+  apiUrl: 'https://gensdemo.demoquaeretech.in/api/api/', //self
   python_apiUrl: 'https://gens.demoquaeretech.in/resume_tracker/api/v1/ats',
   // chatApiUrl: 'http://192.168.23.19:8000/api/ai/chat',
   chatApiUrl: 'https://gens.demoquaeretech.in/chatbot/api/ai/chat',
