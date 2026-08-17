@@ -168,15 +168,23 @@
 
                     <!-- IMAGE -->
                     <ng-container *ngIf="f.doc_type.startsWith('image/')">
-                      <img [src]="f.image" width="80" height="80" class="m-1 rounded cursor-pointer"
-                        (click)="openModal1(f.image)" />
+                      <!-- <img [src]="f.image" width="80" height="80" class="m-1 rounded cursor-pointer"
+                        (click)="openModal1(f.image)" /> -->
+                        <img *ngIf="f.doc_type?.startsWith('image/')"
+     [src]="f.image" width="80" height="80" class="m-1 rounded cursor-pointer"
+     (click)="openModal1(f)" />
                     </ng-container>
 
                     <!-- PDF -->
                     <ng-container *ngIf="f.doc_type === 'application/pdf'">
-                      <a [href]="f.image" class="btn btn-sm btn-primary m-1" target="_blank" download>
+                      <!-- <a [href]="f.image" class="btn btn-sm btn-primary m-1" target="_blank" download>
                         Download PDF
-                      </a>
+                      </a> -->
+                      <button *ngIf="f.doc_type === 'application/pdf'"
+        type="button" class="btn btn-sm btn-primary m-1"
+        (click)="openModal1(f)">
+  View / Download PDF
+</button>
                     </ng-container>
 
                     <!-- EXCEL -->
@@ -213,7 +221,34 @@
   </div>
 </div>
 <!-- Modal -->
-<div class="modal fade" id="imageModal1" tabindex="-1" aria-labelledby="imageModalLabel1" aria-hidden="true">
+
+<div class="modal fade" id="imageModal1" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Document</h5>
+        <button type="button" class="btn btn-sm btn-primary ms-auto me-2"
+          (click)="downloadFile(modalFileUrl, modalFileName)">
+          <i class="fa fa-download"></i> Download
+        </button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <!-- IMAGE -->
+        <img *ngIf="modalFileType?.startsWith('image/')"
+             [src]="modalFileUrl" class="img-fluid" alt="Document" />
+
+        <!-- PDF -->
+        <iframe *ngIf="modalFileType === 'application/pdf'"
+                [src]="modalFileUrl" width="100%" height="500px"
+                style="border:0"></iframe>
+
+        <p *ngIf="!modalFileUrl" class="text-muted">No document</p>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- <div class="modal fade" id="imageModal1" tabindex="-1" aria-labelledby="imageModalLabel1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
       <div class="modal-header">
@@ -225,4 +260,4 @@
       </div>
     </div>
   </div>
-</div>
+</div> -->

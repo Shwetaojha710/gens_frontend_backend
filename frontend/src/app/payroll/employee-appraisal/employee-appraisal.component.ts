@@ -65,7 +65,7 @@ export class EmployeeAppraisalComponent implements OnInit {
   effectiveDate: string = new Date().toISOString().slice(0, 10);
   heads: SalaryHead[] = [];
   summary: AppraisalSummary = { currentCTC: 0, newCTC: 0, totalIncrease: 0 };
-
+  viewMode: 'monthly' | 'yearly' = 'yearly'
   bulkPercent: number | null = null;
 
   private closedHeadKeys = new Set<string>();
@@ -79,6 +79,16 @@ export class EmployeeAppraisalComponent implements OnInit {
     const n = Number(value);
     item.listPercent = Number.isFinite(n) ? n : null;
   }
+
+  displayAmt(amount: number): number {
+    const n = Number(amount) || 0;
+    // data yearly hai → monthly = /12, yearly = as-is
+    return this.viewMode === 'monthly' ? Math.round(n / 12) : Math.round(n);
+  }
+  setViewMode(mode: 'monthly' | 'yearly'): void {
+    this.viewMode = mode;
+  }
+
 
   /** New CTC = Current CTC + (Current CTC × % / 100) */
   calcNewCtc(item: AppraisalEmployee): number {
@@ -177,13 +187,31 @@ export class EmployeeAppraisalComponent implements OnInit {
       next: (res: any) => {
         this.heads = res?.data?.heads || [];
         this.summary = res?.data?.summary || this.summary;
+
+        // Default: deductions closed (same as before), payables open
+        this.closedHeadKeys.clear();
+        for (const h of this.heads) {
+          if (h.componentType === 'deductible' || h.closed) {
+            this.closedHeadKeys.add(h.key);
+          }
+        }
+
         this.showModal('appraisalModal');
         this.onPercentChange();
       },
-      error: (err) => {
-        this.notyf.error(err?.error?.message || 'Failed to load salary heads');
-      },
+      // ...
     });
+    // this.payrollService.getAppraisalDetail({ employeeId: item.id }).subscribe({
+    //   next: (res: any) => {
+    //     this.heads = res?.data?.heads || [];
+    //     this.summary = res?.data?.summary || this.summary;
+    //     this.showModal('appraisalModal');
+    //     this.onPercentChange();
+    //   },
+    //   error: (err) => {
+    //     this.notyf.error(err?.error?.message || 'Failed to load salary heads');
+    //   },
+    // });
   }
 
   onPercentChange(): void {
@@ -191,16 +219,45 @@ export class EmployeeAppraisalComponent implements OnInit {
   }
 
   openAllPayables(): void {
-    this.closedHeadKeys.clear();
+    for (const h of this.heads) {
+      if (h.componentType === 'payable') this.closedHeadKeys.delete(h.key);
+    }
     this.refreshPreview();
   }
 
   closeAllPayables(): void {
     for (const h of this.heads) {
-      if (h.componentType === 'payable') this.closedHeadKeys.add(h.key);
+      if (h.componentType == 'payable') this.closedHeadKeys.add(h.key);
     }
     this.refreshPreview();
   }
+
+  /** Optional — deductions ke liye bhi bulk buttons */
+  openAllDeductions(): void {
+    for (const h of this.heads) {
+      if (h.componentType == 'deductible') this.closedHeadKeys.delete(h.key);
+    }
+    this.refreshPreview();
+  }
+
+  closeAllDeductions(): void {
+    for (const h of this.heads) {
+      if (h.componentType == 'deductible') this.closedHeadKeys.add(h.key);
+    }
+    this.refreshPreview();
+  }
+
+  // openAllPayables(): void {
+  //   this.closedHeadKeys.clear();
+  //   this.refreshPreview();
+  // }
+
+  // closeAllPayables(): void {
+  //   for (const h of this.heads) {
+  //     if (h.componentType === 'payable') this.closedHeadKeys.add(h.key);
+  //   }
+  //   this.refreshPreview();
+  // }
 
   toggleHead(head: SalaryHead): void {
     if (this.closedHeadKeys.has(head.key)) this.closedHeadKeys.delete(head.key);
@@ -245,37 +302,71 @@ export class EmployeeAppraisalComponent implements OnInit {
   }
 
 
-  applySelectedFromList(): void {
-    const rows = this.employees.filter(
-      (e) => this.selectedEmployeeIds.has(e.id) && e.hasSalary && e.listPercent != null,
-    );
-    if (!rows.length) {
-      this.notyf.error('Select employees and enter % on each row');
+  applySelectedFromList(item: any): void {
+    if (!item.hasSalary) {
+      this.notyf.error('Salary setup not found.');
       return;
     }
-    this.isBulkSaving = true;
-    let done = 0;
-    let failed = 0;
-    const finish = () => {
-      done++;
-      if (done === rows.length) {
-        this.isBulkSaving = false;
-        this.selectedEmployeeIds.clear();
-        this.loadEmployees();
-        this.notyf.success(`Done. Failed: ${failed}`);
-      }
-    };
-    for (const item of rows) {
-      this.payrollService
-        .applyAppraisal({
-          employeeId: item.id,
-          percent: Number(item.listPercent),
-          closedHeadKeys: [],
-          effectiveDate: this.listEffectiveDate,
-        })
-        .subscribe({ next: finish, error: () => { failed++; finish(); } });
+
+    if (item.listPercent == null || item.listPercent === '') {
+      this.notyf.error('Please enter appraisal percentage.');
+      return;
     }
+
+    this.isBulkSaving = true;
+
+    this.payrollService
+      .applyAppraisal({
+        employeeId: item.id,
+        percent: Number(item.listPercent),
+        closedHeadKeys: [],
+        effectiveDate: this.listEffectiveDate,
+      })
+      .subscribe({
+        next: () => {
+          this.isBulkSaving = false;
+          this.selectedEmployeeIds.delete(item.id); // Sirf isi employee ko unselect kare
+          this.loadEmployees();
+          this.notyf.success('Appraisal applied successfully.');
+        },
+        error: () => {
+          this.isBulkSaving = false;
+          this.notyf.error('Failed to apply appraisal.');
+        }
+      });
   }
+
+  // applySelectedFromList(): void {
+  //   const rows = this.employees.filter(
+  //     (e) => this.selectedEmployeeIds.has(e.id) && e.hasSalary && e.listPercent != null,
+  //   );
+  //   if (!rows.length) {
+  //     this.notyf.error('Select employees and enter % on each row');
+  //     return;
+  //   }
+  //   this.isBulkSaving = true;
+  //   let done = 0;
+  //   let failed = 0;
+  //   const finish = () => {
+  //     done++;
+  //     if (done === rows.length) {
+  //       this.isBulkSaving = false;
+  //       this.selectedEmployeeIds.clear();
+  //       this.loadEmployees();
+  //       this.notyf.success(`Done. Failed: ${failed}`);
+  //     }
+  //   };
+  //   for (const item of rows) {
+  //     this.payrollService
+  //       .applyAppraisal({
+  //         employeeId: item.id,
+  //         percent: Number(item.listPercent),
+  //         closedHeadKeys: [],
+  //         effectiveDate: this.listEffectiveDate,
+  //       })
+  //       .subscribe({ next: finish, error: () => { failed++; finish(); } });
+  //   }
+  // }
 
   private refreshPreview(): void {
     if (!this.selectedEmp) return;

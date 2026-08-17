@@ -2,6 +2,20 @@
   display: block;
   min-height: 100vh;
 }
+/* .gens-login {
+  --teal: #20b2aa;
+  --teal-dark: #178f89;
+  --navy: #2d3748;
+  --muted: #718096;
+  --border: #e2e8f0;
+  --bg: #ffffff;
+  position: relative;
+  min-height: 100vh;
+  background: var(--bg);
+  overflow-x: hidden;
+  overflow-y: auto;
+  font-family: Inter, "Segoe UI", system-ui, sans-serif;
+} */
 
 .gens-login {
   --teal: #20b2aa;
@@ -13,7 +27,8 @@
   position: relative;
   min-height: 100vh;
   background: var(--bg);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   font-family: Inter, "Segoe UI", system-ui, sans-serif;
 }
 

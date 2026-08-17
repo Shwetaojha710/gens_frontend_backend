@@ -163,6 +163,21 @@ export class FullTimeSalaryComponent {
     this.masterSelected = this.SalaryArr.every((item: any) => item.isSelected);
 
   }
+
+  attendanceMasterSelected: boolean = false;
+
+checkUncheckAllAttendance() {
+  this.attendanceList.forEach((item: any) => {
+    item.editable = this.attendanceMasterSelected;
+  });
+}
+
+isAllAttendanceSelected() {
+  this.attendanceMasterSelected =
+    this.attendanceList.length > 0 &&
+    this.attendanceList.every((item: any) => item.editable);
+}
+
   async getYear() {
     this.yearList = []
     this.master.getAttendanceYear().subscribe((data: { [x: string]: any; data: any; }) => {
@@ -786,8 +801,12 @@ this.modal.show();
 
         if (status === true) {
 
-          this.attendanceList = response.data?.attendanceList || [];
-
+          // this.attendanceList = response.data?.attendanceList || [];
+          this.attendanceList = (response.data?.attendanceList || []).map((a: any) => ({
+            ...a,
+            editable: !!a.editable,
+          }));
+          this.attendanceMasterSelected = false;
         }
         else if (status == "expired") {
           this.router.navigate(["login"]);

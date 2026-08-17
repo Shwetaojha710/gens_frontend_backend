@@ -1032,6 +1032,35 @@ const formattedDate = `Dated: ${day}${getOrdinal(day)} ${month}, ${year}`;
 
     });
 
+    rows.push(
+      new TableRow({
+        children: [
+          new TableCell({
+            columnSpan: 4,
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [new TextRun({ text: "TOTAL", bold: true })],
+              }),
+            ],
+          }),
+          new TableCell({
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [
+                  new TextRun({ text: String(this.totalAmount ?? "0"), bold: true }),
+                ],
+              }),
+            ],
+          }),
+          new TableCell({
+            children: [new Paragraph("")],
+          }),
+        ],
+      }),
+    );
+
     const table = new Table({
       width:{size:100,type:WidthType.PERCENTAGE},
       rows
@@ -1103,11 +1132,30 @@ const formattedDate = `Dated: ${day}${getOrdinal(day)} ${month}, ${year}`;
             })]
           }),
               new Paragraph(""),
+          // new Paragraph({
+          //   children:[ new TextRun({
+          //     text:`1) Enclosed please find Cheque No.${this.chequeNo} dated ${new Date().toLocaleDateString()} of Rs.${this.totalAmount}/- (${this.convertNumberToWords(this.totalAmount)}). Kindly transfer the amount as per details given below:`,
+          //     size:22
+          //   })]
+          // }),
+
           new Paragraph({
-            children:[ new TextRun({
-              text:`1) Enclosed please find Cheque No.${this.chequeNo} dated ${new Date().toLocaleDateString()} of Rs.${this.totalAmount}/- (${this.convertNumberToWords(this.totalAmount)}). Kindly transfer the amount as per details given below:`,
-              size:22
-            })]
+            children: [
+              new TextRun({ text: "1) Enclosed please find ", size: 22 }),
+              new TextRun({ text: `Cheque No.${this.chequeNo}`, bold: true, size: 22 }),
+              new TextRun({ text: " dated ", size: 22 }),
+              new TextRun({ text: `${new Date().toLocaleDateString()}`, bold: true, size: 22 }),
+              new TextRun({ text: " of Rs.", size: 22 }),
+              new TextRun({
+                text: `${this.totalAmount}/- (${this.convertNumberToWords(this.totalAmount)})`,
+                bold: true,
+                size: 22,
+              }),
+              new TextRun({
+                text: ". Kindly transfer the amount as per details given below:",
+                size: 22,
+              }),
+            ],
           }),
 
           new Paragraph(""),
@@ -1118,14 +1166,14 @@ const formattedDate = `Dated: ${day}${getOrdinal(day)} ${month}, ${year}`;
             alignment:AlignmentType.RIGHT,
             children:[ new TextRun("Shiv Pal Singh") ]
           }),
-new Paragraph(""),
+          new Paragraph(""),
           new Paragraph({
             alignment:AlignmentType.RIGHT,
             children:[ new TextRun({ text:"Director",bold:true }) ]
           }),
 
           new Paragraph(""),
-  new Paragraph(""),  new Paragraph(""),  new Paragraph(""),
+          new Paragraph(""),  new Paragraph(""),  new Paragraph(""),
         ]
 
       }]

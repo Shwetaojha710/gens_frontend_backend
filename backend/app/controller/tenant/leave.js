@@ -7,6 +7,10 @@ const empPersonal = require("../../models/empPersonal");
 const leave_balance = require("../../models/leaveBalance");
 const { Op } = require("sequelize");
 const sequelize = require("../../connection/connection");
+const { writeAudit, toPlain } = require("../../helper/auditLog");
+
+
+
 exports.createLeave = async (req, res) => {
   const {
     leaveName,
@@ -540,7 +544,16 @@ exports.applyForLeave = async (req, res) => {
 
       savedLeaves.push(leaveApplication);
     }
-
+    await writeAudit({
+      req,
+      actionType: "LEAVE_CREATE",
+      referenceId: savedLeaves.id,
+      employeeId: savedLeaves.employeeId,
+      oldValue: null,
+      newValue: savedLeaves,
+      remarks: "Leave applied",
+    });
+    
     if (savedLeaves.length > 0) {
       return Helper.response(
         true,
@@ -1001,6 +1014,15 @@ exports.updatedApplyLeaveStatus = async (req, res) => {
     // }
 
     if (await existingLeave.save()) {
+      await writeAudit({
+        req,
+        actionType: "LEAVE_UPDATE",
+        referenceId: existingLeave.id,
+        employeeId: existingLeave.employeeId,
+        oldValue: existingLeave,
+        newValue: toPlain(existingLeave),
+        remarks: "Leave updated",
+      });
       return Helper.response(
         true,
         "Leave updated successfully.",

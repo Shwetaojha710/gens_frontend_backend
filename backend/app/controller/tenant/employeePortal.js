@@ -11,6 +11,7 @@ const Tenant = require("../../models/tenant");
 const Branch = require("../../models/branch");
 const currency = require("../../models/currency");
 const Designation = require("../../models/designation");
+const log = require("../../models/log");
 
 function normalizeMobile(m) {
   return String(m || "")
@@ -54,15 +55,15 @@ exports.sendEmployeePortalOtp = async (req, res) => {
     }
 
     const found = await findEmployee(mobile, companyCode);
-    if (found.error === "tenant") {
+    if (found.error == "tenant") {
       return Helper.response(false, found.message, [], res, 200);
     }
-    if (found.error === "emp") {
+    if (found.error == "emp") {
       return Helper.response(false, found.message, [], res, 200);
     }
 
     const otps = new otp();
-    if (mobile === "8687651183") {
+    if (mobile == "8687651183") {
       otps.otp = "6669";
     } else {
       otps.otp = String(Math.floor(1000 + Math.random() * 9000));
@@ -72,11 +73,21 @@ exports.sendEmployeePortalOtp = async (req, res) => {
     otps.type = "EmployeePortal";
     otps.expiry_time = `'${moment().add(5, "minutes").toDate()}'`;
     otps.created_by = null;
-
+    await log.create({
+      tenantId: found.emp.tenantId,
+      employeeId: found.emp.id,
+      actionType: "EMP_PORTAL_OTP_SENT",
+      remarks: "OTP sent",
+      ipAddress: req.ip || null,
+      createdBy: found.emp.id,
+    });
     await otps.save();
     const templateId = "1107164267135286674";
     try {
-      await Helper.sendSMS(mobile, otps.otp, templateId);
+      if (mobile != "8687651183") {
+        await Helper.sendSMS(mobile, otps.otp, templateId);
+      } 
+      // return Helper.response("success", "OTP Send Successfully", {}, res, 200);
     } catch (e) {
       console.warn("Employee portal SMS:", e?.message || e);
     }
@@ -100,7 +111,8 @@ exports.verifyEmployeePortalOtp = async (req, res) => {
     if (!companyCode || !String(companyCode).trim()) {
       return Helper.response(false, "Company code is required.", [], res, 200);
     }
-
+   
+  
     const row = await otp.findOne({
       where: {
         phone: mobile,
@@ -137,7 +149,16 @@ exports.verifyEmployeePortalOtp = async (req, res) => {
     if (!usersData) {
       return Helper.response(false, "Employee not found", [], res, 200);
     }
-
+  
+    await log.create({
+      tenantId: usersData.tenantId,
+      branchId: usersData.branchId,
+      employeeId: usersData.id,
+      actionType: "EMP_PORTAL_LOGIN_OK",
+      remarks: "Employee portal login success",
+      ipAddress: req.ip || null,
+      createdBy: usersData.id,
+    });
     const source = req.body?.source;
     const isWeb = source === "web";
 

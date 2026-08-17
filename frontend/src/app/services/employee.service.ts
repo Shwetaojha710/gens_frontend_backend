@@ -17,6 +17,10 @@ createEmp(data: any): Observable<any> {
   return this.http.post(`${this.baseUrl}createEmp`, data);
 }
 
+checkEmpByMobile(data: any): Observable<any> {
+  return this.http.post(`${this.baseUrl}checkEmpByMobile`, data);
+}
+
 getEmp(): Observable<any[]> {
   const branchId = localStorage.getItem('branchId') || '';
   return this.http.post<any[]>(`${this.baseUrl}getEmp`, { branchId });

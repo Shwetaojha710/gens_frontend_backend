@@ -2407,11 +2407,9 @@ exports.getAppLeaveTypes = async (req, res) => {
   }
 };
 
-//leaveList
 exports.EmployeeLeaveList = async (req, res) => {
   const tenantId = req.users?.tenantId;
   const employeeId = req.users?.id;
-
   const branchId = req.users && req.users.branchId;
 
   if (!branchId || branchId == "null") {
@@ -2423,21 +2421,7 @@ exports.EmployeeLeaveList = async (req, res) => {
   }
 
   try {
-    const leaveList = await LeaveBalance.findAll({
-      where: { tenantId, employeeId, branchId },
-      raw: true,
-      order: [["createdAt", "desc"]],
-      limit: 1,
-    });
-
-    if (leaveList.length == 0) {
-      return Helper.response(false, "No Leave present", [], res, 404);
-    }
-
-    // const totalLeave = leaveList.reduce(
-    //   (acc, curr) => acc + (Number(curr?.remainingLeaves) || 0),
-    //   0
-    // );
+    const currentYear = new Date().getFullYear();
 
     const leaveStatusCount = await leave_application.findAll({
       attributes: ["status", [fn("SUM", col("days")), "totalDays"]],
@@ -2454,57 +2438,136 @@ exports.EmployeeLeaveList = async (req, res) => {
 
     const leaveData = await Promise.all(
       LeaveMaster.map(async (item) => {
+
+
         const isCompOff =
           String(item?.leaveCode || "").toLowerCase().startsWith("co") ||
           String(item?.leaveName || "").toLowerCase().includes("comp");
 
-        if (isCompOff) {
-          const compOffRecords = await comp_off.findAll({
-            where: { tenantId, employeeId, branchId },
-            raw: true,
-          });
-          const total_leave = compOffRecords.reduce((s, r) => s + Number(r.totalDays || 0), 0);
-          const used_leave = compOffRecords.reduce((s, r) => s + Number(r.usedDays || 0), 0);
-          const available_leave = compOffRecords.reduce((s, r) => s + Number(r.remainingDays || 0), 0);
-          return {
-            name: item?.leaveName,
-            code: item?.leaveCode,
-            available_leave,
-            used_leave,
-            total_leave,
-          };
-        }
-
-        const leavebal = await leave_balance.findOne({
-          where: { tenantId, employeeId, leaveTypeId: item?.id, branchId },
-          order: [["createdAt", "desc"]],
+          if (isCompOff) {
+            const compOffRecords = await comp_off.findAll({
+              where: {
+                tenantId,
+                employeeId,
+                branchId,
+                approval_status: "approved",
+              },
+              raw: true,
+            });
+          
+            const total_leave = compOffRecords.reduce(
+              (s, r) => s + Number(r.totalDays || 0),
+              0,
+            );
+          
+            const usedRows = await leave_application.findAll({
+              attributes: [[fn("SUM", col("days")), "totalDays"]],
+              where: {
+                tenantId,
+                employeeId,
+                branchId,
+                leaveTypeId: item.id,
+                status: "approved",
+              },
+              raw: true,
+            });
+            const used_leave = Number(usedRows?.[0]?.totalDays || 0);
+            const available_leave = Math.max(total_leave - used_leave, 0);
+          
+            return {
+              name: item?.leaveName,
+              code: item?.leaveCode,
+              available_leave,
+              used_leave,
+              total_leave,
+            };
+          }
+        const isRestricted =
+        String(item?.leaveCode || "").toLowerCase().startsWith("rh") ||
+        String(item?.leaveName || "").toLowerCase().includes("restricted");
+      
+      if (isRestricted) {
+        // 1) Restricted HolidayType id
+        const rhTypes = await HolidayType.findAll({
+          where: {
+            tenantId,
+            branchId,
+            status: "active",
+            name: { [Op.iLike]: "%restricted%" }, // Postgres; MySQL: use Op.like + LOWER()
+          },
+          attributes: ["id"],
+          raw: true,
         });
+        const rhTypeIds = rhTypes.map((t) => t.id);
+      
+        // 2) Total from holiday table (current year)
+        let total_leave = 0;
+        if (rhTypeIds.length) {
+          total_leave = await holiday.count({
+            where: {
+              tenantId,
+              branchId,
+              status: "active",
+              holiday_type: { [Op.in]: rhTypeIds },
+              [Op.and]: sequelize.where(
+                sequelize.fn("DATE_PART", "year", col("date")),
+                currentYear,
+              ),
+            },
+          });
+        }
+        const fromDate = moment().startOf("month").format("YYYY-MM-DD");
+        // 3) Used from leave applications
+        // 3) Used = sirf approved
+        const usedRows = await leave_application.findAll({
+          attributes: [[fn("SUM", col("days")), "totalDays"]],
+          where: {
+            tenantId,
+            employeeId,
+            branchId,
+            leaveTypeId: item.id,
+            status: "approved",
+            fromDate: { [Op.gte]: fromDate }, // current month se
+          },
+          raw: true,
+        });
+        const used_leave = Number(usedRows?.[0]?.totalDays || 0);
+        const available_leave = Math.max(total_leave - used_leave, 0);
+      
         return {
           name: item?.leaveName,
           code: item?.leaveCode,
-          available_leave: leavebal?.remainingLeaves ?? 0,
-          used_leave: leavebal?.usedLeaves ?? 0,
-          total_leave:
-            leavebal?.totalAssigned < leavebal?.remainingLeaves
-              ? (leavebal?.remainingLeaves ?? 0)
-              : (leavebal?.totalAssigned ?? 0),
+          available_leave,
+          used_leave,
+          total_leave,
+        };
+      }
+        const leavebal = await leave_balance.findOne({
+          where: {
+            tenantId,
+            employeeId,
+            leaveTypeId: item?.id,
+            branchId,
+            year: currentYear,
+          },
+          order: [["createdAt", "desc"]],
+          raw: true,
+        });
+
+        const totalAssigned = Number(leavebal?.totalAssigned ?? 0);
+        const used = Number(leavebal?.usedLeaves ?? 0);
+        const remaining = Number(leavebal?.remainingLeaves ?? 0);
+        const carry = Number(leavebal?.carryForwarded ?? 0);
+
+        return {
+          name: item?.leaveName,
+          code: item?.leaveCode,
+          available_leave: remaining,
+          used_leave: used,
+          total_leave: totalAssigned + carry || remaining + used,
         };
       }),
     );
-
-    // const leaveData = await Promise.all(
-    //   leaveList.map(async (item) => {
-    //     const leaveName = await leaveMaster.findOne({
-    //       where: { id: item?.leaveTypeId, tenantId },
-    //     });
-    //     return {
-    //       name: leaveName?.leaveName,
-    //       code: leaveName?.leaveCode,
-    //       available_leave: item?.remainingLeaves,
-    //       total_leave: totalLeave,
-    //     };
-    //   })
-    // );
 
     const responseData = {
       leaveBalances: leaveData,
@@ -2523,6 +2586,122 @@ exports.EmployeeLeaveList = async (req, res) => {
     return Helper.response(false, error.message, [], res, 500);
   }
 };
+//leaveList
+// exports.EmployeeLeaveList = async (req, res) => {
+//   const tenantId = req.users?.tenantId;
+//   const employeeId = req.users?.id;
+
+//   const branchId = req.users && req.users.branchId;
+
+//   if (!branchId || branchId == "null") {
+//     return Helper.response(false, "branchId is required!", {}, res, 200);
+//   }
+
+//   if (!tenantId) {
+//     return Helper.response(false, "User Not Found", [], res, 404);
+//   }
+
+//   try {
+//     const leaveList = await LeaveBalance.findAll({
+//       where: { tenantId, employeeId, branchId },
+//       raw: true,
+//       order: [["createdAt", "desc"]],
+//       limit: 1,
+//     });
+
+//     if (leaveList.length == 0) {
+//       return Helper.response(false, "No Leave present", [], res, 404);
+//     }
+
+//     // const totalLeave = leaveList.reduce(
+//     //   (acc, curr) => acc + (Number(curr?.remainingLeaves) || 0),
+//     //   0
+//     // );
+
+//     const leaveStatusCount = await leave_application.findAll({
+//       attributes: ["status", [fn("SUM", col("days")), "totalDays"]],
+//       where: { tenantId, employeeId, branchId },
+//       group: ["status"],
+//       raw: true,
+//     });
+
+//     const LeaveMaster = await leaveMaster.findAll({
+//       where: { tenantId, branchId },
+//       raw: true,
+//       order: [["leaveName", "asc"]],
+//     });
+
+//     const leaveData = await Promise.all(
+//       LeaveMaster.map(async (item) => {
+//         const isCompOff =
+//           String(item?.leaveCode || "").toLowerCase().startsWith("co") ||
+//           String(item?.leaveName || "").toLowerCase().includes("comp");
+
+//         if (isCompOff) {
+//           const compOffRecords = await comp_off.findAll({
+//             where: { tenantId, employeeId, branchId },
+//             raw: true,
+//           });
+//           const total_leave = compOffRecords.reduce((s, r) => s + Number(r.totalDays || 0), 0);
+//           const used_leave = compOffRecords.reduce((s, r) => s + Number(r.usedDays || 0), 0);
+//           const available_leave = compOffRecords.reduce((s, r) => s + Number(r.remainingDays || 0), 0);
+//           return {
+//             name: item?.leaveName,
+//             code: item?.leaveCode,
+//             available_leave,
+//             used_leave,
+//             total_leave,
+//           };
+//         }
+
+//         const leavebal = await leave_balance.findOne({
+//           where: { tenantId, employeeId, leaveTypeId: item?.id, branchId },
+//           order: [["createdAt", "desc"]],
+//         });
+//         return {
+//           name: item?.leaveName,
+//           code: item?.leaveCode,
+//           available_leave: leavebal?.remainingLeaves ?? 0,
+//           used_leave: leavebal?.usedLeaves ?? 0,
+//           total_leave:
+//             leavebal?.totalAssigned < leavebal?.remainingLeaves
+//               ? (leavebal?.remainingLeaves ?? 0)
+//               : (leavebal?.totalAssigned ?? 0),
+//         };
+//       }),
+//     );
+
+//     // const leaveData = await Promise.all(
+//     //   leaveList.map(async (item) => {
+//     //     const leaveName = await leaveMaster.findOne({
+//     //       where: { id: item?.leaveTypeId, tenantId },
+//     //     });
+//     //     return {
+//     //       name: leaveName?.leaveName,
+//     //       code: leaveName?.leaveCode,
+//     //       available_leave: item?.remainingLeaves,
+//     //       total_leave: totalLeave,
+//     //     };
+//     //   })
+//     // );
+
+//     const responseData = {
+//       leaveBalances: leaveData,
+//       appliedLeaveSummary: leaveStatusCount,
+//     };
+
+//     return Helper.response(
+//       true,
+//       "Leave List Found Successfully!",
+//       responseData,
+//       res,
+//       200,
+//     );
+//   } catch (error) {
+//     console.error("Error fetching employee leave list:", error);
+//     return Helper.response(false, error.message, [], res, 500);
+//   }
+// };
 
 // exports.getAppAppliedLeaves = async (req, res) => {
 //   const tenantId = req.users?.tenantId;
@@ -3181,15 +3360,25 @@ exports.PrintBill = async (req, res) => {
     const deductionsData = data.filter((d) => d.pay_code === "DED");
     const currentDate = new Date().toLocaleDateString("en-GB");
 
-    const grossSalary = earnings.reduce(
-      (sum, e) => sum + parseFloat(e.finalAmount),
-      0,
+    // const grossSalary = earnings.reduce(
+    //   (sum, e) => sum + parseFloat(e.finalAmount),
+    //   0,
+    // );
+    // const totalDeductions = deductionsData.reduce(
+    //   (sum, d) => sum + parseFloat(d.finalAmount),
+    //   0,
+    // );
+    // const netSalary = grossSalary - totalDeductions;
+
+    const grossSalary = Math.round(
+      earnings.reduce((sum, e) => sum + parseFloat(e.finalAmount || 0), 0)
     );
-    const totalDeductions = deductionsData.reduce(
-      (sum, d) => sum + parseFloat(d.finalAmount),
-      0,
+    const totalDeductions = Math.round(
+      deductionsData.reduce((sum, d) => sum + parseFloat(d.finalAmount || 0), 0)
     );
-    const netSalary = grossSalary - totalDeductions;
+    const netSalary = Math.round(grossSalary - totalDeductions);
+    // display helpers → always *.00
+    const fmt = (n) => Number(n).toFixed(2);
 
     //  Create Earnings vs Deductions Table
     const maxRows = Math.max(earnings.length, deductionsData.length);
@@ -3216,13 +3405,15 @@ exports.PrintBill = async (req, res) => {
     tableBody.push([
       { text: "Gross Salary", bold: true },
       {
-        text: `${employee.currency || "INR"} ${grossSalary.toFixed(2)}`,
+        // text: `${employee.currency || "INR"} ${grossSalary.toFixed(2)}`,
+        text: `${employee.currency || "INR"} ${fmt(grossSalary)}`,
         bold: true,
         alignment: "right",
       },
       { text: "Total Deductions", bold: true },
       {
-        text: `${employee.currency || "INR"} ${totalDeductions.toFixed(2)}`,
+        // text: `${employee.currency || "INR"} ${totalDeductions.toFixed(2)}`,
+        text: `${employee.currency || "INR"} ${fmt(totalDeductions)}`,
         bold: true,
         alignment: "right",
       },
@@ -3233,7 +3424,8 @@ exports.PrintBill = async (req, res) => {
       {},
       { text: "NET Salary", bold: true, fillColor: "#f0f0f0" },
       {
-        text: `${employee.currency || "INR"} ${netSalary.toFixed(2)}`,
+        // text: `${employee.currency || "INR"} ${netSalary.toFixed(2)}`,
+        text: `${employee.currency || "INR"} ${fmt(netSalary)}`,
         bold: true,
         alignment: "right",
         fillColor: "#f0f0f0",
@@ -3255,7 +3447,8 @@ exports.PrintBill = async (req, res) => {
                 italics: true,
               },
               {
-                text: Helper.convertNumberToWords(Math.floor(netSalary)).toUpperCase(),
+                // text: Helper.convertNumberToWords(Math.floor(netSalary)).toUpperCase(),
+                text: Helper.convertNumberToWords(netSalary).toUpperCase(),
                 alignment: "right",
                 bold: true,
                 italics: true,
@@ -3315,7 +3508,7 @@ exports.PrintBill = async (req, res) => {
                     { text: "Net Pay", fontSize: 10 },
                     {
                       text: `${employee.currency || "INR"} ${netSalary.toFixed(
-                        2,
+                        0,
                       )}`,
                       fontSize: 10,
                       alignment: "right",

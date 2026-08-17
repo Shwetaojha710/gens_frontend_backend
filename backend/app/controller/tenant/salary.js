@@ -23,6 +23,9 @@ const leaveMaster = require("../../models/leaveMaster");
 const HolidayType = require("../../models/HolidayType");
 const comp_off = require("../../models/comp_off");
 const { literal } = require("sequelize");
+const { writeAudit } = require("../../helper/auditLog");
+
+
 const dayMap = {
   Sunday: 0,
   Monday: 1,

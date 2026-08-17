@@ -204,8 +204,8 @@ export class PendingEmpListComponent {
     this.employeeList = []
     // this.cardData = []
     this.originalList = []
-    this.master.getemployeeList().subscribe((response: any) => {
-      if (response && response.data && response.status === true) {
+    this.master.AppEmpList().subscribe((response: any) => {
+      if (response && response.data && response.status == true) {
         // this.notyf.success(response.message || 'Employees loaded successfully');
         this.employees = [];
         // this.cardData = response.data.cardData

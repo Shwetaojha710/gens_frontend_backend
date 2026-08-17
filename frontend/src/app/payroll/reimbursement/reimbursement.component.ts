@@ -504,17 +504,55 @@ export class ReimbursementComponent {
   }
 
 
-  imageUrls: any;
-  openModal1(imageUrl: any) {
-    this.imageUrls = imageUrl;
-    setTimeout(() => {
-      const modalElement = document.getElementById('imageModal1');
-      if (modalElement) {
-        const modal = new bootstrap.Modal(modalElement);
-        modal.show();
-      }
-    }, 0);
+  // imageUrls: any;
+  // openModal1(imageUrl: any) {
+  //   this.imageUrls = imageUrl;
+  //   setTimeout(() => {
+  //     const modalElement = document.getElementById('imageModal1');
+  //     if (modalElement) {
+  //       const modal = new bootstrap.Modal(modalElement);
+  //       modal.show();
+  //     }
+  //   }, 0);
+  // }
+
+
+
+  modalFileUrl: string = '';
+modalFileType: string = '';
+modalFileName: string = 'document';
+
+openModal1(file: any) {
+  this.modalFileUrl = file?.image || file; // string ya object dono
+  this.modalFileType = file?.doc_type || 'image/jpeg';
+  this.modalFileName = (file?.image || 'document').split('/').pop() || 'document';
+
+  setTimeout(() => {
+    const el = document.getElementById('imageModal1');
+    if (el) new bootstrap.Modal(el).show();
+  }, 0);
+}
+
+/** Cross-origin pe <a download> fail hota hai — blob se download */
+async downloadFile(url: string, filename: string) {
+  if (!url) {
+    this.notyf.error('File URL missing');
+    return;
   }
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename || 'reimbursement-file';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch (e) {
+    // fallback: new tab
+    window.open(url, '_blank');
+  }
+}
+
   statuschange(item: any, status: any) {
     let newObj: any = {}
     newObj = Object.assign({}, item)

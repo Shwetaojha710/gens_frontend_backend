@@ -21,6 +21,7 @@ const Tenant = require("../../models/tenant");
 const Subscription = require("../../models/subscription");
 const pin_code_master = require("../../models/pin_code_master");
 const Department = require("../../models/department");
+const { writeAudit, toPlain } = require("../../helper/auditLog");
 
 
 exports.CheckTenant = async (req, res) => {
@@ -378,7 +379,15 @@ exports.createEmp = async (req, res) => {
       emp_status:'approved',
       deviceId: Helper.getIpAddress(req),
     });
-
+    await writeAudit({
+      req,
+      actionType: "EMP_CREATE",
+      referenceId: newEmp?.id,
+      employeeId: newEmp.id,
+      oldValue: null,
+      newValue: newEmp,
+      remarks: "Employee joined / created",
+    });
     return Helper.response(
       true,
       "Employee created successfully",
@@ -888,8 +897,19 @@ exports.updateEmp = async (req, res) => {
     updateData.role = role;
     if (isContractual !== undefined) updateData.isContractual = isContractual;
     if (hourlyRate !== undefined) updateData.hourlyRate = hourlyRate;
-
+    // updateEmp — before save, capture old:
+    const oldEmp = toPlain(existingEmp);
+    const newEmp = toPlain(existingEmp);
     await existingEmp.update(updateData);
+    await writeAudit({
+      req,
+      actionType: "EMP_UPDATE",
+      referenceId: existingEmp.id,
+      employeeId: existingEmp.id,
+      oldValue: oldEmp,
+      newValue: newEmp,
+      remarks: "Employee profile updated",
+    });
     if (
       req.body.branchId !== undefined &&
       req.body.branchId !== existingEmp.branchId
@@ -952,6 +972,15 @@ exports.deleteEmp = async (req, res) => {
     await document.destroy({ where: { employeeId: id, tenantId, branchId } });
     await leave_balance.destroy({
       where: { employeeId: id, tenantId, branchId },
+    });
+    await writeAudit({
+      req,
+      actionType: "EMP_DELETE",
+      referenceId: emp.id,
+      employeeId: emp.id,
+      oldValue: emp,
+      newValue: null,
+      remarks: "Employee deleted",
     });
     await emp.destroy();
 
@@ -1123,7 +1152,7 @@ exports.employeeList = async (req, res) => {
     const dropdown = [
       { label: "All", value: "All" },
       ...employees.map((emp) => ({
-        label: includeInactive && emp.status === "inactive"
+        label: includeInactive && emp.status == "inactive"
           ? `${emp.firstName} ${emp.lastName}-${emp.empCode} (Inactive)`
           : `${emp.firstName} ${emp.lastName}-${emp.empCode}`,
         value: emp.id,
@@ -1216,5 +1245,32 @@ exports.getStateDistrict = async (req, res) => {
       res,
       500,
     );
+  }
+};
+
+
+exports.checkEmpByMobile = async (req, res) => {
+  try {
+    const { mobile } = req.body;
+    const tenantId = req.users?.tenantId;
+    const branchId = req.users?.branchId;
+
+    if (!mobile || String(mobile).length !== 10) {
+      return Helper.response(false, "Valid mobile required", {}, res, 200);
+    }
+
+    const emp = await empPersonal.findOne({
+      where: { mobile, tenantId, branchId },
+      // raw: true,  // optional
+    });
+
+    if (!emp) {
+      return Helper.response(true, "New mobile", null, res, 200);
+    }
+
+    // pending → full data for autofill; approved → just status
+    return Helper.response(true, "Mobile found", emp, res, 200);
+  } catch (error) {
+    return Helper.response(false, error?.message || "Server error", {}, res, 500);
   }
 };

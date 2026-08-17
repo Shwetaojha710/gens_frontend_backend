@@ -7,6 +7,7 @@ const Tenant = require('../../models/tenant');
 const PdfPrinter = require('pdfmake');
 const path = require('path');
 const fs = require('fs');
+const { writeAudit, toPlain } = require("../../helper/auditLog");
 
 const letterPdfFonts = {
   Roboto: { normal: 'Helvetica', bold: 'Helvetica-Bold', italics: 'Helvetica-Oblique', bolditalics: 'Helvetica-BoldOblique' }
@@ -57,9 +58,20 @@ exports.saveLetterData = async (req, res) => {
         const existing = await LetterData.findOne({ where: { tenantId, branchId, employeeId, type } });
 
         if (existing) {
+            const oldValue = toPlain(existing);
             existing.data = data;
             existing.updatedBy = req.users && req.users.id;
             await existing.save();
+            await writeAudit({
+                req,
+                actionType: "LETTER_UPDATE",
+                referenceId: existing.id,
+                employeeId,
+                oldValue: toPlain(existing),
+                newValue: toPlain(existing),
+                remarks: `${type} letter/annexure updated`,
+              });
+          
             return Helper.response(true, 'Letter data updated successfully', existing, res, 200);
         }
 
@@ -72,6 +84,17 @@ exports.saveLetterData = async (req, res) => {
             createdBy: req.users && req.users.id,
             updatedBy: req.users && req.users.id
         });
+
+        const newRecord = toPlain(record);
+        await writeAudit({
+            req,
+            actionType: "LETTER_CREATE",
+            referenceId: record.id,
+            employeeId,
+            oldValue: null,
+            newValue: newRecord,
+            remarks: `${newRecord.type} letter/annexure created`,
+          });
 
         return Helper.response(true, 'Letter data saved successfully', record, res, 201);
     } catch (error) {

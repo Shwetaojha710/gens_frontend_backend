@@ -8,6 +8,8 @@ const deductionS = require("../../models/deductions");
 const Designation = require("../../models/designation");
 const Department = require("../../models/department");
 const EmployeeOldSalary = require("../../models/employeeOldSalary");
+const { writeAudit } = require("../../helper/auditLog");
+
 
 const roundAmt = (n) => Math.round(Number(n) || 0);
 
@@ -73,15 +75,13 @@ function applyIncrement(heads, percent, closedHeadKeys = []) {
   const factor = 1 + pct / 100;
 
   return heads.map((h) => {
-    const closed =
-      h.componentType === "deductible"
-        ? true
-        : closedSet.has(h.key) || !!h.closed;
+    const closed = closedSet.has(h.key);
 
     let increase = 0;
     let newAmount = h.currentAmount;
 
-    if (h.componentType === "payable" && !closed && pct !== 0) {
+    // Payables + deductions both get % when not closed
+    if (!closed && pct !== 0) {
       newAmount = roundAmt(h.currentAmount * factor);
       increase = newAmount - h.currentAmount;
     }
@@ -95,10 +95,56 @@ function applyIncrement(heads, percent, closedHeadKeys = []) {
   });
 }
 
+/** [] from list-apply = close all deductions by default.
+ *  Explicit array from modal = exact closed set (may open deductions). */
+function resolveClosedKeys(heads, closedHeadKeys) {
+  if (closedHeadKeys == null) {
+    return heads
+      .filter((h) => h.componentType === "deductible")
+      .map((h) => h.key);
+  }
+  if (!Array.isArray(closedHeadKeys)) return [];
+  // Empty array from list/bulk: keep old behaviour — deductions stay closed
+  if (closedHeadKeys.length === 0) {
+    return heads
+      .filter((h) => h.componentType === "deductible")
+      .map((h) => h.key);
+  }
+  return closedHeadKeys;
+}
+
+// function applyIncrement(heads, percent, closedHeadKeys = []) {
+//   const closedSet = new Set(closedHeadKeys);
+//   const pct = Number(percent) || 0;
+//   const factor = 1 + pct / 100;
+
+//   return heads.map((h) => {
+//     const closed =
+//       h.componentType === "deductible"
+//         ? true
+//         : closedSet.has(h.key) || !!h.closed;
+
+//     let increase = 0;
+//     let newAmount = h.currentAmount;
+
+//     if (h.componentType === "payable" && !closed && pct !== 0) {
+//       newAmount = roundAmt(h.currentAmount * factor);
+//       increase = newAmount - h.currentAmount;
+//     }
+
+//     return {
+//       ...h,
+//       closed,
+//       increase,
+//       newAmount,
+//     };
+//   });
+// }
+
 function summarize(computedHeads) {
-  const payables = computedHeads.filter((h) => h.componentType === "payable");
+  const payables = computedHeads.filter((h) => h.componentType == "payable");
   const deductibles = computedHeads.filter(
-    (h) => h.componentType === "deductible",
+    (h) => h.componentType == "deductible",
   );
 
   const currentCTC = payables.reduce((s, h) => s + h.currentAmount, 0);
@@ -374,12 +420,20 @@ exports.previewAppraisal = async (req, res) => {
       );
     }
 
+    // const heads = buildHeads(basics, allowances, deductions);
+    // const computed = applyIncrement(
+    //   heads,
+    //   percent,
+    //   Array.isArray(closedHeadKeys) ? closedHeadKeys : [],
+    // );
+    // const summary = summarize(computed);
+
     const heads = buildHeads(basics, allowances, deductions);
-    const computed = applyIncrement(
+    const keys = resolveClosedKeys(
       heads,
-      percent,
-      Array.isArray(closedHeadKeys) ? closedHeadKeys : [],
+      Array.isArray(closedHeadKeys) ? closedHeadKeys : null,
     );
+    const computed = applyIncrement(heads, percent, keys);
     const summary = summarize(computed);
 
     return Helper.response(
@@ -466,11 +520,11 @@ exports.applyAppraisal = async (req, res) => {
     }
 
     const heads = buildHeads(basics, allowances, deductions);
-    const computed = applyIncrement(
+    const keys = resolveClosedKeys(
       heads,
-      percent,
-      Array.isArray(closedHeadKeys) ? closedHeadKeys : [],
+      Array.isArray(closedHeadKeys) ? closedHeadKeys : null,
     );
+    const computed = applyIncrement(heads, percent, keys);
     const summary = summarize(computed);
 
     if (summary.totalIncrease === 0 && Number(percent) > 0) {
@@ -600,7 +654,27 @@ exports.applyAppraisal = async (req, res) => {
         { transaction },
       );
     }
-
+    // after successful apply (before commit):
+    await writeAudit({
+      req,
+      actionType: "APPRAISAL_APPLY",
+      referenceId: employeeId,
+      employeeId,
+      oldValue: {
+        percent: null,
+        ctcBefore: summary?.oldCTC || null,
+        structure: { basics, allowances, deductions },
+      },
+      newValue: {
+        percent,
+        effectiveDate,
+        closedHeadKeys: keys,
+        ctcAfter: summary?.newCTC || null,
+        computed: toPlain(computed),
+      },
+      remarks: `Appraisal ${percent}% effective ${effectiveDate}`,
+      transaction,
+    });
     await transaction.commit();
 
     return Helper.response(

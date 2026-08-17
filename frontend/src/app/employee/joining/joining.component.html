@@ -42,10 +42,16 @@
                 <span *ngIf="!updateFlag" style="color: red"> *</span>
               </label>
               <input type="tel" class="form-control" placeholder="Enter Phone Number"
+  [(ngModel)]="personalDetails.mobile" name="phoneNumber"
+  pattern="^[6-9]\d{9}$" maxlength="10" required
+  #mobileRef="ngModel"
+  (blur)="onMobileChange()"
+  (keypress)="preventMoreThanTenDigits($event, personalDetails.mobile)" />
+              <!-- <input type="tel" class="form-control" placeholder="Enter Phone Number"
                 [(ngModel)]="personalDetails.mobile" name="phoneNumber" pattern="^[6-9]\d{9}$" maxlength="10" required
                 #mobileRef="ngModel" (keypress)="
                   preventMoreThanTenDigits($event, personalDetails.mobile)
-                " />
+                " /> -->
 
               <small class="text-danger" *ngIf="updateFlag==false && mobileRef.invalid && mobileRef.touched">
                 Enter valid 10-digit Mobile number

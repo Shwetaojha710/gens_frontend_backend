@@ -110,6 +110,32 @@ export class JoiningComponent {
     this.searchPaginationRef?.resetSearch();
   }
 
+  onMobileChange() {
+    const mobile = String(this.personalDetails.mobile || '');
+    if (mobile.length !== 10 || this.updateFlag) return; // edit mode skip optional
+
+    this.employeeService.checkEmpByMobile({ mobile }).subscribe({
+      next: async (res: any) => {
+        if (!res?.status) return;
+
+        const emp = res.data;
+        if (!emp) return; // new number
+
+        if (emp.emp_status === 'approved') {
+          this.notyf.error('Phone number already exists');
+          this.personalDetails.mobile = '';
+          return;
+        }
+
+        if (emp.emp_status === 'pending') {
+          await this.update(emp); // existing fill method ~line 513
+          this.notyf.success('Pending employee data loaded');
+        }
+      },
+      error: (err) => this.notyf.error(err?.error?.message || 'Check failed'),
+    });
+  }
+
   async getEmploymentTypes() {
     let obj:any={}
     obj["branchId"]=this.personalDetails["branchId"]
@@ -567,12 +593,20 @@ stats:any
     this.createFlag = false;
     this.listflag = true;
     this.updateFlag = false;
+    let dob: any;
+    let obj: any =Object.assign({}, this.personalDetails);
 
-    const dob = new Date(this.personalDetails.dateOfBirth);
+    //  if(!this.personalDetails.dateOfBirth){
+       dob = new Date(this.personalDetails.dateOfBirth);
     const formattedDob = `${dob.getDate().toString().padStart(2, '0')}/${(dob.getMonth() + 1).toString().padStart(2, '0')}/${dob.getFullYear()}`;;
-    const obj = Object.assign({}, this.personalDetails);
+     obj = Object.assign({}, this.personalDetails);
     obj.dateOfBirth = formattedDob;
-    const aadhaarRaw = obj.adhaarNo.replace(/\D/g, '');
+    //  }
+     let aadhaarRaw: any;
+     if(obj.adhaarNo){
+      aadhaarRaw = obj.adhaarNo.replace(/\D/g, '');
+     }
+
     // if (aadhaarRaw.length !== 12) {
     //   this.notyf.error('Please enter a valid 12 digit Aadhaar number');
     //   return;
