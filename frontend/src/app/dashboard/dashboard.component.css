@@ -1056,3 +1056,804 @@
         margin-left: 0;
     }
 }
+
+
+
+/* new section */
+
+
+.attendance-section {
+      width: 100%;
+      padding: 18px;
+      background: #fff;
+      border: 1px solid #e7edf3;
+      border-radius: 12px;
+      box-shadow: 0 3px 14px rgba(24, 58, 90, 0.06);
+    }
+
+    /* ---------- Header ---------- */
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 14px;
+    }
+
+    .title-area h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #172b4d;
+    }
+
+    .title-area p {
+      font-size: 11px;
+      color: #718096;
+    }
+
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      font-size: 11px;
+      color: #617085;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .present {
+      background: #36b89b;
+    }
+
+    .leave {
+      background: #ff991f;
+    }
+
+    .absent {
+      background: #ff4f5e;
+    }
+
+    /* ---------- Cards Grid ---------- */
+
+    .teams-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+    }
+
+    .team-card {
+      position: relative;
+      min-width: 0;
+      padding: 12px;
+      background: #fff;
+      border: 1px solid #e6edf3;
+      border-radius: 11px;
+      box-shadow: 0 2px 8px rgba(32, 62, 89, 0.04);
+      overflow: hidden;
+      transition: all 0.25s ease;
+    }
+
+    .team-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(32, 62, 89, 0.10);
+      border-color: #d6e1eb;
+    }
+
+    /* ---------- Team Header ---------- */
+
+    .team-header {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 14px;
+    }
+
+    .team-icon {
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 15px;
+    }
+
+    .team-info {
+      min-width: 0;
+    }
+
+    .team-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: #1b3152;
+      margin-bottom: 3px;
+      white-space: nowrap;
+    }
+
+    .members {
+      font-size: 10px;
+      color: #718096;
+    }
+
+    /* ---------- Individual Colors ---------- */
+
+    .development .team-icon {
+      color: #ff9417;
+      background: #fff1dc;
+    }
+
+    .management .team-icon {
+      color: #354a86;
+      background: #e8ecf7;
+    }
+
+    .hr .team-icon {
+      color: #1389db;
+      background: #e2f3ff;
+    }
+
+    .marketing .team-icon {
+      color: #ff5260;
+      background: #ffe7e9;
+    }
+
+    .sales .team-icon {
+      color: #7754df;
+      background: #eee9ff;
+    }
+
+    .qa .team-icon {
+      color: #7855e9;
+      background: #eee9ff;
+    }
+
+    /* ---------- Statistics ---------- */
+
+    .statistics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .stat-number {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #718096;
+    }
+
+    .stat.present-stat .stat-number {
+      color: #18b58f;
+    }
+
+    .stat.leave-stat .stat-number {
+      color: #ff9b21;
+    }
+
+    .stat.absent-stat .stat-number {
+      color: #ff4757;
+    }
+
+    /* ---------- Progress ---------- */
+
+    .progress-wrapper {
+      width: 100%;
+      height: 4px;
+      background: #edf1f4;
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+    }
+
+    .progress-present {
+      background: #20b992;
+      height: 100%;
+    }
+
+    .progress-leave {
+      background: #ffad2f;
+      height: 100%;
+    }
+
+    .progress-absent {
+      background: #ff5260;
+      height: 100%;
+    }
+
+    /* ---------- Responsive ---------- */
+
+    @media (max-width: 1100px) {
+      .teams-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 700px) {
+      .section-header {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .legend {
+        gap: 14px;
+      }
+
+      .teams-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 450px) {
+      .attendance-section {
+        padding: 12px;
+      }
+
+      .teams-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+
+
+    /* ==============================
+   MAIN CONTAINER
+================================ */
+
+.employee-directory {
+    width: 100%;
+    background: #fff;
+    border: 1px solid #e5edf3;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 3px 14px rgba(28, 55, 80, 0.05);
+}
+
+
+/* ==============================
+   HEADER
+================================ */
+
+.directory-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 14px 18px;
+
+    border-bottom: 1px solid #edf1f5;
+}
+
+.directory-title h2 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #142b4d;
+}
+
+.directory-title p {
+    margin-top: 3px;
+    font-size: 9px;
+    color: #8491a1;
+}
+
+
+/* ==============================
+   FILTER AREA
+================================ */
+
+.directory-filters {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.search-box {
+    width: 190px;
+    height: 32px;
+
+    display: flex;
+    align-items: center;
+
+    gap: 7px;
+
+    padding: 0 10px;
+
+    border: 1px solid #e0e7ee;
+    border-radius: 7px;
+
+    background: #fff;
+}
+
+.search-box span {
+    font-size: 15px;
+    color: #77879a;
+}
+
+.search-box input {
+    width: 100%;
+
+    border: none;
+    outline: none;
+
+    font-size: 9px;
+    color: #34495e;
+}
+
+.search-box input::placeholder {
+    color: #9aa7b5;
+}
+
+
+.directory-filters select {
+    height: 32px;
+
+    min-width: 105px;
+
+    padding: 0 9px;
+
+    border: 1px solid #e0e7ee;
+    border-radius: 7px;
+
+    background: #fff;
+
+    color: #52657a;
+
+    font-size: 9px;
+
+    outline: none;
+}
+
+.filter-btn {
+    height: 32px;
+
+    padding: 0 12px;
+
+    border: 1px solid #dfe7ee;
+
+    background: #fff;
+
+    border-radius: 7px;
+
+    color: #53677e;
+
+    font-size: 9px;
+
+    cursor: pointer;
+}
+
+
+/* ==============================
+   TABLE
+================================ */
+
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.employee-table {
+    width: 100%;
+
+    min-width: 1000px;
+
+    border-collapse: collapse;
+}
+
+.employee-table thead {
+    background: #f7fafc;
+}
+
+.employee-table th {
+    padding: 10px 12px;
+
+    text-align: left;
+
+    font-size: 12px;
+
+    font-weight: 600;
+
+    color: #65758a;
+
+    border-bottom: 1px solid #e6edf2;
+
+    white-space: nowrap;
+}
+
+.employee-table td {
+    padding: 9px 12px;
+
+    font-size: 12px;
+
+    color: #586b80;
+
+    border-bottom: 1px solid #edf1f4;
+
+    white-space: nowrap;
+}
+
+.employee-table tbody tr {
+    transition: 0.2s ease;
+}
+
+.employee-table tbody tr:hover {
+    background: #fafdff;
+}
+
+.employee-table input[type="checkbox"] {
+    width: 13px;
+    height: 13px;
+
+    accent-color: #159dc5;
+
+    cursor: pointer;
+}
+
+
+/* ==============================
+   EMPLOYEE
+================================ */
+
+.employee {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.employee img {
+    width: 30px;
+    height: 30px;
+
+    object-fit: cover;
+
+    border-radius: 50%;
+
+    border: 1px solid #e1e9ef;
+}
+
+.employee strong {
+    display: block;
+
+    font-size: 12px;
+
+    font-weight: 600;
+
+    color: #253b57;
+}
+
+.employee small {
+    display: block;
+
+    margin-top: 2px;
+
+    font-size: 11px;
+
+    color: #8b98a7;
+}
+
+
+/* ==============================
+   DEPARTMENT BADGES
+================================ */
+
+.department {
+    display: inline-block;
+
+    padding: 4px 8px;
+
+    border-radius: 20px;
+
+    font-size: 9px;
+
+    font-weight: 600;
+}
+
+.management {
+    color: #3776ca;
+    background: #e8f1ff;
+}
+
+.development {
+    color: #15956c;
+    background: #e5f7ef;
+}
+
+.hr {
+    color: #2a82c5;
+    background: #e7f3ff;
+}
+
+.qa {
+    color: #754bd0;
+    background: #f0eaff;
+}
+
+
+/* ==============================
+   STATUS
+================================ */
+
+.status {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 5px;
+
+    padding: 4px 8px;
+
+    border-radius: 20px;
+
+    font-size: 9px;
+
+    font-weight: 600;
+}
+
+.status::before {
+    content: "";
+
+    width: 5px;
+    height: 5px;
+
+    border-radius: 50%;
+}
+
+.present {
+    color: #13986f;
+    background: #e5f7ef;
+}
+
+.present::before {
+    background: #13aa7b;
+}
+
+.leave {
+    color: #d9840b;
+    background: #fff1df;
+}
+
+.leave::before {
+    background: #f39a16;
+}
+
+
+/* ==============================
+   ATTENDANCE
+================================ */
+
+.attendance {
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+}
+
+.progress {
+    width: 95px;
+    height: 4px;
+
+    overflow: hidden;
+
+    border-radius: 10px;
+
+    background: #e7edf2;
+}
+
+.progress span {
+    display: block;
+
+    height: 100%;
+
+    border-radius: 10px;
+
+    background: #13ae87;
+}
+
+.progress span.orange {
+    background: linear-gradient(
+        to right,
+        #12ac86 0%,
+        #12ac86 70%,
+        #ffb42b 70%,
+        #ffb42b 85%,
+        #ff5360 85%
+    );
+}
+
+.attendance b {
+    font-size: 10px;
+
+    font-weight: 500;
+
+    color: #596b7e;
+}
+
+
+/* ==============================
+   ACTION BUTTONS
+================================ */
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.actions button {
+    width: 27px;
+    height: 27px;
+
+    border: 1px solid #e0e7ee;
+
+    background: #fff;
+
+    border-radius: 6px;
+
+    color: #718094;
+
+    font-size: 16px;
+
+    cursor: pointer;
+
+    transition: all .2s ease;
+}
+
+.actions button:hover {
+    background: #eef8fc;
+
+    color: #1289b6;
+
+    border-color: #8bcbe3;
+}
+
+
+/* ==============================
+   FOOTER
+================================ */
+
+.table-footer {
+    min-height: 42px;
+
+    padding: 7px 14px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    font-size: 8px;
+
+    color: #7d8b9a;
+}
+
+.pagination {
+    display: flex;
+
+    align-items: center;
+
+    gap: 5px;
+}
+
+.pagination button {
+    width: 26px;
+    height: 26px;
+
+    border: 1px solid #e0e7ee;
+
+    background: #fff;
+
+    border-radius: 6px;
+
+    color: #6d7d90;
+
+    font-size: 8px;
+
+    cursor: pointer;
+}
+
+.pagination button:hover {
+    border-color: #75bfdc;
+    color: #128ab7;
+}
+
+.pagination button.active {
+    color: #1688b4;
+
+    border-color: #72bfdd;
+
+    background: #eff8fc;
+
+    font-weight: 600;
+}
+
+.pagination label {
+    display: flex;
+
+    align-items: center;
+
+    gap: 6px;
+
+    margin-left: 8px;
+
+    font-size: 8px;
+}
+
+.pagination select {
+    height: 26px;
+
+    border: 1px solid #e0e7ee;
+
+    border-radius: 6px;
+
+    background: #fff;
+
+    padding: 0 7px;
+
+    font-size: 8px;
+
+    color: #596b7e;
+}
+
+
+/* ==============================
+   RESPONSIVE
+================================ */
+
+@media (max-width: 1100px) {
+
+    body {
+        padding: 15px;
+    }
+
+    .directory-header {
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        gap: 12px;
+    }
+
+    .directory-filters {
+        width: 100%;
+
+        flex-wrap: wrap;
+    }
+
+    .search-box {
+        flex: 1;
+        min-width: 200px;
+    }
+}
+
+
+@media (max-width: 650px) {
+
+    .directory-filters select {
+        flex: 1;
+    }
+
+    .table-footer {
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        gap: 10px;
+    }
+}
