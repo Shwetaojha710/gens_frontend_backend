@@ -121,3 +121,37 @@ a.btn.btn-primary,
 div.dt-container div.dt-length select {
     margin-inline: 0.5rem;
 }
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.actions button {
+    width: 27px;
+    height: 27px;
+
+    border: 1px solid #e0e7ee;
+
+    background: #fff;
+
+    border-radius: 6px;
+
+    color: #718094;
+
+    font-size: 16px;
+
+    cursor: pointer;
+
+    transition: all .2s ease;
+}
+
+.actions button:hover {
+    background: #eef8fc;
+
+    color: #1289b6;
+
+    border-color: #8bcbe3;
+}
+

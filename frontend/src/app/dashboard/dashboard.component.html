@@ -199,7 +199,7 @@
   </div>
 
   <div class="row g-3 mb-3">
-    <div class="col-md-6 col-md-6 col-lg-6">
+    <div class="col-md-4 col-md-4 col-lg-5">
       <div class="ai-card"
         style="background-image: url('/assets/img/bg-login/ai-bg.png');background-size: cover;background-position: center;">
         <div class="ai-content">
@@ -236,6 +236,94 @@
         </div> -->
       </div>
     </div>
+    <div class="col-md-4">
+      <div class="card mb-2 dashboard-glass-card">
+        <div class="card-header d-flex justify-content-between mb-0 align-items-center p-2">
+          <h5 class="mb-0 ml-2">Celebrations</h5>
+          <ul class="nav nav-pills bg-white p-1" style="border-radius: 5px;" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button type="button" class="nav-link waves-effect waves-light" [class.active]="celebrationTab === 'all'"
+                (click)="setCelebrationTab('all')">
+                All
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button type="button" class="nav-link waves-effect waves-light"
+                [class.active]="celebrationTab === 'upcoming'" (click)="setCelebrationTab('upcoming')">
+                Upcoming
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card-body" style="overflow-y:scroll;height: 220px;">
+          <div class="row">
+            <div class="col-6" *ngFor="let item of celebrationsList">
+              <div class="birthday-card"
+                style="background-image: url('../../../assets/img/avatars/birthday-bg.png');background-size: cover;background-position: center;background-repeat: no-repeat;width: 100%;height: 180px; border: 1px solid #ddd;margin-bottom: 5px;">
+                <div class="celebration-card text-center">
+                  <img [src]="getEmployeeAvatar(item)" (error)="onImageError($event, item, 'profileImage')"
+                    alt="emp-img">
+                  <p class="mb-0">{{ item.dateLabel }}</p>
+                  <h4>{{ item.firstName }} {{ item.lastName }}</h4>
+                  <h2>{{ item.cardTitle }}</h2>
+                  <small class="celebration-when" *ngIf="celebrationTab === 'upcoming' && item.daysUntil != null">
+                    {{ item.daysUntil === 0 ? 'Today' : (item.daysUntil === 1 ? 'Tomorrow' : 'In ' + item.daysUntil + '
+                    days') }}
+                  </small>
+                </div>
+              </div>
+            </div>
+            <div class="col-12" *ngIf="!celebrationsList.length">
+              <div class="text-center text-muted py-4">
+                {{ celebrationTab === 'upcoming' ? 'No upcoming celebrations.' : 'No celebrations available.' }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+    </div>
+
+    <div class="col-md-3">
+      <div class="card p-2 dashboard-glass-card">
+        <div class="card-header d-flex align-items-center justify-content-between p-2 mb-0">
+          <h5 class="card-title m-0 me-2">Upcoming Events</h5>
+          <button type="button" class="btn btn-sm approve view-all-btn" (click)="openHolidayPage()">View All</button>
+        </div>
+        <div class="d-flex justify-content-between p-4 border-bottom" style="background: #F5F5F7;">
+          <p class="mb-0" style="font-size: 14px;color:#3C4056;">Event Name</p>
+          <p class="mb-0" style="font-size: 14px;color:#3C4056;">Date</p>
+        </div>
+        <div class="card-body bg-white p-2" style="overflow-y:scroll;height: 170px;">
+          <ul class="p-0 m-0">
+            <li class="d-flex align-items-center mb-2" *ngFor="let item of holidayList"
+              style="border-bottom:  1px solid #dadada;padding-bottom: 4px ;">
+              <div class="avatar avatar-md flex-shrink-0 me-2">
+                <div class="avatar-initial bg-lightest rounded-3">
+                  <div>
+                    <img [src]="item.image" (error)="onImageError($event, item, 'holidayImage')" alt="User"
+                      class="h-20">
+                  </div>
+                </div>
+              </div>
+              <div class="d-flex w-100 flex-wrap align-items-center justify-content-between gap-2">
+                <div class="me-1">
+                  <h6 class="mb-1" style="font-size: 14px; font-weight: 600;">{{ item.name }}</h6>
+                </div>
+                <div class="text" style="font-size: 12px;color: #004463;font-weight: 500;">{{ item.date }}</div>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- <div class="row g-3 mb-3">
+
 
     <div class="col-md-6">
       <div class="card dashboard-glass-card h-100">
@@ -290,257 +378,1273 @@
         </div>
       </div>
     </div>
-  </div>
+  </div> -->
 
-  <div class="row g-3">
-    <div class="col-md-4">
-      <div class="card mb-2 dashboard-glass-card">
-        <div class="card-header d-flex justify-content-between mb-0 align-items-center p-2">
-          <h5 class="mb-0 ml-2">Celebrations</h5>
-          <ul class="nav nav-pills bg-white p-1" style="border-radius: 5px;" role="tablist">
+  <div class="card overflow-hidden dashboard-glass-card">
+    <div class="card-header employee-table-header">
+      <div class="employee-table-header-top">
+        <h5 class="card-title mb-0 me-2">Employee Table</h5>
+
+        <div class="employee-table-header-actions">
+          <ul class="nav nav-pills bg-white p-1 mb-0" style="border-radius: 5px;" role="tablist">
             <li class="nav-item" role="presentation">
-              <button
-                type="button"
-                class="nav-link waves-effect waves-light"
-                [class.active]="celebrationTab === 'all'"
-                (click)="setCelebrationTab('all')"
-              >
-                All
+              <button type="button" class="nav-link active waves-effect waves-light text-secondary app" role="tab"
+                (click)="setEmployeeSectionTab('employee')" data-bs-toggle="tab"
+                data-bs-target="#navs-pills-top-emp-info" aria-controls="navs-pills-top-emp-info" aria-selected="true">
+                Employee Info
               </button>
             </li>
             <li class="nav-item" role="presentation">
-              <button
-                type="button"
-                class="nav-link waves-effect waves-light"
-                [class.active]="celebrationTab === 'upcoming'"
-                (click)="setCelebrationTab('upcoming')"
-              >
-                Upcoming
+              <button type="button" class="nav-link waves-effect waves-light approve" role="tab"
+                (click)="setEmployeeSectionTab('leave')" data-bs-toggle="tab" data-bs-target="#navs-pills-top-leave">
+                Employee Leave Info
+              </button>
+            </li>
+            <li class="employee-table-header-bottom">
+              <button *ngIf="activeEmployeeSectionTab == 'employee'" type="button"
+                class="btn btn-sm approve view-all-btn" (click)="openEmployeeListPage()">
+                View All Employee
+              </button>
+
+              <button *ngIf="activeEmployeeSectionTab == 'leave'" type="button" class="btn btn-sm approve view-all-btn"
+                (click)="openLeaveListPage()">
+                View All Leave
               </button>
             </li>
           </ul>
-        </div>
 
-        <div class="card-body" style="overflow-y:scroll;height: 195px;">
-          <div class="row">
-            <div class="col-6" *ngFor="let item of celebrationsList">
-              <div class="birthday-card"
-                style="background-image: url('../../../assets/img/avatars/birthday-bg.png');background-size: cover;background-position: center;background-repeat: no-repeat;width: 100%;height: 180px;">
-                <div class="celebration-card text-center">
-                  <img [src]="getEmployeeAvatar(item)" (error)="onImageError($event, item, 'profileImage')"
-                    alt="emp-img">
-                  <p class="mb-0">{{ item.dateLabel }}</p>
-                  <h4>{{ item.firstName }} {{ item.lastName }}</h4>
-                  <h2>{{ item.cardTitle }}</h2>
-                  <small class="celebration-when" *ngIf="celebrationTab === 'upcoming' && item.daysUntil != null">
-                    {{ item.daysUntil === 0 ? 'Today' : (item.daysUntil === 1 ? 'Tomorrow' : 'In ' + item.daysUntil + ' days') }}
-                  </small>
-                </div>
-              </div>
-            </div>
-            <div class="col-12" *ngIf="!celebrationsList.length">
-              <div class="text-center text-muted py-4">
-                {{ celebrationTab === 'upcoming' ? 'No upcoming celebrations.' : 'No celebrations available.' }}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card p-2 dashboard-glass-card">
-        <div class="card-header d-flex align-items-center justify-content-between p-2 mb-0">
-          <h5 class="card-title m-0 me-2">Upcoming Events</h5>
-          <button type="button" class="btn btn-sm approve view-all-btn" (click)="openHolidayPage()">View All</button>
-        </div>
-        <div class="d-flex justify-content-between p-4 border-bottom" style="background: #F5F5F7;">
-          <p class="mb-0" style="font-size: 14px;color:#3C4056;">Event Name</p>
-          <p class="mb-0" style="font-size: 14px;color:#3C4056;">Date</p>
-        </div>
-        <div class="card-body bg-white p-2" style="overflow-y:scroll;height: 147px;">
-          <ul class="p-0 m-0">
-            <li class="d-flex align-items-center mb-2" *ngFor="let item of holidayList"
-              style="border-bottom:  1px solid #dadada;padding-bottom: 4px ;">
-              <div class="avatar avatar-md flex-shrink-0 me-4">
-                <div class="avatar-initial bg-lightest rounded-3">
-                  <div>
-                    <img [src]="item.image" (error)="onImageError($event, item, 'holidayImage')" alt="User"
-                      class="h-25">
-                  </div>
-                </div>
-              </div>
-              <div class="d-flex w-100 flex-wrap align-items-center justify-content-between gap-2">
-                <div class="me-2">
-                  <h6 class="mb-1">{{ item.name }}</h6>
-                </div>
-                <div class="text">{{ item.date }}</div>
-              </div>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-xl-8 col-md-6">
-      <div class="card overflow-hidden dashboard-glass-card">
-        <div class="card-header employee-table-header">
-          <div class="employee-table-header-top">
-            <h5 class="card-title mb-0 me-2">Employee Table</h5>
-
-            <div class="employee-table-header-actions">
-              <ul class="nav nav-pills bg-white p-1 mb-0" style="border-radius: 5px;" role="tablist">
-                <li class="nav-item" role="presentation">
-                  <button type="button" class="nav-link active waves-effect waves-light text-secondary app" role="tab"
-                    (click)="setEmployeeSectionTab('employee')" data-bs-toggle="tab"
-                    data-bs-target="#navs-pills-top-emp-info" aria-controls="navs-pills-top-emp-info"
-                    aria-selected="true">
-                    Employee Info
-                  </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                  <button type="button" class="nav-link waves-effect waves-light approve" role="tab"
-                    (click)="setEmployeeSectionTab('leave')" data-bs-toggle="tab"
-                    data-bs-target="#navs-pills-top-leave">
-                    Employee Leave Info
-                  </button>
-                </li>
-                <li class="employee-table-header-bottom">
-                  <button *ngIf="activeEmployeeSectionTab == 'employee'" type="button"
-                    class="btn btn-sm approve view-all-btn" (click)="openEmployeeListPage()">
-                    View All Employee
-                  </button>
-
-                  <button *ngIf="activeEmployeeSectionTab == 'leave'" type="button"
-                    class="btn btn-sm approve view-all-btn" (click)="openLeaveListPage()">
-                    View All Leave
-                  </button>
-                </li>
-              </ul>
-
-              <div class="dropdown table-range-dropdown" *ngIf="activeEmployeeSectionTab == 'leave'">
-                <button class="btn table-range-btn dropdown-toggle" type="button"
-                  (click)="toggleEmployeeTableRangeDropdown($event)" [attr.aria-expanded]="isEmployeeTableRangeOpen">
-                  {{ selectedEmployeeTableRange }}
+          <div class="dropdown table-range-dropdown" *ngIf="activeEmployeeSectionTab == 'leave'">
+            <button class="btn table-range-btn dropdown-toggle" type="button"
+              (click)="toggleEmployeeTableRangeDropdown($event)" [attr.aria-expanded]="isEmployeeTableRangeOpen">
+              {{ selectedEmployeeTableRange }}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end table-range-menu" [class.show]="isEmployeeTableRangeOpen">
+              <li>
+                <button class="dropdown-item" type="button" (click)="setEmployeeTableRange('This Week')">
+                  This Week
                 </button>
-                <ul class="dropdown-menu dropdown-menu-end table-range-menu" [class.show]="isEmployeeTableRangeOpen">
-                  <li>
-                    <button class="dropdown-item" type="button" (click)="setEmployeeTableRange('This Week')">
-                      This Week
-                    </button>
-                  </li>
-                  <li>
-                    <button class="dropdown-item" type="button" (click)="setEmployeeTableRange('This Month')">
-                      This Month
-                    </button>
-                  </li>
-                </ul>
-              </div>
-            </div>
+              </li>
+              <li>
+                <button class="dropdown-item" type="button" (click)="setEmployeeTableRange('This Month')">
+                  This Month
+                </button>
+              </li>
+            </ul>
           </div>
-
-
         </div>
+      </div>
 
-        <div class="tab-content p-0">
-          <div class="tab-pane fade show active" id="navs-pills-top-emp-info" role="tabpanel">
-            <div class="table-responsive">
-              <table class="table table-sm bg-white">
-                <thead>
-                  <tr>
-                    <th class="text-truncate">ID</th>
-                    <th class="text-truncate">Employee Info</th>
-                    <th class="text-truncate">Joining Date</th>
-                    <!-- <th class="text-truncate">Role</th> -->
-                    <th class="text-truncate">Designation</th>
-                    <th class="text-truncate">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let item of employeeList">
-                    <td>{{item.empCode}}</td>
-                    <td>
-                      <div class="d-flex align-items-center">
-                        <div class="avatar avatar-sm me-4">
-                          <img [src]="item.profileImage" (error)="onImageError($event, item, 'profileImage')"
-                            alt="Avatar" class="rounded-circle">
-                        </div>
-                        <div>
-                          <h6 class="mb-0 text-truncate">{{ item.name }}</h6>
-                          <small class="text-truncate">{{ item.gender }}</small>
-                        </div>
-                      </div>
-                    </td>
-                    <td class="text-truncate">{{ item.joiningDate }}</td>
-                    <!-- <td class="text-truncate">{{ item.role }}</td> -->
-                    <td class="text-truncate">
-                      <span class="badge rounded-pill" [ngClass]="'bg-label-' + item.badgeColor">{{ item.badge }}</span>
-                    </td>
-                    <td><a href="javascript:void(0)" (click)="openEmployeeProfile(item)"
-                        class="btn btn-sm approve">View</a></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
 
-          <div class="tab-pane fade" id="navs-pills-top-leave" role="tabpanel">
-            <div class="table-responsive">
-              <table class="table table-sm bg-white">
-                <thead>
-                  <tr>
-                    <th class="text-truncate" style="width: 80px;">ID</th>
-                    <th class="text-truncate">Employee Info</th>
-                    <th class="text-truncate">Contact Info</th>
-                    <th class="text-truncate">Leave Info</th>
-                    <!-- <th class="text-truncate">Type</th> -->
-                    <th class="text-truncate" style="width: 80px;">Status</th>
-                    <th class="text-truncate">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let item of leaveList">
-                    <td>{{ item.empCode || 'NA' }}</td>
-                    <td>
-                      <div class="d-flex align-items-center">
-                        <div class="avatar avatar-sm me-4">
-                          <img src="../../assets/img/avatars/1.png" alt="Avatar" class="rounded-circle">
-                        </div>
-                        <div>
-                          <h6 class="mb-0 text-truncate">{{ item.name }}</h6>
-                          <small class="text-truncate">{{ item.designation }} </small>
+    </div>
 
-                          <!-- <small class="text-truncate">{{ item.reason | slice:0:35 }}{{ item.reason?.length > 35 ? '...' : '' }}</small> -->
-                        </div>
-                      </div>
-                    </td>
-                    <td class="text-truncate">{{ item.mobile }} <br> {{ item.email }}</td>
+    <div class="tab-content p-0">
+      <div class="tab-pane fade show active" id="navs-pills-top-emp-info" role="tabpanel">
+        <div class="table-responsive">
+          <table class="table table-sm bg-white">
+            <thead>
+              <tr>
+                <th class="text-truncate">ID</th>
+                <th class="text-truncate">Employee Info</th>
+                <th class="text-truncate">Joining Date</th>
+                <!-- <th class="text-truncate">Role</th> -->
+                <th class="text-truncate">Designation</th>
+                <th class="text-truncate">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of employeeList">
+                <td>{{item.empCode}}</td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="avatar avatar-sm me-4">
+                      <img [src]="item.profileImage" (error)="onImageError($event, item, 'profileImage')" alt="Avatar"
+                        class="rounded-circle">
+                    </div>
+                    <div>
+                      <h6 class="mb-0 text-truncate">{{ item.name }}</h6>
+                      <small class="text-truncate">{{ item.gender }}</small>
+                    </div>
+                  </div>
+                </td>
+                <td class="text-truncate">{{ item.joiningDate }}</td>
+                <!-- <td class="text-truncate">{{ item.role }}</td> -->
+                <td class="text-truncate">
+                  <span class="badge rounded-pill" [ngClass]="'bg-label-' + item.badgeColor">{{ item.badge }}</span>
+                </td>
+                <td><a href="javascript:void(0)" (click)="openEmployeeProfile(item)" class="btn btn-sm approve">View</a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-                    <td class="text-truncate">{{ item.fromDate | date:'dd MMM yyyy' }} To {{ item.toDate | date:'dd MMM yyyy' }} <br>
-                      {{ item.type }} - {{ item.days }} days</td>
-                    <!-- <td class="text-truncate">{{ item.type }}</td> -->
-                    <td class="text-truncate">
-                      <span class="badge rounded-pill" [ngClass]="getLeaveStatusClass(item.status)">{{ item.status
-                        }}</span>
-                    </td>
-                    <td class="text-truncate">
-                      <a href="javascript:void(0)" (click)="openLeaveApproval(item)" class="btn btn-sm approve me-1"
-                        *ngIf="!['approved', 'rejected', 'self_declined'].includes(item.status)">
-                        <i class="ri ri-check-line me-1"></i>
-                      </a>
-                      <a href="javascript:void(0)" (click)="rejectLeaveApproval(item)" class="btn btn-sm approve"
-                        *ngIf="!['approved', 'rejected', 'self_declined'].includes(item.status)">
-                        <i class="ri ri-close-line me-1"></i>
-                      </a>
-                      <span *ngIf="['approved', 'rejected', 'self_declined'].includes(item.status)">-</span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+      <div class="tab-pane fade" id="navs-pills-top-leave" role="tabpanel">
+        <div class="table-responsive">
+          <table class="table table-sm bg-white">
+            <thead>
+              <tr>
+                <th class="text-truncate" style="width: 80px;">ID</th>
+                <th class="text-truncate">Employee Info</th>
+                <th class="text-truncate">Contact Info</th>
+                <th class="text-truncate">Leave Info</th>
+                <!-- <th class="text-truncate">Type</th> -->
+                <th class="text-truncate" style="width: 80px;">Status</th>
+                <th class="text-truncate">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of leaveList">
+                <td>{{ item.empCode || 'NA' }}</td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="avatar avatar-sm me-4">
+                      <img src="../../assets/img/avatars/1.png" alt="Avatar" class="rounded-circle">
+                    </div>
+                    <div>
+                      <h6 class="mb-0 text-truncate">{{ item.name }}</h6>
+                      <small class="text-truncate">{{ item.designation }} </small>
+
+                      <!-- <small class="text-truncate">{{ item.reason | slice:0:35 }}{{ item.reason?.length > 35 ? '...' : '' }}</small> -->
+                    </div>
+                  </div>
+                </td>
+                <td class="text-truncate">{{ item.mobile }} <br> {{ item.email }}</td>
+
+                <td class="text-truncate">{{ item.fromDate | date:'dd MMM yyyy' }} To {{ item.toDate | date:'dd MMM
+                  yyyy' }} <br>
+                  {{ item.type }} - {{ item.days }} days</td>
+                <!-- <td class="text-truncate">{{ item.type }}</td> -->
+                <td class="text-truncate">
+                  <span class="badge rounded-pill" [ngClass]="getLeaveStatusClass(item.status)">{{ item.status
+                    }}</span>
+                </td>
+                <td class="text-truncate">
+                  <a href="javascript:void(0)" (click)="openLeaveApproval(item)" class="btn btn-sm approve me-1"
+                    *ngIf="!['approved', 'rejected', 'self_declined'].includes(item.status)">
+                    <i class="ri ri-check-line me-1"></i>
+                  </a>
+                  <a href="javascript:void(0)" (click)="rejectLeaveApproval(item)" class="btn btn-sm approve"
+                    *ngIf="!['approved', 'rejected', 'self_declined'].includes(item.status)">
+                    <i class="ri ri-close-line me-1"></i>
+                  </a>
+                  <span *ngIf="['approved', 'rejected', 'self_declined'].includes(item.status)">-</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
   </div>
+
+  <div class="employee-directory">
+
+    <!-- Header -->
+    <div class="directory-header">
+
+        <div class="directory-title">
+            <h2>Employee Directory</h2>
+          
+        </div>
+
+        <div class="directory-filters">
+
+            <div class="search-box">
+                <span>⌕</span>
+                <input type="text" placeholder="Search by name, ID, email or phone...">
+            </div>
+
+            <select>
+                <option>All Departments</option>
+                <option>Management</option>
+                <option>Development</option>
+                <option>HR</option>
+                <option>QA</option>
+            </select>
+
+            <select>
+                <option>All Designations</option>
+                <option>Project Manager</option>
+                <option>Team Lead</option>
+                <option>Developer</option>
+                <option>QA Engineer</option>
+            </select>
+
+            <select>
+                <option>All Status</option>
+                <option>Present</option>
+                <option>On Leave</option>
+                <option>Absent</option>
+            </select>
+
+            <button class="filter-btn">
+                ⚱ Filters
+            </button>
+
+        </div>
+    </div>
+
+
+    <!-- Table -->
+    <div class="table-wrapper">
+
+        <table class="employee-table">
+
+            <thead>
+                <tr>
+                    <th class="check">
+                        <input type="checkbox">
+                    </th>
+
+                    <th>Employee</th>
+                    <th>Employee ID</th>
+                    <th>Department</th>
+                    <th>Designation</th>
+                    <th>Joining Date</th>
+                    <th>Status</th>
+                    <th>Attendance (30 Days)</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+
+            <tbody>
+
+                <!-- Employee 1 -->
+                <tr>
+
+                    <td>
+                        <input type="checkbox">
+                    </td>
+
+                    <td>
+                        <div class="employee">
+
+                            <img
+                                src="https://i.pravatar.cc/100?img=12"
+                                alt="Prabhav"
+                            >
+
+                            <div>
+                                <strong>Prabhav Dixit</strong>
+                                <small>prabhav.d </small>
+                            </div>
+
+                        </div>
+                    </td>
+
+                    <td>QTPL0351</td>
+
+                    <td>
+                        <span class="department management">
+                            Management
+                        </span>
+                    </td>
+
+                    <td>Project Manager</td>
+
+                    <td>NA</td>
+
+                    <td>
+                        <span class="status present">
+                            Present
+                        </span>
+                    </td>
+
+                    <td>
+
+                        <div class="attendance">
+
+                            <div class="progress">
+                                <span style="width:92%"></span>
+                            </div>
+
+                            <b>92%</b>
+
+                        </div>
+
+                    </td>
+
+                    <td>
+                        <div class="actions">
+                             <button><i class="fa fa-eye" style="font-size: 12px;"></i></button>
+                          
+                        </div>
+                    </td>
+
+                </tr>
+
+
+                <!-- Employee 2 -->
+                <tr>
+
+                    <td>
+                        <input type="checkbox">
+                    </td>
+
+                    <td>
+                        <div class="employee">
+
+                            <img
+                                src="https://i.pravatar.cc/100?img=11"
+                                alt="Raghu"
+                            >
+
+                            <div>
+                                <strong>Raghu Raj</strong>
+                                <small>raghu.r </small>
+                            </div>
+
+                        </div>
+                    </td>
+
+                    <td>N/A</td>
+
+                    <td>
+                        <span class="department management">
+                            Management
+                        </span>
+                    </td>
+
+                    <td>Team Lead</td>
+
+                    <td>24 Jun 2026</td>
+
+                    <td>
+                        <span class="status present">
+                            Present
+                        </span>
+                    </td>
+
+                    <td>
+
+                        <div class="attendance">
+
+                            <div class="progress">
+                                <span style="width:88%"></span>
+                            </div>
+
+                            <b>88%</b>
+
+                        </div>
+
+                    </td>
+
+                    <td>
+                        <div class="actions">
+                             <button><i class="fa fa-eye" style="font-size: 12px;"></i></button>
+                          
+                        </div>
+                    </td>
+
+                </tr>
+
+
+                <!-- Employee 3 -->
+                <tr>
+
+                    <td>
+                        <input type="checkbox">
+                    </td>
+
+                    <td>
+                        <div class="employee">
+
+                            <img
+                                src="https://i.pravatar.cc/100?img=13"
+                                alt="Prashant"
+                            >
+
+                            <div>
+                                <strong>PRASHANT TIWARI</strong>
+                                <small>prashant.t </small>
+                            </div>
+
+                        </div>
+                    </td>
+
+                    <td>QTPL00222</td>
+
+                    <td>
+                        <span class="department development">
+                            Development
+                        </span>
+                    </td>
+
+                    <td>Developer</td>
+
+                    <td>01 May 2026</td>
+
+                    <td>
+                        <span class="status present">
+                            Present
+                        </span>
+                    </td>
+
+                    <td>
+
+                        <div class="attendance">
+
+                            <div class="progress">
+                                <span style="width:95%"></span>
+                            </div>
+
+                            <b>95%</b>
+
+                        </div>
+
+                    </td>
+
+                    <td>
+                        <div class="actions">
+                             <button><i class="fa fa-eye" style="font-size: 12px;"></i></button>
+                            
+                        </div>
+                    </td>
+
+                </tr>
+
+
+                <!-- Employee 4 -->
+                <tr>
+
+                    <td>
+                        <input type="checkbox">
+                    </td>
+
+                    <td>
+                        <div class="employee">
+
+                            <img
+                                src="https://i.pravatar.cc/100?img=14"
+                                alt="Test"
+                            >
+
+                            <div>
+                                <strong>Test Test</strong>
+                                <small>test.t </small>
+                            </div>
+
+                        </div>
+                    </td>
+
+                    <td>TEST00012</td>
+
+                    <td>
+                        <span class="department qa">
+                            QA
+                        </span>
+                    </td>
+
+                    <td>QA Engineer</td>
+
+                    <td>14 Apr 2026</td>
+
+                    <td>
+                        <span class="status leave">
+                            On Leave
+                        </span>
+                    </td>
+
+                    <td>
+
+                        <div class="attendance">
+
+                            <div class="progress">
+                                <span
+                                    class="orange"
+                                    style="width:60%"
+                                ></span>
+                            </div>
+
+                            <b>60%</b>
+
+                        </div>
+
+                    </td>
+
+                    <td>
+                        <div class="actions">
+                             <button><i class="fa fa-eye" style="font-size: 12px;"></i></button>
+                          
+                        </div>
+                    </td>
+
+                </tr>
+
+
+                <!-- Employee 5 -->
+                <tr>
+
+                    <td>
+                        <input type="checkbox">
+                    </td>
+
+                    <td>
+                        <div class="employee">
+
+                            <img
+                                src="https://i.pravatar.cc/100?img=47"
+                                alt="Aakanksha"
+                            >
+
+                            <div>
+                                <strong>Aakanksha Shukla</strong>
+                                <small>aakanksha.s </small>
+                            </div>
+
+                        </div>
+                    </td>
+
+                    <td>QTPL0350</td>
+
+                    <td>
+                        <span class="department hr">
+                            HR
+                        </span>
+                    </td>
+
+                    <td>HR Executive</td>
+
+                    <td>07 Apr 2026</td>
+
+                    <td>
+                        <span class="status present">
+                            Present
+                        </span>
+                    </td>
+
+                    <td>
+
+                        <div class="attendance">
+
+                            <div class="progress">
+                                <span style="width:90%"></span>
+                            </div>
+
+                            <b>90%</b>
+
+                        </div>
+
+                    </td>
+
+                    <td>
+                        <div class="actions">
+                             <button><i class="fa fa-eye" style="font-size: 12px;"></i></button>
+                           
+                        </div>
+                    </td>
+
+                </tr>
+
+
+                <!-- Employee 6 -->
+                <tr>
+
+                    <td>
+                        <input type="checkbox">
+                    </td>
+
+                    <td>
+                        <div class="employee">
+
+                            <img
+                                src="https://i.pravatar.cc/100?img=44"
+                                alt="Sakshi"
+                            >
+
+                            <div>
+                                <strong>Sakshi Mishra</strong>
+                                <small>sakshi. </small>
+                            </div>
+
+                        </div>
+                    </td>
+
+                    <td>QTPL0349</td>
+
+                    <td>
+                        <span class="department development">
+                            Development
+                        </span>
+                    </td>
+
+                    <td>Developer</td>
+
+                    <td>24 Mar 2026</td>
+
+                    <td>
+                        <span class="status present">
+                            Present
+                        </span>
+                    </td>
+
+                    <td>
+
+                        <div class="attendance">
+
+                            <div class="progress">
+                                <span style="width:93%"></span>
+                            </div>
+
+                            <b>93%</b>
+
+                        </div>
+
+                    </td>
+
+                    <td>
+                        <div class="actions">
+                             <button><i class="fa fa-eye" style="font-size: 12px;"></i></button>
+                          
+                        </div>
+                    </td>
+
+                </tr>
+
+
+                <!-- Employee 7 -->
+                <tr>
+
+                    <td>
+                        <input type="checkbox">
+                    </td>
+
+                    <td>
+                        <div class="employee">
+
+                            <img
+                                src="https://i.pravatar.cc/100?img=15"
+                                alt="Kamal"
+                            >
+
+                            <div>
+                                <strong>Kamal Singh</strong>
+                                <small>kamal.s </small>
+                            </div>
+
+                        </div>
+                    </td>
+
+                    <td>QTPL0348</td>
+
+                    <td>
+                        <span class="department development">
+                            Development
+                        </span>
+                    </td>
+
+                    <td>Backend Developer</td>
+
+                    <td>13 Mar 2026</td>
+
+                    <td>
+                        <span class="status leave">
+                            On Leave
+                        </span>
+                    </td>
+
+                    <td>
+
+                        <div class="attendance">
+
+                            <div class="progress">
+                                <span
+                                    class="orange"
+                                    style="width:55%"
+                                ></span>
+                            </div>
+
+                            <b>55%</b>
+
+                        </div>
+
+                    </td>
+
+                    <td>
+                        <div class="actions">
+                             <button><i class="fa fa-eye" style="font-size: 12px;"></i></button>
+                             
+                        </div>
+                    </td>
+
+                </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+
+    <!-- Footer -->
+
+    <div class="table-footer">
+
+        <span>
+            Showing 1 to 7 of 42 employees
+        </span>
+
+        <div class="pagination">
+
+            <button>‹</button>
+            <button class="active">1</button>
+            <button>2</button>
+            <button>3</button>
+            <span>...</span>
+            <button>6</button>
+            <button>›</button>
+
+            <label>
+                Rows per page
+                <select>
+                    <option>10</option>
+                    <option>20</option>
+                    <option>30</option>
+                </select>
+            </label>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+  <section class="attendance-section mt-3">
+
+    <!-- Header -->
+    <div class="section-header align-items-center">
+
+      <div class="title-area">
+        <div class="d-flex gap-2 align-items-center">
+          <div class="tw-attendance-icon-badge">
+            <i class="ri ri-organization-chart"></i>
+          </div>
+          <div>
+            <h5 class=" mb-0 tw-attendance-title">Team-wise Attendance</h5>
+            <small class="text-muted">{{ teamwiseDate | date:'dd MMM yyyy' }}</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="legend">
+
+        <div class="legend-item">
+          <span class="legend-dot present"></span>
+          Present
+        </div>
+
+        <div class="legend-item">
+          <span class="legend-dot leave"></span>
+          On Leave
+        </div>
+
+        <div class="legend-item">
+          <span class="legend-dot absent"></span>
+          Absent
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- Teams -->
+    <div class="teams-grid">
+
+      <!-- Development -->
+      <div class="team-card development">
+
+        <div class="team-header">
+
+          <div class="team-icon">
+            <i class="fa-solid fa-code"></i>
+          </div>
+
+          <div class="team-info">
+            <div class="team-name">Development</div>
+            <div class="members">8 Members</div>
+          </div>
+
+        </div>
+
+        <div class="statistics">
+
+          <div class="stat present-stat">
+            <div class="stat-number">7</div>
+            <div class="stat-label">Present</div>
+          </div>
+
+          <div class="stat leave-stat">
+            <div class="stat-number">0</div>
+            <div class="stat-label">Leave</div>
+          </div>
+
+          <div class="stat absent-stat">
+            <div class="stat-number">1</div>
+            <div class="stat-label">Absent</div>
+          </div>
+
+        </div>
+
+        <div class="progress-wrapper">
+          <div class="progress-present" style="width:87.5%"></div>
+          <div class="progress-leave" style="width:0%"></div>
+          <div class="progress-absent" style="width:12.5%"></div>
+        </div>
+
+      </div>
+
+
+      <!-- Management -->
+      <div class="team-card management">
+
+        <div class="team-header">
+
+          <div class="team-icon">
+            <i class="fa-solid fa-briefcase"></i>
+          </div>
+
+          <div class="team-info">
+            <div class="team-name">Management</div>
+            <div class="members">5 Members</div>
+          </div>
+
+        </div>
+
+        <div class="statistics">
+
+          <div class="stat present-stat">
+            <div class="stat-number">7</div>
+            <div class="stat-label">Present</div>
+          </div>
+
+          <div class="stat leave-stat">
+            <div class="stat-number">0</div>
+            <div class="stat-label">Leave</div>
+          </div>
+
+          <div class="stat absent-stat">
+            <div class="stat-number">1</div>
+            <div class="stat-label">Absent</div>
+          </div>
+
+        </div>
+
+        <div class="progress-wrapper">
+          <div class="progress-present" style="width:87.5%"></div>
+          <div class="progress-leave" style="width:0%"></div>
+          <div class="progress-absent" style="width:12.5%"></div>
+        </div>
+
+      </div>
+
+
+      <!-- HR -->
+      <div class="team-card hr">
+
+        <div class="team-header">
+
+          <div class="team-icon">
+            <i class="fa-solid fa-users"></i>
+          </div>
+
+          <div class="team-info">
+            <div class="team-name">HR</div>
+            <div class="members">4 Members</div>
+          </div>
+
+        </div>
+
+        <div class="statistics">
+
+          <div class="stat present-stat">
+            <div class="stat-number">3</div>
+            <div class="stat-label">Present</div>
+          </div>
+
+          <div class="stat leave-stat">
+            <div class="stat-number">1</div>
+            <div class="stat-label">Leave</div>
+          </div>
+
+          <div class="stat absent-stat">
+            <div class="stat-number">0</div>
+            <div class="stat-label">Absent</div>
+          </div>
+
+        </div>
+
+        <div class="progress-wrapper">
+          <div class="progress-present" style="width:75%"></div>
+          <div class="progress-leave" style="width:25%"></div>
+          <div class="progress-absent" style="width:0%"></div>
+        </div>
+
+      </div>
+
+
+      <!-- Marketing -->
+      <div class="team-card marketing">
+
+        <div class="team-header">
+
+          <div class="team-icon">
+            <i class="fa-solid fa-bullhorn"></i>
+          </div>
+
+          <div class="team-info">
+            <div class="team-name">Marketing</div>
+            <div class="members">5 Members</div>
+          </div>
+
+        </div>
+
+        <div class="statistics">
+
+          <div class="stat present-stat">
+            <div class="stat-number">4</div>
+            <div class="stat-label">Present</div>
+          </div>
+
+          <div class="stat leave-stat">
+            <div class="stat-number">0</div>
+            <div class="stat-label">Leave</div>
+          </div>
+
+          <div class="stat absent-stat">
+            <div class="stat-number">1</div>
+            <div class="stat-label">Absent</div>
+          </div>
+
+        </div>
+
+        <div class="progress-wrapper">
+          <div class="progress-present" style="width:80%"></div>
+          <div class="progress-leave" style="width:0%"></div>
+          <div class="progress-absent" style="width:20%"></div>
+        </div>
+
+      </div>
+
+
+      <!-- Sales -->
+      <div class="team-card sales">
+
+        <div class="team-header">
+
+          <div class="team-icon">
+            <i class="fa-solid fa-chart-column"></i>
+          </div>
+
+          <div class="team-info">
+            <div class="team-name">Sales</div>
+            <div class="members">6 Members</div>
+          </div>
+
+        </div>
+
+        <div class="statistics">
+
+          <div class="stat present-stat">
+            <div class="stat-number">5</div>
+            <div class="stat-label">Present</div>
+          </div>
+
+          <div class="stat leave-stat">
+            <div class="stat-number">1</div>
+            <div class="stat-label">Leave</div>
+          </div>
+
+          <div class="stat absent-stat">
+            <div class="stat-number">0</div>
+            <div class="stat-label">Absent</div>
+          </div>
+
+        </div>
+
+        <div class="progress-wrapper">
+          <div class="progress-present" style="width:83.33%"></div>
+          <div class="progress-leave" style="width:16.67%"></div>
+          <div class="progress-absent" style="width:0%"></div>
+        </div>
+
+      </div>
+
+
+      <!-- QA -->
+      <div class="team-card qa">
+
+        <div class="team-header">
+
+          <div class="team-icon">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+
+          <div class="team-info">
+            <div class="team-name">QA</div>
+            <div class="members">3 Members</div>
+          </div>
+
+        </div>
+
+        <div class="statistics">
+
+          <div class="stat present-stat">
+            <div class="stat-number">3</div>
+            <div class="stat-label">Present</div>
+          </div>
+
+          <div class="stat leave-stat">
+            <div class="stat-number">0</div>
+            <div class="stat-label">Leave</div>
+          </div>
+
+          <div class="stat absent-stat">
+            <div class="stat-number">0</div>
+            <div class="stat-label">Absent</div>
+          </div>
+
+        </div>
+
+        <div class="progress-wrapper">
+          <div class="progress-present" style="width:100%"></div>
+          <div class="progress-leave" style="width:0%"></div>
+          <div class="progress-absent" style="width:0%"></div>
+        </div>
+
+      </div>
+
+
+      <!-- Management -->
+      <div class="team-card management">
+
+        <div class="team-header">
+
+          <div class="team-icon">
+            <i class="fa-solid fa-briefcase"></i>
+          </div>
+
+          <div class="team-info">
+            <div class="team-name">Management</div>
+            <div class="members">5 Members</div>
+          </div>
+
+        </div>
+
+        <div class="statistics">
+
+          <div class="stat present-stat">
+            <div class="stat-number">7</div>
+            <div class="stat-label">Present</div>
+          </div>
+
+          <div class="stat leave-stat">
+            <div class="stat-number">0</div>
+            <div class="stat-label">Leave</div>
+          </div>
+
+          <div class="stat absent-stat">
+            <div class="stat-number">1</div>
+            <div class="stat-label">Absent</div>
+          </div>
+
+        </div>
+
+        <div class="progress-wrapper">
+          <div class="progress-present" style="width:87.5%"></div>
+          <div class="progress-leave" style="width:0%"></div>
+          <div class="progress-absent" style="width:12.5%"></div>
+        </div>
+
+      </div>
+
+
+      <!-- HR -->
+      <div class="team-card hr">
+
+        <div class="team-header">
+
+          <div class="team-icon">
+            <i class="fa-solid fa-users"></i>
+          </div>
+
+          <div class="team-info">
+            <div class="team-name">HR</div>
+            <div class="members">4 Members</div>
+          </div>
+
+        </div>
+
+        <div class="statistics">
+
+          <div class="stat present-stat">
+            <div class="stat-number">3</div>
+            <div class="stat-label">Present</div>
+          </div>
+
+          <div class="stat leave-stat">
+            <div class="stat-number">1</div>
+            <div class="stat-label">Leave</div>
+          </div>
+
+          <div class="stat absent-stat">
+            <div class="stat-number">0</div>
+            <div class="stat-label">Absent</div>
+          </div>
+
+        </div>
+
+        <div class="progress-wrapper">
+          <div class="progress-present" style="width:75%"></div>
+          <div class="progress-leave" style="width:25%"></div>
+          <div class="progress-absent" style="width:0%"></div>
+        </div>
+
+      </div>
+
+
+      <!-- Marketing -->
+      <div class="team-card marketing">
+
+        <div class="team-header">
+
+          <div class="team-icon">
+            <i class="fa-solid fa-bullhorn"></i>
+          </div>
+
+          <div class="team-info">
+            <div class="team-name">Marketing</div>
+            <div class="members">5 Members</div>
+          </div>
+
+        </div>
+
+        <div class="statistics">
+
+          <div class="stat present-stat">
+            <div class="stat-number">4</div>
+            <div class="stat-label">Present</div>
+          </div>
+
+          <div class="stat leave-stat">
+            <div class="stat-number">0</div>
+            <div class="stat-label">Leave</div>
+          </div>
+
+          <div class="stat absent-stat">
+            <div class="stat-number">1</div>
+            <div class="stat-label">Absent</div>
+          </div>
+
+        </div>
+
+        <div class="progress-wrapper">
+          <div class="progress-present" style="width:80%"></div>
+          <div class="progress-leave" style="width:0%"></div>
+          <div class="progress-absent" style="width:20%"></div>
+        </div>
+
+      </div>
+
+
+      <!-- Sales -->
+      <div class="team-card sales">
+
+        <div class="team-header">
+
+          <div class="team-icon">
+            <i class="fa-solid fa-chart-column"></i>
+          </div>
+
+          <div class="team-info">
+            <div class="team-name">Sales</div>
+            <div class="members">6 Members</div>
+          </div>
+
+        </div>
+
+        <div class="statistics">
+
+          <div class="stat present-stat">
+            <div class="stat-number">5</div>
+            <div class="stat-label">Present</div>
+          </div>
+
+          <div class="stat leave-stat">
+            <div class="stat-number">1</div>
+            <div class="stat-label">Leave</div>
+          </div>
+
+          <div class="stat absent-stat">
+            <div class="stat-number">0</div>
+            <div class="stat-label">Absent</div>
+          </div>
+
+        </div>
+
+        <div class="progress-wrapper">
+          <div class="progress-present" style="width:83.33%"></div>
+          <div class="progress-leave" style="width:16.67%"></div>
+          <div class="progress-absent" style="width:0%"></div>
+        </div>
+
+      </div>
+
+
+      <!-- QA -->
+      <div class="team-card qa">
+
+        <div class="team-header">
+
+          <div class="team-icon">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+
+          <div class="team-info">
+            <div class="team-name">QA</div>
+            <div class="members">3 Members</div>
+          </div>
+
+        </div>
+
+        <div class="statistics">
+
+          <div class="stat present-stat">
+            <div class="stat-number">3</div>
+            <div class="stat-label">Present</div>
+          </div>
+
+          <div class="stat leave-stat">
+            <div class="stat-number">0</div>
+            <div class="stat-label">Leave</div>
+          </div>
+
+          <div class="stat absent-stat">
+            <div class="stat-number">0</div>
+            <div class="stat-label">Absent</div>
+          </div>
+
+        </div>
+
+        <div class="progress-wrapper">
+          <div class="progress-present" style="width:100%"></div>
+          <div class="progress-leave" style="width:0%"></div>
+          <div class="progress-absent" style="width:0%"></div>
+        </div>
+
+      </div>
+
+    </div>
+
+
+
+
+  </section>
+
+  
 
   <!-- Team-wise Attendance: visible for admin / hr / superadmin (director & manager roles) -->
   <div class="row g-3 mt-1" *ngIf="isManagerRole">
@@ -627,8 +1731,7 @@
                         <div class="tw-member-info">
                           <img
                             [src]="member.profileImage || (member.gender === 'Male' ? 'assets/img/avatars/5.png' : 'assets/img/avatars/4.png')"
-                            class="tw-member-avatar" alt=""
-                            (error)="onImageError($event, member, 'avatar')">
+                            class="tw-member-avatar" alt="" (error)="onImageError($event, member, 'avatar')">
                           <div>
                             <div class="tw-member-name">{{ member.name }}</div>
                             <div class="tw-member-sub">{{ member.empCode }} · {{ member.designation || '—' }}</div>
@@ -698,8 +1801,7 @@
                     <div class="tw-member-info">
                       <img
                         [src]="member.profileImage || (member.gender === 'Male' ? 'assets/img/avatars/5.png' : 'assets/img/avatars/4.png')"
-                        class="tw-member-avatar" alt=""
-                        (error)="onImageError($event, member, 'avatar')">
+                        class="tw-member-avatar" alt="" (error)="onImageError($event, member, 'avatar')">
                       <div>
                         <div class="tw-member-name">{{ member.name }}</div>
                         <div class="tw-member-sub">{{ member.empCode }} · {{ member.designation || '—' }}</div>
@@ -732,7 +1834,7 @@
     <div class="footer-container d-flex align-items-center justify-content-between py-4 flex-md-row flex-column">
       <div class="mb-2 mb-md-0">
         © 2026
-        <a href="https://pixinvent.com" target="_blank" class="footer-link fw-medium text-primary">Quaeretech</a>
+        <a href="https://pixinvent.com" target="_blank" class="footer-link fw-medium text-primary">gmailtech</a>
       </div>
       <div class="d-none d-lg-inline-block"></div>
     </div>
