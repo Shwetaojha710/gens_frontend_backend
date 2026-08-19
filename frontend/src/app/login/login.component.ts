@@ -92,7 +92,22 @@ export class LoginComponent {
           this.notyf.success(data.message);
           const returnUrl = sessionStorage.getItem('returnUrl');
           sessionStorage.removeItem('returnUrl');
-          this.router.navigateByUrl(returnUrl || '/branchwise', { replaceUrl: true });
+
+          // Marketing / public pages pe wapas mat bhejo
+          const isAppUrl =
+            !!returnUrl &&
+            (returnUrl.startsWith('/layout') ||
+              returnUrl.startsWith('/branchwise') ||
+              returnUrl.startsWith('/landing-home') ||
+              returnUrl.startsWith('/recruitment') ||
+              returnUrl.startsWith('/pending-emp-list'));
+
+          this.router.navigateByUrl(isAppUrl ? returnUrl! : '/branchwise', {
+            replaceUrl: true,
+          });
+          // const returnUrl = sessionStorage.getItem('returnUrl');
+          // sessionStorage.removeItem('returnUrl');
+          // this.router.navigateByUrl(returnUrl || '/branchwise', { replaceUrl: true });
         } else {
           this.notyf.error(data.message);
         }

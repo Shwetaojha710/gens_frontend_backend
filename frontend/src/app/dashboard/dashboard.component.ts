@@ -474,7 +474,15 @@ export class DashboardComponent {
       }
     });
   }
-
+  deptPct(dept: any, type: 'present' | 'leave' | 'absent'): number {
+    const total = Number(dept?.total) || 0;
+    if (!total) return 0;
+    const n =
+      type === 'present' ? Number(dept?.presentCount) || 0 :
+      type === 'leave'   ? Number(dept?.onLeaveCount) || 0 :
+                           Number(dept?.absentCount) || 0;
+    return Math.round((n / total) * 1000) / 10; // e.g. 87.5
+  }
   openLeaveApproval(item: any) {
     this.confirmLeaveStatusChange(item, 'approved');
   }
