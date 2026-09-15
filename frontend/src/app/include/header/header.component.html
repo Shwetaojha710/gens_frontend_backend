@@ -64,6 +64,54 @@
           <i class="ri ri-notification-3-line"></i>
           <span class="notification-dot"></span>
         </button> -->
+
+        <div class="notif-wrap">
+          <button type="button" class="utility-btn notification-btn"
+                  aria-label="Notifications"
+                  (click)="toggleNotifications($event)">
+            <i class="ri ri-notification-3-line"></i>
+            <span class="notification-dot" *ngIf="unreadCount > 0"></span>
+            <span class="notif-badge" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
+          </button>
+          <div class="notif-dropdown" *ngIf="showNotifications" (click)="$event.stopPropagation()">
+            <div class="notif-head">
+              <strong>Notifications</strong>
+              <div class="notif-head-actions">
+                <small *ngIf="unreadCount">{{ unreadCount }} new</small>
+                <button type="button" class="notif-link-btn" *ngIf="unreadCount > 0"
+                        (click)="markAllRead($event)">Mark all read</button>
+              </div>
+            </div>
+            <div class="notif-list" *ngIf="notifications.length; else emptyNotif">
+              <div class="notif-item" *ngFor="let n of notifications"
+                   [class.unread]="!n.read">
+                <button type="button" class="notif-item-main" (click)="openNotification(n)">
+                  <i class="ri" [ngClass]="n.icon"></i>
+                  <div>
+                    <div class="notif-title">
+                      {{ n.title }}
+                      <span class="notif-unread-dot" *ngIf="!n.read"></span>
+                    </div>
+                    <div class="notif-sub">{{ n.message }}</div>
+                    <div class="notif-time">{{ n.time }}</div>
+                  </div>
+                </button>
+                <button type="button" class="notif-mark-btn" *ngIf="!n.read"
+                        title="Mark as read" (click)="markOneRead(n, $event)">
+                  <i class="ri ri-check-line"></i>
+                </button>
+              </div>
+            </div>
+            <ng-template #emptyNotif>
+              <div class="notif-empty">No new notifications</div>
+            </ng-template>
+            <div class="notif-footer">
+              <a routerLink="/layout/notifications" (click)="showNotifications = false">
+                View all notifications
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="header-cta-group">

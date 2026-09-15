@@ -64,6 +64,7 @@ export class NewnavbarComponent {
         { title: 'Holiday', icon: 'ri-barricade-fill', link: '/layout/attendance/holiday' },
         { title: 'Attendance Logs', icon: 'ri-calendar-line', link: '/layout/attendance/logs' },
         { title: 'Leaves', icon: 'ri-leaf-line', link: '/layout/attendance/leaves' },
+        { title: 'Leave Ledger', icon: 'ri-book-open-line', link: '/layout/attendance/leave-ledger' },
         { title: 'Upload Attendance', icon: 'ri-upload-cloud-line', link: '/layout/attendance/upload-attendance' },
         { title: 'Regularize', icon: 'ri-upload-cloud-line', link: '/layout/attendance/regularize' }
 

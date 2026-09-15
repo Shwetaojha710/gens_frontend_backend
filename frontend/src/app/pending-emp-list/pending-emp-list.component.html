@@ -358,6 +358,10 @@
                 (click)="submitForm()">
                 Submit
               </button> -->
+              <button *ngIf="updateFlag == true && createFlag == true" type="button"
+                class="btn btn-danger me-2" (click)="rejectform()">
+                Reject
+              </button>&nbsp;
               <button *ngIf="updateFlag == true && createFlag == true" type="button" class="btn btn-primary"
                 (click)="updateform()">
                 Approved
@@ -448,7 +452,11 @@
                       <!-- <button type="button" class="badge badge-center bg-label-secondary"  title="Approved"
                       (click)="changeStatus(item)">
                       <i class="fas fa-location"></i></button>&nbsp; -->
-                      <button type="button" class="btn btn-sm btn-outline-danger" title="Edit"
+                      <button type="button" class="btn btn-sm btn-outline-danger" title="Reject"
+                        (click)="rejectEmployee(item)">
+                        <i class="fas fa-times"></i>
+                      </button> &nbsp;
+                      <button type="button" class="btn btn-sm btn-outline-info" title="Edit"
                         (click)="update(item)">
                         <i class="fas fa-edit"></i>
                       </button>

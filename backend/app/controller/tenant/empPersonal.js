@@ -23,6 +23,72 @@ const pin_code_master = require("../../models/pin_code_master");
 const Department = require("../../models/department");
 const { writeAudit, toPlain } = require("../../helper/auditLog");
 
+/**
+ * Generate next empCode for tenant+branch using Prefix master.
+ * Format: {prefix}{NNNN} e.g. QTPL0357
+ * Sequence is tenant-wide for that prefix because DB unique is (tenantId, empCode).
+ */
+async function generateNextEmpCode(tenantId, branchId) {
+  const getprefix = await Prefix.findOne({
+    where: {
+      tenantId,
+      branchId,
+      status: "active",
+    },
+  });
+
+  if (!getprefix?.name) {
+    const err = new Error(
+      "Company prefix not configured for this branch. Please set it in Master > Company Prefix.",
+    );
+    err.code = "PREFIX_MISSING";
+    throw err;
+  }
+
+  const prefixName = String(getprefix.name).trim();
+  // Unique constraint is (tenantId, empCode) — scan whole tenant for this prefix
+  const employees = await empPersonal.findAll({
+    where: {
+      tenantId,
+      empCode: { [Op.like]: `${prefixName}%` },
+    },
+    attributes: ["empCode"],
+    raw: true,
+  });
+
+  let maxNum = 0;
+  const prefixLen = prefixName.length;
+  for (const e of employees) {
+    const code = String(e.empCode || "");
+    if (!code.startsWith(prefixName)) continue;
+    const suffix = code.slice(prefixLen);
+    if (/^\d+$/.test(suffix)) {
+      maxNum = Math.max(maxNum, parseInt(suffix, 10));
+    }
+  }
+
+  // Retry-safe: keep trying until free (handles races / gaps)
+  let next = maxNum + 1;
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const pad = Math.max(4, String(next).length);
+    const candidate = `${prefixName}${String(next).padStart(pad, "0")}`;
+    const taken = await empPersonal.findOne({
+      where: { tenantId, empCode: candidate },
+      attributes: ["id"],
+      raw: true,
+    });
+    if (!taken) return candidate;
+    next += 1;
+  }
+
+  const err = new Error("Unable to generate a unique employee code. Please try again.");
+  err.code = "EMPCODE_GEN_FAILED";
+  throw err;
+}
+
+function isBlankEmpCode(value) {
+  return value == null || String(value).trim() === "";
+}
 
 exports.CheckTenant = async (req, res) => {
   
@@ -157,7 +223,10 @@ exports.createEmp = async (req, res) => {
   const image = req.file ? req.file.filename : null;
   const tenantId = req.users && req.users.tenantId;
 
-  const branchId = req.users && req.users.branchId;
+  let branchId = req.body?.branchId;
+  if (!branchId || branchId == "null") {
+    branchId = req.users && req.users.branchId;
+  }
 
   if (!branchId || branchId == "null") {
     return Helper.response(false, "branchId is required!", {}, res, 200);
@@ -284,30 +353,26 @@ exports.createEmp = async (req, res) => {
     }
     // ─────────────────────────────────────────────────────────────────────
 
-    const maxuser = await empPersonal.count({ tenantId, branchId });
-    // const getprefix = await Prefix.findOne({
-    //   where: {
-    //     tenantId,
-    //     branchId,
-    //     status: "active",
-    //   },
-    // });
-    // if (!empCode) {
-    //   empCode = `${getprefix.name}${(maxuser + 1).toString().padStart(3, "0")}`;
-    // }
+    // Auto-generate empCode from Prefix (tenant + branch) when frontend does not send it
+    if (isBlankEmpCode(empCode)) {
+      try {
+        empCode = await generateNextEmpCode(tenantId, branchId);
+      } catch (genErr) {
+        if (genErr?.code === "PREFIX_MISSING" || genErr?.code === "EMPCODE_GEN_FAILED") {
+          return Helper.response(false, genErr.message, {}, res, 200);
+        }
+        throw genErr;
+      }
+    } else {
+      empCode = String(empCode).trim();
+    }
 
-    const [
-      existsMobile,
-      existsEmail,
-      // existsAdhaarNo,
-      // existsPanNo,
-      existsEmpCode,
-    ] = await Promise.all([
+    const [existsMobile, existsEmail, existsEmpCode] = await Promise.all([
       empPersonal.findOne({ where: { mobile, tenantId, branchId } }),
-      empPersonal.findOne({ where: { email, tenantId, branchId } }),
-      // empPersonal.findOne({ where: { adhaarNo, tenantId, branchId } }),
-      // empPersonal.findOne({ where: { panNo, tenantId, branchId } }),
-      // empPersonal.findOne({ where: { empCode, tenantId, branchId } }),
+      email
+        ? empPersonal.findOne({ where: { email, tenantId, branchId } })
+        : Promise.resolve(null),
+      empPersonal.findOne({ where: { empCode, tenantId } }),
     ]);
 
     if (existsMobile) {
@@ -316,18 +381,6 @@ exports.createEmp = async (req, res) => {
     if (existsEmail) {
       return Helper.response(false, "Email Already Exists", {}, res, 400);
     }
-    // if (existsAdhaarNo) {
-    //   return Helper.response(
-    //     false,
-    //     "Aadhaar Number Already Exists",
-    //     {},
-    //     res,
-    //     400
-    //   );
-    // }
-    // if (existsPanNo) {
-    //   return Helper.response(false, "PAN Number Already Exists", {}, res, 400);
-    // }
     if (existsEmpCode) {
       return Helper.response(
         false,
@@ -361,7 +414,7 @@ exports.createEmp = async (req, res) => {
       nationality,
       pinCode,
       joiningDate: joiningDate || "01/01/1970",
-      empCode: empCode,
+      empCode,
       departmentId,
       designationId,
       state,
@@ -371,7 +424,6 @@ exports.createEmp = async (req, res) => {
       createdBy: req.users && req.users.id,
       updatedBy: req.users && req.users.id,
       profileImage: image,
-      empCode,
       empType: empType,
       shift_id,
       branchId,
@@ -397,7 +449,25 @@ exports.createEmp = async (req, res) => {
     );
   } catch (error) {
     console.error("Error creating employee:", error);
-    return Helper.response(false, error?.errors[0]?.message, error, res, 500);
+    if (error?.name === "SequelizeUniqueConstraintError") {
+      const fields = error?.fields || {};
+      if (fields.empCode || String(error?.parent?.constraint || "").includes("emp_code")) {
+        return Helper.response(false, "Employee Code Already Exists", {}, res, 400);
+      }
+      if (fields.email || String(error?.parent?.constraint || "").includes("email")) {
+        return Helper.response(false, "Email Already Exists", {}, res, 400);
+      }
+      if (fields.mobile || String(error?.parent?.constraint || "").includes("mobile")) {
+        return Helper.response(false, "Mobile Already Exists", {}, res, 400);
+      }
+    }
+    return Helper.response(
+      false,
+      error?.errors?.[0]?.message || error?.message || "Failed to create employee",
+      {},
+      res,
+      500,
+    );
   }
 };
 
@@ -885,13 +955,50 @@ exports.updateEmp = async (req, res) => {
     if (reportingPersonId !== undefined)
       updateData.reportingPersonId = reportingPersonId;
     if (joiningDate !== undefined) updateData.joiningDate = joiningDate;
-    if (empCode != undefined) updateData.empCode = empCode;
     if (guarantorName != undefined) updateData.guarantorName = guarantorName;
-    // if (empCode !== undefined) updateData.empCode = empCode;
     if (branchId !== undefined) updateData.branchId = branchId;
-    if(type=='pending_employee'){
-      updateData.emp_status = emp_status || 'pending'
+
+    // Pending employee approval: auto empCode if frontend / existing record has none
+    if (type == "pending_employee") {
+      updateData.emp_status = emp_status || "pending";
+
+      if (String(updateData.emp_status).toLowerCase() === "approved") {
+        const hasIncoming = !isBlankEmpCode(empCode);
+        const hasExisting = !isBlankEmpCode(existingEmp.empCode);
+
+        if (hasIncoming) {
+          updateData.empCode = String(empCode).trim();
+        } else if (!hasExisting) {
+          try {
+            updateData.empCode = await generateNextEmpCode(tenantId, branchId);
+          } catch (genErr) {
+            if (genErr?.code === "PREFIX_MISSING" || genErr?.code === "EMPCODE_GEN_FAILED") {
+              return Helper.response(false, genErr.message, {}, res, 200);
+            }
+            throw genErr;
+          }
+        }
+      } else if (!isBlankEmpCode(empCode)) {
+        updateData.empCode = String(empCode).trim();
+      }
+    } else if (empCode != undefined) {
+      updateData.empCode = empCode;
     }
+
+    // Unique empCode check when setting/changing code (DB: tenantId + empCode)
+    if (updateData.empCode != null && updateData.empCode !== existingEmp.empCode) {
+      const codeTaken = await empPersonal.findOne({
+        where: {
+          empCode: updateData.empCode,
+          tenantId,
+          id: { [Op.ne]: id },
+        },
+      });
+      if (codeTaken) {
+        return Helper.response(false, "Employee Code Already Exists", {}, res, 400);
+      }
+    }
+
     updateData.updatedBy = req.users && req.users.id;
     updateData.deviceId = Helper.getIpAddress(req);
     updateData.role = role;

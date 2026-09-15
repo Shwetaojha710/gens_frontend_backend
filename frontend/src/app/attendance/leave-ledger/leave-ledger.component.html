@@ -1,0 +1,186 @@
+<div class="container-fluid mt-5">
+  <div class="row mb-6">
+    <div class="col-md">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center">
+          <span>Leave Ledger</span>
+        </h5>
+        <div class="card-body">
+          <div class="row g-2">
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label class="form-label">Select Employee</label>
+              <ng-select
+                [items]="EmpList"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="obj['emp_id']"
+                [multiple]="false"
+                placeholder="Select Employee"
+                name="emp_id"
+              >
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label class="form-label">
+                Select Year <span style="color: red">*</span>
+              </label>
+              <ng-select
+                [items]="yearList"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="obj['year']"
+                [multiple]="false"
+                placeholder="Select Year"
+                name="year"
+              >
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label class="form-label">Select Month</label>
+              <ng-select
+                [items]="monthList"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="obj['month']"
+                [multiple]="false"
+                placeholder="Select Month"
+                name="month"
+              >
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label class="form-label">Leave Type</label>
+              <ng-select
+                [items]="leaveTypeList"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="obj['leaveTypeId']"
+                [multiple]="false"
+                placeholder="Select Leave Type"
+                name="leaveTypeId"
+              >
+              </ng-select>
+            </div>
+          </div>
+
+          <div class="row mt-2">
+            <div class="col-12 justify-content-center">
+              <button
+                type="button"
+                class="btn btn-sm btn-primary waves-effect waves-light"
+                (click)="getLeaveLedger()"
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mb-6">
+    <div class="col-md">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center">
+          <span>Leave Ledger List</span>
+        </h5>
+
+        <div class="card-body pb-0" *ngIf="ledgerList.length > 0">
+          <div class="row g-2 mb-3">
+            <div class="col-6 col-md-3">
+              <div class="border rounded p-2 text-center bg-label-primary">
+                <small class="d-block text-muted">Total Assigned</small>
+                <strong>{{ summary.totalAssigned }}</strong>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="border rounded p-2 text-center bg-label-info">
+                <small class="d-block text-muted">Carry Forwarded</small>
+                <strong>{{ summary.carryForwarded }}</strong>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="border rounded p-2 text-center bg-label-warning">
+                <small class="d-block text-muted">Used Leaves</small>
+                <strong>{{ summary.usedLeaves }}</strong>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="border rounded p-2 text-center bg-label-success">
+                <small class="d-block text-muted">Remaining (Latest Month)</small>
+                <strong>{{ summary.remainingLeaves }}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <app-search-pagination
+          [totalItems]="ledgerList.length"
+          [pageSize]="itemsPerPage"
+          [currentPage]="currentPage"
+          (search)="onSearch($event)"
+          (pageChange)="onPageChange($event)"
+          (pageSizeChange)="onPageSizeChange($event)"
+        >
+          <div class="table-responsive">
+            <table class="table table-striped dataTable bg-white">
+              <thead>
+                <tr>
+                  <th>SI.No</th>
+                  <th>Emp. Name / Emp.Code</th>
+                  <th>Leave Type</th>
+                  <th>Year</th>
+                  <th>Month</th>
+                  <th>Total Assigned</th>
+                  <th>Carry Forwarded</th>
+                  <th>Used Leaves</th>
+                  <th>Monthly Leave (+)</th>
+                  <th>Remaining</th>
+                </tr>
+              </thead>
+              <tbody class="table-border-bottom-0">
+                <tr *ngFor="let item of filteredList; let i = index">
+                  <td>{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+                  <td>
+                    <strong>{{ item.employeeName }}</strong>
+                    <br />
+                    {{ item.empCode }}
+                  </td>
+                  <td>{{ item.leaveTypeName }}</td>
+                  <td>{{ item.year }}</td>
+                  <td>{{ getMonthLabel(item.month) }}</td>
+                  <td>{{ item.totalAssigned }}</td>
+                  <td>{{ item.carryForwarded }}</td>
+                  <td>{{ item.usedLeaves }}</td>
+                  <td>
+                    <strong class="text-primary">+{{ getMonthlyLeave(item) }}</strong>
+                  </td>
+                  <td>
+                    <strong class="text-success">{{ calcRemaining(item) }}</strong>
+                  </td>
+                </tr>
+                <tr *ngIf="filteredList.length === 0">
+                  <td colspan="10" class="text-center">No leave ledger data found</td>
+                </tr>
+              </tbody>
+              <tfoot *ngIf="filteredList.length > 0">
+                <tr>
+                  <th colspan="5" class="text-end">Latest Remaining (till now) →</th>
+                  <th>{{ summary.totalAssigned }}</th>
+                  <th>{{ summary.carryForwarded }}</th>
+                  <th class="text-primary">+{{ summary.monthlyLeaveCredit }}</th>
+                  <th>{{ summary.usedLeaves }}</th>
+                  <th class="text-success">{{ summary.remainingLeaves }}</th>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </app-search-pagination>
+      </div>
+    </div>
+  </div>
+</div>

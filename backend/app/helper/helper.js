@@ -164,6 +164,10 @@ Helper.applySandwichRule = (leaveRecords, holidays, startDate, endDate) => {
     return holidaySet.has(dateKey) || date.day() == 0 || date.day() == 6;
   };
   const getSandwichStatus = (prevLeave, nextLeave) => {
+    // Leave/RH on one side + absent on other → unpaid sandwich (LOP)
+    if (prevLeave?.isAbsentAnchor || nextLeave?.isAbsentAnchor) {
+      return "pending";
+    }
     if (prevLeave?.status == "approved" || nextLeave?.status == "approved") {
       return "approved";
     }
@@ -176,6 +180,12 @@ Helper.applySandwichRule = (leaveRecords, holidays, startDate, endDate) => {
     return "pending";
   };
   const getSandwichLeaveType = (prevLeave, nextLeave) => {
+    if (prevLeave?.isAbsentAnchor && nextLeave?.leaveTypeId) {
+      return nextLeave.leaveTypeId;
+    }
+    if (nextLeave?.isAbsentAnchor && prevLeave?.leaveTypeId) {
+      return prevLeave.leaveTypeId;
+    }
     if (prevLeave?.leaveTypeId && prevLeave.leaveTypeId === nextLeave?.leaveTypeId) {
       return prevLeave.leaveTypeId;
     }
@@ -204,7 +214,7 @@ Helper.applySandwichRule = (leaveRecords, holidays, startDate, endDate) => {
     // check if this day is a weekend or a tenant holiday
     if (!isNonWorkingDay(d)) continue;
 
-    // sandwich condition → leave must exist just before & just after
+    // sandwich condition → leave/absent must exist just before & just after
     let prev = moment(d).subtract(1, "days");
     let prevLeave = null;
     while (prev.isSameOrAfter(startDate)) {
@@ -231,6 +241,7 @@ Helper.applySandwichRule = (leaveRecords, holidays, startDate, endDate) => {
 
     if (!prevLeave || !nextLeave) continue;
 
+    const sandwichStatus = getSandwichStatus(prevLeave, nextLeave);
     const sandwichLeave = {
       id: uuidv4(),
       employeeId: prevLeave.employeeId || nextLeave.employeeId || leaveRecords[0].employeeId,
@@ -241,7 +252,8 @@ Helper.applySandwichRule = (leaveRecords, holidays, startDate, endDate) => {
       to_duration_type: "full",
       days: 1,
       isSandwich: true,
-      status: getSandwichStatus(prevLeave, nextLeave),
+      status: sandwichStatus,
+      leavestatus: sandwichStatus === "approved" ? "approved" : "unpaid",
       tenantId: prevLeave.tenantId || nextLeave.tenantId || leaveRecords[0].tenantId,
       branchId: prevLeave.branchId || nextLeave.branchId || leaveRecords[0].branchId,
     };
@@ -507,7 +519,10 @@ const addDays = (dateStr, days) => {
 
 
 Helper.adjustLeaveRecords = (leaveBalanceArr, leaveRecordsArr) => {
-  leaveRecordsArr.forEach((rec) => {
+  // Work on copies so caller arrays (e.g. applysandwitchleave) are not mutated in place
+  const records = leaveRecordsArr.map((rec) => ({ ...rec }));
+
+  records.forEach((rec) => {
     if (rec.status !== "approved") {
       rec.leavestatus = "unpaid";
     }
@@ -516,11 +531,13 @@ Helper.adjustLeaveRecords = (leaveBalanceArr, leaveRecordsArr) => {
   leaveBalanceArr.forEach((balance) => {
     const allowed = Number(balance.remainingLeaves ?? 0);
 
-    const matchingRecords = leaveRecordsArr.filter(
+    const matchingRecords = records.filter(
       (rec) =>
         rec.employeeId === balance.employeeId &&
         rec.leaveTypeId === balance.leaveTypeId &&
-        rec.status === "approved",
+        rec.status === "approved" &&
+        !rec.isSandwich &&
+        !rec.isAbsentAnchor,
     );
 
     const appliedLeaveDays = matchingRecords.reduce(
@@ -537,6 +554,7 @@ Helper.adjustLeaveRecords = (leaveBalanceArr, leaveRecordsArr) => {
 
       for (const rec of sorted) {
         const originalDays = Number(rec.days || 0);
+        const originalToDate = rec.toDate || rec.fromDate;
         const remaining = allowed - used;
 
         if (remaining <= 0) {
@@ -551,29 +569,30 @@ Helper.adjustLeaveRecords = (leaveBalanceArr, leaveRecordsArr) => {
           const approvedDays = remaining;
           const unpaidDays = originalDays - remaining;
 
-          // -----------------------
-          // APPROVED PART
-          // -----------------------
+          // Approved part: first N calendar days (inclusive)
           rec.leavestatus = "approved";
           rec.days = approvedDays;
-          rec.toDate = addDays(rec.fromDate, approvedDays);
+          rec.toDate =
+            approvedDays <= 1
+              ? rec.fromDate
+              : addDays(rec.fromDate, Math.floor(approvedDays) - 1);
           rec.to_duration_type =
             approvedDays % 1 === 0.5 ? "first_half" : "full";
 
-          // -----------------------
-          // UNPAID PART
-          // -----------------------
-          const unpaidFromDate = addDays(rec.fromDate, approvedDays);
-
-          leaveRecordsArr.push({
+          // Unpaid part: next day through original toDate (keeps full leave span e.g. 10–25)
+          const unpaidFromDate = addDays(rec.fromDate, Math.floor(approvedDays));
+          records.push({
             ...rec,
-            id: crypto.randomUUID(),
+            id: typeof crypto !== "undefined" && crypto.randomUUID
+              ? crypto.randomUUID()
+              : uuidv4(),
             days: unpaidDays,
             fromDate: unpaidFromDate,
-            toDate: unpaidFromDate, // ✅ SAME DAY
-            duration_type: "first_half", // ✅ REQUIRED
-            to_duration_type: "first_half",
+            toDate: originalToDate,
+            duration_type: "full",
+            to_duration_type: "full",
             leavestatus: "unpaid",
+            isBalanceExceededUnpaid: true,
           });
 
           used += approvedDays;
@@ -583,18 +602,10 @@ Helper.adjustLeaveRecords = (leaveBalanceArr, leaveRecordsArr) => {
       matchingRecords.forEach((rec) => {
         rec.leavestatus = "approved";
       });
-      matchingRecords.forEach((match) => {
-        const index = leaveRecordsArr.findIndex((r) => r.id === match.id);
-
-        if (index !== -1) {
-          leaveRecordsArr[index].leavestatus = "approved";
-        }
-      });
-      // leaveRecordsArr=matchingRecords
     }
   });
 
-  return leaveRecordsArr;
+  return records;
 };
 
 // Helper.adjustLeaveRecords = (leaveBalanceArr, leaveRecordsArr) => {

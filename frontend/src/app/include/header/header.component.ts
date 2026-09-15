@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, ViewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, ViewChild } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
 import { Notyf } from 'notyf';
 import { Router } from '@angular/router';
@@ -25,7 +25,7 @@ interface SearchResult {
   templateUrl: './header.component.html',
   styleUrl: './header.component.css'
 })
-export class HeaderComponent {
+export class HeaderComponent implements OnDestroy {
   notyf: Notyf = new Notyf();
   tenantDetails: any = {}
   baseurl: any
@@ -33,6 +33,7 @@ export class HeaderComponent {
   @ViewChild('searchInputRef') searchInputRef?: ElementRef<HTMLInputElement>;
 
   private searchIndex: SearchResult[] = [];
+  private notifPollTimer: ReturnType<typeof setInterval> | null = null;
   searchQuery = '';
   searchResults: SearchResult[] = [];
   showResults = false;
@@ -87,6 +88,7 @@ export class HeaderComponent {
     if (!this.eRef.nativeElement.contains(event.target)) {
       this.isDropdownOpen = false; // close if clicked outside
       this.showResults = false;
+      this.showNotifications = false;
     }
   }
 
@@ -112,6 +114,8 @@ export class HeaderComponent {
     }
     return results;
   }
+
+
 
   onSearchInput(): void {
     const query = this.searchQuery.trim().toLowerCase();
@@ -173,8 +177,77 @@ export class HeaderComponent {
   //   }
   // }
   personalDetail: any = {}
+  notifications: any[] = [];
+  unreadCount = 0;
+  showNotifications = false;
   ngOnInit() {
     this.personalDetail = JSON.parse(localStorage.getItem('user') || '{}');
+    this.loadNotifications();
+    this.notifPollTimer = setInterval(() => this.loadNotifications(), 60000);
+  }
+
+  ngOnDestroy() {
+    if (this.notifPollTimer) {
+      clearInterval(this.notifPollTimer);
+      this.notifPollTimer = null;
+    }
+  }
+
+  toggleNotifications(e: Event) {
+    e.stopPropagation();
+    this.showNotifications = !this.showNotifications;
+    this.isDropdownOpen = false;
+    if (this.showNotifications) this.loadNotifications();
+  }
+  loadNotifications() {
+    this.masterService.getHeaderNotifications({ limit: 12 }).subscribe({
+      next: (res: any) => {
+        if (res?.status === true) {
+          this.notifications = res.data?.items || [];
+          this.unreadCount = res.data?.count ?? this.notifications.filter((n: any) => !n.read).length;
+        }
+      },
+      error: () => {}
+    });
+  }
+  openNotification(n: any) {
+    this.showNotifications = false;
+    if (!n.read) this.markOneRead(n);
+    if (n.link) this.router.navigateByUrl(n.link);
+  }
+
+  markOneRead(n: any, e?: Event) {
+    e?.stopPropagation();
+    if (!n || n.read) return;
+    this.masterService.markHeaderNotificationsRead({
+      items: [{
+        refType: n.refType,
+        refId: n.refId,
+        status: n.status,
+        updatedAtSnapshot: n.updatedAtSnapshot,
+      }],
+    }).subscribe({
+      next: (res: any) => {
+        if (res?.status === true) {
+          n.read = true;
+          this.unreadCount = Math.max(0, this.unreadCount - 1);
+        }
+      },
+      error: () => {},
+    });
+  }
+
+  markAllRead(e?: Event) {
+    e?.stopPropagation();
+    this.masterService.markHeaderNotificationsRead({ markAll: true }).subscribe({
+      next: (res: any) => {
+        if (res?.status === true) {
+          this.notifications = this.notifications.map((n) => ({ ...n, read: true }));
+          this.unreadCount = 0;
+        }
+      },
+      error: () => {},
+    });
   }
 
   logout() {

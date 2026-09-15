@@ -20,7 +20,12 @@ export class MasterService {
       ? localStorage.getItem('base_url')?.replace(/["\\,]/g, '') || ''
       : localStorage.getItem('base_url')?.replace(/["\\,]/g, '') || '';
   }
-
+  getHeaderNotifications(body: any = {}): Observable<any> {
+    return this.http.post(`${this.baseUrl}header-notifications`, body || {});
+  }
+  markHeaderNotificationsRead(body: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}mark-header-notifications-read`, body || {});
+  }
   getImageUrl(filename: string): string {
     const base = this.getBaseUrl()
     return `${base}upload/${filename}`;

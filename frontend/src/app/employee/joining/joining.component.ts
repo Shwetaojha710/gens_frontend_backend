@@ -557,9 +557,9 @@ stats:any
   }
 
   inActiveFlag: any = false
-  activeFlag: any = false
+  activeFlag: any = true
   newJoinerFlag: any = false
-  totalEmpFlag: any = true
+  totalEmpFlag: any = false
 
   async checkStatus() {
     this.inActiveFlag = true

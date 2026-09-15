@@ -467,10 +467,73 @@ isAllAttendanceSelected() {
       case 'leave':
         this.loadLeaveRequests();
         break;
+     case 'regularization':
+      this.loadRegularization();
+        break;
 
     }
 
   }
+
+  approveRegularization(item: any, status: string) {
+    this.master.UpdateApplyRegularizeStatus({
+      ids: item.id,
+      status,
+      employeeId: item.employeeId
+    }).subscribe({
+      next: (response: any) => {
+        const ok = this.statusService.handleResponseStatus(response.status, response.message);
+        if (ok === true) {
+          this.notyf.success(response.message);
+          this.loadRegularization(); // list refresh
+        }
+      },
+      error: (err) => this.notyf.error(err.error?.message)
+    });
+  }
+
+  loadRegularization() {
+    const empId = this.personalDetails?.employeeId;
+    const month = this.obj['month'];
+    const year = this.obj['year'];
+
+    if (!empId || !month || !year) {
+      this.regularizationList = [];
+      return;
+    }
+
+    const startDate = `${year}-${month}-01`;
+    const lastDay = new Date(Number(year), Number(month), 0).getDate();
+    const endDate = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+
+    const payload = {
+      emp_id: empId,
+      startDate,
+      endDate,
+      status: 'pending'   // backend default bhi pending hai; 'All' abhi kaam nahi karega
+    };
+
+    this.master.getRegularizeList(payload).subscribe({
+      next: (response: any) => {
+        const message = response.message || 'Data found Successfully';
+        const status = this.statusService.handleResponseStatus(response.status, message);
+
+        if (status === true) {
+          this.regularizationList = response.data || [];   // ✅ direct array
+        } else if (status === 'expired') {
+          this.router.navigate(['login']);
+        } else {
+          this.regularizationList = [];
+          this.notyf.error(message);
+        }
+      },
+      error: (err) => {
+        this.regularizationList = [];
+        this.notyf.error(err.error?.message);
+      }
+    });
+  }
+  regularizationList: any[] = [];
   //   changeTab(tab: string) {
 
   //     this.activeTab = tab;

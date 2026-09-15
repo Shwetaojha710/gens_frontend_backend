@@ -251,6 +251,12 @@
               Leave Requests
             </a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link" [class.active]="activeTab == 'regularization'"
+               (click)="changeTab('regularization')">
+              Regularization
+            </a>
+          </li>
           <!-- <li class="nav-item">
             <a class="nav-link" [class.active]="activeTab == 'salary'"  (click)="activeTab='salary'; onSubmit()">
               Salary Breakup
@@ -633,6 +639,51 @@
           </table>
 
         </div>
+
+        <!-- ================= REGULARIZATION TAB ================= -->
+         <div *ngIf="activeTab == 'regularization'">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>SI.No</th>
+        <th>Date</th>
+        <th>In Time</th>
+        <th>Out Time</th>
+        <th>Reason</th>
+        <th>Status</th>
+        <th>Applied On</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let item of regularizationList; let i = index">
+        <td>{{ i + 1 }}</td>
+        <td>{{ item.attendanceDate | date:'dd-MM-yyyy' }}</td>
+        <td>{{ item.inTimeRequested }}</td>
+        <td>{{ item.outTimeRequested }}</td>
+        <td>{{ item.reason }}</td>
+        <td>{{ item.status }}</td>
+        <td>{{ item.createdAt | date:'dd-MM-yyyy hh:mm a' }}</td>
+        <td>
+          <button *ngIf="item.status == 'pending'" type="button"
+            class="btn btn-sm btn-outline-success"
+            (click)="approveRegularization(item, 'approved')">
+            <i class="fas fa-check"></i>
+          </button>
+          &nbsp;
+          <button *ngIf="item.status == 'pending'" type="button"
+            class="btn btn-sm btn-outline-danger"
+            (click)="approveRegularization(item, 'rejected')">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </td>
+      </tr>
+      <tr *ngIf="regularizationList.length === 0">
+        <td colspan="8" class="text-center">No regularization requests for this month</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
       </div>
     </div>

@@ -52,6 +52,7 @@ export const DEFAULT_PERMISSIONS: PermissionSection[] = [
       { key: 'att.holiday',      label: 'Holiday',               roles: ['admin', 'superadmin', 'hr', 'manager', 'director'] },
       { key: 'att.logs',         label: 'Attendance Logs',       roles: ['admin', 'superadmin', 'hr', 'manager', 'director'] },
       { key: 'att.leaves',       label: 'Leaves',                roles: ['admin', 'superadmin', 'hr', 'manager', 'director'] },
+      { key: 'att.leaveLedger',  label: 'Leave Ledger',          roles: ['admin', 'superadmin', 'hr', 'manager', 'director'] },
       { key: 'att.upload',       label: 'Upload Attendance',     roles: ['admin', 'superadmin', 'hr'] },
       { key: 'att.regularize',   label: 'Regularize',            roles: ['admin', 'superadmin', 'hr'] },
       { key: 'att.weekend',      label: 'Weekend Employee List', roles: ['admin', 'superadmin', 'hr'] },
@@ -68,6 +69,7 @@ export const DEFAULT_PERMISSIONS: PermissionSection[] = [
       { key: 'pay.deduction',  label: 'Deduction Summary',     roles: ['admin', 'superadmin', 'hr'] },
       { key: 'pay.reimburse',  label: 'Reimbursement',         roles: ['admin', 'superadmin', 'hr'] },
       { key: 'pay.appraisal',  label: 'Employee Appraisal',    roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'pay.arrear',     label: 'Arrear Management',     roles: ['admin', 'superadmin', 'hr'] },
     ]
   },
   {

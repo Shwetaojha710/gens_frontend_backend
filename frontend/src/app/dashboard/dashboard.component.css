@@ -23,6 +23,468 @@
     padding: 5px;
 }
 
+.celebrations-body {
+  overflow-y: auto;
+  height: 220px;
+}
+
+.bday-mini-card {
+  position: relative;
+  width: 100%;
+  min-height: 180px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 4px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: default;
+}
+
+.bday-mini-card--anniversary {
+  background: #f8fafc;
+  background-image: none !important;
+}
+
+.bday-mini-card--anniversary .bday-mini-card__inner {
+  background: transparent;
+}
+
+.bday-mini-card--today {
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(2, 169, 217, 0.28);
+  border-color: #7dd3fc;
+}
+
+.bday-mini-card__inner {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 10px 6px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0.72) 100%);
+}
+
+.bday-mini-card__avatar-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2px;
+}
+
+.bday-mini-card__avatar {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
+  box-shadow: 0 4px 10px rgba(15, 92, 153, 0.2);
+}
+
+.bday-mini-card__avatar--lg {
+  width: 72px;
+  height: 72px;
+  border-width: 3px;
+  border-color: #38bdf8;
+}
+
+.bday-mini-card__date {
+  font-weight: 500;
+  font-size: 10px;
+  line-height: 18px;
+  color: #17394d;
+}
+
+.bday-mini-card__name {
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 18px;
+  margin: 0;
+  color: #1e293b;
+}
+
+.bday-mini-card__title {
+  font-family: Italianno, cursive, serif;
+  font-weight: 400;
+  font-size: 22px;
+  line-height: 24px;
+  margin: 2px 0 0;
+  text-transform: capitalize;
+  background: linear-gradient(293.36deg, #02a9d9 -19.55%, #005b8f 25.16%, #2c9bce 69.88%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.bday-mini-card--today .bday-mini-card__title {
+  font-size: 20px;
+}
+
+/* ── Birthday modal (Happy Birthday design) ─────────────────────────────── */
+.bday-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(30, 41, 59, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: bdayBackdropIn 0.35s ease-out both;
+}
+
+.bday-modal {
+  position: relative;
+  width: min(435px, 100%);
+  max-height: 102vh;
+  overflow: hidden;
+  background-color: #fff;
+  background-image: url(/assets/img/birthday-bg.jpg);
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  padding: 106px 24px 79px;
+  text-align: center;
+  animation: bdayModalPop 0.55s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+}
+/* .bday-modal {
+  position: relative;
+  width: min(360px, 100%);
+  max-height: 92vh;
+  overflow: hidden;
+  background-color: #fff;
+  background-image: url('/assets/img/birthday-bg.jpg');
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  padding: 28px 24px 22px;
+  text-align: center;
+  animation: bdayModalPop 0.55s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+} */
+
+.bday-modal__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 0;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.bday-modal__close:hover {
+  transform: rotate(90deg) scale(1.05);
+  background: #f1f5f9;
+}
+
+.bday-modal__close i { font-size: 18px; }
+
+.bday-modal__heading {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1e3a5f;
+  margin: 8px 0 4px;
+  position: relative;
+  z-index: 1;
+  animation: bdayTitleBounce 0.8s ease-out 0.15s both;
+}
+
+.bday-modal__sub {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 1;
+  animation: bdayFadeUp 0.5s ease-out 0.28s both;
+}
+
+.bday-modal__avatar-ring {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  padding: 4px;
+  background: linear-gradient(135deg, #38bdf8, #22c55e, #facc15, #38bdf8);
+  background-size: 240% 240%;
+  box-shadow: 0 10px 24px rgba(14, 165, 233, 0.35);
+  position: relative;
+  z-index: 1;
+  animation:
+    bdayAvatarIn 0.65s cubic-bezier(0.22, 1.2, 0.36, 1) 0.2s both,
+    bdayRingSpin 4s linear infinite;
+}
+
+.bday-modal__avatar-ring img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #fff;
+  display: block;
+  background: #e2e8f0;
+  animation: bdayAvatarPulse 2.4s ease-in-out infinite;
+}
+
+.bday-modal__name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px;
+  position: relative;
+  z-index: 1;
+  animation: bdayFadeUp 0.5s ease-out 0.35s both;
+}
+
+.bday-modal__date {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0ea5e9;
+  margin-bottom: 14px;
+  position: relative;
+  z-index: 1;
+  animation: bdayFadeUp 0.5s ease-out 0.42s both;
+}
+
+.bday-modal__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(90deg, #06b6d4 0%, #0284c7 100%);
+  box-shadow: 0 10px 20px rgba(2, 132, 199, 0.35);
+  cursor: pointer;
+  margin-bottom: 14px;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  animation: bdayFadeUp 0.5s ease-out 0.48s both, bdayCtaGlow 2s ease-in-out infinite 0.8s;
+}
+
+.bday-modal__cta::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
+  transform: skewX(-20deg);
+  animation: bdayShimmer 2.8s ease-in-out infinite 1s;
+}
+
+.bday-modal__wish {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #64748b;
+  margin: 0 auto;
+  max-width: 280px;
+  position: relative;
+  z-index: 1;
+  animation: bdayFadeUp 0.5s ease-out 0.55s both;
+}
+
+.bday-modal__balloon {
+  position: absolute;
+  width: 28px;
+  height: 36px;
+  border-radius: 50% 50% 50% 50% / 45% 45% 55% 55%;
+  opacity: 0.95;
+  pointer-events: none;
+  z-index: 0;
+  will-change: transform;
+}
+
+.bday-modal__balloon::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 1px;
+  height: 18px;
+  background: #94a3b8;
+}
+
+.bday-modal__balloon--pink {
+  background: #f9a8d4;
+  left: 18px;
+  top: 42%;
+  animation: bdayFloatA 3.2s ease-in-out infinite;
+}
+
+.bday-modal__balloon--blue {
+  background: #7dd3fc;
+  right: 20px;
+  top: 36%;
+  animation: bdayFloatB 3.6s ease-in-out infinite 0.3s;
+}
+
+.bday-modal__balloon--yellow {
+  background: #fde047;
+  left: 46%;
+  bottom: 72px;
+  width: 22px;
+  height: 28px;
+  animation: bdayFloatC 2.8s ease-in-out infinite 0.15s;
+}
+
+.bday-modal__balloon--mint {
+  background: #5eead4;
+  right: 42px;
+  bottom: 110px;
+  width: 18px;
+  height: 24px;
+  animation: bdayFloatA 3.4s ease-in-out infinite 0.5s;
+}
+
+.bday-modal__confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.bday-confetti {
+  position: absolute;
+  top: -12px;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  opacity: 0.9;
+  animation: bdayConfettiFall linear infinite;
+}
+
+.bday-confetti:nth-child(1)  { left: 6%;  background: #f472b6; animation-duration: 3.2s; animation-delay: 0s; }
+.bday-confetti:nth-child(2)  { left: 14%; background: #38bdf8; animation-duration: 3.8s; animation-delay: 0.4s; width: 6px; height: 6px; border-radius: 50%; }
+.bday-confetti:nth-child(3)  { left: 22%; background: #a78bfa; animation-duration: 2.9s; animation-delay: 0.2s; }
+.bday-confetti:nth-child(4)  { left: 30%; background: #facc15; animation-duration: 3.5s; animation-delay: 0.7s; width: 10px; height: 4px; }
+.bday-confetti:nth-child(5)  { left: 38%; background: #2dd4bf; animation-duration: 4s;   animation-delay: 0.1s; }
+.bday-confetti:nth-child(6)  { left: 46%; background: #fb923c; animation-duration: 3.1s; animation-delay: 0.55s; width: 6px; height: 6px; border-radius: 50%; }
+.bday-confetti:nth-child(7)  { left: 54%; background: #f472b6; animation-duration: 3.6s; animation-delay: 0.25s; }
+.bday-confetti:nth-child(8)  { left: 62%; background: #60a5fa; animation-duration: 2.7s; animation-delay: 0.8s; width: 10px; height: 4px; }
+.bday-confetti:nth-child(9)  { left: 70%; background: #34d399; animation-duration: 3.9s; animation-delay: 0.35s; }
+.bday-confetti:nth-child(10) { left: 78%; background: #e879f9; animation-duration: 3.3s; animation-delay: 0.6s; width: 6px; height: 6px; border-radius: 50%; }
+.bday-confetti:nth-child(11) { left: 86%; background: #fde047; animation-duration: 2.8s; animation-delay: 0.15s; }
+.bday-confetti:nth-child(12) { left: 92%; background: #22d3ee; animation-duration: 3.7s; animation-delay: 0.9s; }
+.bday-confetti:nth-child(13) { left: 10%; background: #c084fc; animation-duration: 4.2s; animation-delay: 1.1s; width: 10px; height: 4px; }
+.bday-confetti:nth-child(14) { left: 50%; background: #f43f5e; animation-duration: 3.4s; animation-delay: 1.3s; }
+.bday-confetti:nth-child(15) { left: 66%; background: #4ade80; animation-duration: 3s;   animation-delay: 1s; width: 6px; height: 6px; border-radius: 50%; }
+.bday-confetti:nth-child(16) { left: 82%; background: #38bdf8; animation-duration: 4.1s; animation-delay: 0.45s; }
+
+@keyframes bdayBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes bdayModalPop {
+  0% { opacity: 0; transform: translateY(28px) scale(0.86); }
+  70% { opacity: 1; transform: translateY(-6px) scale(1.03); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes bdayTitleBounce {
+  0% { opacity: 0; transform: translateY(-16px) scale(0.9); }
+  60% { opacity: 1; transform: translateY(4px) scale(1.05); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes bdayFadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bdayAvatarIn {
+  from { opacity: 0; transform: scale(0.5); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes bdayAvatarPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+@keyframes bdayRingSpin {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes bdayFloatA {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50% { transform: translateY(-14px) rotate(5deg); }
+}
+
+@keyframes bdayFloatB {
+  0%, 100% { transform: translateY(0) rotate(3deg); }
+  50% { transform: translateY(-18px) rotate(-6deg); }
+}
+
+@keyframes bdayFloatC {
+  0%, 100% { transform: translateY(0) translateX(0) rotate(0deg); }
+  50% { transform: translateY(-12px) translateX(4px) rotate(8deg); }
+}
+
+@keyframes bdayConfettiFall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0;
+  }
+  8% { opacity: 1; }
+  100% {
+    transform: translateY(420px) rotate(720deg);
+    opacity: 0.15;
+  }
+}
+
+@keyframes bdayCtaGlow {
+  0%, 100% { box-shadow: 0 10px 20px rgba(2, 132, 199, 0.35); transform: scale(1); }
+  50% { box-shadow: 0 12px 28px rgba(2, 132, 199, 0.55); transform: scale(1.03); }
+}
+
+@keyframes bdayShimmer {
+  0%, 40% { left: -120%; }
+  70%, 100% { left: 140%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bday-modal-backdrop,
+  .bday-modal,
+  .bday-modal__heading,
+  .bday-modal__sub,
+  .bday-modal__avatar-ring,
+  .bday-modal__avatar-ring img,
+  .bday-modal__name,
+  .bday-modal__date,
+  .bday-modal__cta,
+  .bday-modal__wish,
+  .bday-modal__balloon,
+  .bday-confetti,
+  .bday-modal__cta::after {
+    animation: none !important;
+  }
+}
+
 .celebration-card img {
     width: 54px;
     height: 54px;
@@ -701,6 +1163,10 @@
     box-shadow: 0 6px 14px -8px rgba(13, 148, 136, 0.65);
 }
 
+.tw-attendance-icon-badge i {
+    color: #fff !important;
+}
+
 .tw-attendance-title {
     font-weight: 700;
     font-size: 1rem;
@@ -1168,6 +1634,11 @@
       justify-content: center;
       align-items: center;
       font-size: 15px;
+      color: #fff;
+    }
+
+    .team-icon i {
+      color: #fff !important;
     }
 
     .team-info {
@@ -1187,37 +1658,23 @@
       color: #718096;
     }
 
-    /* ---------- Individual Colors ---------- */
+    /* ---------- Individual Colors (icon glyph stays white) ---------- */
 
-    .development .team-icon {
-      color: #ff9417;
-      background: #fff1dc;
-    }
-
-    .management .team-icon {
-      color: #354a86;
-      background: #e8ecf7;
-    }
-
-    .hr .team-icon {
-      color: #1389db;
-      background: #e2f3ff;
-    }
-
-    .marketing .team-icon {
-      color: #ff5260;
-      background: #ffe7e9;
-    }
-
-    .sales .team-icon {
-      color: #7754df;
-      background: #eee9ff;
-    }
-
+    .development .team-icon,
+    .management .team-icon,
+    .hr .team-icon,
+    .marketing .team-icon,
+    .sales .team-icon,
     .qa .team-icon {
-      color: #7855e9;
-      background: #eee9ff;
+      color: #fff;
     }
+
+    .development .team-icon { background: #ff9417; }
+    .management .team-icon { background: #354a86; }
+    .hr .team-icon { background: #1389db; }
+    .marketing .team-icon { background: #ff5260; }
+    .sales .team-icon { background: #7754df; }
+    .qa .team-icon { background: #7855e9; }
 
     /* ---------- Statistics ---------- */
 
@@ -1478,7 +1935,7 @@
 .employee-table td {
     padding: 9px 12px;
 
-    font-size: 12px;
+    font-size: 14px;
 
     color: #586b80;
 
@@ -1558,7 +2015,7 @@
 
     border-radius: 20px;
 
-    font-size: 9px;
+    font-size: 12px;
 
     font-weight: 600;
 }
@@ -1856,4 +2313,114 @@
 
         gap: 10px;
     }
+}
+
+
+/* Leave type / days */
+.leave-type-badge {
+  color: #005b8f;
+  background: #e8f4fb;
+}
+.leave-days-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: #17394d;
+}
+.leave-dates {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.leave-contact {
+  font-size: 11px;
+  color: #6b8798;
+}
+
+/* Leave status badges */
+.status.leave-pending {
+  color: #d9840b;
+  background: #fff1df;
+}
+.status.leave-pending::before { background: #f39a16; }
+
+.status.leave-approved {
+  color: #13986f;
+  background: #e5f7ef;
+}
+.status.leave-approved::before { background: #13aa7b; }
+
+.status.leave-rejected {
+  color: #c0392b;
+  background: #fdecec;
+}
+.status.leave-rejected::before { background: #e74c3c; }
+
+.status.leave-recommended {
+  color: #3776ca;
+  background: #e8f1ff;
+}
+.status.leave-recommended::before { background: #3776ca; }
+
+/* Approve / Reject icons */
+.actions .action-approve,
+.actions .action-reject {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+}
+.actions .action-approve {
+  background: #e7f8ef;
+  color: #1a7f4b;
+}
+.actions .action-approve:hover {
+  background: #1a7f4b;
+  color: #fff;
+}
+.actions .action-reject {
+  background: #fdecec;
+  color: #c0392b;
+}
+.actions .action-reject:hover {
+  background: #c0392b;
+  color: #fff;
+}
+
+.emp-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+.emp-badge--primary {
+  color: #3776ca;
+  background: #e8f1ff;
+}
+.emp-badge--warning {
+  color: #d9840b;
+  background: #fff1df;
+}
+.emp-badge--info {
+  color: #0d9488;
+  background: #e6f7f5;
+}
+.emp-badge--danger {
+  color: #c0392b;
+  background: #fdecec;
+}
+.emp-badge--success {
+  color: #13986f;
+  background: #e5f7ef;
 }

@@ -1,0 +1,26 @@
+/* Reuse existing project table/card patterns — minimal local overrides */
+.badge-outline-success {
+  color: #28c76f;
+  border: 1px solid #28c76f;
+  background: transparent;
+}
+.badge-outline-danger {
+  color: #ea5455;
+  border: 1px solid #ea5455;
+  background: transparent;
+}
+.badge-outline-warning {
+  color: #ff9f43;
+  border: 1px solid #ff9f43;
+  background: transparent;
+}
+.badge-outline-secondary {
+  color: #82868b;
+  border: 1px solid #82868b;
+  background: transparent;
+}
+.badge-outline-info {
+  color: #00cfe8;
+  border: 1px solid #00cfe8;
+  background: transparent;
+}

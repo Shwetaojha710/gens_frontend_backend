@@ -68,6 +68,11 @@ export class DashboardComponent {
   anniversaries: any[] = [];
   /** Celebrations card tabs */
   celebrationTab: 'all' | 'upcoming' = 'all';
+  /** Today's birthday popup (matches Happy Birthday card design) */
+  showBirthdayModal = false;
+  birthdayModalPerson: any = null;
+  birthdayModalQueue: any[] = [];
+  birthdayModalIndex = 0;
   attendanceChart: any = null;
   attendanceByDepartment: any[] = [];
   teamwiseAttendance: any[] = [];
@@ -212,6 +217,7 @@ export class DashboardComponent {
           this.attendanceByDepartment = res.data.attendanceByDepartment || [];
           this.Event = res.data;
           this.setAttendanceDonutChart();
+          this.maybeShowTodayBirthdayModal();
           return;
         }
 
@@ -358,12 +364,16 @@ export class DashboardComponent {
       ...this.birthdays.map((item: any) => ({
         ...item,
         cardTitle: 'Birthday',
+        cardKind: 'birthday',
         dateLabel: this.formatCelebrationDate(item),
+        dateLong: this.formatCelebrationDateLong(item),
       })),
       ...this.anniversaries.map((item: any) => ({
         ...item,
         cardTitle: 'Anniversary',
+        cardKind: 'anniversary',
         dateLabel: this.formatCelebrationDate(item),
+        dateLong: this.formatCelebrationDateLong(item),
       })),
     ].sort((a: any, b: any) => (a.daysUntil ?? 999) - (b.daysUntil ?? 999));
 
@@ -380,6 +390,12 @@ export class DashboardComponent {
     return list.filter((item: any) => item.inCurrentMonth === true || item.isToday === true);
   }
 
+  get todaysBirthdays(): any[] {
+    return (this.birthdays || []).filter(
+      (b: any) => b.isToday === true || Number(b.daysUntil) === 0,
+    );
+  }
+
   private formatCelebrationDate(item: any): string {
     const raw = item?.nextOccurrence || item?.eventDate || item?.dateOfBirth || item?.joiningDate;
     if (!raw) return 'NA';
@@ -388,8 +404,94 @@ export class DashboardComponent {
     return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
   }
 
+  formatCelebrationDateLongPublic(item: any): string {
+    return this.formatCelebrationDateLong(item);
+  }
+
+  private formatCelebrationDateLong(item: any): string {
+    const raw = item?.nextOccurrence || item?.eventDate || item?.dateOfBirth || item?.joiningDate;
+    if (!raw) return '';
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return '';
+    const day = d.getDate();
+    const month = d.toLocaleDateString('en-GB', { month: 'long' });
+    const year = new Date().getFullYear();
+    return `${day} ${month} ${year}`;
+  }
+
   setCelebrationTab(tab: 'all' | 'upcoming'): void {
     this.celebrationTab = tab;
+  }
+
+  /** Show Happy Birthday popup once per day per person (session). */
+  maybeShowTodayBirthdayModal(): void {
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const dismissedRaw = sessionStorage.getItem('bdayModalDismissed') || '{}';
+    let dismissed: Record<string, string> = {};
+    try {
+      dismissed = JSON.parse(dismissedRaw);
+    } catch {
+      dismissed = {};
+    }
+
+    const queue = this.todaysBirthdays.filter((b: any) => {
+      const id = String(b.id || b.employeeId || `${b.firstName}-${b.lastName}`);
+      return dismissed[id] !== todayKey;
+    });
+
+    if (!queue.length) {
+      this.showBirthdayModal = false;
+      this.birthdayModalPerson = null;
+      this.birthdayModalQueue = [];
+      return;
+    }
+
+    this.birthdayModalQueue = queue;
+    this.birthdayModalIndex = 0;
+    this.birthdayModalPerson = queue[0];
+    this.showBirthdayModal = true;
+  }
+
+  closeBirthdayModal(): void {
+    const person = this.birthdayModalPerson;
+    if (person) {
+      const todayKey = new Date().toISOString().slice(0, 10);
+      const id = String(person.id || person.employeeId || `${person.firstName}-${person.lastName}`);
+      let dismissed: Record<string, string> = {};
+      try {
+        dismissed = JSON.parse(sessionStorage.getItem('bdayModalDismissed') || '{}');
+      } catch {
+        dismissed = {};
+      }
+      dismissed[id] = todayKey;
+      sessionStorage.setItem('bdayModalDismissed', JSON.stringify(dismissed));
+    }
+
+    const next = this.birthdayModalIndex + 1;
+    if (next < this.birthdayModalQueue.length) {
+      this.birthdayModalIndex = next;
+      this.birthdayModalPerson = this.birthdayModalQueue[next];
+      this.showBirthdayModal = true;
+    } else {
+      this.showBirthdayModal = false;
+      this.birthdayModalPerson = null;
+      this.birthdayModalQueue = [];
+    }
+  }
+
+  openBirthdayCelebration(item?: any): void {
+    const person = item || this.birthdayModalPerson;
+    if (!person) return;
+    this.closeBirthdayModal();
+    this.celebrationTab = 'all';
+  }
+
+  openTodayBirthday(item: any): void {
+    if (!item) return;
+    this.birthdayModalQueue = [item];
+    this.birthdayModalIndex = 0;
+    this.birthdayModalPerson = item;
+    this.showBirthdayModal = true;
   }
 
   onImageError(event: Event, data: any, imageType: string) {
@@ -408,17 +510,11 @@ export class DashboardComponent {
   }
 
   getLeaveStatusClass(status: string): string {
-    const normalizedStatus = String(status || '').toLowerCase();
-
-    if (normalizedStatus === 'approved') {
-      return 'bg-label-success';
-    }
-
-    if (normalizedStatus === 'rejected') {
-      return 'bg-label-danger';
-    }
-
-    return 'bg-label-warning';
+    const s = String(status || '').toLowerCase();
+    if (s == 'approved') return 'leave-approved';
+    if (s == 'rejected' || s == 'self_declined') return 'leave-rejected';
+    if (s == 'recommended') return 'leave-recommended';
+    return 'leave-pending'; // pending / escalate etc.
   }
 
   onBranchChange(branchId: any) {
@@ -640,4 +736,50 @@ export class DashboardComponent {
       }
     });
   }
+
+// ── Employee table search + pagination ──
+tableSearch = '';
+currentPage = 1;
+pageSize = 10;
+readonly Math = Math;
+
+get filteredTableRows(): any[] {
+  const q = this.tableSearch.trim().toLowerCase();
+  const source =
+    this.activeEmployeeSectionTab === 'leave' ? this.leaveList : this.employeeList;
+  if (!q) return source || [];
+  return (source || []).filter((item: any) =>
+    JSON.stringify(item).toLowerCase().includes(q),
+  );
+}
+
+get pagedTableRows(): any[] {
+  const start = (this.currentPage - 1) * this.pageSize;
+  return this.filteredTableRows.slice(start, start + this.pageSize);
+}
+
+get totalPages(): number {
+  return Math.max(1, Math.ceil(this.filteredTableRows.length / this.pageSize) || 1);
+}
+
+get pageNumbers(): number[] {
+  const total = this.totalPages;
+  const pages: number[] = [];
+  for (let i = 1; i <= total; i++) pages.push(i);
+  return pages;
+}
+
+onTableSearch(): void {
+  this.currentPage = 1;
+}
+
+goToPage(p: number): void {
+  if (p < 1 || p > this.totalPages) return;
+  this.currentPage = p;
+}
+
+onPageSizeChange(size: any): void {
+  this.pageSize = Number(size) || 10;
+  this.currentPage = 1;
+}
 }

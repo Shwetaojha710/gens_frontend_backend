@@ -24,6 +24,7 @@ const reimbursement_file = require("../../models/reimbursementfile");
 const reimbursement = require("../../models/reimbursement");
 const comp_off = require("../../models/comp_off");
 const leave_application = require("../../models/leave_application");
+const { writeAudit, toPlain } = require("../../helper/auditLog");
 
 exports.attendanceMaster = async (req, res) => {
   const {
@@ -1453,6 +1454,14 @@ exports.addHoliday = async (req, res) => {
         status: status || "active",
       });
       createdDocs.push(newDoc);
+      await writeAudit({
+        req,
+        actionType: "HOLIDAY_CREATE",
+        referenceId: newDoc.id,
+        oldValue: null,
+        newValue: newDoc,
+        remarks: `Holiday created: ${holiday_name}`,
+      });
     }
 
     return Helper.response(
@@ -1566,6 +1575,8 @@ exports.updateHoliday = async (req, res) => {
       return Helper.response(false, "Holiday not found", null, res, 404);
     }
 
+    const oldHoliday = toPlain(holidayExists);
+
     if (!req.files || Object.keys(req.files).length === 0) {
       holidayExists.holiday_type = holiday_type;
       holidayExists.holiday_name = holiday_name;
@@ -1575,6 +1586,15 @@ exports.updateHoliday = async (req, res) => {
       holidayExists.updatedBy = req.users?.id;
       holidayExists.updatedAt = new Date();
       await holidayExists.save();
+
+      await writeAudit({
+        req,
+        actionType: "HOLIDAY_UPDATE",
+        referenceId: holidayExists.id,
+        oldValue: oldHoliday,
+        newValue: holidayExists,
+        remarks: `Holiday updated: ${holiday_name}`,
+      });
 
       return Helper.response(
         true,
@@ -1613,6 +1633,15 @@ exports.updateHoliday = async (req, res) => {
       await holidayExists.save();
       updatedHolidays.push(holidayExists);
     }
+
+    await writeAudit({
+      req,
+      actionType: "HOLIDAY_UPDATE",
+      referenceId: holidayExists.id,
+      oldValue: oldHoliday,
+      newValue: holidayExists,
+      remarks: `Holiday updated (with file): ${holiday_name}`,
+    });
 
     return Helper.response(
       true,
@@ -1787,6 +1816,8 @@ exports.deleteHoliday = async (req, res) => {
       return Helper.response(false, "Document not found", null, res, 404);
     }
 
+    const oldHoliday = toPlain(delteholiday);
+
     const filePath = path.join(
       __dirname,
       "../../../upload",
@@ -1801,6 +1832,15 @@ exports.deleteHoliday = async (req, res) => {
     }
 
     await delteholiday.destroy();
+
+    await writeAudit({
+      req,
+      actionType: "HOLIDAY_DELETE",
+      referenceId: id,
+      oldValue: oldHoliday,
+      newValue: null,
+      remarks: `Holiday deleted: ${oldHoliday?.holiday_name || id}`,
+    });
 
     return Helper.response(
       true,

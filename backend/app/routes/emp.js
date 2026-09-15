@@ -5,6 +5,7 @@ const {createEmploymentType, getEmploymentTypes, editEmploymentType, deleteEmplo
 const { activeLocation, getStateDistrict } = require('../controller/tenant/empPersonal');
 const { getLocationHistory, getActiveLocationEmp, getempLocationHistory, getappActiveLocationEmp, getliveLocationHistory, getVisitReport, getVisitPlace } = require('../controller/tenant/tracking');
 const {Admin, AppAdmin} = require('../middleware/auth');
+const { getHeaderNotifications, markHeaderNotificationsRead } = require('../controller/tenant/headerNotifications');
 
 router.post('/createEmpType', Admin, createEmploymentType);
 router.post('/getEmpTypes', Admin, getEmploymentTypes);
@@ -41,4 +42,9 @@ router.post("/app-track-location-history",AppAdmin, getempLocationHistory);
 router.post("/visit-report",Admin, getVisitReport);
 router.get("/comp-off-list",AppAdmin, CompoffData);
 router.post("/get-state-district",getStateDistrict)
+
+
+router.post('/header-notifications', Admin, getHeaderNotifications);
+router.post('/mark-header-notifications-read', Admin, markHeaderNotificationsRead);
+
 module.exports= router;

@@ -2477,6 +2477,7 @@ exports.EmployeeLeaveList = async (req, res) => {
             return {
               name: item?.leaveName,
               code: item?.leaveCode,
+              type: "comp-off",
               available_leave,
               used_leave,
               total_leave,
@@ -2532,14 +2533,17 @@ exports.EmployeeLeaveList = async (req, res) => {
           raw: true,
         });
         const used_leave = Number(usedRows?.[0]?.totalDays || 0);
-        const available_leave = Math.max(total_leave - used_leave, 0);
-      
+        // const available_leave = Math.max(total_leave - used_leave, 0);
+        const available_leave = total_leave >0 ? Math.max(item?.allowedPerYear - used_leave, 0) : 0;
+        const allowed_days =  item?.allowedPerYear-used_leave;
         return {
           name: item?.leaveName,
           code: item?.leaveCode,
           available_leave,
           used_leave,
           total_leave,
+          type: "restricted",
+          allowed_days: item?.allowedPerYear,
         };
       }
         const leavebal = await leave_balance.findOne({
@@ -2555,16 +2559,17 @@ exports.EmployeeLeaveList = async (req, res) => {
         });
 
         const totalAssigned = Number(leavebal?.totalAssigned ?? 0);
-        const used = Number(leavebal?.usedLeaves ?? 0);
+        // const used = Number(leavebal?.usedLeaves ?? 0);
         const remaining = Number(leavebal?.remainingLeaves ?? 0);
         const carry = Number(leavebal?.carryForwarded ?? 0);
-
+        const used = totalAssigned + carry - remaining;
         return {
           name: item?.leaveName,
           code: item?.leaveCode,
           available_leave: remaining,
           used_leave: used,
           total_leave: totalAssigned + carry || remaining + used,
+          type: "leave",
         };
       }),
     );
@@ -2816,8 +2821,31 @@ exports.AppapplyForLeave = async (req, res) => {
   if (!employeeId || !leaveTypeId || !tenantId) {
     return Helper.response(false, "Required fields missing", [], res, 200);
   }
-
+  
   try {
+    const leaveType = await leaveMaster.findByPk(leaveTypeId, {
+      attributes: ["leaveName", "leaveCode"],
+      raw: true,
+    });
+    const type = leaveType?.leaveName;
+    if(type == "RESTRICTED"){
+      const leaveBalance = await holiday.findOne({
+        where: { tenantId,  holiday_type: leaveTypeId, branchId ,date: fromDate},
+        raw: true,
+      });
+      if(!leaveBalance){
+        return Helper.response(false, "Leave balance not found", {}, res, 200);
+      }
+    }
+    // if(type == "comp-off"){
+    //   const compOffRecord = await comp_off.findOne({
+    //     where: { id: compOffId, employeeId, tenantId, branchId },
+    //   });
+    //   if(!compOffRecord){
+    //     return Helper.response(false, "Comp-off record not found", {}, res, 200);
+    //   }
+    // }
+   
     let days = moment(toDate).diff(moment(fromDate), "days") + 1;
 
     if (fromDate == toDate) {
@@ -2852,7 +2880,7 @@ exports.AppapplyForLeave = async (req, res) => {
       if (compOffRecord.approval_status !== "approved") {
         return Helper.response(false, "Comp-off is not approved yet", {}, res, 200);
       }
-      if (compOffRecord.status === "used") {
+      if (compOffRecord.status == "used") {
         return Helper.response(false, "Comp-off is already fully used", {}, res, 200);
       }
       // if (compOffRecord.status === "expired") {
@@ -2921,6 +2949,24 @@ exports.AppapplyForLeave = async (req, res) => {
         },
         { where: { id: compOffId } },
       );
+    }
+
+    // Push notify reporting manager (FCM)
+    try {
+      const { notifyManagerOnLeaveApply } = require("./headerNotifications");
+      const leaveTypeRow = await leaveMaster.findByPk(leaveTypeId, {
+        attributes: ["leaveName", "leaveCode"],
+        raw: true,
+      });
+      await notifyManagerOnLeaveApply({
+        employeeId,
+        tenantId,
+        branchId,
+        leaveLabel: leaveTypeRow?.leaveName || leaveTypeRow?.leaveCode || "leave",
+        days,
+      });
+    } catch (pushErr) {
+      console.error("Leave apply push notify failed:", pushErr?.message || pushErr);
     }
 
     return Helper.response(
@@ -3328,6 +3374,17 @@ exports.PrintBill = async (req, res) => {
       );
     }
 
+    const tenant = await Tenant.findOne({
+      where: { id: tenantId },
+      attributes: ["companyName", "companyAddress", "image"],
+      raw: true,
+    });
+    const companyName =
+      tenant?.companyName || "Quaere Etechnologies Pvt Ltd";
+    const companyAddress =
+      (tenant?.companyAddress && String(tenant.companyAddress).trim()) ||
+      "7th Floor, Cyber Tower, Pickup Road, Vibhuti Khand, Gomti Nagar, Lucknow-226010";
+
     const data = await Promise.all(
       getSalaryData.map(async (item) => {
         const basics = await Basic.findOne({
@@ -3467,7 +3524,7 @@ exports.PrintBill = async (req, res) => {
         { image: logo, width: 140, alignment: "left" },
         {
           columns: [
-            { text: "Quaere eTechnologies Pvt. Ltd.", style: "header" },
+            { text: companyName, style: "header" },
             {
               text: "PAY SLIP",
               bold: true,
@@ -3477,12 +3534,7 @@ exports.PrintBill = async (req, res) => {
           ],
         },
         {
-          text: "www.quaeretech.com | +91-522 406 7760",
-          alignment: "left",
-          fontSize: 10,
-        },
-        {
-          text: "7th Floor, Cyber Tower, Pickup Road, Vibhuti Khand, Gomti Nagar, Lucknow-226010",
+          text: companyAddress,
           alignment: "left",
           fontSize: 10,
           margin: [0, 0, 0, 10],
@@ -3567,6 +3619,14 @@ exports.PrintBill = async (req, res) => {
             hLineColor: () => "#000",
             vLineColor: () => "#000",
           },
+        },
+        {
+          text: "This salary slip has been generated electronically by the system and does not require a signature.",
+          alignment: "center",
+          fontSize: 9,
+          italics: true,
+          color: "#555555",
+          margin: [0, 20, 0, 0],
         },
       ],
       styles: {

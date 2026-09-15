@@ -222,7 +222,7 @@ exports.assignLeave = async (req, res) => {
 
   try {
     const existing = await leaveBalance.findOne({
-      where: { employeeId, leaveTypeId, year, branchId },
+      where: { employeeId, leaveTypeId, year,month, branchId },
     });
     const usedLeaves = existing ? existing.usedLeaves : 0;
     const remainingLeaves =
@@ -441,6 +441,165 @@ exports.getLeaveByEmployee = async (req, res) => {
   }
 };
 
+/** Monthly leave ledger — all employees or one employee, with year/month/leave-type filters */
+exports.getLeaveLedger = async (req, res) => {
+  try {
+    const { employeeId, year, month, leaveTypeId } = req.body;
+    const tenantId = req.users && req.users.tenantId;
+    const branchId = req.users && req.users.branchId;
+
+    if (!branchId || branchId == "null") {
+      return Helper.response(false, "branchId is required!", {}, res, 200);
+    }
+    if (!tenantId) {
+      return Helper.response(false, "tenantId is required!", {}, res, 200);
+    }
+    if (!year) {
+      return Helper.response(false, "year is required!", {}, res, 200);
+    }
+
+    const where = {
+      tenantId,
+      branchId,
+      year: Number(year),
+    };
+
+    if (employeeId && employeeId !== "All") {
+      where.employeeId = employeeId;
+    }
+    if (month && month !== "All" && month !== "" && month != null) {
+      where.month = Number(month);
+    }
+    if (leaveTypeId && leaveTypeId !== "All" && leaveTypeId !== "") {
+      where.leaveTypeId = leaveTypeId;
+    }
+
+    const leaveBalanceData = await leaveBalance.findAll({
+      where,
+      raw: true,
+      order: [
+        ["year", "DESC"],
+        ["month", "ASC"],
+      ],
+    });
+
+    if (!leaveBalanceData.length) {
+      return Helper.response(false, "No leave ledger data found.", [], res, 200);
+    }
+
+    const empIds = [...new Set(leaveBalanceData.map((r) => r.employeeId).filter(Boolean))];
+    const typeIds = [...new Set(leaveBalanceData.map((r) => r.leaveTypeId).filter(Boolean))];
+
+    const [employees, leaveTypes] = await Promise.all([
+      empIds.length
+        ? empPersonal.findAll({
+            where: { id: { [Op.in]: empIds } },
+            attributes: ["id", "firstName", "lastName", "empCode", "joiningDate"],
+            raw: true,
+          })
+        : [],
+      typeIds.length
+        ? leaveMaster.findAll({
+            where: { id: { [Op.in]: typeIds } },
+            attributes: ["id", "leaveName", "leaveCode"],
+            raw: true,
+          })
+        : [],
+    ]);
+
+    const empMap = Object.fromEntries(
+      employees.map((e) => [
+        e.id,
+        {
+          employeeName: `${e.firstName || ""} ${e.lastName || ""}`.trim(),
+          empCode: e.empCode || "",
+          joiningDate: e.joiningDate || null,
+        },
+      ]),
+    );
+    const typeMap = Object.fromEntries(
+      leaveTypes.map((t) => [t.id, { leaveTypeName: t.leaveName, leaveCode: t.leaveCode }]),
+    );
+
+    const isCompOffLeave = (type) => {
+      const name = String(type?.leaveTypeName || "").toLowerCase();
+      const code = String(type?.leaveCode || "");
+      return code === "002" || name.includes("comp");
+    };
+
+    const isCLLeave = (type) => {
+      const name = String(type?.leaveTypeName || "")
+        .toLowerCase()
+        .trim();
+      const code = String(type?.leaveCode || "");
+      return (
+        name === "cl" ||
+        name === "casual leave" ||
+        name.includes("casual") ||
+        code === "001"
+      );
+    };
+
+    /** CL only: first 3 months after joining → 1, then → 2. Comp Off / others → 0. */
+    const getMonthlyLeaveCredit = (type, joiningDate, year, month) => {
+      if (!type || isCompOffLeave(type)) return 0;
+      if (!isCLLeave(type)) return 0;
+
+      if (!joiningDate || !year || !month) return 2;
+
+      const joiningMonthStart = moment(joiningDate).startOf("month");
+      const rowMonthStart = moment(
+        `${year}-${String(month).padStart(2, "0")}-01`,
+        "YYYY-MM-DD",
+      );
+      const monthsSinceJoining = rowMonthStart.diff(joiningMonthStart, "months");
+      // Joining month=0, 2nd=1, 3rd=2 → 1 leave; from 4th month (3+) → 2
+      return monthsSinceJoining < 3 ? 1 : 2;
+    };
+
+    const result = leaveBalanceData.map((r) => {
+      const totalAssigned = Number(r.totalAssigned || 0);
+      const usedLeaves = Number(r.usedLeaves || 0);
+      const carryForwarded = Number(r.carryForwarded || 0);
+      const typeInfo = typeMap[r.leaveTypeId] || {};
+      const empInfo = empMap[r.employeeId] || {};
+      const monthlyLeaveCredit = getMonthlyLeaveCredit(
+        typeInfo,
+        empInfo.joiningDate,
+        r.year,
+        r.month,
+      );
+      // Remaining = carry forwarded - used + monthly leave (never below 0)
+      // Comp Off: monthlyLeaveCredit = 0 → no +2
+      const remainingLeaves = Math.max(
+        0,
+        Number((carryForwarded - usedLeaves + monthlyLeaveCredit).toFixed(1)),
+      );
+
+      return {
+        ...r,
+        employeeName: empInfo.employeeName || "",
+        empCode: empInfo.empCode || "",
+        leaveTypeName: typeInfo.leaveTypeName || "",
+        leaveCode: typeInfo.leaveCode || "",
+        totalAssigned,
+        usedLeaves,
+        carryForwarded,
+        monthlyLeaveCredit,
+        remainingLeaves,
+        availableLeaves: remainingLeaves,
+        prevremainingLeaves: Number(r.prevremainingLeaves || 0),
+        prevusedLeaves: Number(r.prevusedLeaves || 0),
+      };
+    });
+
+    return Helper.response(true, "Leave ledger fetched successfully.", result, res, 200);
+  } catch (error) {
+    console.error("Error fetching leave ledger:", error);
+    return Helper.response(false, error?.message || "Internal server error", [], res, 500);
+  }
+};
+
 exports.applyForLeave = async (req, res) => {
   const {
     employeeId,
@@ -553,8 +712,27 @@ exports.applyForLeave = async (req, res) => {
       newValue: savedLeaves,
       remarks: "Leave applied",
     });
-    
+
     if (savedLeaves.length > 0) {
+      // Push notify reporting manager (FCM)
+      try {
+        const { notifyManagerOnLeaveApply } = require("./headerNotifications");
+        const leaveTypeRow = await leaveMaster.findByPk(leaveTypeId, {
+          attributes: ["leaveName", "leaveCode"],
+          raw: true,
+        });
+        const first = savedLeaves[0];
+        await notifyManagerOnLeaveApply({
+          employeeId,
+          tenantId,
+          branchId,
+          leaveLabel: leaveTypeRow?.leaveName || leaveTypeRow?.leaveCode || "leave",
+          days: first?.days,
+        });
+      } catch (pushErr) {
+        console.error("Leave apply push notify failed:", pushErr?.message || pushErr);
+      }
+
       return Helper.response(
         true,
         "Leave application submitted successfully.",

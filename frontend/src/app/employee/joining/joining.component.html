@@ -431,35 +431,17 @@
   <!--Header-->
 
   <div class="row g-3 mb-6" *ngIf="!createFlag">
-    <div class="col-lg-3 col-sm-6"  (click)="checkTotalEmp()">
-
-
-      <div class="card h-100">
-        <div class="card-body">
-          <div class="d-flex align-items-center mb-2">
-            <div class="avatar me-4">
-              <span class="avatar-initial rounded-3 bg-label-primary"><i class="icon-base ri ri-user-star-line icon-24px"></i></span>
-            </div>
-            <h4 class="mb-0 text-primary">{{cardData?.['totalEmployee']}}</h4>
-          </div>
-          <h6 class="mb-0 fw-normal">Total Employee</h6>
-          <p class="mb-0">
-            <span class="me-1 fw-medium">+2 </span>
-            <small class="text-body-secondary">New Employee added last months</small>
-          </p>
-        </div>
-      </div>
-    </div>
+    <!-- 1) Active FIRST -->
     <div class="col-lg-3 col-sm-6" (click)="checkActiveStatus()">
-
-
       <div class="card h-100">
         <div class="card-body">
           <div class="d-flex align-items-center mb-2">
             <div class="avatar me-4">
-              <span class="avatar-initial rounded-3 bg-label-success"><i class="icon-base ri ri-pie-chart-2-line icon-24px"></i></span>
+              <span class="avatar-initial rounded-3 bg-label-success">
+                <i class="icon-base ri ri-pie-chart-2-line icon-24px"></i>
+              </span>
             </div>
-            <h4 class="mb-0 text-success">{{cardData?.['ActiveEmployee']}}</h4>
+            <h4 class="mb-0 text-success">{{ cardData?.['ActiveEmployee'] }}</h4>
           </div>
           <h6 class="mb-0 fw-normal">Total Active Employee</h6>
           <p class="mb-0">
@@ -469,6 +451,26 @@
         </div>
       </div>
     </div>
+    <!-- 2) Total SECOND -->
+    <div class="col-lg-3 col-sm-6" (click)="checkTotalEmp()">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-2">
+            <div class="avatar me-4">
+              <span class="avatar-initial rounded-3 bg-label-primary">
+                <i class="icon-base ri ri-user-star-line icon-24px"></i>
+              </span>
+            </div>
+            <h4 class="mb-0 text-primary">{{ cardData?.['totalEmployee'] }}</h4>
+          </div>
+          <h6 class="mb-0 fw-normal">Total Employee</h6>
+          <p class="mb-0">
+            <span class="me-1 fw-medium">+2 </span>
+            <small class="text-body-secondary">New Employee added last months</small>
+          </p>
+        </div>
+      </div>
+      </div>
     <div class="col-lg-3 col-sm-6" (click)="checkStatus()">
 
 

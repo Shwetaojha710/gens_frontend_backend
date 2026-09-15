@@ -59,6 +59,7 @@ export const APP_MENU_ITEMS: MenuItem[] = [
       { title: 'Holiday',                 icon: 'ri-barricade-fill',       link: '/layout/attendance/holiday',              permKey: 'att.holiday' },
       { title: 'Attendance Logs',         icon: 'ri-calendar-line',        link: '/layout/attendance/logs',                 permKey: 'att.logs' },
       { title: 'Leaves',                  icon: 'ri-leaf-line',            link: '/layout/attendance/leaves',               permKey: 'att.leaves' },
+      { title: 'Leave Ledger',            icon: 'ri-book-open-line',       link: '/layout/attendance/leave-ledger',         permKey: 'att.leaveLedger' },
       { title: 'Upload Attendance',       icon: 'ri-upload-cloud-line',    link: '/layout/attendance/upload-attendance',    permKey: 'att.upload' },
       { title: 'Regularize',              icon: 'ri-upload-cloud-line',    link: '/layout/attendance/regularize',           permKey: 'att.regularize' },
       { title: 'Weekend Employee List',   icon: 'ri-upload-cloud-line',    link: '/layout/attendance/weekend-emp-list',     permKey: 'att.weekend' },
@@ -76,6 +77,7 @@ export const APP_MENU_ITEMS: MenuItem[] = [
       { title: 'Deduction Summary',     icon: 'ri-subtract-line',           link: '/layout/payroll/deduction-summary', permKey: 'pay.deduction' },
       { title: 'Reimbursement',         icon: 'ri-refund-line',             link: '/layout/payroll/reimbursement',     permKey: 'pay.reimburse' },
       { title: 'Employee Appraisal',    icon: 'ri-percent-line',            link: '/layout/payroll/employee-appraisal', permKey: 'pay.appraisal' },
+      { title: 'Arrear Management',     icon: 'ri-refund-2-line',           link: '/layout/payroll/arrear-management', permKey: 'pay.arrear' },
     ]
   },
   {

@@ -9,6 +9,8 @@ import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { SearchPaginationComponent } from '../master/search-pagination/search-pagination.component';
+import Swal from 'sweetalert2';
+
 @Component({
   selector: 'app-pending-emp-list',
   imports: [FormsModule, CommonModule, NgSelectModule, SearchPaginationComponent],
@@ -191,6 +193,69 @@ export class PendingEmpListComponent {
       }
     });
   }
+
+
+rejectEmployee(item: any) {
+  Swal.fire({
+    title: 'Reject employee?',
+    text: `${item.firstName} ${item.lastName || ''} will be rejected.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, reject',
+    confirmButtonColor: '#d33',
+  }).then((result) => {
+    if (!result.isConfirmed) return;
+
+    const obj = {
+      id: item.id,
+      branchId: item.branchId,
+      emp_status: 'rejected',
+      type: 'pending_employee',
+    };
+
+    this.employeeService.updateEmp(obj).subscribe({
+      next: (response) => {
+        const status = this.statusService.handleResponseStatus(response.status, response.message);
+        if (status === true) {
+          this.notyf.success(response.message || 'Employee rejected');
+          this.loadEmployees();
+        } else if (status === 'expired') {
+          this.router.navigate(['login']);
+        } else {
+          this.notyf.error(response.message);
+        }
+      },
+      error: (err) => this.notyf.error(err?.error?.message || 'Failed to reject employee'),
+    });
+  });
+}
+
+rejectform() {
+  const dob = new Date(this.personalDetails.dateOfBirth);
+  const formattedDob = `${dob.getDate().toString().padStart(2, '0')}/${(dob.getMonth() + 1).toString().padStart(2, '0')}/${dob.getFullYear()}`;
+
+  const obj = Object.assign({}, this.personalDetails);
+  obj.dateOfBirth = formattedDob;
+  obj.emp_status = 'rejected';
+  obj.type = 'pending_employee';
+
+  this.employeeService.updateEmp(obj).subscribe(
+    (response) => {
+      const status = this.statusService.handleResponseStatus(response.status, response.message);
+      if (status === true) {
+        this.notyf.success(response.message || 'Employee rejected');
+        this.reset();
+        this.loadEmployees();
+      } else if (status === 'expired') {
+        this.router.navigate(['login']);
+      } else {
+        this.notyf.error(response.message);
+      }
+    },
+    (error) => this.notyf.error(error?.error?.message || 'Failed to reject employee')
+  );
+}
+
   inActiveFlag: any = false
   activeFlag: any = false
   newJoinerFlag: any = false

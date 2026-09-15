@@ -8,7 +8,7 @@ const deductionS = require("../../models/deductions");
 const Designation = require("../../models/designation");
 const Department = require("../../models/department");
 const EmployeeOldSalary = require("../../models/employeeOldSalary");
-const { writeAudit } = require("../../helper/auditLog");
+const { writeAudit, toPlain } = require("../../helper/auditLog");
 
 
 const roundAmt = (n) => Math.round(Number(n) || 0);
@@ -17,10 +17,19 @@ function headKey(source, id) {
   return `${source}:${id}`;
 }
 
+/** Temp month-only rows from salary generation — not part of structure / appraisal. */
+function isExcludedSalaryHead(row) {
+  const name = String(row?.name || "").trim().toLowerCase();
+  if (name === "leave deduction" || name === "penalty") return true;
+  if (String(row?.type || "").toLowerCase() === "is_special") return true;
+  return false;
+}
+
 function buildHeads(basics, allowances, deductions) {
   const heads = [];
 
   for (const b of basics) {
+    if (isExcludedSalaryHead(b)) continue;
     heads.push({
       key: headKey("basic", b.id),
       source: "basic",
@@ -37,6 +46,7 @@ function buildHeads(basics, allowances, deductions) {
   }
 
   for (const a of allowances) {
+    if (isExcludedSalaryHead(a)) continue;
     heads.push({
       key: headKey("allowance", a.id),
       source: "allowance",
@@ -52,6 +62,7 @@ function buildHeads(basics, allowances, deductions) {
   }
 
   for (const d of deductions) {
+    if (isExcludedSalaryHead(d)) continue;
     heads.push({
       key: headKey("deduction", d.id),
       source: "deduction",
@@ -260,10 +271,12 @@ exports.listAppraisalEmployees = async (req, res) => {
 
     const payableSum = {};
     for (const b of basics) {
+      if (isExcludedSalaryHead(b)) continue;
       payableSum[b.employeeId] =
         (payableSum[b.employeeId] || 0) + roundAmt(b.finalAmount);
     }
     for (const a of allowances) {
+      if (isExcludedSalaryHead(a)) continue;
       payableSum[a.employeeId] =
         (payableSum[a.employeeId] || 0) + roundAmt(a.finalAmount);
     }
@@ -538,27 +551,60 @@ exports.applyAppraisal = async (req, res) => {
     endDate.setDate(endDate.getDate() - 1);
     const endDateStr = endDate.toISOString().slice(0, 10);
 
-    await Basic.update(
-      { endDate: endDateStr, status: "inactive" },
-      {
-        where: { employeeId, branchId, tenantId, status: "active" },
-        transaction,
-      },
-    );
-    await allowance.update(
-      { endDate: endDateStr, status: "inactive" },
-      {
-        where: { employeeId, branchId, tenantId, status: "active" },
-        transaction,
-      },
-    );
-    await deductionS.update(
-      { endDate: endDateStr, status: "inactive" },
-      {
-        where: { employeeId, branchId, tenantId, status: "active" },
-        transaction,
-      },
-    );
+    // Only close structure heads being replaced — keep Leave Deduction / Penalty / is_special untouched
+    const basicIds = computed.filter((h) => h.source === "basic").map((h) => h.id);
+    const allowanceIds = computed
+      .filter((h) => h.source === "allowance")
+      .map((h) => h.id);
+    const deductionIds = computed
+      .filter((h) => h.source === "deduction")
+      .map((h) => h.id);
+
+    if (basicIds.length) {
+      await Basic.update(
+        { endDate: endDateStr, status: "inactive" },
+        {
+          where: {
+            id: { [Op.in]: basicIds },
+            employeeId,
+            branchId,
+            tenantId,
+            status: "active",
+          },
+          transaction,
+        },
+      );
+    }
+    if (allowanceIds.length) {
+      await allowance.update(
+        { endDate: endDateStr, status: "inactive" },
+        {
+          where: {
+            id: { [Op.in]: allowanceIds },
+            employeeId,
+            branchId,
+            tenantId,
+            status: "active",
+          },
+          transaction,
+        },
+      );
+    }
+    if (deductionIds.length) {
+      await deductionS.update(
+        { endDate: endDateStr, status: "inactive" },
+        {
+          where: {
+            id: { [Op.in]: deductionIds },
+            employeeId,
+            branchId,
+            tenantId,
+            status: "active",
+          },
+          transaction,
+        },
+      );
+    }
 
     const basicById = Object.fromEntries(basics.map((b) => [b.id, b]));
     const allowById = Object.fromEntries(allowances.map((a) => [a.id, a]));
@@ -571,6 +617,7 @@ exports.applyAppraisal = async (req, res) => {
     for (const h of computed) {
       if (h.source === "basic") {
         const old = basicById[h.id];
+        if (!old || isExcludedSalaryHead(old)) continue;
         basicRecords.push({
           employeeId,
           tenantId,
@@ -589,6 +636,7 @@ exports.applyAppraisal = async (req, res) => {
         });
       } else if (h.source === "allowance") {
         const old = allowById[h.id];
+        if (!old || isExcludedSalaryHead(old)) continue;
         allowanceRecords.push({
           employeeId,
           tenantId,
@@ -606,6 +654,7 @@ exports.applyAppraisal = async (req, res) => {
         });
       } else if (h.source === "deduction") {
         const old = dedById[h.id];
+        if (!old || isExcludedSalaryHead(old)) continue;
         deductionRecords.push({
           employeeId,
           tenantId,

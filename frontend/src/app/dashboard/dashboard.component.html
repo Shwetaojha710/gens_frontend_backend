@@ -198,6 +198,264 @@
     </div>
   </div>
 
+  <div class="employee-directory">
+
+    <!-- Header -->
+    <div class="directory-header">
+
+        <div class="directory-title">
+            <h2>Employee Table</h2>
+
+        </div>
+
+        <div class="directory-filters">
+          <div class="search-box">
+            <span>⌕</span>
+            <input type="text"
+                   placeholder="Search by name, ID..."
+                   [(ngModel)]="tableSearch"
+                   (ngModelChange)="onTableSearch()" />
+          </div>
+
+          <!-- Employee / Leave toggle (purana wala) -->
+          <div class="btn-group btn-group-sm emp-leave-toggle" role="group">
+            <button type="button" class="btn"
+              [class.btn-primary]="activeEmployeeSectionTab === 'employee'"
+              [class.btn-outline-primary]="activeEmployeeSectionTab !== 'employee'"
+              (click)="setEmployeeSectionTab('employee')">
+              Employee
+            </button>
+            <button type="button" class="btn"
+              [class.btn-primary]="activeEmployeeSectionTab === 'leave'"
+              [class.btn-outline-primary]="activeEmployeeSectionTab !== 'leave'"
+              (click)="setEmployeeSectionTab('leave')">
+              Leave
+            </button>
+          </div>
+
+          <button type="button" class="filter-btn"
+            *ngIf="activeEmployeeSectionTab === 'employee'"
+            (click)="openEmployeeListPage()">
+            View All
+          </button>
+          <button type="button" class="filter-btn"
+            *ngIf="activeEmployeeSectionTab === 'leave'"
+            (click)="openLeaveListPage()">
+            View All Leave
+          </button>
+        </div>
+    </div>
+
+
+    <!-- Table -->
+    <div class="table-wrapper">
+
+        <table class="employee-table">
+          <thead>
+            <!-- Employee headers -->
+            <tr *ngIf="activeEmployeeSectionTab == 'employee'">
+              <th class="check"><input type="checkbox" /></th>
+              <th>Employee</th>
+              <th>Employee ID</th>
+              <th>Department</th>
+              <th>Designation</th>
+              <th>Joining Date</th>
+              <!-- <th>Status</th> -->
+              <!-- <th>Attendance (30 Days)</th> -->
+              <th>Action</th>
+            </tr>
+
+            <!-- Leave headers -->
+            <tr *ngIf="activeEmployeeSectionTab == 'leave'">
+              <th class="check"><input type="checkbox" /></th>
+              <th>Employee</th>
+              <th>Employee ID</th>
+              <th>Leave Type</th>
+              <th>Days</th>
+              <th>Leave Dates</th>
+              <th>Status</th>
+              <th>Contact</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+
+            <tbody>
+              <!-- EMPLOYEE -->
+              <ng-container *ngIf="activeEmployeeSectionTab === 'employee'">
+                <tr *ngFor="let item of pagedTableRows">
+                  <td>
+                    <input type="checkbox" />
+                  </td>
+
+                  <td>
+                    <div class="employee">
+                      <img
+                        [src]="getEmployeeAvatar(item)"
+                        [alt]="item.name"
+                        (error)="onImageError($event, item, 'profileImage')"
+                      />
+                      <div>
+                        <strong>{{ item.name }}</strong>
+                        <small>{{ item.gender || '—' }}</small>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td>{{ item.empCode || 'N/A' }}</td>
+
+               <!-- Designation badge -->
+<td>
+  <span class="emp-badge" [ngClass]="'emp-badge--' + (item.badgeColor || 'primary')">
+    {{ item.badge || item.role || 'N/A' }}
+  </span>
+</td>
+
+            <!-- Gender badge (optional) -->
+<td>
+  <span class="emp-badge"
+        [ngClass]="item.gender === 'Female' ? 'emp-badge--info' : 'emp-badge--success'">
+    {{ item.gender || '—' }}
+  </span>
+</td>
+
+
+                  <td>{{ item.joiningDate || 'NA' }}</td>
+
+                  <!-- <td>
+                    <span class="status present">{{ item.status || 'N/A' }}</span>
+                  </td> -->
+
+                  <!-- <td>
+                    <div class="attendance">
+                      <div class="progress">
+                        <span style="width:0%"></span>
+                      </div>
+                      <b>—</b>
+                    </div>
+                  </td> -->
+
+                  <td>
+                    <div class="actions">
+                      <button type="button" (click)="openEmployeeProfile(item)" title="View">
+                        <i class="fa fa-eye" style="font-size: 12px"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr *ngIf="!pagedTableRows.length">
+                  <td colspan="9" class="text-center text-muted py-4">
+                    No employees found
+                  </td>
+                </tr>
+              </ng-container>
+
+              <!-- LEAVE -->
+              <ng-container *ngIf="activeEmployeeSectionTab === 'leave'">
+                <tr *ngFor="let item of pagedTableRows">
+                  <td>
+                    <input type="checkbox" />
+                  </td>
+
+                  <td>
+                    <div class="employee">
+                      <img src="assets/img/avatars/1.png" alt="" />
+                      <div>
+                        <strong>{{ item.name || '—' }}</strong>
+                        <small>{{ item.designation || '—' }}</small>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td>{{ item.empCode || 'N/A' }}</td>
+
+                  <td>
+                    <span class="department leave-type-badge">{{ item.type || '—' }}</span>
+                  </td>
+
+                  <td>
+                    <span class="leave-days-badge">{{ item.days }} day(s)</span>
+                  </td>
+
+                  <td class="leave-dates">
+                    {{ item.fromDate | date:'dd MMM yyyy' }}
+                    <span *ngIf="item.toDate"> → {{ item.toDate | date:'dd MMM yyyy' }}</span>
+                  </td>
+
+                  <td>
+                    <span class="status" [ngClass]="getLeaveStatusClass(item.status)">
+                      {{ item.status }}
+                    </span>
+                  </td>
+
+                  <td>
+                    <small class="leave-contact">{{ item.mobile || item.email || '—' }}</small>
+                  </td>
+
+                  <td>
+                    <div class="actions"
+                         *ngIf="!['approved','rejected','self_declined'].includes((item.status || '').toLowerCase()); else leaveDone">
+                      <button type="button" class="action-approve"
+                              (click)="openLeaveApproval(item)" title="Approve">
+                        <i class="ri ri-check-line"></i>
+                      </button>
+                      <button type="button" class="action-reject"
+                              (click)="rejectLeaveApproval(item)" title="Reject">
+                        <i class="ri ri-close-line"></i>
+                      </button>
+                    </div>
+                    <ng-template #leaveDone>
+                      <span class="text-muted">—</span>
+                    </ng-template>
+                  </td>
+                </tr>
+
+                <tr *ngIf="!pagedTableRows.length">
+                  <td colspan="9" class="text-center text-muted py-4">No leave requests</td>
+                </tr>
+              </ng-container>
+            </tbody>
+
+        </table>
+
+    </div>
+
+
+    <!-- Footer -->
+
+    <div class="table-footer">
+      <span>
+        Showing
+        {{ filteredTableRows.length ? (currentPage - 1) * pageSize + 1 : 0 }}
+        to
+        {{ Math.min(currentPage * pageSize, filteredTableRows.length) }}
+        of {{ filteredTableRows.length }}
+        {{ activeEmployeeSectionTab === 'leave' ? 'leaves' : 'employees' }}
+      </span>
+
+      <div class="pagination">
+        <button type="button" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">‹</button>
+
+        <button type="button" *ngFor="let p of pageNumbers"
+                [class.active]="p === currentPage"
+                (click)="goToPage(p)">
+          {{ p }}
+        </button>
+
+        <button type="button" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages">›</button>
+
+        <label>
+          Rows per page
+          <select [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)">
+            <option [ngValue]="10">10</option>
+            <option [ngValue]="20">20</option>
+            <option [ngValue]="30">30</option>
+          </select>
+        </label>
+      </div>
+    </div>
+</div>
+<br>
   <div class="row g-3 mb-3">
     <div class="col-md-4 col-md-4 col-lg-5">
       <div class="ai-card"
@@ -256,20 +514,37 @@
           </ul>
         </div>
 
-        <div class="card-body" style="overflow-y:scroll;height: 220px;">
-          <div class="row">
+        <div class="card-body celebrations-body">
+          <div class="row g-2">
             <div class="col-6" *ngFor="let item of celebrationsList">
-              <div class="birthday-card"
-                style="background-image: url('../../../assets/img/avatars/birthday-bg.png');background-size: cover;background-position: center;background-repeat: no-repeat;width: 100%;height: 180px; border: 1px solid #ddd;margin-bottom: 5px;">
-                <div class="celebration-card text-center">
-                  <img [src]="getEmployeeAvatar(item)" (error)="onImageError($event, item, 'profileImage')"
-                    alt="emp-img">
-                  <p class="mb-0">{{ item.dateLabel }}</p>
-                  <h4>{{ item.firstName }} {{ item.lastName }}</h4>
-                  <h2>{{ item.cardTitle }}</h2>
+              <div
+                class="bday-mini-card"
+                [class.bday-mini-card--today]="item.isToday && item.cardKind === 'birthday'"
+                [class.bday-mini-card--anniversary]="item.cardKind == 'anniversary'"
+                [style.background-image]="item.cardKind == 'birthday' ? 'url(/assets/img/birthday-bg.jpg)' : 'none'"
+                (click)="item.isToday && item.cardKind === 'birthday' ? openTodayBirthday(item) : null"
+              >
+                <div class="bday-mini-card__inner text-center">
+                  <div class="bday-mini-card__avatar-wrap" *ngIf="item.isToday && item.cardKind === 'birthday'">
+                    <img
+                      class="bday-mini-card__avatar bday-mini-card__avatar--lg"
+                      [src]="getEmployeeAvatar(item)"
+                      (error)="onImageError($event, item, 'profileImage')"
+                      [alt]="item.firstName"
+                    />
+                  </div>
+                  <img
+                    *ngIf="!(item.isToday && item.cardKind === 'birthday')"
+                    class="bday-mini-card__avatar"
+                    [src]="getEmployeeAvatar(item)"
+                    (error)="onImageError($event, item, 'profileImage')"
+                    [alt]="item.firstName"
+                  />
+                  <p class="bday-mini-card__date mb-0">{{ item.dateLabel }}</p>
+                  <h4 class="bday-mini-card__name">{{ item.firstName }} {{ item.lastName }}</h4>
+                  <h2 class="bday-mini-card__title">{{ item.isToday && item.cardKind === 'birthday' ? 'Happy Birthday' : item.cardTitle }}</h2>
                   <small class="celebration-when" *ngIf="celebrationTab === 'upcoming' && item.daysUntil != null">
-                    {{ item.daysUntil === 0 ? 'Today' : (item.daysUntil === 1 ? 'Tomorrow' : 'In ' + item.daysUntil + '
-                    days') }}
+                    {{ item.daysUntil === 0 ? 'Today' : (item.daysUntil === 1 ? 'Tomorrow' : 'In ' + item.daysUntil + ' days') }}
                   </small>
                 </div>
               </div>
@@ -282,8 +557,6 @@
           </div>
         </div>
       </div>
-
-
     </div>
 
     <div class="col-md-3">
@@ -381,175 +654,7 @@
   </div> -->
 
 
-  <div class="employee-directory">
 
-    <!-- Header -->
-    <div class="directory-header">
-
-        <div class="directory-title">
-            <h2>Employee Table</h2>
-
-        </div>
-
-        <div class="directory-filters">
-
-            <div class="search-box">
-                <span>⌕</span>
-                <input type="text" placeholder="Search by name, ID, email or phone...">
-            </div>
-
-            <select>
-                <option>All Departments</option>
-                <option>Management</option>
-                <option>Development</option>
-                <option>HR</option>
-                <option>QA</option>
-            </select>
-
-            <select>
-                <option>All Designations</option>
-                <option>Project Manager</option>
-                <option>Team Lead</option>
-                <option>Developer</option>
-                <option>QA Engineer</option>
-            </select>
-
-            <select>
-                <option>All Status</option>
-                <option>Present</option>
-                <option>On Leave</option>
-                <option>Absent</option>
-            </select>
-
-            <button class="filter-btn">
-                ⚱ Filters
-            </button>
-
-        </div>
-    </div>
-
-
-    <!-- Table -->
-    <div class="table-wrapper">
-
-        <table class="employee-table">
-
-            <thead>
-                <tr>
-                    <th class="check">
-                        <input type="checkbox">
-                    </th>
-
-                    <th>Employee</th>
-                    <th>Employee ID</th>
-                    <th>Department</th>
-                    <th>Designation</th>
-                    <th>Joining Date</th>
-                    <th>Status</th>
-                    <th>Attendance (30 Days)</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-
-
-            <tbody>
-              <tr *ngFor="let item of employeeList">
-                <td>
-                  <input type="checkbox" />
-                </td>
-
-                <td>
-                  <div class="employee">
-                    <img
-                      [src]="getEmployeeAvatar(item)"
-                      [alt]="item.name"
-                      (error)="onImageError($event, item, 'profileImage')"
-                    />
-                    <div>
-                      <strong>{{ item.name }}</strong>
-                      <small>{{ item.gender || '—' }}</small>
-                    </div>
-                  </div>
-                </td>
-
-                <td>{{ item.empCode || 'N/A' }}</td>
-
-                <td>
-                  <span class="department" [ngClass]="item.badgeColor || 'management'">
-                    {{ item.role || item.badge || 'N/A' }}
-                  </span>
-                </td>
-
-                <td>{{ item.badge || item.role || 'N/A' }}</td>
-
-                <td>{{ item.joiningDate || 'NA' }}</td>
-
-                <td>
-                  <span class="status present">—</span>
-                </td>
-
-                <td>
-                  <div class="attendance">
-                    <div class="progress">
-                      <span style="width:0%"></span>
-                    </div>
-                    <b>—</b>
-                  </div>
-                </td>
-
-                <td>
-                  <div class="actions">
-                    <button type="button" (click)="openEmployeeProfile(item)" title="View">
-                      <i class="fa fa-eye" style="font-size: 12px"></i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-
-              <tr *ngIf="!employeeList?.length">
-                <td colspan="9" class="text-center text-muted py-4">
-                  No employees found
-                </td>
-              </tr>
-            </tbody>
-
-        </table>
-
-    </div>
-
-
-    <!-- Footer -->
-
-    <div class="table-footer">
-
-        <span>
-            Showing 1 to 7 of 42 employees
-        </span>
-
-        <div class="pagination">
-
-            <button>‹</button>
-            <button class="active">1</button>
-            <button>2</button>
-            <button>3</button>
-            <span>...</span>
-            <button>6</button>
-            <button>›</button>
-
-            <label>
-                Rows per page
-                <select>
-                    <option>10</option>
-                    <option>20</option>
-                    <option>30</option>
-                </select>
-            </label>
-
-        </div>
-
-    </div>
-
-</div>
 
 
 <section class="attendance-section mt-3" *ngIf="isManagerRole">
@@ -648,6 +753,46 @@
 
   <!-- Team-wise Attendance: visible for admin / hr / superadmin (director & manager roles) -->
 
+</div>
+
+<!-- Happy Birthday modal (shown on birthday day with employee photo) -->
+<div class="bday-modal-backdrop" *ngIf="showBirthdayModal && birthdayModalPerson" (click)="closeBirthdayModal()">
+  <div class="bday-modal" (click)="$event.stopPropagation()" role="dialog" aria-label="Happy Birthday">
+    <button type="button" class="bday-modal__close" (click)="closeBirthdayModal()" aria-label="Close">
+      <i class="ri ri-close-line"></i>
+    </button>
+
+    <div class="bday-modal__confetti" aria-hidden="true">
+      <span class="bday-confetti" *ngFor="let i of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]"></span>
+    </div>
+    <div class="bday-modal__balloon bday-modal__balloon--pink" aria-hidden="true"></div>
+    <div class="bday-modal__balloon bday-modal__balloon--blue" aria-hidden="true"></div>
+    <div class="bday-modal__balloon bday-modal__balloon--yellow" aria-hidden="true"></div>
+    <div class="bday-modal__balloon bday-modal__balloon--mint" aria-hidden="true"></div>
+
+    <h2 class="bday-modal__heading">Happy Birthday</h2>
+    <p class="bday-modal__sub">Today is a special day!</p>
+
+    <div class="bday-modal__avatar-ring">
+      <img
+        [src]="getEmployeeAvatar(birthdayModalPerson)"
+        (error)="onImageError($event, birthdayModalPerson, 'profileImage')"
+        [alt]="birthdayModalPerson.firstName"
+      />
+    </div>
+
+    <h3 class="bday-modal__name">{{ birthdayModalPerson.firstName }} {{ birthdayModalPerson.lastName }}</h3>
+    <p class="bday-modal__date">{{ formatCelebrationDateLongPublic(birthdayModalPerson) }}</p>
+
+    <button type="button" class="bday-modal__cta" (click)="openBirthdayCelebration()">
+      Birthday Celebration
+    </button>
+
+    <p class="bday-modal__wish">
+      Wishing you a day filled with happiness, laughter and beautiful memories.
+      May the year ahead bring you success, joy and endless smiles!
+    </p>
+  </div>
 </div>
 
 <footer class="content-footer footer bg-footer-theme mt-5"

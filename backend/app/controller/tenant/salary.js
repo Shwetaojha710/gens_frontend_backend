@@ -24,6 +24,7 @@ const HolidayType = require("../../models/HolidayType");
 const comp_off = require("../../models/comp_off");
 const { literal } = require("sequelize");
 const { writeAudit } = require("../../helper/auditLog");
+const { markArrearsPaid } = require("./arrear");
 
 
 const dayMap = {
@@ -2753,6 +2754,21 @@ exports.generateSalary = async (req, res) => {
         });
       });
 
+      // Mark approved arrears for this payout month as paid (allowance inactivated)
+      try {
+        await markArrearsPaid(
+          tenantId,
+          branchId,
+          emp.employeeId,
+          emp.year,
+          emp.month,
+          billRow.bill_id,
+          t,
+        );
+      } catch (arrearErr) {
+        console.error("markArrearsPaid:", arrearErr?.message || arrearErr);
+      }
+
       billRecords.push(billRow);
 
       // --- Prepare next month ---
@@ -5183,14 +5199,100 @@ exports.calculateAttendance = async (req, res) => {
         }
       }
       const sandwichNonWorkingDays = [...new Set([...holidays, ...shiftWeekOffDates])];
+      const sandwichNonWorkingSet = new Set(sandwichNonWorkingDays);
 
-      // Apply sandwich rule
+      // RH applied dates act as sandwich anchors (e.g. Fri RH + Mon leave => Sat/Sun sandwich)
+      // but RH day itself should NOT become sandwich unpaid leave.
+      const rhAnchorLeaves = leaveRecords
+        .filter((item) => item.isRestrictedHolidayLeave)
+        .map((item) => ({
+          ...item,
+          isRhSandwichAnchor: true,
+        }));
+
+      // Working days with no attendance (and no leave) also act as sandwich anchors.
+      // Example: leave Fri/Sat + absent Mon => Sunday becomes unpaid sandwich.
+      const leaveDatesForSandwich = new Set();
+      leaveRecords.forEach((item) => {
+        const leaveStart = moment(item.fromDate);
+        const leaveEnd = item.toDate ? moment(item.toDate) : moment(item.fromDate);
+        for (let d = moment(leaveStart); d.isSameOrBefore(leaveEnd); d.add(1, "days")) {
+          leaveDatesForSandwich.add(d.format("YYYY-MM-DD"));
+        }
+      });
+
+      const monthAttendanceForSandwich = await attendance.findAll({
+        where: {
+          employeeId: employeeId[i],
+          branchId,
+          check_in_time: {
+            [Op.between]: [
+              startDate.format("YYYY-MM-DD 00:00:00"),
+              endDate.format("YYYY-MM-DD 23:59:59"),
+            ],
+          },
+        },
+        raw: true,
+      });
+      const presentDatesForSandwich = new Set();
+      monthAttendanceForSandwich.forEach((att) => {
+        if (att?.check_in_time && att?.check_out_time) {
+          presentDatesForSandwich.add(moment(att.check_in_time).format("YYYY-MM-DD"));
+        }
+      });
+
+      const absentAnchorLeaves = [];
+      const defaultLeaveTypeId =
+        leaveRecords.find((r) => !r.isRestrictedHolidayLeave)?.leaveTypeId ||
+        leaveRecords[0]?.leaveTypeId ||
+        null;
+
+      for (let d = moment(startDate); d.isSameOrBefore(endDate); d.add(1, "days")) {
+        const dateKey = d.format("YYYY-MM-DD");
+        const isWeekend = d.day() === 0 || d.day() === 6;
+        if (sandwichNonWorkingSet.has(dateKey) || isWeekend) continue;
+        if (leaveDatesForSandwich.has(dateKey)) continue;
+        if (presentDatesForSandwich.has(dateKey)) continue;
+
+        absentAnchorLeaves.push({
+          id: `absent-anchor-${employeeId[i]}-${dateKey}`,
+          employeeId: employeeId[i],
+          leaveTypeId: defaultLeaveTypeId,
+          fromDate: dateKey,
+          toDate: dateKey,
+          duration_type: "full",
+          to_duration_type: "full",
+          days: 1,
+          status: "pending",
+          leavestatus: "unpaid",
+          isAbsentAnchor: true,
+          tenantId,
+          branchId,
+        });
+      }
+
+      // Apply sandwich rule (include RH + absent anchors so leave/absent bridge works)
       let applysandwitchleave = Helper.applySandwichRule(
-        leaveRecords.filter((item) => !item.isRestrictedHolidayLeave),
+        [
+          ...leaveRecords.filter((item) => !item.isRestrictedHolidayLeave),
+          ...rhAnchorLeaves,
+          ...absentAnchorLeaves,
+        ],
         sandwichNonWorkingDays,
         startDate,
         endDate,
       );
+
+      // Remove RH/absent anchors from sandwich result; keep real leaves + sandwich days
+      applysandwitchleave = applysandwitchleave.filter(
+        (item) =>
+          !item.isRestrictedHolidayLeave &&
+          !item.isRhSandwichAnchor &&
+          !item.isAbsentAnchor &&
+          !(item.isSandwich && restrictedHolidayAppliedDates.has(item.fromDate)),
+      );
+
+      // Keep original RH leaves separately (approved/unpaid as per status)
       applysandwitchleave = [
         ...applysandwitchleave,
         ...leaveRecords
@@ -5200,6 +5302,23 @@ exports.calculateAttendance = async (req, res) => {
             leavestatus: item.status === "approved" ? "approved" : "unpaid",
           })),
       ];
+
+      // // Apply sandwich rule
+      // let applysandwitchleave = Helper.applySandwichRule(
+      //   leaveRecords.filter((item) => !item.isRestrictedHolidayLeave),
+      //   sandwichNonWorkingDays,
+      //   startDate,
+      //   endDate,
+      // );
+      // applysandwitchleave = [
+      //   ...applysandwitchleave,
+      //   ...leaveRecords
+      //     .filter((item) => item.isRestrictedHolidayLeave)
+      //     .map((item) => ({
+      //       ...item,
+      //       leavestatus: item.status === "approved" ? "approved" : "unpaid",
+      //     })),
+      // ];
       const leaveDateMap1 = {};
       for (const leave of applysandwitchleave) {
         const leaveStart = moment(leave.fromDate);
@@ -5266,6 +5385,63 @@ exports.calculateAttendance = async (req, res) => {
         ...restrictedHolidayLeaves,
       ];
 
+      // After balance adjust: mark Sat/Sun/holidays inside leave span as sandwich
+      // (e.g. approved leave 10–25 with balance 5 → approved 10–14 + unpaid 15–25,
+      //  weekends 15–16, 22–23 become sandwich days)
+      const nonWorkingSetForLeaveSandwich = new Set([
+        ...sandwichNonWorkingDays,
+      ]);
+      const weekendSandwichLeaves = [];
+      const coveredSandwichDates = new Set(
+        leaveRecords.filter((l) => l.isSandwich).map((l) => l.fromDate),
+      );
+
+      leaveRecords
+        .filter((l) => !l.isSandwich && !l.isRestrictedHolidayLeave)
+        .forEach((leave) => {
+          const leaveStart = moment(leave.fromDate);
+          const leaveEnd = leave.toDate
+            ? moment(leave.toDate)
+            : moment(leave.fromDate);
+          for (
+            let d = moment(leaveStart);
+            d.isSameOrBefore(leaveEnd);
+            d.add(1, "days")
+          ) {
+            const dateKey = d.format("YYYY-MM-DD");
+            const isWeekend = d.day() === 0 || d.day() === 6;
+            if (
+              !isWeekend &&
+              !nonWorkingSetForLeaveSandwich.has(dateKey)
+            ) {
+              continue;
+            }
+            if (coveredSandwichDates.has(dateKey)) continue;
+            coveredSandwichDates.add(dateKey);
+            weekendSandwichLeaves.push({
+              id: `sandwich-${employeeId[i]}-${dateKey}`,
+              employeeId: employeeId[i],
+              leaveTypeId: leave.leaveTypeId,
+              fromDate: dateKey,
+              toDate: dateKey,
+              duration_type: "full",
+              to_duration_type: "full",
+              days: 1,
+              status: leave.leavestatus === "approved" ? "approved" : "pending",
+              leavestatus: leave.leavestatus || "unpaid",
+              isSandwich: true,
+              tenantId,
+              branchId,
+            });
+          }
+        });
+
+      if (weekendSandwichLeaves.length) {
+        leaveRecords = [...leaveRecords, ...weekendSandwichLeaves];
+      }
+      // Response should reflect balance-split leave + weekend sandwich
+      applysandwitchleave = leaveRecords;
+
       const leaveDateMap = {};
       for (const leave of leaveRecords) {
         const leaveStart = moment(leave.fromDate);
@@ -5281,11 +5457,18 @@ exports.calculateAttendance = async (req, res) => {
           d.add(1, "days")
         ) {
           const dateKey = d.format("YYYY-MM-DD");
+          const isWeekend = d.day() === 0 || d.day() === 6;
+          const existing = leaveDateMap[dateKey];
+          // Prefer explicit sandwich record flags when merging overlapping spans
           leaveDateMap[dateKey] = {
-            duration_type: leave.duration_type || "full", // full, first_half, second_half
+            duration_type: leave.duration_type || "full",
             leavestatus: leave.leavestatus,
             isRestrictedHolidayLeave: !!leave.isRestrictedHolidayLeave,
-            isSandwich: !!leave.isSandwich,
+            isSandwich:
+              !!leave.isSandwich ||
+              !!existing?.isSandwich ||
+              isWeekend ||
+              nonWorkingSetForLeaveSandwich.has(dateKey),
             isCompOff: !!leave.isCompOff,
           };
         }
@@ -5335,9 +5518,28 @@ exports.calculateAttendance = async (req, res) => {
         }
         if (!shift || shift.is_week_off) {
           const sandwichLeave = leaveDateMap[dayStr];
-          if (sandwichLeave?.isSandwich && sandwichLeave?.leavestatus === "unpaid") {
-            absentdaysArr.push({ date: dayStr, reason: "Sandwich leave unpaid" });
+          // Unpaid sandwich / unpaid leave on week-off → LOP (absent)
+          if (
+            sandwichLeave &&
+            sandwichLeave.leavestatus === "unpaid"
+          ) {
+            absentdaysArr.push({
+              date: dayStr,
+              reason: sandwichLeave.isSandwich
+                ? "Sandwich leave unpaid"
+                : "Leave Not Available",
+            });
             absentDays++;
+          } else if (sandwichLeave?.leavestatus === "approved") {
+            // Paid leave on week-off / holiday (e.g. 15 Aug within leave) → count as leave
+            if (
+              sandwichLeave?.duration_type === "first_half" ||
+              sandwichLeave?.duration_type === "second_half"
+            ) {
+              halfDays++;
+            } else {
+              fullDays++;
+            }
           } else {
             fullDays++;
           }

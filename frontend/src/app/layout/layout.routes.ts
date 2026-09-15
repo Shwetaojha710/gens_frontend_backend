@@ -36,6 +36,13 @@ export const layoutRoutes: Routes = [
         loadComponent: () =>
           import('../dashboard/dashboard.component').then((m) => m.DashboardComponent),
       },
+      {
+        path: 'notifications',
+        loadComponent: () =>
+          import('../notifications/notifications.component').then(
+            (m) => m.NotificationsComponent,
+          ),
+      },
 
       // ── Employee Management ────────────────────────────────────────────────
       {
@@ -138,6 +145,15 @@ export const layoutRoutes: Routes = [
           import('../attendance/leaves/leaves.component').then((m) => m.LeavesComponent),
       },
       {
+        path: 'attendance/leave-ledger',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'att.leaveLedger' },
+        loadComponent: () =>
+          import('../attendance/leave-ledger/leave-ledger.component').then(
+            (m) => m.LeaveLedgerComponent,
+          ),
+      },
+      {
         path: 'attendance/upload-attendance',
         canActivate: [PermissionGuard],
         data: { permKey: 'att.upload' },
@@ -232,6 +248,15 @@ export const layoutRoutes: Routes = [
         loadComponent: () =>
           import('../payroll/employee-appraisal/employee-appraisal.component').then(
             (m) => m.EmployeeAppraisalComponent,
+          ),
+      },
+      {
+        path: 'payroll/arrear-management',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'pay.arrear' },
+        loadComponent: () =>
+          import('../payroll/arrear-management/arrear-management.component').then(
+            (m) => m.ArrearManagementComponent
           ),
       },
 

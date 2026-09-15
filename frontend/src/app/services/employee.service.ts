@@ -110,8 +110,11 @@ assignedLeave(data: any): Observable<any> {
   return this.http.post(`${this.baseUrl}assign-leave`, data);
 }
 
-getAssignLeaveList(obj: any): Observable<any> {
+  getAssignLeaveList(obj: any): Observable<any> {
   return this.http.post(`${this.baseUrl}get-leave-by-emp`, obj);
+}
+getLeaveLedger(obj: any): Observable<any> {
+  return this.http.post(`${this.baseUrl}get-leave-ledger`, obj);
 }
 updateAssignedLeave(id: any, dept: any): Observable<any> {
   return this.http.post<any>(`${this.baseUrl}update-assign-leave`, dept);
