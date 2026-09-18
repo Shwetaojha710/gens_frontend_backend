@@ -18,8 +18,10 @@
   <div class="nda-first-page">
     <div class="nda-letterhead-spacer" aria-hidden="true"></div>
 
+
     <h3 class="nda-title" style="text-align:center; text-decoration: underline; font-weight: bold;">
-      Employee/Intern/Contractor IP Rights, Confidentiality, Non-Solicitation, Non-Competition Agreement
+      Employee/Intern/Contractor IP Rights, Confidentiality, Non-Solicitation, Non-
+      <br>Competition Agreement
     </h3>
 
     <p class="nda-intro" style="text-align: justify;">
@@ -33,7 +35,7 @@
       (herein referred as “company”) having principal office at
       {{tenant?.companyAddress}}
     </p>
-   
+
 
     <p style="text-align: justify;">
       In consideration of the compensation paid to me by the Company for services in any capacity as an Employee,
@@ -41,29 +43,28 @@
       interactions will expose me to valuable confidential information related to the Company’s business operations.
     </p>
 
-    <ol class="nda-terms">
+    <ol class="nda-terms nda-page1-end">
       <li>
         The Company shall be entitled to sole ownership of any intellectual property rights including but not limited
         to software programs, hardware specifications and other property rights created, developed and discovered by me
         while in the course of my employment with the Company, including all registrations for the same.
       </li>
-      <li>
+      <li >
         I agree that I shall promptly disclose to the Company the following: a) all software programs, inventions,
-        improvements, discoveries and technical developments (‘Inventions’) made, created or
+        improvements, discoveries and technical developments (‘Inventions’) made, created  or conceived by me (either alone
+        or with others) during the term of my employment, b) all Inventions which are based on proprietary information of
+        the Company and are made or conceived by me (either alone or with others), c) any documentation related to the
+        Inventions, which shall become the company’s property, and d) Web content and development concepts, ideas, design,
+        software code, and multimedia graphics, and artwork.
       </li>
     </ol>
   </div>
 
-  <!-- ========== PAGE 2+: remainder of clause 2, then clauses 3+ ========== -->
-  <div class="nda-page-break" aria-hidden="true"></div>
+  <!-- ========== PAGE 2: clause 2 remainder + clauses 3–8 ========== -->
+  <div class="nda-mid-page">
+  <!-- <p class="nda-clause2-continue" style="text-align: justify;">
 
-  <p class="nda-clause2-continue" style="text-align: justify;">
-    conceived by me (either alone
-    or with others) during the term of my employment, b) all Inventions which are based on proprietary information of
-    the Company and are made or conceived by me (either alone or with others), c) any documentation related to the
-    Inventions, which shall become the company’s property, and d) Web content and development concepts, ideas, design,
-    software code, and multimedia graphics, and artwork.
-  </p>
+  </p> -->
 
   <ol class="nda-terms" start="3">
 
@@ -108,10 +109,11 @@
       I understand that the Company's trade secret is any information, process or idea that is not generally known in
       the industry, that the Company considers confidential, and that gives the the Company a competitive advantage.
       Examples of trade secrets include:<ul>
-        <li>Technical plans and documentation</li>
-        <li>Software code and program listings</li>
-        <li>Products under development</li>
-        <li>Customer and vendor information</li>
+        a. technical plans, charts, drawings, and other materials containing technical data and information <br>
+        b. Scomputer program listings, software or design source codes and object codes, executable
+         programs or final outputs <br>
+         c. all information relating to programs now existing or currently under development <br>
+        d. customer lists and records, sources of acquiring customers, pricing, sources of purchasing and all other information related to vendors and suppliers. <br>
       </ul>
     </li>
 
@@ -122,15 +124,22 @@
       transmitted or acquired from the Company’s customers, suppliers, employees or other persons – to any person,
       company or entity.</li>
 
+  </ol>
+  </div>
+
+  <!-- ========== PAGE 3: clauses 9–15 + date / signatures ========== -->
+  <div class="nda-last-page">
+  <ol class="nda-terms" start="9">
+
     <li>
-      I also covenant and agree that during the term of my employment with the Company and for twelve (12) months
+      I also covenant and agree that during the term of my employment with the Company and for twenty four (24) months
       after the termination thereof, regardless of the reason for the employment termination, I will not, directly or
       indirectly, solicit or attempt to solicit any business from any of the the Company’s Customers, Clients, Customer
       Prospects, or Vendors with whom I had Material Contact during the last one (1) years of my employment with the
       Company.</li>
 
     <li>
-      I also covenant and agree that during the term of my employment with the Company and for twelve (12) months
+      I also covenant and agree that during the term of my employment with the Company and for twenty four (24) months
       after the termination thereof, regardless of the reason for the employment termination, I will not, directly or
       indirectly, on my own behalf or on behalf of or in conjunction with any person or legal entity, recruit, solicit,
       or induce, or attempt to recruit, solicit, or induce, any non-clerical employee of the Company with whom I had
@@ -138,7 +147,7 @@
       Company.</li>
 
     <li>
-      I also covenant and agree that I shall not, either during my employment or for a period of twelve (12) months
+      I also covenant and agree that I shall not, either during my employment or for a period of twenty four (24) months
       following the termination of my employment for any reason including resignation, without the prior written consent
       of the Company, carry on, become officer, director, employee, consultant, advisor, partner, co-venturer,
       stockholder or be engaged in, or be concerned with, or interested in, or employed by, any person engaged in or
@@ -147,7 +156,7 @@
 
     <li>
       I agree not to seek, encourage, and/or accept direct or indirect employment with any
-      client/customer/prospective customer of the Company for a period of twelve (12) months following the termination
+      client/customer/prospective customer of the Company for a period of twenty four (24) months following the termination
       of employment or membership with the Company.</li>
 
     <li>
@@ -169,52 +178,52 @@
 
   </ol>
 
-  <br />
-
-  <!-- <p><b>Date:</b> {{date}}</p>
-<p><b>Place:</b> {{place}}</p> -->
-
-  <div class="row mb-2">
-    <div class="col-4">
-      <div class="d-flex gap-2 align-items-center">
-        <span class="w-20"> Date : </span> <input type="date" [(ngModel)]="personalDetails.date"
-          (ngModelChange)="saveData()" class="form-control w-80" />
+  <div class="nda-end-block">
+  <div class="nda-meta">
+    <div class="row mb-3">
+      <div class="col-4">
+        <div class="d-flex gap-2 align-items-center">
+         <b><span class="w-20"> Date : </span></b>
+          <input type="date" [(ngModel)]="personalDetails.date"
+            (ngModelChange)="saveData()" class="form-control w-80" style="font-weight: normal;" />
+          <span *ngIf="personalDetails.date" class="nda-date-preview" style="font-weight: normal; margin-left: 6px;"
+            [innerHTML]="'(' + formatNdaDateHtml(personalDetails.date) + ')'">
+          </span>
+        </div>
       </div>
     </div>
 
-
-
-  </div>
-  <div class="row">
-    <div class="col-4">
-      <div class="d-flex gap-2 align-items-center">
-        <span class="w-20"> Place :</span> <input type="text" [(ngModel)]="personalDetails.place"
-          (ngModelChange)="saveData()" class="form-control" />
+    <div class="row mb-2">
+      <div class="col-4">
+        <div class="d-flex gap-2 align-items-center">
+          <span class="w-20"> Place :</span>
+          <input type="text" [(ngModel)]="personalDetails.place"
+            (ngModelChange)="saveData()" class="form-control" />
+        </div>
       </div>
     </div>
-
-
   </div>
-  <br />
 
-  <table width="100%" style="margin-top:40px;">
+  <table class="nda-sign-table" width="100%">
     <tr>
-      <td style="width:50%; text-align:left;">
-        <p>________________________</p>
-        <p><b>Shiv Pal Singh</b></p>
-        <p>Senior Vice President</p>
-        <p></p>
-        <p></p>
+      <td style="width:50%; text-align:left; padding-top: 12px;">
+        <p style="margin: 0 0 8px 0;">________________________</p>
+        <p style="margin: 6px 0;">Signature</p>
+        <p style="margin: 6px 0;">Auth. Signatory</p>
+        <p style="margin: 6px 0;">For <b>{{tenant?.companyName}}</b></p>
+        <p style="margin: 6px 0;">Designation: <span>Director</span></p>
       </td>
 
-      <td style="width:50%; text-align:right;">
-        <p>________________________</p>
-        <p><b>Signature</b></p>
-        <p>(Employee)</p>
-        <p>For {{personalDetails?.firstName}} {{personalDetails?.lastName}}</p>
-        <p>Designation {{personalDetails?.Designation}}</p>
+      <td style="width:50%; text-align:right; padding-top: 12px;">
+        <p style="margin: 0 0 8px 0;">________________________</p>
+        <p style="margin: 6px 0;">Signature</p>
+        <p style="margin: 6px 0;">(Employee)</p>
+        <p style="margin: 6px 0;">For <b>{{getTitle()}} {{personalDetails?.firstName}} {{personalDetails?.lastName}}</b></p>
+        <p style="margin: 6px 0;">Designation: {{ designation || '_______________' }}</p>
       </td>
     </tr>
   </table>
+  </div>
+  </div>
 
 </div>

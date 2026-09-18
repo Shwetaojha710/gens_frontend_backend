@@ -89,7 +89,7 @@
           <span>Leave Ledger List</span>
         </h5>
 
-        <div class="card-body pb-0" *ngIf="ledgerList.length > 0">
+        <!-- <div class="card-body pb-0" *ngIf="ledgerList.length > 0">
           <div class="row g-2 mb-3">
             <div class="col-6 col-md-3">
               <div class="border rounded p-2 text-center bg-label-primary">
@@ -116,7 +116,7 @@
               </div>
             </div>
           </div>
-        </div>
+        </div> -->
 
         <app-search-pagination
           [totalItems]="ledgerList.length"
@@ -135,7 +135,7 @@
                   <th>Leave Type</th>
                   <th>Year</th>
                   <th>Month</th>
-                  <th>Total Assigned</th>
+                  <!-- <th>Total Assigned</th> -->
                   <th>Carry Forwarded</th>
                   <th>Used Leaves</th>
                   <th>Monthly Leave (+)</th>
@@ -153,7 +153,7 @@
                   <td>{{ item.leaveTypeName }}</td>
                   <td>{{ item.year }}</td>
                   <td>{{ getMonthLabel(item.month) }}</td>
-                  <td>{{ item.totalAssigned }}</td>
+                  <!-- <td>{{ item.totalAssigned }}</td> -->
                   <td>{{ item.carryForwarded }}</td>
                   <td>{{ item.usedLeaves }}</td>
                   <td>

@@ -117,7 +117,9 @@ export class ServiceAgreementComponent {
   }
 
   get companyAddress(): string {
-    return this.tenant?.companyAddress || '7th Floor, Cyber Tower, Vibhuti Khand, Gomti Nagar, Lucknow-UP';
+    const addr = String(this.tenant?.companyAddress || '').trim();
+    if (addr && /cyber\s*tower/i.test(addr)) return addr;
+    return '7th Floor, Cyber Tower, Vibhuti Khand, Gomti Nagar, Lucknow, Uttar Pradesh 226010';
   }
 
   get employeeAddress(): string {
@@ -179,13 +181,33 @@ export class ServiceAgreementComponent {
   }
 
   formatJoiningDate(dateStr: string): string {
-    if (!dateStr) return '____ Day of ________, ____';
+    const parts = this.getJoiningDateParts(dateStr);
+    if (!parts) return '____ of ____, ____';
+    return `${parts.day}${parts.suffix} of ${parts.month}, ${parts.year}`;
+  }
+
+  /** Date with superscript ordinal, e.g. 7<sup>th</sup> of Apr, 2026 */
+  formatJoiningDateHtml(dateStr: string): string {
+    const parts = this.getJoiningDateParts(dateStr);
+    if (!parts) return '____ of ____, ____';
+    return `${parts.day}<sup class="ord-sup">${parts.suffix}</sup> of ${parts.month}, ${parts.year}`;
+  }
+
+  private getJoiningDateParts(dateStr: string): { day: number; suffix: string; month: string; year: number } | null {
+    if (!dateStr) return null;
     const date = new Date(dateStr.includes('T') ? dateStr : `${dateStr}T00:00:00`);
-    if (Number.isNaN(date.getTime())) return '____ Day of ________, ____';
+    if (Number.isNaN(date.getTime())) return null;
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec',
+    ];
     const day = date.getDate();
-    const year = date.getFullYear();
-    const month = date.toLocaleString('default', { month: 'long' });
-    return `${day}${this.getDaySuffix(day)} Day of ${month}, ${year}`;
+    return {
+      day,
+      suffix: this.getDaySuffix(day),
+      month: months[date.getMonth()],
+      year: date.getFullYear(),
+    };
   }
 
   getDaySuffix(day: number): string {
@@ -306,43 +328,50 @@ export class ServiceAgreementComponent {
     body {
       margin: 0; padding: 0;
       font-family: 'Times New Roman', Times, serif;
-      font-size: 12pt; line-height: 1.55; color: #000; background: #fff;
+      font-size: 10pt; line-height: 1.55; color: #000; background: #fff;
     }
     .document-wrapper { display: block; }
     .page {
       width: 100%; min-height: auto; height: auto; margin: 0; padding: 0;
       position: relative; page-break-after: always; break-after: page;
       page-break-inside: avoid; break-inside: avoid;
-      font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.55;
+      font-family: 'Times New Roman', Times, serif; font-size: 10pt; line-height: 1.55;
     }
     .page:last-child { page-break-after: auto; break-after: auto; }
     .content { padding: 0; }
-    .page--parties {
-      font-size: 11pt; line-height: 1.32;
+    .ord-sup {
+      font-size: 0.65em;
+      vertical-align: super;
+      line-height: 0;
+      font-weight: inherit;
     }
-    .page--parties .content { padding: 0 0 56px; }
-    .page--parties h6 { margin: 5px 0 3px; font-size: 11pt; }
-    .page--parties p { margin: 3px 0; font-size: 11pt; line-height: 1.32; text-align: justify; }
-    .page--parties .def-item { margin: 2px 0 2px 8px; line-height: 1.28; }
-    .page--parties .edit-field, .page--parties input.edit-field { font-size: 11pt; }
-    .page--parties .signature { margin-top: 28px; }
+    .page--parties {
+      font-size: 9.5pt; line-height: 1.32;
+    }
+    .page--parties .content { padding: 0 0 24px; }
+    .page--parties h6 { margin: 14px 0 8px; font-size: 9.5pt; }
+    .page--parties h6:first-child { margin-top: 0; }
+    .page--parties p { margin: 6px 0 12px; font-size: 9.5pt; line-height: 1.38; text-align: justify; }
+    .page--parties .def-item { margin: 8px 0 8px 8px; line-height: 1.32; }
+    .page--parties .edit-field, .page--parties input.edit-field { font-size: 9.5pt; }
+    .page--parties .signature { margin-top: 100px; }
     .page--terms, .page--terms .content { font-size: 10pt; line-height: 1.4; }
     .page--terms .content { padding-top: 28px; }
     .page--terms h6 { margin: 8px 0 6px; font-size: 10pt; }
     .page--terms p { margin: 6px 0; font-size: 10pt; line-height: 1.4; text-align: justify; }
     .page--terms .edit-field, .page--terms input.edit-field { font-size: 10pt; }
     .page--terms .salary-table {
-      width: 85%; margin: 6px 0; font-size: 8pt;
+      width: 85%; margin: 6px 0; font-size: 7.5pt;
     }
     .page--terms .salary-table th, .page--terms .salary-table td {
-      font-size: 8pt; padding: 2px 4px; line-height: 1.25;
+      font-size: 7.5pt; padding: 2px 4px; line-height: 1.25;
     }
-    .page--terms .signature { font-size: 10pt; margin-top: 28px; }
+    .page--terms .signature { font-size: 10pt; margin-top: 80px; }
     .page--terms .def-item { font-size: 10pt; line-height: 1.4; }
     .page--terms ol.terms, .page--terms ol.terms li { font-size: 10pt; line-height: 1.4; }
     .sa-letterhead-spacer { display: block; height: 150mm; min-height: 150mm; }
     .center { text-align: center; margin-bottom: 14px; font-weight: bold; }
-    h3 { text-align: center; font-weight: bold; font-size: 13pt; margin: 0 0 14px 0; }
+    h3 { text-align: center; font-weight: bold; font-size: 9.5pt; margin: 0 0 14px 0; }
     h4, h6 { font-weight: bold; margin: 12px 0 8px; }
     p { margin: 8px 0; text-align: justify; }
     .meta-line { margin: 0; padding: 0; line-height: 1.25; text-align: left; font-weight: bold; }
@@ -350,23 +379,26 @@ export class ServiceAgreementComponent {
     .salary-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 10pt; }
     .salary-table th, .salary-table td { border: 1px solid #000; padding: 4px 6px; text-align: left; font-size: 10pt; }
     .signature {
-      margin-top: 48px; display: flex; justify-content: space-between;
+      margin-top: 150px; display: flex; justify-content: space-between;
       font-weight: bold; position: relative; bottom: auto; left: auto; right: auto;
+      page-break-inside: avoid; break-inside: avoid;
+      page-break-before: avoid; break-before: avoid;
     }
     .signature > div {
       min-width: 120px; text-align: center; padding-top: 10px; border-top: 1px solid #000;
+      page-break-inside: avoid; break-inside: avoid;
     }
     .edit-field, input.edit-field {
       border: none; border-bottom: 1px solid #999; outline: none;
-      font-family: 'Times New Roman', Times, serif; font-size: 12pt;
+      font-family: 'Times New Roman', Times, serif; font-size: 10pt;
       background: transparent; min-width: 60px; padding: 0 2px;
     }
     .def-item { margin: 6px 0 6px 12px; }
     ol.terms { padding-left: 22px; }
     ol.terms li { margin-bottom: 8px; text-align: justify; }
     .tick-row { margin: 6px 0; }
-    .page--witness .content { padding-top: 36px; padding-bottom: 40px; font-size: 11pt; }
-    .page--witness .witness-heading { margin: 0 0 18px; font-size: 12pt; text-align: left; }
+    .page--witness .content { padding-top: 36px; padding-bottom: 40px; font-size: 9.5pt; }
+    .page--witness .witness-heading { margin: 0 0 18px; font-size: 10pt; text-align: left; font-weight: normal; }
     .witness-top {
       display: flex; justify-content: space-between; align-items: flex-start;
       gap: 40px; min-height: 300px;
@@ -377,7 +409,10 @@ export class ServiceAgreementComponent {
     .party-block { width: 180px; text-align: center; }
     .sig-space { height: 36px; }
     .witness-label {
-      margin: 0; text-align: center; font-weight: bold; text-transform: uppercase;
+      margin: 0; text-align: center; font-weight: normal; text-transform: uppercase;
+    }
+    .witness-top .party-label {
+      margin: 0; text-align: center; font-weight: normal; text-transform: uppercase;
     }
     .party-label {
       margin: 0; text-align: center; font-weight: bold; text-transform: uppercase;
