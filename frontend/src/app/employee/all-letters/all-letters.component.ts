@@ -35,6 +35,15 @@ export class AllLettersComponent implements OnInit {
 
   notyf = new Notyf();
 
+  /** Keep textarea newlines when injecting address into letter HTML */
+  private formatMultilineHtml(value: string | null | undefined): string {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\r\n|\r|\n/g, '<br>');
+  }
+
   readonly letterTypes = [
     { key: 'appointment', label: 'Appointment Letter', route: 'appointment-letter', color: 'appointment' },
     { key: 'offer',       label: 'Offer Letter',       route: 'offer-letter',       color: 'offer'       },
@@ -176,15 +185,17 @@ export class AllLettersComponent implements OnInit {
   body{margin:0;font-family:"Times New Roman",serif;font-size:12px;color:#000;background:#fff;}
   .page{width:21cm;min-height:29.7cm;padding:100px 60px 60px;${pageStyle}}
   .page--plain{padding:15mm 20mm;}
+  .page--nda{padding:150mm 18mm 12mm 18mm;}
   table{width:100%;border-collapse:collapse;}
   th,td{border:1px solid #000;padding:4px 6px;}
   .no-border td{border:none;}
   ol,ul{padding-left:20px;}
   li{margin-bottom:6px;font-size:12px;}
-  p{margin:8px 0;}
+  p{margin:8px 0;text-align:justify;}
+  h3{text-align:center;font-weight:bold;}
   sup{font-size:0.7em;vertical-align:super;}
   @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
-</style></head><body><div class="page ${type === 'appointment' || type === 'nda' ? 'page--plain' : ''}">${body}</div></body></html>`;
+</style></head><body><div class="page ${type === 'nda' ? 'page--nda' : (type === 'appointment' ? 'page--plain' : '')}">${body}</div></body></html>`;
   }
 
   private offerBody(emp: any, data: any, tenant: any): string {
@@ -198,7 +209,7 @@ export class AllLettersComponent implements OnInit {
   </tr>
 </table>
 <div style="margin:30px 0;line-height:1.8;font-size:11px;">
-  <b>${name}</b><br>${parentPrefix} ${emp.fatherName || ''}<br>${emp.permanentAddress || emp.address || ''}
+  <b>${name}</b><br>${parentPrefix} ${emp.fatherName || ''}<br>${this.formatMultilineHtml(emp.permanentAddress || emp.address || '')}
 </div>
 <p style="margin:20px 0;font-weight:bold;">Dear ${emp.firstName || ''},</p>
 <div style="font-size:11px;line-height:1.6;">
@@ -258,7 +269,7 @@ export class AllLettersComponent implements OnInit {
     <td style="vertical-align:top;">
       <p style="margin:0;font-weight:bold;">${name}</p>
       <p style="margin:0;font-weight:bold;">${this.genderOf(emp) === 'female' ? 'D/O' : 'S/O'} ${emp.fatherName || ''}</p>
-      <p style="margin:0;font-weight:bold;">${emp.permanentAddress || emp.address || ''}</p>
+      <p style="margin:0;font-weight:bold;">${this.formatMultilineHtml(emp.permanentAddress || emp.address || '')}</p>
     </td>
     <td style="text-align:right;vertical-align:top;">
       <p style="margin:0;font-weight:bold;">Date: ${fmtJoining}</p>
@@ -295,9 +306,9 @@ ${annexure}`;
   private ndaBody(emp: any, data: any, tenant: any): string {
     const name = this.employeeName(emp);
     return `
-<h3 style="text-align:center;text-decoration:underline;">Employee/Intern/Contractor IP Rights, Confidentiality, Non-Solicitation, Non-Competition Agreement</h3>
-<p>I <b>${name}</b> ${this.genderOf(emp) === 'female' ? 'D/O' : 'S/O'} <b>${emp.fatherName || ''}</b> residing at <b>${emp.permanentAddress || emp.address || ''}</b> do hereby agree with <b>${tenant.companyName || ''}</b> having its principal office at <b>${tenant.companyAddress || ''}</b>.</p>
-<p>INDIA and all of its associate companies to abide by the following in consideration of the compensation paid to me by the Company for services, in any capacity, as an Employee, Associate, Intern, Part time Employee or a Contractor.</p>
+<h3 style="text-align:center;text-decoration:underline;font-weight:bold;">Employee/Intern/Contractor IP Rights, Confidentiality, Non-Solicitation, Non-Competition Agreement</h3>
+<p style="text-align:justify;">I <b>${name}</b> ${this.genderOf(emp) === 'female' ? 'D/O' : 'S/O'} <b>${emp.fatherName || ''}</b> of having my principal address ${emp.permanentAddress || emp.address || ''} do hereby agree with <b>${tenant.companyName || ''}</b> (herein referred as “company”) having principal office at ${tenant.companyAddress || ''}</p>
+<p style="text-align:justify;">INDIA and all of its associate companies to abide by the following in consideration of the compensation paid to me by the Company for services, in any capacity, as an Employee, Associate, Intern, Part time Employee or a Contractor. I understand that being associated with the company, my responsibilities and business contacts will enable me to acquire valuable information and skill with respect to the business operations of the Company. In recognition of these acquired benefits, I agree to abide by the following:</p>
 <ol>
   <li>The Company shall be entitled to sole ownership of any intellectual property rights created, developed and discovered by me while in the course of my employment with the Company.</li>
   <li>I agree that I shall promptly disclose all software programs, inventions, improvements, discoveries and technical developments made, created or conceived by me during the term of my employment.</li>
@@ -330,7 +341,7 @@ ${annexure}`;
   </tr>
 </table>
 <div style="margin:20px 0;line-height:1.8;">
-  ${name}<br>${parentPrefix} <b>${emp.fatherName || ''}</b><br>${emp.permanentAddress || emp.address || ''}
+  ${name}<br>${parentPrefix} <b>${emp.fatherName || ''}</b><br>${this.formatMultilineHtml(emp.permanentAddress || emp.address || '')}
 </div>
 <div style="margin:30px 0 20px;">Subject: <b><u>Relieving Cum Experience Letter</u></b></div>
 <div style="margin:20px 0;font-weight:bold;">Dear ${salutation} ${name},</div>

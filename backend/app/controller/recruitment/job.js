@@ -645,7 +645,12 @@ exports.generateOfferLetterPdf = async (req, res) => {
           stack: [
             { text: `${d.firstName} ${d.lastName}`, bold: true },
             { text: `${salutationPrefix} ${d.fatherName}` },
-            { text: d.permanentAddress || '' }
+            ...String(d.permanentAddress || '')
+              .replace(/\r\n/g, '\n')
+              .replace(/\r/g, '\n')
+              .split('\n')
+              .filter((line) => line.trim().length > 0)
+              .map((text) => ({ text }))
           ],
           margin: [0, 0, 0, 28]
         },

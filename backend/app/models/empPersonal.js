@@ -85,6 +85,18 @@ const empPersonal = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    guarantorAge: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    guarantorRelation: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    guarantorAddress: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
     bloodGroup: {
       type: DataTypes.ENUM("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"),
       allowNull: true,

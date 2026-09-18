@@ -178,6 +178,21 @@
               </small>
             </div>
             <div class="col-md-3">
+              <label class="col-form-label fw-bold">Guarantor Age</label>
+              <input type="number" class="form-control" placeholder="Enter Guarantor Age"
+                [(ngModel)]="personalDetails.guarantorAge" name="guarantorAge" />
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Guarantor Relation</label>
+              <input type="text" class="form-control" placeholder="e.g. elder sister"
+                [(ngModel)]="personalDetails.guarantorRelation" name="guarantorRelation" />
+            </div>
+            <div class="col-md-6">
+              <label class="col-form-label fw-bold">Guarantor Address</label>
+              <textarea class="form-control" rows="2" placeholder="Enter Guarantor Address"
+                [(ngModel)]="personalDetails.guarantorAddress" name="guarantorAddress"></textarea>
+            </div>
+            <div class="col-md-3">
               <label class="col-form-label fw-bold">Nationality
                 <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
               </label>

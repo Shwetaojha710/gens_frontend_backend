@@ -20,6 +20,15 @@ export class EmployeePortalDocumentsComponent implements OnInit, AfterViewChecke
   notyf = new Notyf();
   downloading: string | null = null;
 
+  /** Keep textarea newlines when injecting address into letter HTML */
+  private formatMultilineHtml(value: string | null | undefined): string {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\r\n|\r|\n/g, '<br>');
+  }
+
   isLoadingPdfs = false;
   letterPdfUrls: Record<string, string | null> | null = null;
 
@@ -226,7 +235,7 @@ export class EmployeePortalDocumentsComponent implements OnInit, AfterViewChecke
   </tr>
 </table>
 <div style="margin:30px 0;line-height:1.8;font-size:11px;">
-  <b>${e.firstName} ${e.lastName}</b><br>${parentPrefix} ${e.fatherName}<br>${e.permanentAddress || ''}
+  <b>${e.firstName} ${e.lastName}</b><br>${parentPrefix} ${e.fatherName}<br>${this.formatMultilineHtml(e.permanentAddress || '')}
 </div>
 <p style="margin:20px 0;font-weight:bold;">Dear ${e.firstName},</p>
 <div style="font-size:11px;line-height:1.6;">
@@ -302,7 +311,7 @@ export class EmployeePortalDocumentsComponent implements OnInit, AfterViewChecke
     <td style="vertical-align:top;">
       <p style="margin:0;font-weight:bold;">${e.firstName} ${e.lastName}</p>
       <p style="margin:0;font-weight:bold;">${e.gender === 'Female' ? 'D/O' : 'S/O'} ${e.fatherName}</p>
-      <p style="margin:0;font-weight:bold;">${e.permanentAddress || ''}</p>
+      <p style="margin:0;font-weight:bold;">${this.formatMultilineHtml(e.permanentAddress || '')}</p>
     </td>
     <td style="text-align:right;vertical-align:top;">
       <p style="margin:0;font-weight:bold;">Date: ${fmtJoining}</p>
@@ -377,7 +386,7 @@ ${annexure}`;
   </tr>
 </table>
 <div style="margin:20px 0;line-height:1.8;">
-  ${e.firstName} ${e.lastName}<br>${parentPrefix} <b>${e.fatherName}</b><br>${e.permanentAddress || ''}
+  ${e.firstName} ${e.lastName}<br>${parentPrefix} <b>${e.fatherName}</b><br>${this.formatMultilineHtml(e.permanentAddress || '')}
 </div>
 <div style="margin:30px 0 20px;">Subject: <b><u>Relieving Cum Experience Letter</u></b></div>
 <div style="margin:20px 0;font-weight:bold;">Dear ${salutation} ${e.firstName} ${e.lastName},</div>

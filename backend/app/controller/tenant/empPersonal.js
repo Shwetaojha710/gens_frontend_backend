@@ -218,6 +218,9 @@ exports.createEmp = async (req, res) => {
     reportingPersonId,
     shift_id,
     guarantorName,
+    guarantorAge,
+    guarantorRelation,
+    guarantorAddress,
   } = req.body;
 
   const image = req.file ? req.file.filename : null;
@@ -428,6 +431,9 @@ exports.createEmp = async (req, res) => {
       shift_id,
       branchId,
       guarantorName,
+      guarantorAge,
+      guarantorRelation,
+      guarantorAddress,
       emp_status:'approved',
       deviceId: Helper.getIpAddress(req),
     });
@@ -792,6 +798,9 @@ exports.updateEmp = async (req, res) => {
     empCode,
     role,
     guarantorName,
+    guarantorAge,
+    guarantorRelation,
+    guarantorAddress,
     type,
     emp_status,
     isContractual,
@@ -956,6 +965,9 @@ exports.updateEmp = async (req, res) => {
       updateData.reportingPersonId = reportingPersonId;
     if (joiningDate !== undefined) updateData.joiningDate = joiningDate;
     if (guarantorName != undefined) updateData.guarantorName = guarantorName;
+    if (guarantorAge != undefined) updateData.guarantorAge = guarantorAge;
+    if (guarantorRelation != undefined) updateData.guarantorRelation = guarantorRelation;
+    if (guarantorAddress != undefined) updateData.guarantorAddress = guarantorAddress;
     if (branchId !== undefined) updateData.branchId = branchId;
 
     // Pending employee approval: auto empCode if frontend / existing record has none

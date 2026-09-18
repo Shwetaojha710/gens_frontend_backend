@@ -26,6 +26,19 @@ const fmtDate = (dateStr) => {
   return `${day}${suf} ${months[d.getMonth()]}, ${year}`;
 };
 
+/** Preserve textarea line breaks for pdfmake address blocks */
+const multilineAddress = (address, opts = {}) => {
+  const lines = String(address || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .split('\n')
+    .map((l) => l.trimEnd())
+    .filter((l, i, arr) => l.length > 0 || (i > 0 && i < arr.length - 1));
+  if (!lines.length) return { text: '', ...opts };
+  if (lines.length === 1) return { text: lines[0], ...opts };
+  return { stack: lines.map((text) => ({ text, ...opts })) };
+};
+
 // Returns pdfmake inline text array with raised superscript ordinal (e.g. 22ⁿᵈ April, 2026)
 const fmtDatePdf = (dateStr) => {
     if (!dateStr) return [{ text: '___' }];
@@ -230,7 +243,7 @@ const buildLetterDoc = (type, emp, data, designation, department, tenant, letter
                     { stack: [
                         { text: empName, bold: true, fontSize: 11 },
                         { text: `${salutationPrefix} ${emp.fatherName || ''}`, fontSize: 11 },
-                        { text: emp.permanentAddress || '', fontSize: 11 }
+                        multilineAddress(emp.permanentAddress, { fontSize: 11 })
                     ], margin: [0, 0, 0, 20] },
                     { text: `Dear ${emp.firstName},`, bold: true, margin: [0, 0, 0, 10] },
                     { text: `With reference to your application and subsequent interview with us, we are pleased to offer you employment in our Company as ${designationName} in the ${data.department || ''} at our Head Office – ${companyAddress}, as per the mutually agreed terms and conditions discussed with you at the time of interview.`, fontSize: 11, margin: [0, 0, 0, 8] },
@@ -329,7 +342,7 @@ const buildLetterDoc = (type, emp, data, designation, department, tenant, letter
                 { width: '60%', stack: [
                     { text: empName, bold: true, fontSize: 11 },
                     { text: `${salutationPrefix} ${emp.fatherName || ''}`, bold: true, fontSize: 11 },
-                    { text: emp.permanentAddress || '', bold: true, fontSize: 11 }
+                    multilineAddress(emp.permanentAddress, { bold: true, fontSize: 11 })
                 ]},
                 { width: '40%', stack: [
                     { text: `Date: ${joiningFmt}`, bold: true, alignment: 'right', fontSize: 11 },
@@ -421,7 +434,7 @@ const buildLetterDoc = (type, emp, data, designation, department, tenant, letter
                     { stack: [
                         { text: empName, fontSize: 10 },
                         { text: [{ text: `${salutationPrefix} ` }, { text: emp.fatherName || '', bold: true }], fontSize: 10 },
-                        { text: emp.permanentAddress || '', fontSize: 10 }
+                        multilineAddress(emp.permanentAddress, { fontSize: 10 })
                     ], margin: [0, 0, 0, 18] },
                     { text: [{ text: 'Subject: ' }, { text: 'Relieving Cum Experience Letter', bold: true, decoration: 'underline' }], fontSize: 10, margin: [0, 0, 0, 12] },
                     { text: `Dear ${salutation} ${empName},`, bold: true, fontSize: 10, margin: [0, 0, 0, 10] },

@@ -2,9 +2,78 @@
   width: 800px;
   margin: auto;
   padding: 40px;
-  font-family: 'Times New Roman';
+  font-family: 'Times New Roman', Times, serif;
   background: #fff;
   position: relative;
+}
+
+.nda-content {
+  max-width: 794px;
+  margin: 0 auto;
+  padding: 50px 25px 25px;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 12pt;
+  line-height: 1.55;
+  color: #000;
+  background: #fff;
+}
+
+/*
+  Letterhead blank on first page.
+  Sized so title → clause 2 “…made, created or” fits on page 1
+  with remaining space used by this spacer (~100mm ≈ 1/3 page).
+*/
+.nda-letterhead-spacer {
+  height: 150mm;
+  min-height: 150mm;
+}
+
+.nda-title {
+  text-align: center;
+  text-decoration: underline;
+  font-weight: bold;
+  margin: 0 0 14px;
+  font-size: 13pt;
+}
+
+.nda-intro,
+.nda-content p,
+.nda-clause2-continue {
+  text-align: justify;
+}
+
+.nda-terms {
+  padding-left: 22px;
+  margin: 8px 0;
+}
+
+.nda-terms li {
+  margin-bottom: 8px;
+  text-align: justify;
+}
+
+.nda-clause2-continue {
+  margin: 0 0 10px 22px;
+}
+
+/* Screen: no forced break; print/Word use real page break */
+.nda-page-break {
+  display: none;
+}
+
+@media print {
+  .nda-letterhead-spacer {
+    height: 150mm;
+  }
+
+  .nda-first-page {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .nda-page-break {
+    display: none;
+  }
 }
 
 .header {
@@ -50,17 +119,3 @@
   text-align: center;
   margin-top: 20px;
 }
-
-
-/* .date-section p {
-  margin: 5px 0;
-  font-family: 'Times New Roman';
-}
-
-.input-inline {
-  border: none;
-  border-bottom: 1px solid #000;
-  outline: none;
-  font-family: 'Times New Roman';
-  width: 180px;
-} */

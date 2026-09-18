@@ -62,19 +62,62 @@ export class NdaComponent {
   }
 
   private readonly ndaPrintStyles = `
-    @page { margin: 0; }
-    body { font-family: 'Times New Roman'; line-height: 1.6; padding: 15mm 20mm; color: #000; background: #fff; }
-    h3 { text-align: center; text-decoration: underline; }
-    ol { padding-left: 20px; }
+    @page { size: A4; margin: 12mm 18mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 12pt;
+      line-height: 1.55;
+      color: #000;
+      background: #fff;
+      padding: 0;
+      margin: 0;
+    }
+    /* Letterhead blank — sized so page-1 content fits through “…made, created or” */
+    .nda-letterhead-spacer {
+      display: block;
+      height: 150mm;
+      min-height: 150mm;
+    }
+    .nda-first-page {
+      page-break-after: always;
+      break-after: page;
+    }
+    h3, .nda-title {
+      text-align: center;
+      text-decoration: underline;
+      font-weight: bold;
+      font-size: 13pt;
+      margin: 0 0 14px 0;
+    }
+    p, .nda-clause2-continue {
+      margin: 8px 0;
+      text-align: justify;
+    }
+    .nda-clause2-continue { margin-left: 22px; }
+    .nda-intro { margin-top: 6px; }
+    ol.nda-terms, ol { padding-left: 22px; margin: 8px 0; }
     ul { padding-left: 20px; }
+    li { margin-bottom: 8px; text-align: justify; }
     table { width: 100%; border-collapse: collapse; }
-    p { margin: 8px 0; }
+    table td { vertical-align: top; border: none !important; }
+    input { border: none; border-bottom: 1px solid #000; outline: none; }
+    .nda-page-break { display: none; }
   `;
 
   private replaceInputsWithText(el: HTMLElement): void {
     el.querySelectorAll('input').forEach((input: any) => {
       const span = document.createElement('span');
-      span.innerText = input.value || '';
+      let value = input.value || '';
+      if (input.type === 'date' && value) {
+        const d = new Date(`${value}T00:00:00`);
+        if (!Number.isNaN(d.getTime())) {
+          const dd = String(d.getDate()).padStart(2, '0');
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          value = `${dd}/${mm}/${d.getFullYear()}`;
+        }
+      }
+      span.textContent = value;
       input.parentNode.replaceChild(span, input);
     });
   }
@@ -151,9 +194,34 @@ downloadDoc() {
       <meta charset='utf-8'>
       <title>NDA</title>
       <style>
-        body { font-family: 'Times New Roman'; line-height: 1.6; }
-        h3 { text-align: center; text-decoration: underline; }
-        ol { padding-left: 20px; }
+        @page { size: A4; margin: 12mm 18mm; }
+        body {
+          font-family: 'Times New Roman', Times, serif;
+          font-size: 12pt;
+          line-height: 1.55;
+          padding: 0;
+          margin: 0;
+        }
+        .nda-letterhead-spacer {
+          display: block;
+          height: 150mm;
+          min-height: 150mm;
+        }
+        .nda-first-page {
+          page-break-after: always;
+          break-after: page;
+        }
+        h3, .nda-title {
+          text-align: center;
+          text-decoration: underline;
+          font-weight: bold;
+        }
+        p, .nda-clause2-continue { text-align: justify; margin: 8px 0; }
+        .nda-clause2-continue { margin-left: 22px; }
+        ol { padding-left: 22px; }
+        table { width: 100%; border-collapse: collapse; }
+        table td { border: none; vertical-align: top; }
+        .nda-page-break { display: none; }
       </style>
     </head>
     <body>
