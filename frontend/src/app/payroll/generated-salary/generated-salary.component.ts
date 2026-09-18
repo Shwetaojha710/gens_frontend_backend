@@ -976,11 +976,13 @@ export class GeneratedSalaryComponent {
 
       const loadImg = async (path: string, w: number, h: number) =>
         new ImageRun({
+          type: "png",
           data: await fetch(path).then(r => r.arrayBuffer()),
           transformation: { width: w, height: h }
         });
 
       const letterhead = new ImageRun({
+        type: "png",
         data: await fetch('assets/img/Letterhead-1.png').then(r => r.arrayBuffer()),
         transformation: { width: 800, height: 1123 },
         floating: {
