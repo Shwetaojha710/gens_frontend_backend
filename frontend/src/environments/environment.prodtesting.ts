@@ -1,11 +1,13 @@
+const origin = typeof window !== 'undefined' ? window.location.origin : '';
+
 export const environment = {
   production: true,
   apiUrl: 'https://gens.demoquaeretech.in/api/api/',
   python_apiUrl: 'https://gens.demoquaeretech.in/resume_tracker/api/v1/ats',
   websitechatApiUrl: 'https://wonderful-den-garlic-disposal.trycloudflare.com/chat',
   transcribeApiUrl: 'https://wonderful-den-garlic-disposal.trycloudflare.com/api/transcribe',
-  aiHrmsApiUrl: 'https://gens.demoquaeretech.in/chatbot',
-  chatApiUrl: 'https://gens.demoquaeretech.in/chatbot/api/ai/chat',
+  aiHrmsApiUrl: `${origin}/chatbot`,
+  chatApiUrl: `${origin}/chatbot/api/ai/chat`,
 
   firebase: {
     apiKey: "AIzaSyCBII2E72DiTXfMWyRLoQ2JGtz9EZ1TXks",
