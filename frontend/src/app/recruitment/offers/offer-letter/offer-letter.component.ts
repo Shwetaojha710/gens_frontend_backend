@@ -231,6 +231,14 @@ export class RecruitmentOfferLetterComponent implements OnInit {
     return `${day}<sup>${this.getOrdinalSuffix(day)}</sup> ${month}, ${year}`;
   }
 
+  formatAddressHtml(address: string | null | undefined): string {
+    return String(address || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\r\n|\r|\n/g, '<br>');
+  }
+
   private getOrdinalSuffix(day: number): string {
     if (day >= 11 && day <= 13) return 'th';
     switch (day % 10) {

@@ -30,12 +30,24 @@
 
 /* LEFT SIDE */
 .left {
-  width: 60%;
+  width: 48%;
+}
+
+.recipient-block,
+.recipient-address {
+  max-width: 300px;
+}
+
+.address-lines {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* RIGHT SIDE */
 .right {
-  width: 40%;
+  width: 52%;
   text-align: right;
 }
 

@@ -2,7 +2,7 @@ const express = require('express');
 const { readdirSync } = require('fs');
 const app = express();
 const cookieParser = require('cookie-parser');
-require('dotenv').config();
+require('dotenv').config({ path: require('path').resolve(__dirname, '.env') });
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');

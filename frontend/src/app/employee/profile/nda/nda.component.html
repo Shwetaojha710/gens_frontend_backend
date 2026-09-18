@@ -14,59 +14,58 @@
 
 <div id="nda-doc" class="nda-content">
 
+  <!-- ========== PAGE 1: letterhead space + content through clause 2 partial ========== -->
+  <div class="nda-first-page">
+    <div class="nda-letterhead-spacer" aria-hidden="true"></div>
 
+    <h3 class="nda-title" style="text-align:center; text-decoration: underline; font-weight: bold;">
+      Employee/Intern/Contractor IP Rights, Confidentiality, Non-Solicitation, Non-Competition Agreement
+    </h3>
 
-  <h3 style="text-align:center; text-decoration: underline;">
-    Employee/Intern/Contractor IP Rights, Confidentiality, Non-Solicitation, Non-Competition Agreement
-  </h3>
+    <p class="nda-intro" style="text-align: justify;">
+      I <b>{{personalDetails?.firstName}} {{personalDetails?.lastName}}</b>
+      <span *ngIf="personalDetails.gender=='Male'"> S/O </span>
+      <span *ngIf="personalDetails.gender=='Female'"> D/O </span>
+      <b>{{personalDetails?.fatherName}}</b>
+      of having my principal address {{personalDetails?.permanentAddress}}
+      do hereby agree with
+      <b>{{tenant?.companyName}}</b>
+      (herein referred as “company”) having principal office at
+      {{tenant?.companyAddress}}
+    </p>
+   
 
-  <p>
-    I <b>{{personalDetails?.firstName}} {{personalDetails?.lastName}}</b> <span *ngIf="personalDetails.gender=='Male'">
-      S/O </span>
-    <span *ngIf="personalDetails.gender=='Female'"> D/O </span> <b> {{personalDetails?.fatherName}}</b>
-    residing at <b>{{personalDetails?.permanentAddress}}</b> do hereby agree with
-    <b>{{tenant?.companyName}}</b> (here in after referred to as “Company”) having its principal office at
-    <b>{{tenant?.companyAddress}}</b> .
+    <p style="text-align: justify;">
+      In consideration of the compensation paid to me by the Company for services in any capacity as an Employee,
+      Associate, Intern, Part-time Employee, or Contractor, I understand that my responsibilities and business
+      interactions will expose me to valuable confidential information related to the Company’s business operations.
+    </p>
+
+    <ol class="nda-terms">
+      <li>
+        The Company shall be entitled to sole ownership of any intellectual property rights including but not limited
+        to software programs, hardware specifications and other property rights created, developed and discovered by me
+        while in the course of my employment with the Company, including all registrations for the same.
+      </li>
+      <li>
+        I agree that I shall promptly disclose to the Company the following: a) all software programs, inventions,
+        improvements, discoveries and technical developments (‘Inventions’) made, created or
+      </li>
+    </ol>
+  </div>
+
+  <!-- ========== PAGE 2+: remainder of clause 2, then clauses 3+ ========== -->
+  <div class="nda-page-break" aria-hidden="true"></div>
+
+  <p class="nda-clause2-continue" style="text-align: justify;">
+    conceived by me (either alone
+    or with others) during the term of my employment, b) all Inventions which are based on proprietary information of
+    the Company and are made or conceived by me (either alone or with others), c) any documentation related to the
+    Inventions, which shall become the company’s property, and d) Web content and development concepts, ideas, design,
+    software code, and multimedia graphics, and artwork.
   </p>
-  <p>
-    INDIA and all of its associate companies to abide by the following in consideration of the compensation paid to me
-    by the Company for services, in any capacity, as an Employee, Associate, Intern, Part time Employee or a Contractor.
-    I understand that being associated with the company, my responsibilities and business contacts will enable me to
-    acquire valuable information and skill with respect to the business operations of the Company. In recognition of
-    these acquired benefits, I agree to abide by the following:
-  </p>
 
-  <p>
-    In consideration of the compensation paid to me by the Company for services in any capacity as an Employee,
-    Associate, Intern, Part-time Employee, or Contractor, I understand that my responsibilities and business
-    interactions will expose me to valuable confidential information related to the Company’s business operations.
-  </p>
-
-  <!-- <p>
-In recognition of these benefits, I agree to the following:
-</p> -->
-
-  <ol>
-
-    <li>
-      The Company shall be entitled to sole ownership of any intellectual property rights including but not limited
-      to software programs, hardware specifications and other property rights created, developed and discovered by me
-      while in the course of my employment with the Company, including all registrations for the same. </li>
-
-    <li>
-      I agree that I shall promptly disclose to the Company the following: a) all software programs, inventions,
-      improvements, discoveries and technical developments (‘Inventions’) made, created or conceived by me (either alone
-      or with others) during the term of my employment, b) all Inventions which are based on proprietary information of
-      the Company and are made or conceived by me (either alone or with others), c) any documentation related to the
-      Inventions, which shall become the company’s property, and d) Web content and development concepts, ideas, design,
-      software code, and multimedia graphics, and artwork.
-      <ul>
-        <!-- <li>All software programs, inventions, improvements, discoveries, and developments.</li>
-<li>All inventions based on proprietary information of the Company.</li>
-<li>All related documentation.</li>
-<li>All web content, designs, software code, multimedia graphics, and artwork.</li> -->
-      </ul>
-    </li>
+  <ol class="nda-terms" start="3">
 
     <li>
       I hereby assign to the Company my entire right, title and interest in and to such Inventions and documents,

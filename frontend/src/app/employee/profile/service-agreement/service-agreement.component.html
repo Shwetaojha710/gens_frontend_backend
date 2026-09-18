@@ -1,198 +1,167 @@
-<div class="document-wrapper">
+<div class="row mb-2">
+  <div class="col-12 d-flex gap-2 justify-content-end">
+    <button type="button" class="btn btn-secondary" (click)="printDoc()">
+      <i class="fa fa-print mx-2"></i> Print
+    </button>
+  </div>
+</div>
+
+<div id="service-agreement-doc" class="document-wrapper">
 
   <!-- PAGE 1 -->
-  <div class="page">
+  <div class="page page--first">
+    <div class="sa-letterhead-spacer" aria-hidden="true"></div>
     <div class="content">
+      <p class="meta-line">
+        Serial Number:
+        <input class="edit-field" style="width: 90px" [(ngModel)]="form.serialNumber" name="serialNumber" (change)="saveData()" />
+      </p>
+      <p class="meta-line">Employee ID: {{ personalDetails?.empCode || '________' }}</p>
+      <p class="meta-line">Year: {{ year }}</p>
 
-      <p>Serial Number : 11B</p>
-      <p>Employee ID : {{personalDetails?.empCode}}</p>
-      <p>Year : 2026</p>
-   <h3 class="center"><b>{{tenant.companyName}}</b></h3>
-      <h3 class="center">SERVICE AGREEMENT</h3>
+      <h3 class="center" style="text-decoration: underline;">{{ tenant?.companyName || 'Quaere Etechnologies Pvt. Ltd.' }}</h3>
+      <h3 class="center" style="text-decoration: underline;">SERVICE AGREEMENT</h3>
 
       <p>
-        THIS SERVICE AGREEMENT executed on  is with effect from Date of Joining <b>{{ formatJoiningDate(personalDetails?.joiningDate) }}</b> to the successful completion of Foundation Training and up to a period of 24 months from the Date of Allocation to a Development Unit at <b>{{tenant?.companyName}}</b>. (hereinafter referred to as the “Service Period”)
-        <!-- This Service Agreement is made on <b>{{agreementDate}}</b> between
-        <b>{{companyName}}</b> and <b>{{employeeName}}</b>. -->
+        THIS SERVICE AGREEMENT executed on is with effect from Date of Joining
+        <b>{{ formatJoiningDate(personalDetails?.joiningDate) }}</b>
+        to the successful completion of Foundation Training and up to a period of
+        <input class="edit-field" style="width: 40px" type="number" [(ngModel)]="form.coverServiceMonths" name="coverServiceMonths" (change)="saveData()" />
+        months from the Date of Allocation to a Development Unit at
+        <b>{{ tenant?.companyName || 'Quaere Etechnologies Pvt. Ltd.' }}</b>
+        (hereinafter referred to as the “Service Period”)
       </p>
-
 
       <div class="signature">
         <div>COMPANY</div>
         <div>ENGINEER</div>
         <div>SURETY</div>
       </div>
-
     </div>
   </div>
-<!-- PAGE 2 -->
-<div class="page">
 
-  <h6><b>BETWEEN:</b></h6>
+  <!-- PAGE 2 -->
+  <div class="page page--parties">
+    <div class="content">
+      <h6><b style="text-decoration: underline;">BETWEEN:</b></h6>
+      <p>
+        M/s. <b>{{ tenant?.companyName || 'Quaere Etechnologies Pvt. Ltd.' }}</b> a Company incorporated under the Companies Act. 1956,
+        having its registered office at {{ companyAddress }} represented by Mr.Shiv Pal Singh
+        <!--<input class="edit-field" style="width: 160px" [(ngModel)]="form.representativeName" name="representativeName" (change)="saveData()" />-->,
+        hereinafter referred to as the
+        <input class="edit-field" style="width: 180px" [(ngModel)]="form.representativeTitle" name="representativeTitle" (change)="saveData()" />
+        (which term shall unless repugnant to the context mean and include its successors-in-interest and permitted assignees) of the ONE PART:
+      </p>
 
-  <p>
-    M/s. {{tenant?.companyName}}, a Company incorporated under the Companies Act, 1956,
-    having its registered office at 7th Floor, Cyber Tower, Vibhuti Khand, Gomti Nagar, Lucknow-UP,
-    represented by Shiv Pal Singh, hereinafter referred to as the Senior Vice President
-    (which term shall unless repugnant to the context mean and include its successors-in-interest
-    and permitted assignees) of the ONE PART:
-  </p>
+      <h6><b style="text-decoration: underline;">AND:</b></h6>
+      <p>
+        <b>{{ getTitle() }} {{ employeeName }}</b>
+       {{ getRelation() }} of Mr. <b>{{ fatherName }}</b>
+        aged about <b>{{ employeeAge }}</b> Years, currently residing at
+        <b>{{ employeeAddress }}</b>
+        hereinafter referred to as Trainee (which term shall unless repugnant to the context mean and include his/her heirs, legal representatives, assigns, executors and administrators) of the SECOND PART:
+      </p>
 
-  <h6><b>AND:</b></h6>
+      <h6><b style="text-decoration: underline;">AND:</b></h6>
+      <p>
+        <b>Ms. {{ guarantorName }}</b>,
+        {{ guarantorRelation }}
+        of <b>{{ getTitle() }} {{ employeeName }}</b>, aged about
+        <b>{{ guarantorAge }}</b>
+        years (approx) currently residing at
+        <b>{{ guarantorAddress }}</b>,
+        hereinafter referred to as the SURETY (which term shall unless repugnant to the context mean and include his/her heirs, legal representatives, assigns, executors and administrators) of the <b>THIRD PART</b>
+      </p>
 
-  <p>
-    <!-- Title -->
-    <span *ngIf="personalDetails?.gender == 'Male'">Mr.</span>
-    <span *ngIf="personalDetails?.gender == 'Female'">Ms.</span>
+      <h6><b style="text-decoration: underline;">DEFINITIONS:</b></h6>
+      <p>The following terms shall have the following meanings for the purpose of this Service Agreement:</p>
+      <p class="def-item">
+        <b>Date of Allocation:</b> Is the date when the Engineer is allocated to a Development Unit for On the Job Training.
+      </p>
+      <p class="def-item">
+        <b>Development Unit:</b> Development Unit refers to individual business unit / horizontal business unit /department where the Engineer is posted. A Practice Unit may be a delivery unit or business enabler function / department.
+      </p>
+      <p class="def-item">
+        <b>On-the-Job training:</b> Training imparted to the Engineer on allocation to a Practice Unit.
+      </p>
 
-    {{personalDetails?.firstName}} {{personalDetails?.lastName}},
+      <h6><b style="text-decoration: underline;">WHEREAS</b></h6>
+      <p>
+        The Engineer applied to the Company for the designation of {{ designation }}. Pursuant to such application, the Company appointed his/her as a {{ designation }} on the terms and conditions contained in the offer letter together with this Service Agreement, under which he/she is required to undergo training as may be determined by the Company;
+      </p>
+      <p>
+        AND WHEREAS the Engineer recognizes and accepts that at the time of appointment as {{ designation }}, except exposure to academic knowledge, he/she has received no formal, effective, technical or practical training to independently function as a Engineer who is commercially viable to the Company;
+      </p>
+      <p>
+        AND WHEREAS the Engineer further recognizes and accepts that prior to and at the time of joining the Company, he/she has not been exposed to and, therefore, has not acquired any management or communication skills, which are essential to for performance of duties by the Engineer which meet the current business needs, parameters, standards and efficiency levels required by the Company;
+      </p>
+      <p>
+        AND WHEREAS consequently and in order for the Company to utilize the skills of the Engineer, the Engineer would need to undergo formal and extensive training in accordance with courses, modules and programmes prescribed or conducted by the Company;
+      </p>
+      <p>
+        AND WHEREAS the Engineer is aware that the Company would be expending substantial sums of money and incurring costs, expenses, man hours etc. in the process of selecting and appointing his/her as {{ designation }} and thereafter imparting training to such Engineer;
+      </p>
 
-    <!-- S/O or D/O -->
-    <span *ngIf="personalDetails?.gender == 'Male'">S/O</span>
-    <span *ngIf="personalDetails?.gender == 'Female'">D/O</span>
-
-    <!-- Father's Name -->
-    <!-- <span *ngIf="personalDetails?.gender == 'Male'">Mr.</span>
-    <span *ngIf="personalDetails?.gender == 'Female'">Mr.</span> -->
-    {{personalDetails?.fatherName}},
-
-    aged about {{personalDetails?.age || 24}} years,
-
-    currently residing at House Number {{personalDetails?.permanentAddress}},
-
-    hereinafter referred to as Trainee (which term shall unless repugnant to the context
-    mean and include his/her heirs, legal representatives, assigns, executors and administrators)
-    of the SECOND PART:
-  </p>
-<h6><b>AND:</b></h6>
-<p>
-  {{personalDetails?.guarantorName}}, elder sister of {{personalDetails?.firstName}}{{personalDetails?.lastName}}, aged about {{personalDetails?.age}} years (approx) currently residing at House Number {{personalDetails?.permanentAddress}}., hereinafter referred to as the SURETY (which term shall unless repugnant to the context mean and include his/her heirs, legal representatives, assigns, executors and administrators) of the THIRD PART
-</p>
-
-<h6>
-  <b>DEFINITIONS:</b>
-</h6>
-<p>
-  The following terms shall have the following meanings for the purpose of this Service Agreement:
-</p>
-<p>
-  <span>
-   <b>•	Date of Allocation:</b> Is the date when the Engineer is allocated to a Development Unit for On the Job Training.
-  </span>
-</p>
-<p>
-  <span>
-   <b>•	D e v e l o p m e n t U n i t :  </b> D e v e l o p m e n t U n i t r e f e r s to i n d i v i d u a l b u s i n e s s u n i t / horizontal b u s i n e s s u n i t /department where the Engineer is posted. A Practice Unit may be a delivery unit or business enabler function / department.
-  </span>
-</p>
-<p>
-  <span>
-   <b>•	On-the-Job training:  </b> Training imparted to the Engineer on allocation to a Practice Unit.
-  </span>
-</p>
-<h6>
-  <b>
-WHEREAS
-  </b>
-  </h6>
-  <p>
-    The Engineer applied to the Company for the designation of {{personalDetails?.designation}}. Pursuant to such application, the Company appointed his/her as a {{personalDetails?.designation}} on the terms and conditions contained in the offer letter together with this Service Agreement, under which he/she is required to undergo training as may be determined by the Company;
-  </p>
-  <p>
-AND WHEREAS the Engineer recognizes and accepts that at the time of appointment as  {{personalDetails?.designation}}, except exposure to academic knowledge, he/she has received no formal, effective, technical or practical training to independently function as a Engineer who is commercially viable to the Company;  </p>
-
-<p>
-  AND WHEREAS the Engineer further recognizes and accepts that prior to and at the time of joining the Company, he/she has not been exposed to and, therefore, has not acquired any management or communication skills, which are essential to for performance of duties by the Engineer which meet the current business needs, parameters, standards and efficiency levels required by the Company;
-</p>
-
-<p>
-AND WHEREAS consequently and in order for the Company to utilize the skills of the Engineer, the Engineer would need to undergo formal and extensive training in accordance with courses, modules and programmes prescribed or conducted by the Company;
-</p>
-<p>
-
-  AND WHEREAS the Engineer is aware that the Company would be expending substantial sums of money and incurring costs, expenses, man hours etc. in the process of selecting and appointing his/her as Trainee – Software Engineer and thereafter imparting training to such Engineer;
-
-</p>
-   <div class="signature">
+      <div class="signature">
         <div>COMPANY</div>
         <div>ENGINEER</div>
         <div>SURETY</div>
       </div>
+    </div>
+  </div>
 
-</div>
   <!-- PAGE 3 -->
-  <div class="page">
+  <div class="page page--terms">
     <div class="content">
+      <p>
+        AND WHEREAS the Engineer recognizes and accepts that the Company would suffer substantial financial loss, inconvenience, loss of resources, man hours, computer time etc., in the event the Engineer fails to complete the training as prescribed hereunder and/or leaves the Company during the Service Period. In such event, the Engineer hereby agrees to reimburse and compensate the Company in the manner enumerated in clause 5 of this Service Agreement;
+      </p>
 
-      <h4>3. TERMS & CONDITIONS</h4>
+      <h6><b>NOW THIS SERVICE AGREEMENT WITNESSES AS FOLLOWS:</b></h6>
 
       <p>
-        The Engineer has been appointed as a Trainee Software Engineer...
+        <b>1.</b> The Engineer has been appointed as a {{ designation }} on training with the Company for the Service Period which begins from the date of joining upto a period of
+        <input class="edit-field" style="width: 40px" type="number" [(ngModel)]="form.servicePeriodMonths" name="servicePeriodMonths" (change)="saveData()" />
+        months from the Date of Allocation to a Development Unit at the company. The Service period also includes the applicable Foundation Training (the FT) period as detailed in Clause 3 of this agreement at the Company’s location at
+        <input class="edit-field" style="width: 120px" [(ngModel)]="form.location" name="location" (change)="saveData()" />,
+        India which will commence on the Engineer joining the Company. If the Engineer takes leaves on loss of pay (“LOP”), such leave period shall not be included within the meaning of Service Period. The Engineer hereby acknowledges and agrees that his/her Service Period shall be extended by the number days of leave taken on LOP.
+      </p>
+
+      <p>
+        <b>2.</b> The Engineer's cost to company will be Rs.
+        <input class="edit-field" style="width: 80px" type="number" [(ngModel)]="form.ctc" name="ctc" (change)="onCtcChange()" />/-
+        and paid a total monthly fixed compensation as follows:
       </p>
 
       <table class="salary-table">
         <tr>
+          <th style="width:40px">#</th>
           <th>Component</th>
-          <th>Amount</th>
+          <th>Amount (Rs.)</th>
         </tr>
-        <tr>
-          <td>Basic Salary</td>
-          <td>{{salary.basic}}</td>
+        <tr *ngFor="let row of salaryComponents; let i = index">
+          <td>{{ i + 1 }}.</td>
+          <td>{{ row.name }}</td>
+          <td>{{ row.amount }}/-</td>
         </tr>
-        <tr>
-          <td>HRA</td>
-          <td>{{salary.hra}}</td>
-        </tr>
-        <tr>
-          <td>Total</td>
-          <td>{{salary.total}}</td>
+        <tr *ngIf="!salaryComponents?.length">
+          <td colspan="3">No salary components found</td>
         </tr>
       </table>
 
-      <div class="signature">
-        <div>COMPANY</div>
-        <div>ENGINEER</div>
-        <div>SURETY</div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- PAGE 4 -->
-  <div class="page">
-    <div class="content">
-
-      <h4>4. TERMS</h4>
-
-      <ul>
-        <li>Agreement period will be 2 years.</li>
-        <li>Engineer must follow company policies.</li>
-        <li>Violation may lead to termination.</li>
-      </ul>
-
-      <div class="signature">
-        <div>COMPANY</div>
-        <div>ENGINEER</div>
-        <div>SURETY</div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- PAGE 5-->
-  <div class="page">
-    <div class="content">
-
-      <h4>WITNESSES</h4>
-
-      <p>Witness 1: __________________</p>
-      <p>Witness 2: __________________</p>
-
-      <h4>NOTARY</h4>
-
       <p>
-        The Engineer has signed before me ☐<br>
-        The Surety has signed before me ☐
+        <b>3.</b> The Engineer agrees to undergo training immediately upon joining. The objectives, methodology, content and evaluation procedures of the FT are detailed in the assessment and evaluation policy which is available to the Engineer for inspection with the Human Resource (“HRD”) department. The duration of the FT would normally range up to a period of
+        <input class="edit-field" style="width: 40px" type="number" [(ngModel)]="form.ftMonths" name="ftMonths" (change)="saveData()" />
+        months, unless otherwise expressly prescribed by the Company. FT period will be determined by the Company on the basis of educational qualification of the Engineer at the time of entry into the Company and business requirements of the Company. The Engineer is expected to qualify in the FT, which is intended to render his/her competent to undertake software development tasks that may be subsequently assigned to his/her.
+      </p>
+      <p>
+        Notwithstanding any other provision, in certain cases, based on the business requirements of the Company, the Company shall depute the Engineer for “On-the-Job” training before undergoing or prior to completion of the FT.
+      </p>
+      <p>
+        Trainee – Software Engineer undergoing training are required to peruse the assessment and evaluation policy which is available with the HR department. The content shall be presumed to be within the knowledge of the Engineer upon reporting for training.
+      </p>
+      <p>
+        <b>4.</b> The Engineer accepts, agrees and admits that the Company has incurred expenses and costs in the process of recruitment, such expenses being in the nature of advertisements, implementation of selection procedures, interviews, travel, etc. The Engineer is aware that in the event of his / her not completing the Service Period, the Company would, without option, be constrained once again to incur, similar expenses, which would be a direct result of him / her leaving the Company prematurely. The Engineer further accepts, agrees and admits that the nature, quality, intensity and content of training (“Exhibit A”) to be imparted by the Company is not available or imparted by any other company of a similar nature. The FT is designed to satisfy the exclusive requirements of the Company and that the opportunity to be trained in computers, with provision for exclusive working on computers is not available with or provided by any other company of similar nature. The Engineer is further aware that the Company would have earned considerable revenue by hiring out computer time instead of imparting such FT training thereon to the Engineer. The Engineer admits and recognizes that the technical and management training involves substantial training costs, man hours, resource utilization and is the result of the Company’s pro-active policies in encouraging leadership qualities.
       </p>
 
       <div class="signature">
@@ -200,7 +169,176 @@ AND WHEREAS consequently and in order for the Company to utilize the skills of t
         <div>ENGINEER</div>
         <div>SURETY</div>
       </div>
+    </div>
+  </div>
 
+  <!-- PAGE 4 -->
+  <div class="page page--terms">
+    <div class="content">
+      <p>
+        <b>5.</b> The Engineer, therefore, agrees that in the event of his/her leaving the Company before completion of the Service Period or in the event of his/her not completing FT or Service Period for any reason whatsoever, he / she shall be liable to pay to the Company compensation / damages calculated as follows and / or reimburse all costs and expenses incurred in or connected with the training:
+      </p>
+      <p class="def-item">
+        a) Fixed cost of Rs.
+        <b>{{ form.fixedCost }}</b>
+        which includes Rs.
+        <b> {{ form.trainingCost }}</b>
+        Recruitment cost and Rs.
+        <b>{{ form.recruitmentCost }}</b>
+        Training cost.
+      </p>
+      <p class="def-item">
+        b) 100% of fixed salary paid by the Company to the Engineer during the FT period, which is calculated at Rs.
+        <input class="edit-field" style="width: 70px" type="number" [(ngModel)]="form.salaryPerDay" name="salaryPerDay" (change)="saveData()" />
+        per day (Average calendar day per month is considered at 30 days. In case the Engineer resigns in middle of any month, the number of days worked in that month would be considered for calculation).
+      </p>
+      <p class="def-item">
+        c) 50% of Total computer time utilized is calculated at Rs.
+        <input class="edit-field" style="width: 70px" type="number" [(ngModel)]="form.computerTimePerDay" name="computerTimePerDay" (change)="saveData()" />
+        per day (Average working day per month is considered at 22 days. In case the Engineer resigns in middle of any month, the number of days worked in that month would be considered for the calculation).
+      </p>
+
+      <p>
+        <b>6.</b> The Engineer, Company and Surety accept, agree and admit that the amounts calculated on the aforementioned basis in clause no 5 is a genuine, fair and reasonable estimate of the damages, loss and expenses that the Company would suffer on providing training to the Engineer.
+      </p>
+
+      <p>
+        <b>7.</b> The Engineer agrees that he / she shall faithfully and diligently undergo and imbibe the training prescribed as per the FT. The Engineer acknowledges that failure to complete the FPT successfully or leaving the Company within the Service Period shall mean and include:
+      </p>
+      <ol class="terms" type="a">
+        <li>Failure to remain with the company during the Service Period prescribed in the this Service Agreement;</li>
+        <li>Failure to be present with the Company during the Service Period for 10 consecutive days;</li>
+        <li>Tendering of resignation to the company within the Service Period, whether resignation be accepted or not by the company;</li>
+        <li>Failure to complete FT by being absent for any reason(s) whatsoever from the Company;</li>
+        <li>Leaving the Company for the purpose of higher studies, research, alternate employment, alternate training or any other purpose during the Service Period.</li>
+        <li>Dismissal of Engineer by the Company for any act of misconduct, indiscipline, absence, refusal to obey orders, breach of internal policies of the Company or unsatisfactory response of the Engineer during the Service Period.</li>
+      </ol>
+
+      <p>
+        <b>8.</b> The Surety hereby undertakes and accepts that his / her liability is co-extensive with that of the Engineer. The Surety shall be jointly and severally liable with the Engineer for payment of all amounts that may become due and payable under this Service Agreement. The Surety hereby acknowledges that he/she is aware and accepts the special nature and character of deputation of the Engineer as well as the manner of computation of damages / compensation enumerated in clause 5 of this Service Agreement. The Surety hereby agrees and accepts that the Company shall be at liberty to enforce this guarantee furnished by him/her without necessarily seeking to enforce the same against the Engineer in the first instance. The Surety hereby agrees and accepts that the Company shall be entitled to proceed either against the Engineer or Surety or both for recovery of any amounts due under this Service Agreement. The Surety hereby agrees and accepts that any demand made on the Engineer under this Service Agreement shall be deemed to be sufficient notice of such demand to the Surety also. The Surety and Engineer hereby state that they have entered into this Service Agreement voluntarily and after being fully aware of all legal consequences arising out of this Service Agreement. IN WITNESSES WHEREOF the parties have signed this Service Agreement on the date, month and year first above written before the following witnesses:
+      </p>
+
+      <div class="signature">
+        <div>COMPANY</div>
+        <div>ENGINEER</div>
+        <div>SURETY</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 5: Witnesses / Notary -->
+  <div class="page page--witness">
+    <div class="content">
+      <div class="witness-top">
+        <div class="witness-left">
+          <h6 class="witness-heading"><b><u>WITNESSES:</u></b></h6>
+          <div class="witness-list">
+            <div class="witness-item">
+              <div class="sig-space"></div>
+              <p class="witness-label"><b><u>WITNESS 1</u></b></p>
+            </div>
+            <div class="witness-item">
+              <div class="sig-space"></div>
+              <p class="witness-label"><b><u>WITNESS 2</u></b></p>
+            </div>
+            <div class="witness-item">
+              <div class="sig-space"></div>
+              <p class="witness-label"><b><u>WITNESS 3</u></b></p>
+            </div>
+          </div>
+        </div>
+        <div class="witness-right">
+          <div class="party-block">
+            <div class="stamp-box" aria-hidden="true"></div>
+            <p class="party-label"><b><u>COMPANY</u></b></p>
+          </div>
+          <div class="party-block">
+            <div class="sig-space"></div>
+            <p class="party-label"><b><u>ENGINEER</u></b></p>
+          </div>
+          <div class="party-block">
+            <div class="sig-space"></div>
+            <p class="party-label"><b><u>SURETY</u></b></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="notary-block">
+        <h6 class="witness-heading"><b><u>NOTARY:</u></b></h6>
+        <p class="notary-note">(Please tick the appropriate box and initial / sign against the chosen option)</p>
+        <div class="notary-row">
+          <span>• The Engineer has signed before me</span>
+          <span class="notary-box">☐</span>
+        </div>
+        <div class="notary-row">
+          <span>• The Surety has signed before me</span>
+          <span class="notary-box">☐</span>
+        </div>
+        <div class="notary-row">
+          <span>• The Engineer &amp; Surety have signed before me</span>
+          <span class="notary-box">☐</span>
+        </div>
+      </div>
+
+      <div class="witness-footer">
+        <div class="footer-col">
+          <div class="stamp-box stamp-box--lg" aria-hidden="true"></div>
+          <p class="party-label"><b>COMPANY</b></p>
+        </div>
+        <div class="footer-col">
+          <div class="sig-space"></div>
+          <div class="sig-line"></div>
+          <p class="party-label"><b>ENGINEER</b></p>
+        </div>
+        <div class="footer-col">
+          <div class="sig-space"></div>
+          <div class="sig-line"></div>
+          <p class="party-label"><b>SURETY</b></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 6 — Exhibit A -->
+  <div class="page">
+    <div class="content">
+      <h3 class="center">Exhibit A</h3>
+      <h4>The Foundation Training (FT)</h4>
+      <p>
+        The FT may consist of several training modules (hereinafter the terms “module” and “programme” are used interchangeably).
+      </p>
+      <p>Currently there are two training modules, namely:</p>
+      <p class="def-item">a) Technical Training; and</p>
+      <p class="def-item">b) Management Skills Training</p>
+      <p>Technical Training further comprises of 2 distinct modules</p>
+      <p class="def-item">a) Generic Stream; and</p>
+      <p class="def-item">b) Technology Specific Stream</p>
+      <p>All references to “Technical Training” shall include both Generic Stream and Technology Specific Stream.</p>
+
+      <h6><b>Technical Training:</b></h6>
+      <p>
+        The Engineer would be required to undergo Technical Training in all or any of the following Company designed courses as a specified programme. The curriculum may be modified based on the Company’s requirement from time to time. At present there are two modules (also called stream programmes) of technical training as enumerated below:
+      </p>
+      <p>
+        <b>Generic Stream Programme:</b> Programming principles, database concepts, designing concepts, quality systems concepts, computer hardware &amp; software, network &amp; system administration and other subjects.
+      </p>
+      <p>
+        <b>Technology Specific Stream Programme:</b> Open Source Technologies, Mobile Development, Web Development, ERP, Social, Data analytics, Cloud and other subjects.
+      </p>
+
+      <h6><b>Management Skills Training:</b></h6>
+      <p>
+        Every Engineer shall undergo pre-determined management skills programme during and as a part of the FT. These programmes would cover communication skills and business skills and such other components as the Company may determine from time to time depending upon varying business requirements of the Company.
+      </p>
+      <p>
+        It is mandatory that every Engineer qualifies in the manner specified both in Technical Training and Management Skills Training. All evaluation criteria and training process / methodology shall be exclusively determined by the Company and may be reviewed by the Company from time to time.
+      </p>
+
+      <div class="signature">
+        <div>COMPANY</div>
+        <div>ENGINEER</div>
+        <div>SURETY</div>
+      </div>
     </div>
   </div>
 

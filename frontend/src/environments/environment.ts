@@ -1,6 +1,6 @@
 export const environment = {
   production: false,
-  apiUrl:  'http://192.168.23.25:3002/api/',
+  apiUrl:  'http://192.168.23.19:5012/api/',
   // apiUrl:  'http://192.168.1.190:3002/api/',
   //  apiUrl: 'https://gens.demoquaeretech.in/api/api/',
   // apiUrl: 'https://gensdemo.demoquaeretech.in/api/api/', //self
@@ -11,12 +11,6 @@ export const environment = {
   websitechatApiUrl: 'https://wonderful-den-garlic-disposal.trycloudflare.com/chat',
   transcribeApiUrl: 'https://wonderful-den-garlic-disposal.trycloudflare.com/api/transcribe',
   aiHrmsApiUrl: 'https://gens.demoquaeretech.in/chatbot',
-  // websitechatApiUrl: 'http://192.168.23.19:8000/chat',
-  // aiHrmsApiUrl: 'http://192.168.23.19:8000/chatbot',
-  // transcribeApiUrl: 'http://182.69.118.104:8000/api/transcribe',
-  //  apiUrl:  'http://192.168.23.13:3001/api/' //ABHISHEK sir
-  //  apiUrl:  'http://192.168.23.13:3001/api/' //ABHISHEK sir
-  //  apiUrl:   'https://gens.demoquaeretech.in/api/api/', //self
   firebase: {
     apiKey: "AIzaSyCBII2E72DiTXfMWyRLoQ2JGtz9EZ1TXks",
     authDomain: "gens-7d05d.firebaseapp.com",

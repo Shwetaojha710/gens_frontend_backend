@@ -23,6 +23,18 @@ export class AppointmentLetterComponent {
      currency:any
      newObj:any
      obj:any={}
+  /** Editable part after Quaere/Appoint/{year}/ */
+  refSuffix = '';
+  readonly appointRefYear = new Date().getFullYear();
+
+  get appointRefPrefix(): string {
+    return `Quaere/Appoint/${this.appointRefYear}/`;
+  }
+
+  get fullAppointRefNo(): string {
+    const suffix = String(this.refSuffix || '').trim();
+    return suffix ? `${this.appointRefPrefix}${suffix}` : this.appointRefPrefix.replace(/\/$/, '');
+  }
  constructor(
 public payrollService: PayrollService, private router: Router, public statusService: StatusService, public dataService: DataService, private employeeService: EmployeeService
   ) {
@@ -41,22 +53,49 @@ public payrollService: PayrollService, private router: Router, public statusServ
     this.loadData();
   }
 
+  private parseRefNo(refNo: string): void {
+    const value = String(refNo || '').trim();
+    const match = value.match(/^Quaere\/Appoint\/(\d{4})\/?(.*)$/i);
+    if (match) {
+      this.refSuffix = (match[2] || '').trim();
+      this.personalDetails.ref_no = this.fullAppointRefNo;
+      return;
+    }
+    // Legacy / free-form value: keep as editable suffix only
+    this.refSuffix = value.replace(/^Quaere\/Appoint\/?/i, '').replace(/^\d{4}\//, '');
+    this.personalDetails.ref_no = this.fullAppointRefNo;
+  }
+
+  onRefSuffixChange(): void {
+    this.personalDetails.ref_no = this.fullAppointRefNo;
+    this.saveData();
+  }
+
   loadData(): void {
     this.employeeService.getLetterData(this.personalDetails.id, 'appointment').subscribe({
       next: (res: any) => {
         if (res.status && res.data) {
           if (res.data.joiningDate) this.personalDetails.joiningDate = res.data.joiningDate;
-          if (res.data.ref_no) this.personalDetails.ref_no = res.data.ref_no;
+          if (res.data.ref_no) {
+            this.parseRefNo(res.data.ref_no);
+          } else {
+            this.personalDetails.ref_no = this.fullAppointRefNo;
+          }
           if (res.data.designation) this.personalDetails.designation = res.data.designation;
           if (res.data.salaryTable) this.salaryTable = res.data.salaryTable;
           if (res.data.ctc != null) this.ctc = res.data.ctc;
+        } else {
+          this.personalDetails.ref_no = this.fullAppointRefNo;
         }
       },
-      error: () => {}
+      error: () => {
+        this.personalDetails.ref_no = this.fullAppointRefNo;
+      }
     });
   }
 
   saveData(): void {
+    this.personalDetails.ref_no = this.fullAppointRefNo;
     this.employeeService.saveLetterData(this.personalDetails.id, 'appointment', {
       joiningDate: this.personalDetails.joiningDate,
       ref_no: this.personalDetails.ref_no,
@@ -274,22 +313,34 @@ masterSelected:any
   }
 
   formatOrdinalDate(dateValue: string | Date): string {
+    return this.formatDateDMY(dateValue);
+  }
+
+  /** Numeric date as dd/mm/yyyy */
+  formatDateDMY(dateValue: string | Date | null | undefined): string {
     if (!dateValue) return '';
 
     const date = typeof dateValue === 'string'
-      ? new Date(`${dateValue}T00:00:00`)
+      ? new Date(dateValue.includes('T') ? dateValue : `${dateValue}T00:00:00`)
       : dateValue;
 
     if (Number.isNaN(date.getTime())) return '';
 
-    const day = date.getDate();
-    const suffix = day % 100 >= 11 && day % 100 <= 13
-      ? 'th'
-      : ['th', 'st', 'nd', 'rd'][day % 10] || 'th';
-    const month = date.toLocaleString('en-US', { month: 'short' });
-
-    return `${day}<sup>${suffix}</sup> ${month}, ${date.getFullYear()}`;
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
   }
+
+  /** Escape + keep newlines; long single-line addresses still wrap via CSS */
+  formatAddressHtml(address: string | null | undefined): string {
+    return String(address || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\r\n|\r|\n/g, '<br>');
+  }
+
 isDownload:any=false
 downloadDoc() {
   console.log('Downloading document...',this.data);
@@ -306,10 +357,10 @@ this.isDownload=true
 
   inputs.forEach((input: any) => {
     const value = input.type == 'date'
-      ? this.formatOrdinalDate(input.value)
+      ? this.formatDateDMY(input.value)
       : input.value || '';
     const span = document.createElement('span');
-    span.innerHTML = value;
+    span.textContent = value;
     input.parentNode.replaceChild(span, input);
   });
 
@@ -333,6 +384,13 @@ this.isDownload=true
       .page-break-spacer { page-break-before: always; height: 16px; margin-top: 16px; }
       .force-page-break { page-break-before: always; mso-page-break-before: always; break-before: page; padding-top: 16px; }
       h4.force-page-break { page-break-before: always; mso-page-break-before: always; break-before: page; }
+      .recipient-address, .address-lines {
+        max-width: 300px;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        white-space: pre-wrap;
+      }
     </style>
   </head>
   <body>
@@ -367,9 +425,9 @@ printDoc() {
   cloned.querySelectorAll('input').forEach((input: any) => {
     const span = document.createElement('span');
     const value = input.type === 'date'
-      ? this.formatOrdinalDate(input.value)
+      ? this.formatDateDMY(input.value)
       : input.value || '';
-    span.innerHTML = value;
+    span.textContent = value;
     input.parentNode.replaceChild(span, input);
   });
 
@@ -390,6 +448,13 @@ printDoc() {
     h4 + *, h4 + table { page-break-before: avoid; }
     table { width: 100%; border-collapse: collapse; }
     .header-table td { vertical-align: top; border: none !important; }
+    .recipient-address, .address-lines {
+      max-width: 300px;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
     .salary-table th, .salary-table td { border: 1px solid black; padding: 4px; font-size: 12px; }
     .salary-table tr { page-break-inside: avoid; }
     ol { padding-left: 20px; margin-top: 10px; }

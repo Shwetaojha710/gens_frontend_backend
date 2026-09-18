@@ -310,7 +310,7 @@ export class EmployeePortalLeaveComponent implements OnInit {
   }
 
   get historyTotalDays(): number {
-    return this.historyResults.reduce(
+    return (this.historyResults as any[]).reduce(
       (sum: number, r: any) => sum + Number(r['days'] || 0),
       0,
     );
