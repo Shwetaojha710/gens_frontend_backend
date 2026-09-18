@@ -312,24 +312,54 @@ masterSelected:any
     this.isEdit = !this.isEdit;
   }
 
-  formatOrdinalDate(dateValue: string | Date): string {
+  formatOrdinalDate(dateValue: string | Date | null | undefined): string {
     return this.formatDateDMY(dateValue);
   }
 
-  /** Numeric date as dd/mm/yyyy */
+  private getDaySuffix(day: number): string {
+    if (day >= 11 && day <= 13) return 'th';
+    switch (day % 10) {
+      case 1: return 'st';
+      case 2: return 'nd';
+      case 3: return 'rd';
+      default: return 'th';
+    }
+  }
+
+  private getDateParts(
+    dateValue: string | Date | null | undefined
+  ): { day: number; suffix: string; month: string; year: number } | null {
+    if (!dateValue) return null;
+    const date =
+      typeof dateValue === 'string'
+        ? new Date(dateValue.includes('T') ? dateValue : `${dateValue}T00:00:00`)
+        : dateValue;
+    if (Number.isNaN(date.getTime())) return null;
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    const day = date.getDate();
+    return {
+      day,
+      suffix: this.getDaySuffix(day),
+      month: months[date.getMonth()],
+      year: date.getFullYear(),
+    };
+  }
+
+  /** e.g. 7th September, 2026 */
   formatDateDMY(dateValue: string | Date | null | undefined): string {
-    if (!dateValue) return '';
+    const parts = this.getDateParts(dateValue);
+    if (!parts) return '';
+    return `${parts.day}${parts.suffix} ${parts.month}, ${parts.year}`;
+  }
 
-    const date = typeof dateValue === 'string'
-      ? new Date(dateValue.includes('T') ? dateValue : `${dateValue}T00:00:00`)
-      : dateValue;
-
-    if (Number.isNaN(date.getTime())) return '';
-
-    const dd = String(date.getDate()).padStart(2, '0');
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const yyyy = date.getFullYear();
-    return `${dd}/${mm}/${yyyy}`;
+  /** e.g. 7<sup>th</sup> September, 2026 */
+  formatDateHtml(dateValue: string | Date | null | undefined): string {
+    const parts = this.getDateParts(dateValue);
+    if (!parts) return '';
+    return `${parts.day}<sup class="ord-sup">${parts.suffix}</sup> ${parts.month}, ${parts.year}`;
   }
 
   /** Escape + keep newlines; long single-line addresses still wrap via CSS */
@@ -356,11 +386,12 @@ this.isDownload=true
   const inputs = cloned.querySelectorAll('input');
 
   inputs.forEach((input: any) => {
-    const value = input.type == 'date'
-      ? this.formatDateDMY(input.value)
-      : input.value || '';
     const span = document.createElement('span');
-    span.textContent = value;
+    if (input.type == 'date' && input.value) {
+      span.innerHTML = this.formatDateHtml(input.value);
+    } else {
+      span.textContent = input.value || '';
+    }
     input.parentNode.replaceChild(span, input);
   });
 
@@ -384,6 +415,7 @@ this.isDownload=true
       .page-break-spacer { page-break-before: always; height: 16px; margin-top: 16px; }
       .force-page-break { page-break-before: always; mso-page-break-before: always; break-before: page; padding-top: 16px; }
       h4.force-page-break { page-break-before: always; mso-page-break-before: always; break-before: page; }
+      .ord-sup { font-size: 0.65em; vertical-align: super; line-height: 0; }
       .recipient-address, .address-lines {
         max-width: 300px;
         word-wrap: break-word;
@@ -424,10 +456,11 @@ printDoc() {
   // Replace inputs with their typed values
   cloned.querySelectorAll('input').forEach((input: any) => {
     const span = document.createElement('span');
-    const value = input.type === 'date'
-      ? this.formatDateDMY(input.value)
-      : input.value || '';
-    span.textContent = value;
+    if (input.type === 'date' && input.value) {
+      span.innerHTML = this.formatDateHtml(input.value);
+    } else {
+      span.textContent = input.value || '';
+    }
     input.parentNode.replaceChild(span, input);
   });
 
@@ -462,6 +495,7 @@ printDoc() {
     p { font-size: 11px; margin: 6px 0; }
     .page-break-spacer { page-break-before: always; break-before: page; height: 16px; margin-top: 16px; }
     .force-page-break { page-break-before: always; break-before: page; padding-top: 16px; }
+    .ord-sup { font-size: 0.65em; vertical-align: super; line-height: 0; }
     @media print {
       .salary-table th, .salary-table td { border: 1px solid black; }
       .salary-table tr { page-break-inside: avoid; }

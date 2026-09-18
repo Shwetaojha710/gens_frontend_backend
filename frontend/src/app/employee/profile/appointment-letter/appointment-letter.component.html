@@ -80,23 +80,20 @@
         <!-- RIGHT SIDE -->
         <td class="right" style="vertical-align: top; text-align: right; border: none; width: 52%; font-size: 14px;">
           <p
-            style="text-align: right;margin: 0px !important;padding-bottom: 0px; font-weight: bold;display: flex; justify-content: end;align-items: center;">
-            Date:
-            <span style="text-align: right; font-weight: bold; margin-bottom: 5px;" *ngIf="isDownload==false">
-              <input type="date" [(ngModel)]="personalDetails.joiningDate" (ngModelChange)="saveData()" class="form-control w-80 h-30" />
-            </span>
-            <span style="text-align: right; font-weight: bold;vertical-align: top;" *ngIf="isDownload">{{ formatDateDMY(personalDetails.joiningDate) }}</span>
+            style="text-align: right; margin: 0 !important; padding: 0; font-weight: bold; line-height: 1.5;">
+            Date:&nbsp;<span style="font-weight: bold; vertical-align: baseline;" *ngIf="isDownload==false">
+              <input type="date" [(ngModel)]="personalDetails.joiningDate" (ngModelChange)="saveData()"
+                class="form-control w-80 h-30" style="display: inline-block; vertical-align: middle; height: 28px; padding: 2px 6px;" />
+            </span><span style="font-weight: bold; vertical-align: baseline;" *ngIf="isDownload"
+              [innerHTML]="formatDateHtml(personalDetails.joiningDate)"></span>
           </p>
 
           <p
-            style="text-align: right;margin: 0px !important;padding-bottom: 0px; font-weight: bold;display: flex; justify-content: end; align-items: center; gap: 0px; flex-wrap: wrap;">
-            Ref No:
-            <span style="font-weight: bold; white-space: nowrap;">{{ appointRefPrefix }}</span>
-            <span *ngIf="isDownload==false">
+            style="text-align: right; margin: 0 !important; padding: 0; font-weight: bold; line-height: 1.5;">
+            Ref No:&nbsp;<span style="font-weight: bold; white-space: nowrap; vertical-align: baseline;">{{ appointRefPrefix }}</span><span *ngIf="isDownload==false">
               <input type="text" [(ngModel)]="refSuffix" (ngModelChange)="onRefSuffixChange()"
-                class="form-control w-80 h-30" placeholder="e.g.44" style="display:inline-block; width:90px;" />
-            </span>
-            <span style="font-weight: bold;" *ngIf="isDownload">{{ refSuffix }}</span>
+                class="form-control w-80 h-30" placeholder="e.g.44" style="display: inline-block; width: 90px; vertical-align: middle; height: 28px; padding: 2px 6px;" />
+            </span><span style="font-weight: bold; vertical-align: baseline;" *ngIf="isDownload">{{ refSuffix }}</span>
           </p>
         </td>
 
@@ -113,10 +110,10 @@
     <!-- BODY -->
     <p style="font-size:15px;">
       The management takes great pride in informing you that you have been appointed as
-       <span style="text-align: right; font-weight: bold; margin-bottom: 5px;" *ngIf="isDownload==false">
+       "<span style="text-align: right; font-weight: bold; margin-bottom: 5px;" *ngIf="isDownload==false">
               <input type="text" [(ngModel)]="personalDetails.designation" (ngModelChange)="saveData()" class=" w-10 h-30" />
             </span>
-            <span style="text-align: right; font-weight: bold;" *ngIf="isDownload">{{personalDetails.designation }}</span>
+            <span style="text-align: right; font-weight: bold;" *ngIf="isDownload">{{personalDetails.designation }}</span>"
       <!-- <span >{{personalDetails.designation}}</span> -->
       in our company presently posted at
      <b> <span  style="font-size:15px;">{{tenant.companyAddress}}</span>,</b>
@@ -124,7 +121,7 @@
         <b *ngIf="isDownload==false">
           <input type="date" [(ngModel)]="personalDetails.joiningDate" (ngModelChange)="saveData()" class="form-control w-80 h-30 d-inline-block" style="width:150px; display:inline-block;" />
         </b>
-        <b *ngIf="isDownload">{{ formatDateDMY(personalDetails.joiningDate) }}</b>
+        <b *ngIf="isDownload" [innerHTML]="formatDateHtml(personalDetails.joiningDate)"></b>
       </span>.
       You will be required to sign our NDA, Service Agreement and Separation Policy.
     </p>
@@ -397,7 +394,7 @@ Quaere
     <span *ngIf="isDownload==false">
       <input type="date" [(ngModel)]="personalDetails.joiningDate" (ngModelChange)="saveData()" class="form-control w-80 h-30 d-inline-block" style="width:150px; display:inline-block;" />
     </span>
-    <span *ngIf="isDownload"><b>{{ formatDateDMY(personalDetails.joiningDate) }}</b></span>
+    <span *ngIf="isDownload"><b [innerHTML]="formatDateHtml(personalDetails.joiningDate)"></b></span>
     mentioned
     above, please note that the breakup of your salary will be as follows:-
 

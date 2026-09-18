@@ -20,7 +20,8 @@
 
     <div class="nda-page1-body">
     <h3 class="nda-title" style="text-align:center; text-decoration: underline; font-weight: bold;">
-      Employee/Intern/Contractor IP Rights, Confidentiality, Non-Solicitation, Non-Competition Agreement
+      Employee/Intern/Contractor IP Rights, Confidentiality, Non-Solicitation, Non-
+      <br>Competition Agreement
     </h3>
 
     <p class="nda-intro" style="text-align: justify;line-height: 1.15;">
@@ -34,7 +35,7 @@
       (herein referred as “company”) having principal office at
       <b>{{ companyAddress }}</b>
     </p>
-   
+
 
     <p style="text-align: justify;line-height: 1.15;">
       INDIA and all of its associate companies to abide by the following in consideration of the compensation paid to me by the Company for services in any capacity as an Employee,
@@ -50,14 +51,19 @@
       </li>
       <li style="text-align: justify;line-height: 1.15;">
         I agree that I shall promptly disclose to the Company the following: a) all software programs, inventions,
-        improvements, discoveries and technical developments (‘Inventions’) made, created or
+        improvements, discoveries and technical developments (‘Inventions’) made, created  or conceived by me (either alone
+        or with others) during the term of my employment, b) all Inventions which are based on proprietary information of
+        the Company and are made or conceived by me (either alone or with others), c) any documentation related to the
+        Inventions, which shall become the company’s property, and d) Web content and development concepts, ideas, design,
+        software code, and multimedia graphics, and artwork.
       </li>
     </ol>
     </div>
   </div>
 
-  <!-- ========== PAGE 2+: remainder of clause 2, then clauses 3+ ========== -->
-  <div class="nda-page-break" aria-hidden="true"></div>
+  <!-- ========== PAGE 2: clause 2 remainder + clauses 3–8 ========== -->
+  <div class="nda-mid-page">
+  <!-- <p class="nda-clause2-continue" style="text-align: justify;">
 
   <p class="nda-clause2-continue" style="text-align: justify;line-height: 1.15;">
     conceived by me (either alone
@@ -150,7 +156,7 @@
 
     <li style="text-align: justify;line-height: 1;">
       I agree not to seek, encourage, and/or accept direct or indirect employment with any
-      client/customer/prospective customer of the Company for a period of twelve (12) months following the termination
+      client/customer/prospective customer of the Company for a period of twenty four (24) months following the termination
       of employment or membership with the Company.</li>
 
     <li style="text-align: justify;line-height: 1;">
@@ -172,33 +178,31 @@
 
   </ol>
 
-  <br />
-
-  <!-- <p><b>Date:</b> {{date}}</p>
-<p><b>Place:</b> {{place}}</p> -->
-
-  <div class="row mb-2">
-    <div class="col-4">
-      <div class="d-flex gap-2 align-items-center">
-        <span class="w-20"> Date : </span> <input type="date" [(ngModel)]="personalDetails.date"
-          (ngModelChange)="saveData()" class="form-control w-80" />
+  <div class="nda-end-block">
+  <div class="nda-meta">
+    <div class="row mb-3">
+      <div class="col-4">
+        <div class="d-flex gap-2 align-items-center">
+         <b><span class="w-20"> Date : </span></b>
+          <input type="date" [(ngModel)]="personalDetails.date"
+            (ngModelChange)="saveData()" class="form-control w-80" style="font-weight: normal;" />
+          <span *ngIf="personalDetails.date" class="nda-date-preview" style="font-weight: normal; margin-left: 6px;"
+            [innerHTML]="'(' + formatNdaDateHtml(personalDetails.date) + ')'">
+          </span>
+        </div>
       </div>
     </div>
 
-
-
-  </div>
-  <div class="row">
-    <div class="col-4">
-      <div class="d-flex gap-2 align-items-center">
-        <span class="w-20"> Place :</span> <input type="text" [(ngModel)]="personalDetails.place"
-          (ngModelChange)="saveData()" class="form-control" />
+    <div class="row mb-2">
+      <div class="col-4">
+        <div class="d-flex gap-2 align-items-center">
+          <span class="w-20"> Place :</span>
+          <input type="text" [(ngModel)]="personalDetails.place"
+            (ngModelChange)="saveData()" class="form-control" />
+        </div>
       </div>
     </div>
-
-
   </div>
-  <br />
 
   <table class="nda-sign-table" width="100%">
     <tr>
@@ -219,5 +223,7 @@
       </td>
     </tr>
   </table>
+  </div>
+  </div>
 
 </div>

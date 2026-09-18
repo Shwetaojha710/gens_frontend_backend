@@ -99,3 +99,9 @@ br[style*="page-break-before"] {
   font-weight: bold;
 }
 
+.ord-sup {
+  font-size: 0.65em;
+  vertical-align: super;
+  line-height: 0;
+}
+

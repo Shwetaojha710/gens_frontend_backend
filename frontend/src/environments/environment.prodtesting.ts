@@ -2,8 +2,8 @@ const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
 export const environment = {
   production: true,
-  apiUrl: `${origin}/api/api/`,
-  python_apiUrl: `${origin}/resume_tracker/api/v1/ats`,
+  apiUrl: 'https://gens.demoquaeretech.in/api/api/',
+  python_apiUrl: 'https://gens.demoquaeretech.in/resume_tracker/api/v1/ats',
   websitechatApiUrl: 'https://wonderful-den-garlic-disposal.trycloudflare.com/chat',
   transcribeApiUrl: 'https://wonderful-den-garlic-disposal.trycloudflare.com/api/transcribe',
   aiHrmsApiUrl: `${origin}/chatbot`,
