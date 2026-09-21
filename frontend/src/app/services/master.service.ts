@@ -344,6 +344,35 @@ export class MasterService {
     return this.http.post(`${this.baseUrl}get-company-profile`, {});
   }
 
+  /** HR Document Templates (Phase 1) */
+  getHrTemplateVariables(): Observable<any> {
+    return this.http.post(`${this.baseUrl}hr-template-variables`, {});
+  }
+  listHrTemplates(body: any = {}): Observable<any> {
+    return this.http.post(`${this.baseUrl}hr-template-list`, body);
+  }
+  getHrTemplate(id: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}hr-template-get`, { id });
+  }
+  createHrTemplate(body: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}hr-template-create`, body);
+  }
+  updateHrTemplate(body: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}hr-template-update`, body);
+  }
+  deleteHrTemplate(id: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}hr-template-delete`, { id });
+  }
+  previewHrTemplate(body: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}hr-template-preview`, body);
+  }
+  saveHrGenerated(body: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}hr-template-save-generated`, body);
+  }
+  listHrGenerated(body: any = {}): Observable<any> {
+    return this.http.post(`${this.baseUrl}hr-template-generated-list`, body);
+  }
+
   getLetterhead(): Observable<any> {
     return this.http.post(`${this.baseUrl}get-letterhead`, {});
   }

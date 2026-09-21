@@ -71,6 +71,15 @@ export const layoutRoutes: Routes = [
           ),
       },
       {
+        path: 'employee/generate-letter',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'emp-mgmt.letters' },
+        loadComponent: () =>
+          import('../employee/generate-letter/generate-letter.component').then(
+            (m) => m.GenerateLetterComponent,
+          ),
+      },
+      {
         path: 'employee/joining',
         canActivate: [PermissionGuard],
         data: { permKey: 'emp-mgmt.add' },
@@ -402,6 +411,15 @@ export const layoutRoutes: Routes = [
         loadComponent: () =>
           import('../master/document-type/document-type.component').then(
             (m) => m.DocumentTypeComponent,
+          ),
+      },
+      {
+        path: 'master/document-templates',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'master.docs' },
+        loadComponent: () =>
+          import('../master/document-template/document-template.component').then(
+            (m) => m.DocumentTemplateComponent,
           ),
       },
       {

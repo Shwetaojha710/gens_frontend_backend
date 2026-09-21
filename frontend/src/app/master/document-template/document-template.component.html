@@ -1,0 +1,183 @@
+<div class="container-fluid mt-4">
+  <div class="row mb-3" *ngIf="createFlag">
+    <div class="col-12">
+      <div class="card dt-editor-card">
+        <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <span>{{ updateFlag ? 'Edit' : 'Create' }} Document (Word-like editor)</span>
+          <button type="button" class="btn btn-sm btn-primary" (click)="back()">
+            <i class="fa-solid fa-arrow-left"></i> Back
+          </button>
+        </h5>
+        <div class="card-body">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Template Name</label>
+              <input class="form-control" [(ngModel)]="form.name" placeholder="e.g. Experience Letter" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-bold">Category</label>
+              <select class="form-select" [(ngModel)]="form.category">
+                <option *ngFor="let c of categories" [value]="c.value">{{ c.label }}</option>
+              </select>
+            </div>
+            <div class="col-md-2" *ngIf="updateFlag">
+              <label class="form-label fw-bold">Status</label>
+              <select class="form-select" [(ngModel)]="form.status">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-check mt-4">
+                <input type="checkbox" class="form-check-input" [(ngModel)]="form.includeSalaryAnnexure" />
+                Append salary annexure
+              </label>
+            </div>
+          </div>
+
+          <div class="row g-3 mt-1">
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Letterhead</label>
+              <div class="d-flex flex-wrap gap-3 align-items-center">
+                <label class="form-check mb-0">
+                  <input
+                    type="radio"
+                    class="form-check-input"
+                    name="lhMode"
+                    value="image"
+                    [(ngModel)]="letterheadMode"
+                    (ngModelChange)="syncLetterheadMode()"
+                  />
+                  Use uploaded letterhead
+                </label>
+                <label class="form-check mb-0">
+                  <input
+                    type="radio"
+                    class="form-check-input"
+                    name="lhMode"
+                    value="blank"
+                    [(ngModel)]="letterheadMode"
+                    (ngModelChange)="syncLetterheadMode()"
+                  />
+                  Blank top (pre-printed paper)
+                </label>
+              </div>
+              <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
+                <label class="btn btn-sm btn-outline-secondary mb-0">
+                  {{ uploadingLetterhead ? 'Uploading…' : 'Upload letterhead' }}
+                  <input type="file" accept="image/*" hidden (change)="onLetterheadFile($event)" [disabled]="uploadingLetterhead" />
+                </label>
+                <a class="btn btn-sm btn-link" routerLink="/layout/master/letterhead">Manage letterhead</a>
+                <small class="text-muted" *ngIf="!pageBackground && letterheadMode === 'image'">
+                  No letterhead yet — upload one or choose blank top.
+                </small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Import document (optional)</label>
+              <div>
+                <label class="btn btn-sm btn-outline-primary mb-0">
+                  Import HTML / TXT
+                  <input type="file" accept=".html,.htm,.txt,text/html,text/plain" hidden (change)="importDocumentFile($event)" />
+                </label>
+                <small class="text-muted d-block mt-1">Loads content into the editor so you can edit and add variables.</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <label class="form-label fw-bold">Insert variable</label>
+            <div class="var-groups">
+              <div class="var-group" *ngFor="let group of ['employee','salary','company']">
+                <small class="text-muted text-uppercase">{{ group }}</small>
+                <div class="d-flex flex-wrap gap-1 mt-1">
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary btn-sm var-chip"
+                    *ngFor="let v of catalog[group]"
+                    (click)="insertVariable(v.key)"
+                    [title]="v.label"
+                  >{{'{{' + v.key + '}}'}}</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <label class="form-label fw-bold">Document body</label>
+            <div class="a4-stage">
+              <div
+                class="editor-frame"
+                [class.editor-frame--blank]="letterheadMode === 'blank'"
+                [class.editor-frame--image]="letterheadMode === 'image' && !!pageBackground"
+                [style.background-image]="pageBackground && letterheadMode === 'image' ? 'url(' + pageBackground + ')' : null"
+              >
+                <div #editorHost class="dt-quill-host"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3 d-flex gap-2">
+            <button type="button" class="btn btn-primary btn-sm" (click)="save()">
+              {{ updateFlag ? 'Update' : 'Save' }} Template
+            </button>
+            <a class="btn btn-outline-primary btn-sm" routerLink="/layout/employee/generate-letter">
+              Generate for employee
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" *ngIf="!createFlag">
+    <div class="col-12">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <span>HR Document Templates</span>
+          <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-sm btn-outline-secondary" routerLink="/layout/master/letterhead">Letterhead</a>
+            <a class="btn btn-sm btn-outline-primary" routerLink="/layout/employee/generate-letter">Generate Letter</a>
+            <button type="button" class="btn btn-sm btn-primary" (click)="openCreate()">+ New Template</button>
+          </div>
+        </h5>
+        <div class="card-body table-responsive">
+          <table class="table table-bordered table-sm align-middle">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Letterhead</th>
+                <th>Salary Annexure</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of list; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>{{ row.name }}</td>
+                <td>{{ row.category }}</td>
+                <td>{{ letterheadLabel(row) }}</td>
+                <td>{{ row.includeSalaryAnnexure ? 'Yes' : 'No' }}</td>
+                <td>
+                  <span class="badge" [class.bg-success]="row.status==='active'" [class.bg-secondary]="row.status!=='active'">
+                    {{ row.status }}
+                  </span>
+                </td>
+                <td class="d-flex gap-2">
+                  <button type="button" class="btn btn-sm btn-outline-primary" (click)="openEdit(row)">Edit</button>
+                  <button type="button" class="btn btn-sm btn-outline-danger" (click)="remove(row)">Delete</button>
+                </td>
+              </tr>
+              <tr *ngIf="!list?.length">
+                <td colspan="7" class="text-center text-muted">No templates yet. Upload letterhead, then create a template.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
