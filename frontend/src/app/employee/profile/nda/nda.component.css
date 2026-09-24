@@ -18,11 +18,56 @@
   background: #fff;
 }
 
-/* Screen preview — same letterhead blank as print */
+/*
+  Letterhead blank on first page — padding is more reliable than empty-div height
+  (empty divs often collapse in print / Word).
+*/
+.nda-first-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 1123px; /* ~A4 at 96dpi screen preview */
+}
+
 .nda-letterhead-spacer {
   display: block;
-  height: 180mm;
-  min-height: 180mm;
+
+  /* height: 180mm;
+  min-height: 180mm; */
+
+  height: 120mm;
+  min-height: 120mm;
+  width: 100%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.nda-letterhead-spacer::after {
+  content: '\00a0';
+  display: block;
+  height: 120mm;
+  line-height: 120mm;
+  font-size: 1px;
+}
+
+/* Push page-1 text block to the bottom of the page */
+.nda-page1-body {
+  margin-top: auto;
+  padding-bottom: 8px;
+}
+
+.nda-first-page .nda-title {
+  margin-top: 0;
+}
+
+/* Continuation pages — top margin so content is not stuck to edge */
+.nda-clause2-continue,
+.nda-content > ol.nda-terms {
+  margin-top: 8px;
+}
+
+.nda-content > .nda-page-break + .nda-clause2-continue {
+  padding-top: 24px;
+
 }
 
 .nda-first-page {
@@ -115,42 +160,39 @@
 
 /* PRINT only — push ending content to page bottom (no empty gap) */
 @media print {
-  .nda-letterhead-spacer {
-    display: block;
-    height: 150mm;
-    min-height: 150mm;
-    flex-shrink: 0;
-  }
-
   .nda-first-page {
-    min-height: 400mm;
+
+    /* min-height: 400mm; */
+
     display: flex;
     flex-direction: column;
-    page-break-after: always;
-    break-after: page;
-    padding-bottom: 0;
-  }
-
-  .nda-first-page .nda-page1-end {
-    margin-top: auto;
-    margin-bottom: 0;
-  }
-
-  .nda-mid-page {
-    page-break-after: always;
-    break-after: page;
-  }
-
-  .nda-last-page {
     min-height: 257mm;
-    display: flex;
-    flex-direction: column;
-    padding-top: 0;
+    height: 257mm;
+    page-break-after: always;
+    break-after: page;
   }
 
-  .nda-end-block {
+  .nda-letterhead-spacer {
+    height: 100mm;
+    min-height: 100mm;
+  }
+
+  .nda-letterhead-spacer::after {
+    height: 100mm;
+    line-height: 100mm;
+  }
+
+  .nda-page1-body {
     margin-top: auto;
-    padding-top: 16px;
+    padding-bottom: 4mm;
+  }
+
+  .nda-first-page .nda-title {
+    margin-top: 0;
+  }
+
+  .nda-content > .nda-page-break + .nda-clause2-continue {
+    padding-top: 24px;
   }
 
   .nda-page-break {

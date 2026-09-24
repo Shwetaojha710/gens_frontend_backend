@@ -19,14 +19,30 @@ export class NdaComponent {
   tenant:any={}
    notyf: Notyf;
  constructor(private employeeService: EmployeeService, private masterService: MasterService) {
-
+ 
     this.personalDetails = JSON.parse(localStorage.getItem('employeeId') || '{}');
     this.tenant = JSON.parse(localStorage.getItem('tenant') || '{}');
     this.notyf = new Notyf();
     this.ensureDesignation();
+    this.loadCompanyProfile();
     this.loadData();
   }
 
+  /** Load company name/address from tenants table via API. */
+  private loadCompanyProfile(): void {
+    this.masterService.getCompanyProfile().subscribe({
+      next: (res: any) => {
+        if (!res?.status || !res?.data) return;
+        this.tenant = {
+          ...this.tenant,
+          companyName: res.data.companyName || this.tenant?.companyName,
+          companyAddress: res.data.companyAddress || this.tenant?.companyAddress,
+        };
+      },
+      error: () => {},
+    });
+  }
+ 
   /** Employee designation for signature block. */
   get designation(): string {
     return (
@@ -37,25 +53,25 @@ export class NdaComponent {
       ''
     );
   }
-
+ 
   private ensureDesignation(): void {
     if (String(this.personalDetails?.designation || '').trim()) return;
-
+ 
     const fromProfile =
       this.personalDetails?.designation_name ||
       this.personalDetails?.Designation ||
       this.personalDetails?.designationName ||
       '';
-
+ 
     if (fromProfile) {
       this.personalDetails.designation = String(fromProfile).trim();
       return;
     }
-
+ 
     const designationId = this.personalDetails?.designationId;
     const departmentId = this.personalDetails?.departmentId;
     if (!designationId || !departmentId) return;
-
+ 
     this.masterService
       .designationDD({ department: departmentId?.value || departmentId })
       .subscribe({
@@ -72,7 +88,7 @@ export class NdaComponent {
         error: () => {},
       });
   }
-
+ 
   loadData(): void {
     this.employeeService.getLetterData(this.personalDetails.id, 'nda').subscribe({
       next: (res: any) => {
@@ -93,7 +109,7 @@ export class NdaComponent {
       }
     });
   }
-
+ 
   saveData(): void {
     this.employeeService.saveLetterData(this.personalDetails.id, 'nda', {
       date: this.personalDetails.date,
@@ -102,10 +118,20 @@ export class NdaComponent {
     }).subscribe({ error: () => {} });
   }
   isEdit = false;
-
+ 
   documentName = "NDA Agreement";
   getTitle(): string {
     return String(this.personalDetails?.gender || '').trim().toLowerCase() === 'male' ? 'Mr.' : 'Ms.';
+  }
+
+  /** Company registered / principal office address from tenant. */
+  get companyAddress(): string {
+    return (
+      this.tenant?.companyAddress ||
+      this.tenant?.address ||
+      this.tenant?.registeredAddress ||
+      ''
+    );
   }
   data = {
     name: 'Bharti Verma',
@@ -116,11 +142,11 @@ export class NdaComponent {
     date: '04 Aug 2024',
     place: 'Lucknow'
   };
-
+ 
   toggleEdit() {
     this.isEdit = !this.isEdit;
   }
-
+ 
   private readonly ndaPrintStyles = `
     @page { size: A4; margin: 12mm 18mm; }
     * { box-sizing: border-box; }
@@ -133,19 +159,33 @@ export class NdaComponent {
       padding: 0;
       margin: 0;
     }
-    /* Letterhead blank — sized so page-1 content fits through “…made, created or” */
+    /* Letterhead blank + pin page-1 body to bottom */
     .nda-letterhead-spacer {
       display: block;
-      height: 150mm;
-      min-height: 150mm;
+      height: 100mm;
+      min-height: 100mm;
+      width: 100%;
+      overflow: hidden;
       flex-shrink: 0;
+    }
+    .nda-letterhead-spacer::after {
+      content: '\\00a0';
+      display: block;
+      height: 100mm;
+      line-height: 100mm;
+      font-size: 1px;
     }
     .nda-first-page {
       min-height: 257mm;
+      height: 257mm;
       display: flex;
       flex-direction: column;
       page-break-after: always;
       break-after: page;
+    }
+    .nda-page1-body {
+      margin-top: auto;
+      padding-bottom: 4mm;
     }
     .nda-first-page .nda-page1-end {
       margin-top: auto;
@@ -171,7 +211,7 @@ export class NdaComponent {
       text-decoration: underline;
       font-weight: bold;
       font-size: 12pt;
-      margin: 0 0 12px 0;
+      margin: 12px 0 12px 0;
     }
     p, .nda-clause2-continue {
       margin: 8px 0;
@@ -196,7 +236,7 @@ export class NdaComponent {
       line-height: 0;
     }
   `;
-
+ 
   private getDaySuffix(day: number): string {
     if (day >= 11 && day <= 13) return 'th';
     switch (day % 10) {
@@ -206,21 +246,21 @@ export class NdaComponent {
       default: return 'th';
     }
   }
-
+ 
   /** e.g. 21st Apr, 2026 */
   formatNdaDate(dateValue: string | Date | null | undefined): string {
     const parts = this.getNdaDateParts(dateValue);
     if (!parts) return '';
     return `${parts.day}${parts.suffix} ${parts.month}, ${parts.year}`;
   }
-
+ 
   /** e.g. 21<sup>st</sup> Apr, 2026 */
   formatNdaDateHtml(dateValue: string | Date | null | undefined): string {
     const parts = this.getNdaDateParts(dateValue);
     if (!parts) return '';
     return `${parts.day}<sup class="ord-sup">${parts.suffix}</sup> ${parts.month}, ${parts.year}`;
   }
-
+ 
   private getNdaDateParts(
     dateValue: string | Date | null | undefined
   ): { day: number; suffix: string; month: string; year: number } | null {
@@ -242,7 +282,7 @@ export class NdaComponent {
       year: date.getFullYear(),
     };
   }
-
+ 
   private replaceInputsWithText(el: HTMLElement): void {
     el.querySelectorAll('.nda-date-preview').forEach((n) => n.remove());
     el.querySelectorAll('input').forEach((input: any) => {
@@ -256,14 +296,14 @@ export class NdaComponent {
       input.parentNode.replaceChild(span, input);
     });
   }
-
+ 
   downloadPDF() {
     const element = document.getElementById('nda-doc');
     if (!element) return;
-
+ 
     const cloned = element.cloneNode(true) as HTMLElement;
     this.replaceInputsWithText(cloned);
-
+ 
     html2pdf().from(cloned).set({
       margin: 10,
       filename: this.documentName + '.pdf',
@@ -280,23 +320,23 @@ export class NdaComponent {
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     }).save();
   }
-
+ 
   printDoc() {
     const element = document.getElementById('nda-doc');
     if (!element) return;
-
+ 
     const cloned = element.cloneNode(true) as HTMLElement;
     this.replaceInputsWithText(cloned);
-
+ 
     const content = `<!DOCTYPE html><html><head><title>NDA</title>
       <style>${this.ndaPrintStyles}</style>
     </head><body>${cloned.innerHTML}</body></html>`;
-
+ 
     const iframe = document.createElement('iframe');
     iframe.style.cssText = 'position:fixed;left:-9999px;width:1px;height:1px;border:0;';
     iframe.setAttribute('srcdoc', content);
     document.body.appendChild(iframe);
-
+ 
     iframe.onload = () => {
       iframe.contentWindow?.focus();
       iframe.contentWindow?.print();
@@ -305,13 +345,13 @@ export class NdaComponent {
   }
 downloadDoc() {
   const element = document.getElementById('nda-doc');
-
+ 
   if (!element) return;
-
+ 
   // Clone so we can modify before download
   const cloned = element.cloneNode(true) as HTMLElement;
   this.replaceInputsWithText(cloned);
-
+ 
   // Create Word-compatible HTML
   const html = `
     <html xmlns:o='urn:schemas-microsoft-com:office:office'
@@ -330,16 +370,33 @@ downloadDoc() {
         }
         .nda-letterhead-spacer {
           display: block;
-          height: 150mm;
-          min-height: 150mm;
+          height: 100mm;
+          min-height: 100mm;
+          width: 100%;
+          overflow: hidden;
           flex-shrink: 0;
+          mso-line-height-rule: exactly;
+          line-height: 100mm;
+          font-size: 1pt;
+        }
+        .nda-letterhead-spacer::after {
+          content: '\\00a0';
+          display: block;
+          height: 100mm;
+          line-height: 100mm;
+          font-size: 1px;
         }
         .nda-first-page {
           min-height: 257mm;
+          height: 257mm;
           display: flex;
           flex-direction: column;
           page-break-after: always;
           break-after: page;
+        }
+        .nda-page1-body {
+          margin-top: auto;
+          padding-bottom: 4mm;
         }
         .nda-first-page .nda-page1-end {
           margin-top: auto;
@@ -365,6 +422,7 @@ downloadDoc() {
           text-decoration: underline;
           font-weight: bold;
           font-size: 12pt;
+          margin: 28px 0 12px 0;
         }
         p, .nda-clause2-continue { text-align: justify; margin: 8px 0; }
         .nda-clause2-continue { margin-left: 22px; }
@@ -388,18 +446,18 @@ downloadDoc() {
     </body>
     </html>
   `;
-
+ 
   const blob = new Blob(['\ufeff', html], {
     type: 'application/msword'
   });
-
+ 
   const url = URL.createObjectURL(blob);
-
+ 
   const a = document.createElement('a');
   a.href = url;
   a.download = 'NDA.doc';
   a.click();
-
+ 
   URL.revokeObjectURL(url);
 }
 }
