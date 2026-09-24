@@ -1,0 +1,94 @@
+.var-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.var-chip {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+}
+
+.a4-stage {
+  background: #e8eaed;
+  border-radius: 8px;
+  padding: 24px 12px;
+  overflow: auto;
+  max-height: 78vh;
+}
+
+.editor-frame {
+  width: 210mm;
+  max-width: 100%;
+  margin: 0 auto;
+  background-color: #fff;
+  background-repeat: no-repeat;
+  background-position: top center;
+  background-size: 100% auto;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.editor-frame--blank {
+  background-image: none !important;
+}
+
+.dt-quill-host {
+  background: transparent;
+}
+
+:host ::ng-deep .ql-toolbar.ql-snow {
+  background: #f8f9fa;
+  border: none;
+  border-bottom: 1px solid #dee2e6;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+:host ::ng-deep .editor-frame .ql-container.ql-snow {
+  border: none;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 12pt;
+  line-height: 1.5;
+  background: transparent;
+}
+
+:host ::ng-deep .editor-frame .ql-editor {
+  min-height: 260mm;
+  padding: 28mm 18mm 20mm;
+  color: #000;
+  background: transparent;
+}
+
+:host ::ng-deep .editor-frame--blank .ql-editor {
+  padding-top: 120mm;
+}
+
+:host ::ng-deep .editor-frame--image .ql-editor {
+  padding-top: 32mm;
+}
+
+:host ::ng-deep .editor-frame .ql-editor p {
+  margin: 0.45em 0;
+}
+
+:host ::ng-deep .ql-editor.ql-blank::before {
+  font-style: normal;
+  color: #9aa0a6;
+  left: 18mm;
+  right: 18mm;
+}
+
+@media (max-width: 900px) {
+  .editor-frame {
+    width: 100%;
+  }
+
+  :host ::ng-deep .editor-frame .ql-editor,
+  :host ::ng-deep .editor-frame--blank .ql-editor {
+    padding: 16px;
+    min-height: 60vh;
+  }
+}

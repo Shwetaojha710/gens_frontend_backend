@@ -1,0 +1,50 @@
+<div class="container-fluid mt-4">
+  <div class="card mb-3">
+    <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span>Generate HR Letter</span>
+      <a class="btn btn-sm btn-outline-primary" routerLink="/layout/master/document-templates">
+        Manage Templates
+      </a>
+    </h5>
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label fw-bold">Employee</label>
+          <select class="form-select" [(ngModel)]="employeeId">
+            <option value="">Select employee</option>
+            <option *ngFor="let e of employees" [value]="e.id">{{ empLabel(e) }}</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-bold">Template</label>
+          <select class="form-select" [(ngModel)]="templateId">
+            <option value="">Select template</option>
+            <option *ngFor="let t of templates" [value]="t.id">{{ t.name }} ({{ t.category }})</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label fw-bold">Issue Date</label>
+          <input type="date" class="form-control" [(ngModel)]="issueDate" />
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+          <button type="button" class="btn btn-primary btn-sm" [disabled]="loading" (click)="preview()">
+            {{ loading ? 'Loading…' : 'Preview' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" *ngIf="previewUrl">
+    <h5 class="card-header d-flex justify-content-between align-items-center">
+      <span>Preview</span>
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="print()">Print</button>
+        <button type="button" class="btn btn-sm btn-success" (click)="saveGenerated()">Save</button>
+      </div>
+    </h5>
+    <div class="card-body p-0">
+      <iframe class="preview-iframe" [src]="previewUrl" title="Letter preview"></iframe>
+    </div>
+  </div>
+</div>

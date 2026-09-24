@@ -47,6 +47,7 @@ export const APP_MENU_ITEMS: MenuItem[] = [
       { title: 'Add Employee',  icon: 'ri-user-add-line',     link: '/layout/employee/joining',     permKey: 'emp-mgmt.add' },
       { title: 'Apply Leave',   icon: 'ri-file-list-2-line',  link: '/layout/employee/apply-leave', permKey: 'emp-mgmt.leave' },
       { title: 'All Letters',   icon: 'ri-file-paper-2-line', link: '/layout/employee/all-letters', permKey: 'emp-mgmt.letters' },
+      { title: 'Generate Letter', icon: 'ri-file-edit-line', link: '/layout/employee/generate-letter', permKey: 'emp-mgmt.letters' },
     ]
   },
   {
@@ -114,6 +115,7 @@ export const APP_MENU_ITEMS: MenuItem[] = [
       { title: 'Department Master',  icon: 'ri-building-4-line',  link: '/layout/master/department',       permKey: 'master.department' },
       { title: 'Employment Type',    icon: 'ri-briefcase-4-line', link: '/layout/master/employment-type',  permKey: 'master.emptype' },
       { title: 'Documents',          icon: 'ri-file-text-line',   link: '/layout/master/documents',        permKey: 'master.docs' },
+      { title: 'HR Templates',       icon: 'ri-file-list-3-line', link: '/layout/master/document-templates', permKey: 'master.docs' },
       { title: 'Holiday Types',      icon: 'ri-suitcase-line',    link: '/layout/master/holiday-type',     permKey: 'master.holidaytype' },
       { title: 'Salary Component',   icon: 'ri-wallet-2-line',    link: '/layout/master/salary-component', permKey: 'master.salary' },
       { title: 'Pay Slip Setup',     icon: 'ri-file-pdf-2-line',  link: '/layout/master/pay-slip',         permKey: 'master.payslip' },
