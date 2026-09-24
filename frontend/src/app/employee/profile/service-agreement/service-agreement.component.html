@@ -23,8 +23,8 @@
       <h3 class="center" style="text-decoration: underline;">SERVICE AGREEMENT</h3>
 
       <p>
-        THIS SERVICE AGREEMENT executed on is with effect from Date of Joining
-        <b>{{ formatJoiningDate(personalDetails?.joiningDate) }}</b>
+        <b>THIS SERVICE AGREEMENT</b> executed on is with effect from Date of Joining
+        <span [innerHTML]="formatJoiningDateHtml(personalDetails?.joiningDate)"></span>
         to the successful completion of Foundation Training and up to a period of
         <input class="edit-field" style="width: 40px" type="number" [(ngModel)]="form.coverServiceMonths" name="coverServiceMonths" (change)="saveData()" />
         months from the Date of Allocation to a Development Unit at
@@ -46,11 +46,12 @@
       <h6><b style="text-decoration: underline;">BETWEEN:</b></h6>
       <p>
         M/s. <b>{{ tenant?.companyName || 'Quaere Etechnologies Pvt. Ltd.' }}</b> a Company incorporated under the Companies Act. 1956,
-        having its registered office at {{ companyAddress }} represented by Mr.Shiv Pal Singh
+        having its registered office at {{ companyAddress }} represented by <b>Mr. Shiv Pal Singh</b>
         <!--<input class="edit-field" style="width: 160px" [(ngModel)]="form.representativeName" name="representativeName" (change)="saveData()" />-->,
-        hereinafter referred to as the
-        <input class="edit-field" style="width: 180px" [(ngModel)]="form.representativeTitle" name="representativeTitle" (change)="saveData()" />
-        (which term shall unless repugnant to the context mean and include its successors-in-interest and permitted assignees) of the ONE PART:
+        hereinafter referred to as  Director
+        <!-- <input class="edit-field" style="width: 180px" [(ngModel)]="form.representativeTitle" name="representativeTitle" (change)="saveData()" /> -->
+        (which term shall unless repugnant to the context mean and include its successors-in-interest and permitted assignees) of the
+        <b style="text-decoration: underline; white-space: nowrap;">ONE PART:</b>
       </p>
 
       <h6><b style="text-decoration: underline;">AND:</b></h6>
@@ -59,7 +60,8 @@
        {{ getRelation() }} of Mr. <b>{{ fatherName }}</b>
         aged about <b>{{ employeeAge }}</b> Years, currently residing at
         <b>{{ employeeAddress }}</b>
-        hereinafter referred to as Trainee (which term shall unless repugnant to the context mean and include his/her heirs, legal representatives, assigns, executors and administrators) of the SECOND PART:
+        hereinafter referred to as Trainee (which term shall unless repugnant to the context mean and include his/her heirs, legal representatives, assigns, executors and administrators) of the
+        <b style="text-decoration: underline; white-space: nowrap;">SECOND PART:</b>
       </p>
 
       <h6><b style="text-decoration: underline;">AND:</b></h6>
@@ -70,10 +72,10 @@
         <b>{{ guarantorAge }}</b>
         years (approx) currently residing at
         <b>{{ guarantorAddress }}</b>,
-        hereinafter referred to as the SURETY (which term shall unless repugnant to the context mean and include his/her heirs, legal representatives, assigns, executors and administrators) of the <b>THIRD PART</b>
+        hereinafter referred to as the <b  style="text-decoration: underline; white-space: nowrap;">SURETY </b>(which term shall unless repugnant to the context mean and include his/her heirs, legal representatives, assigns, executors and administrators) of the <b  style="text-decoration: underline; white-space: nowrap;">THIRD PART</b>
       </p>
 
-      <h6><b style="text-decoration: underline;">DEFINITIONS:</b></h6>
+      <h6><b >DEFINITIONS:</b></h6>
       <p>The following terms shall have the following meanings for the purpose of this Service Agreement:</p>
       <p class="def-item">
         <b>Date of Allocation:</b> Is the date when the Engineer is allocated to a Development Unit for On the Job Training.
@@ -128,7 +130,7 @@
       </p>
 
       <p>
-        <b>2.</b> The Engineer's cost to company will be Rs.
+        <b>2.</b>The <b> Engineer's cost to </b>company will be Rs.
         <input class="edit-field" style="width: 80px" type="number" [(ngModel)]="form.ctc" name="ctc" (change)="onCtcChange()" />/-
         and paid a total monthly fixed compensation as follows:
       </p>
@@ -178,23 +180,24 @@
       <p>
         <b>5.</b> The Engineer, therefore, agrees that in the event of his/her leaving the Company before completion of the Service Period or in the event of his/her not completing FT or Service Period for any reason whatsoever, he / she shall be liable to pay to the Company compensation / damages calculated as follows and / or reimburse all costs and expenses incurred in or connected with the training:
       </p>
-      <p class="def-item">
-        a) Fixed cost of Rs.
+      <p class="def-item " style="margin-left: 80px;">
+        a Fixed cost of <b>Rs. </b>
         <b>{{ form.fixedCost }}</b>
-        which includes Rs.
+        which includes <b>Rs. </b>
         <b> {{ form.trainingCost }}</b>
-        Recruitment cost and Rs.
+        Recruitment cost and <b>Rs. </b>
         <b>{{ form.recruitmentCost }}</b>
         Training cost.
       </p>
-      <p class="def-item">
-        b) 100% of fixed salary paid by the Company to the Engineer during the FT period, which is calculated at Rs.
-        <input class="edit-field" style="width: 70px" type="number" [(ngModel)]="form.salaryPerDay" name="salaryPerDay" (change)="saveData()" />
-        per day (Average calendar day per month is considered at 30 days. In case the Engineer resigns in middle of any month, the number of days worked in that month would be considered for calculation).
+      <p class="def-item" style="margin-left:80px;">
+        b 100% of fixed salary paid by the Company to the Engineer during the FT period, which is calculated at Rs.
+       <b> <input class="edit-field" style="width: 70px" type="number" [(ngModel)]="form.salaryPerDay" name="salaryPerDay" (change)="saveData()" />
+        per day</b> (Average calendar day per month is considered at 30 days. In case the Engineer resigns in middle of any month, the number of days worked in that month would be considered for calculation).
       </p>
-      <p class="def-item">
-        c) 50% of Total computer time utilized is calculated at Rs.
+      <p class="def-item" style="margin-left:80px;">
+        c 50% of Total computer time utilized is calculated at <b>Rs.
         <input class="edit-field" style="width: 70px" type="number" [(ngModel)]="form.computerTimePerDay" name="computerTimePerDay" (change)="saveData()" />
+       </b>
         per day (Average working day per month is considered at 22 days. In case the Engineer resigns in middle of any month, the number of days worked in that month would be considered for the calculation).
       </p>
 
@@ -205,8 +208,8 @@
       <p>
         <b>7.</b> The Engineer agrees that he / she shall faithfully and diligently undergo and imbibe the training prescribed as per the FT. The Engineer acknowledges that failure to complete the FPT successfully or leaving the Company within the Service Period shall mean and include:
       </p>
-      <ol class="terms" type="a">
-        <li>Failure to remain with the company during the Service Period prescribed in the this Service Agreement;</li>
+      <ol class="terms" type="a" style="margin-left: 80px;">
+        <li >Failure to remain with the company during the Service Period prescribed in the this Service Agreement;</li>
         <li>Failure to be present with the Company during the Service Period for 10 consecutive days;</li>
         <li>Tendering of resignation to the company within the Service Period, whether resignation be accepted or not by the company;</li>
         <li>Failure to complete FT by being absent for any reason(s) whatsoever from the Company;</li>
@@ -231,34 +234,34 @@
     <div class="content">
       <div class="witness-top">
         <div class="witness-left">
-          <h6 class="witness-heading"><b><u>WITNESSES:</u></b></h6>
+          <h6 class="witness-heading"><u>WITNESSES:</u></h6>
           <div class="witness-list">
             <div class="witness-item">
               <div class="sig-space"></div>
-              <p class="witness-label"><b><u>WITNESS 1</u></b></p>
+              <p class="witness-label"><u>WITNESS 1</u></p>
             </div>
             <div class="witness-item">
               <div class="sig-space"></div>
-              <p class="witness-label"><b><u>WITNESS 2</u></b></p>
+              <p class="witness-label"><u>WITNESS 2</u></p>
             </div>
             <div class="witness-item">
               <div class="sig-space"></div>
-              <p class="witness-label"><b><u>WITNESS 3</u></b></p>
+              <p class="witness-label"><u>WITNESS 3</u></p>
             </div>
           </div>
         </div>
         <div class="witness-right">
           <div class="party-block">
-            <div class="stamp-box" aria-hidden="true"></div>
-            <p class="party-label"><b><u>COMPANY</u></b></p>
+            <div class="sig-space"></div>
+            <p class="party-label"><u>COMPANY</u></p>
           </div>
           <div class="party-block">
             <div class="sig-space"></div>
-            <p class="party-label"><b><u>ENGINEER</u></b></p>
+            <p class="party-label"><u>ENGINEER</u></p>
           </div>
           <div class="party-block">
             <div class="sig-space"></div>
-            <p class="party-label"><b><u>SURETY</u></b></p>
+            <p class="party-label"><u>SURETY</u></p>
           </div>
         </div>
       </div>
@@ -282,7 +285,8 @@
 
       <div class="witness-footer">
         <div class="footer-col">
-          <div class="stamp-box stamp-box--lg" aria-hidden="true"></div>
+          <div class="sig-space"></div>
+          <div class="sig-line"></div>
           <p class="party-label"><b>COMPANY</b></p>
         </div>
         <div class="footer-col">
@@ -303,7 +307,7 @@
   <div class="page">
     <div class="content">
       <h3 class="center">Exhibit A</h3>
-      <h4>The Foundation Training (FT)</h4>
+      <h4 class="center" style="font-weight: normal;">The Foundation Training (FT)</h4>
       <p>
         The FT may consist of several training modules (hereinafter the terms “module” and “programme” are used interchangeably).
       </p>
@@ -315,18 +319,18 @@
       <p class="def-item">b) Technology Specific Stream</p>
       <p>All references to “Technical Training” shall include both Generic Stream and Technology Specific Stream.</p>
 
-      <h6><b>Technical Training:</b></h6>
+      <h6 style="font-weight: normal; text-decoration: underline;">Technical Training:</h6>
       <p>
         The Engineer would be required to undergo Technical Training in all or any of the following Company designed courses as a specified programme. The curriculum may be modified based on the Company’s requirement from time to time. At present there are two modules (also called stream programmes) of technical training as enumerated below:
       </p>
       <p>
-        <b>Generic Stream Programme:</b> Programming principles, database concepts, designing concepts, quality systems concepts, computer hardware &amp; software, network &amp; system administration and other subjects.
+        <span style="text-decoration: underline;">Generic Stream Programme:</span> Programming principles, database concepts, designing concepts, quality systems concepts, computer hardware &amp; software, network &amp; system administration and other subjects.
       </p>
       <p>
-        <b>Technology Specific Stream Programme:</b> Open Source Technologies, Mobile Development, Web Development, ERP, Social, Data analytics, Cloud and other subjects.
+        <span style="text-decoration: underline;">Technology Specific Stream Programme:</span> Open Source Technologies, Mobile Development, Web Development, ERP, Social, Data analytics, Cloud and other subjects.
       </p>
 
-      <h6><b>Management Skills Training:</b></h6>
+      <h6 style="font-weight: normal; text-decoration: underline;">Management Skills Training:</h6>
       <p>
         Every Engineer shall undergo pre-determined management skills programme during and as a part of the FT. These programmes would cover communication skills and business skills and such other components as the Company may determine from time to time depending upon varying business requirements of the Company.
       </p>
