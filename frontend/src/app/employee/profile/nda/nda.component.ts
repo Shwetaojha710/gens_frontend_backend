@@ -162,7 +162,7 @@ export class NdaComponent {
       page-break-before: auto;
     }
     .nda-end-block {
-      margin-top: auto;
+      margin-top: 18px;
       padding-top: 16px;
       page-break-inside: avoid;
     }
@@ -356,7 +356,7 @@ downloadDoc() {
           page-break-before: auto;
         }
         .nda-end-block {
-          margin-top: auto;
+          margin-top: 18px;
           padding-top: 16px;
           page-break-inside: avoid;
         }

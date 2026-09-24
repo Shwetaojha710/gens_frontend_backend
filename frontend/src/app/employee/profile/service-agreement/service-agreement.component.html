@@ -180,7 +180,7 @@
       <p>
         <b>5.</b> The Engineer, therefore, agrees that in the event of his/her leaving the Company before completion of the Service Period or in the event of his/her not completing FT or Service Period for any reason whatsoever, he / she shall be liable to pay to the Company compensation / damages calculated as follows and / or reimburse all costs and expenses incurred in or connected with the training:
       </p>
-      <p class="def-item " style="margin-left: 80px;">
+      <p class="def-item " style="margin-left: 60px;">
         a Fixed cost of <b>Rs. </b>
         <b>{{ form.fixedCost }}</b>
         which includes <b>Rs. </b>
@@ -189,12 +189,12 @@
         <b>{{ form.recruitmentCost }}</b>
         Training cost.
       </p>
-      <p class="def-item" style="margin-left:80px;">
+      <p class="def-item" style="margin-left:60px;">
         b 100% of fixed salary paid by the Company to the Engineer during the FT period, which is calculated at Rs.
        <b> <input class="edit-field" style="width: 70px" type="number" [(ngModel)]="form.salaryPerDay" name="salaryPerDay" (change)="saveData()" />
         per day</b> (Average calendar day per month is considered at 30 days. In case the Engineer resigns in middle of any month, the number of days worked in that month would be considered for calculation).
       </p>
-      <p class="def-item" style="margin-left:80px;">
+      <p class="def-item" style="margin-left:60px;">
         c 50% of Total computer time utilized is calculated at <b>Rs.
         <input class="edit-field" style="width: 70px" type="number" [(ngModel)]="form.computerTimePerDay" name="computerTimePerDay" (change)="saveData()" />
        </b>
@@ -208,7 +208,7 @@
       <p>
         <b>7.</b> The Engineer agrees that he / she shall faithfully and diligently undergo and imbibe the training prescribed as per the FT. The Engineer acknowledges that failure to complete the FPT successfully or leaving the Company within the Service Period shall mean and include:
       </p>
-      <ol class="terms" type="a" style="margin-left: 80px;">
+      <ol class="terms" type="a" style="margin-left: 50px;">
         <li >Failure to remain with the company during the Service Period prescribed in the this Service Agreement;</li>
         <li>Failure to be present with the Company during the Service Period for 10 consecutive days;</li>
         <li>Tendering of resignation to the company within the Service Period, whether resignation be accepted or not by the company;</li>
@@ -251,6 +251,24 @@
           </div>
         </div>
         <div class="witness-right">
+
+          <div class="witness-list">
+            <div class="witness-item">
+              <div class="sig-space"></div>
+              <p class="witness-label"><u>COMPANY</u></p>
+            </div>
+            <div class="witness-item">
+              <div class="sig-space"></div>
+              <p class="witness-label"><u>ENGINEER</u></p>
+            </div>
+            <div class="witness-item">
+              <div class="sig-space"></div>
+              <p class="witness-label"><u>SURETY</u></p>
+            </div>
+          </div>
+        </div>
+        <!-- <div class="witness-right">
+
           <div class="party-block">
             <div class="sig-space"></div>
             <p class="party-label"><u>COMPANY</u></p>
@@ -263,7 +281,7 @@
             <div class="sig-space"></div>
             <p class="party-label"><u>SURETY</u></p>
           </div>
-        </div>
+        </div> -->
       </div>
 
       <div class="notary-block">

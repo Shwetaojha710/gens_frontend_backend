@@ -286,8 +286,8 @@ ol.terms li {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 40px;
-  padding-top: 8px;
+  gap: 48px;
+  padding-top: 32px;
   min-width: 160px;
 }
 

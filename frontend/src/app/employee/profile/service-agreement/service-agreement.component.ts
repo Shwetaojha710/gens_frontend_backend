@@ -418,8 +418,12 @@ export class ServiceAgreementComponent {
       margin: 0; text-align: center; font-weight: bold; text-transform: uppercase;
     }
     .witness-right {
-      display: flex; flex-direction: column; align-items: flex-end;
-      gap: 40px; padding-top: 8px; min-width: 160px;
+          display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 48px;
+    padding-top: 48px;
+    min-width: 160px;
     }
     .witness-right .party-label { text-align: right; }
     .stamp-box {

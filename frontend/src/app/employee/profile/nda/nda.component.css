@@ -21,8 +21,8 @@
 /* Screen preview — same letterhead blank as print */
 .nda-letterhead-spacer {
   display: block;
-  height: 150mm;
-  min-height: 150mm;
+  height: 180mm;
+  min-height: 180mm;
 }
 
 .nda-first-page {
@@ -103,7 +103,7 @@
 }
 
 .nda-end-block {
-  margin-top: 48px;
+  margin-top: 18px;
   padding-top: 12px;
   page-break-inside: avoid;
   break-inside: avoid;
@@ -123,7 +123,7 @@
   }
 
   .nda-first-page {
-    min-height: 257mm;
+    min-height: 400mm;
     display: flex;
     flex-direction: column;
     page-break-after: always;

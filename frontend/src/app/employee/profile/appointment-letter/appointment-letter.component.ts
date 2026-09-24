@@ -362,6 +362,20 @@ masterSelected:any
     return `${parts.day}<sup class="ord-sup">${parts.suffix}</sup> ${parts.month}, ${parts.year}`;
   }
 
+  /** e.g. 7/09/2026 */
+  formatDateNumeric(dateValue: string | Date | null | undefined): string {
+    if (!dateValue) return '';
+    const date =
+      typeof dateValue === 'string'
+        ? new Date(dateValue.includes('T') ? dateValue : `${dateValue}T00:00:00`)
+        : dateValue;
+    if (Number.isNaN(date.getTime())) return '';
+    const d = date.getDate();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    return `${d}/${mm}/${yyyy}`;
+  }
+
   /** Escape + keep newlines; long single-line addresses still wrap via CSS */
   formatAddressHtml(address: string | null | undefined): string {
     return String(address || '')
@@ -388,7 +402,9 @@ this.isDownload=true
   inputs.forEach((input: any) => {
     const span = document.createElement('span');
     if (input.type == 'date' && input.value) {
-      span.innerHTML = this.formatDateHtml(input.value);
+      span.innerHTML = input.classList.contains('date-numeric')
+        ? this.formatDateNumeric(input.value)
+        : this.formatDateHtml(input.value);
     } else {
       span.textContent = input.value || '';
     }
@@ -423,6 +439,8 @@ this.isDownload=true
         word-break: break-word;
         white-space: pre-wrap;
       }
+      .ref-no-line, .ref-no-line span { white-space: nowrap !important; }
+      .right { white-space: nowrap; }
     </style>
   </head>
   <body>
@@ -457,7 +475,9 @@ printDoc() {
   cloned.querySelectorAll('input').forEach((input: any) => {
     const span = document.createElement('span');
     if (input.type === 'date' && input.value) {
-      span.innerHTML = this.formatDateHtml(input.value);
+      span.innerHTML = input.classList.contains('date-numeric')
+        ? this.formatDateNumeric(input.value)
+        : this.formatDateHtml(input.value);
     } else {
       span.textContent = input.value || '';
     }
@@ -488,6 +508,8 @@ printDoc() {
       word-break: break-word;
       white-space: pre-wrap;
     }
+    .ref-no-line, .ref-no-line span { white-space: nowrap !important; }
+    .right { white-space: nowrap; }
     .salary-table th, .salary-table td { border: 1px solid black; padding: 4px; font-size: 12px; }
     .salary-table tr { page-break-inside: avoid; }
     ol { padding-left: 20px; margin-top: 10px; }
