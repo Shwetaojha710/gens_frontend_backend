@@ -41,6 +41,7 @@ export const DEFAULT_PERMISSIONS: PermissionSection[] = [
       { key: 'emp-mgmt.add',     label: 'Add Employee',  roles: ['admin', 'superadmin', 'hr'] },
       { key: 'emp-mgmt.leave',   label: 'Apply Leave',   roles: ['admin', 'superadmin', 'hr', 'manager', 'director'] },
       { key: 'emp-mgmt.letters', label: 'All Letters',   roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'emp-mgmt.insurance', label: 'Insurance Documents', roles: ['admin', 'superadmin', 'hr'] },
     ]
   },
   {
@@ -95,6 +96,7 @@ export const DEFAULT_PERMISSIONS: PermissionSection[] = [
       { key: 'master.salary',       label: 'Salary Component',   roles: ['admin', 'superadmin'] },
       { key: 'master.payslip',      label: 'Pay Slip Setup',     roles: ['admin', 'superadmin'] },
       { key: 'master.branch',       label: 'Branch',             roles: ['admin', 'superadmin'] },
+      { key: 'master.insurancePolicy', label: 'Insurance Policy', roles: ['admin', 'superadmin', 'hr'] },
     ]
   },
   {
@@ -177,7 +179,7 @@ export class PermissionService {
   private readonly ROLE_PERM_KEY   = 'app_role_permissions';
   private readonly USER_PERM_KEY   = 'custom_user_permissions';
   // Bump this version whenever DEFAULT_PERMISSIONS changes — forces a fresh load
-  private readonly PERM_VERSION    = 'v6';
+  private readonly PERM_VERSION    = 'v8';
   private readonly VERSION_KEY     = 'app_role_permissions_version';
 
   // ── Role-based permissions (admin configures per role) ──────────────────

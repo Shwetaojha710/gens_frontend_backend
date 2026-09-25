@@ -345,6 +345,13 @@ export class EmployeePortalService {
     );
   }
 
+  /** Own insurance docs (E-card / policy) — AppAdmin */
+  getAppInsuranceDocs(): Observable<{ status: unknown; message?: string; data?: any[] }> {
+    return this.http.get<{ status: unknown; message?: string; data?: any[] }>(
+      `${this.base}getAppInsuranceDocs`,
+    );
+  }
+
   saveEmpLetterSignature(signature: string): Observable<{ status: unknown; message?: string }> {
     return this.http.post<{ status: unknown; message?: string }>(
       `${this.base}save-emp-letter-signature`,
@@ -360,6 +367,13 @@ export class EmployeePortalService {
   getAppHandbook(): Observable<{ status: unknown; message?: string; data?: { url: string | null; filename: string | null } }> {
     return this.http.get<{ status: unknown; message?: string; data?: { url: string | null; filename: string | null } }>(
       `${this.base}get-app-handbook`,
+    );
+  }
+
+  /** Company-wide insurance policy (Master) — all employees, mobile + portal */
+  getAppInsurancePolicy(): Observable<{ status: unknown; message?: string; data?: { url: string | null; filename: string | null } }> {
+    return this.http.get<{ status: unknown; message?: string; data?: { url: string | null; filename: string | null } }>(
+      `${this.base}get-app-insurance-policy`,
     );
   }
 

@@ -84,6 +84,72 @@
     </div>
   </div>
 
+  <!-- Company insurance policy (Master — all employees) -->
+  <div *ngIf="!loading && active" class="mt-4">
+    <h6 class="fw-semibold mb-2"><i class="ri ri-file-shield-2-line me-1 text-primary"></i>Company Insurance Policy</h6>
+    <p class="text-muted small mb-3">Company-wide policy document uploaded by HR (same for all employees).</p>
+
+    <div *ngIf="companyPolicyLoading" class="text-center py-3">
+      <div class="spinner-border spinner-border-sm text-primary"></div>
+    </div>
+
+    <div *ngIf="!companyPolicyLoading && !companyPolicyUrl" class="text-muted small mb-3">
+      No company insurance policy uploaded yet.
+    </div>
+
+    <div *ngIf="!companyPolicyLoading && companyPolicyUrl" class="row g-3 mb-2">
+      <div class="col-12 col-sm-6 col-md-4">
+        <div class="epd-card epd-card--appointment">
+          <div class="epd-card__icon-wrap">
+            <i class="ri ri-file-shield-2-line"></i>
+          </div>
+          <div class="epd-card__body">
+            <div class="epd-card__label">Insurance Policy Document</div>
+            <div class="epd-badge epd-badge--ready mb-2">
+              <i class="ri ri-check-line me-1"></i>Available
+            </div>
+            <a class="epd-action-btn epd-action-btn--download" [href]="companyPolicyUrl" target="_blank" rel="noopener">
+              <i class="ri ri-download-line me-1"></i>View / Download
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Insurance documents (assigned by HR) -->
+  <div *ngIf="!loading && active" class="mt-4">
+    <h6 class="fw-semibold mb-2"><i class="ri ri-shield-check-line me-1 text-primary"></i>My Insurance Documents</h6>
+    <p class="text-muted small mb-3">E-Insurance Card and Policy Document assigned to you by HR.</p>
+
+    <div *ngIf="insuranceLoading" class="text-center py-3">
+      <div class="spinner-border spinner-border-sm text-primary"></div>
+    </div>
+
+    <div *ngIf="!insuranceLoading && !insuranceDocs.length" class="text-muted small mb-3">
+      No insurance documents available yet.
+    </div>
+
+    <div *ngIf="!insuranceLoading && insuranceDocs.length" class="row g-3">
+      <div *ngFor="let item of insuranceDocs" class="col-12 col-sm-6 col-md-4">
+        <div class="epd-card epd-card--appointment">
+          <div class="epd-card__icon-wrap">
+            <i class="ri ri-shield-check-line"></i>
+          </div>
+          <div class="epd-card__body">
+            <div class="epd-card__label">{{ item.typeLabel || item.insuranceDocType }}</div>
+            <div class="epd-badge epd-badge--ready mb-2">
+              <i class="ri ri-check-line me-1"></i>Available
+            </div>
+            <a class="epd-action-btn epd-action-btn--download" [href]="item.fileUrl" target="_blank" rel="noopener">
+              <i class="ri ri-download-line me-1"></i>View / Download
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Download All Letters PDF -->
   <div *ngIf="!loading && active" class="mt-4">
     <div class="card border-0 shadow-sm">

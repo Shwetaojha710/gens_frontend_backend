@@ -27,7 +27,8 @@
   background-size: 100% auto;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
   border-radius: 4px;
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
 }
 
 .editor-frame--blank {
@@ -36,6 +37,128 @@
 
 .dt-quill-host {
   background: transparent;
+}
+
+.dt-rich-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 6px;
+}
+
+.dt-quill-wrap {
+  width: 100%;
+}
+
+.dt-rich-toolbar .btn {
+  min-width: 36px;
+}
+
+.dt-rich-sep {
+  width: 1px;
+  height: 22px;
+  background: #ced4da;
+  margin: 0 4px;
+}
+
+.dt-rich-host {
+  min-height: 297mm;
+  padding: 12mm 14mm 14mm;
+  box-sizing: border-box;
+  outline: none;
+  background: #fff;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 12pt;
+  line-height: 1.5;
+  color: #000;
+  overflow-wrap: anywhere;
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+  -webkit-user-modify: read-write;
+  pointer-events: auto;
+  position: relative;
+  z-index: 1;
+}
+
+.dt-rich-host:focus {
+  outline: 2px solid #93c5fd;
+  outline-offset: -2px;
+}
+
+.dt-rich-host * {
+  user-select: text;
+  -webkit-user-select: text;
+  pointer-events: auto;
+}
+
+.dt-rich-host u,
+.dt-rich-host span[style*='underline'] {
+  text-decoration: underline !important;
+}
+
+.dt-rich-host ol,
+.dt-rich-host .hr-doc-ol {
+  list-style-type: decimal !important;
+  list-style-position: outside;
+  padding-left: 1.6em !important;
+  margin: 0.4em 0;
+}
+
+.dt-rich-host ul,
+.dt-rich-host .hr-doc-ul {
+  list-style-type: disc !important;
+  list-style-position: outside;
+  padding-left: 1.6em !important;
+  margin: 0.4em 0;
+}
+
+.dt-rich-host li {
+  display: list-item !important;
+  margin: 0.2em 0;
+}
+
+.dt-rich-host .hr-align-left { text-align: left !important; }
+.dt-rich-host .hr-align-center { text-align: center !important; }
+.dt-rich-host .hr-align-right { text-align: right !important; }
+.dt-rich-host .hr-align-justify { text-align: justify !important; }
+
+.dt-rich-host table,
+.dt-rich-host .hr-doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5em 0;
+  border: none;
+}
+
+.dt-rich-host table td,
+.dt-rich-host table th {
+  border: none;
+  padding: 2px 6px;
+  vertical-align: top;
+}
+
+.dt-rich-host table.hr-doc-table-bordered td,
+.dt-rich-host table.hr-doc-table-bordered th,
+.dt-rich-host table[border]:not([border='0']) td,
+.dt-rich-host table[border]:not([border='0']) th {
+  border: 1px solid #000;
+  padding: 4px 6px;
+}
+
+.dt-rich-host .page-break {
+  display: block;
+  page-break-before: always;
+  break-before: page;
+  height: 0;
+  margin: 12mm 0;
+  border: 0;
+  border-top: 1px dashed #cbd5e1;
 }
 
 :host ::ng-deep .ql-toolbar.ql-snow {
@@ -56,22 +179,117 @@
 }
 
 :host ::ng-deep .editor-frame .ql-editor {
-  min-height: 260mm;
-  padding: 28mm 18mm 20mm;
+  min-height: 297mm;
+  padding: 28mm 18mm 22mm;
   color: #000;
   background: transparent;
+  box-sizing: border-box;
+  /* Keep body clear of letterhead band / footer band when using company image */
+  overflow-wrap: anywhere;
 }
 
 :host ::ng-deep .editor-frame--blank .ql-editor {
-  padding-top: 120mm;
+  /* Pre-printed paper / Word templates that already include letterhead */
+  padding-top: 18mm;
+  padding-bottom: 18mm;
 }
 
 :host ::ng-deep .editor-frame--image .ql-editor {
-  padding-top: 32mm;
+  /* Reserve space so body does not overlap header artwork */
+  padding-top: 36mm;
+  padding-bottom: 24mm;
+}
+
+:host ::ng-deep .editor-frame--imported .ql-editor,
+:host ::ng-deep .editor-frame--blank.editor-frame--imported .ql-editor {
+  /* Imported DOCX already encodes margins / letterhead images */
+  padding: 12mm 14mm 14mm;
+  min-height: 297mm;
 }
 
 :host ::ng-deep .editor-frame .ql-editor p {
-  margin: 0.45em 0;
+  margin: 0.35em 0;
+}
+
+/* DOCX import: respect inline spacing/alignment from Word (don't flatten margins) */
+:host ::ng-deep .editor-frame--imported .ql-editor p,
+:host ::ng-deep .editor-frame--imported .ql-editor h1,
+:host ::ng-deep .editor-frame--imported .ql-editor h2,
+:host ::ng-deep .editor-frame--imported .ql-editor h3,
+:host ::ng-deep .editor-frame .ql-editor p.hr-imported-doc,
+:host ::ng-deep .editor-frame .ql-editor h1.hr-imported-doc,
+:host ::ng-deep .editor-frame .ql-editor h2.hr-imported-doc,
+:host ::ng-deep .editor-frame .ql-editor h3.hr-imported-doc {
+  margin-top: unset;
+  margin-bottom: unset;
+}
+
+:host ::ng-deep .editor-frame .ql-editor img {
+  max-width: 100%;
+  height: auto;
+}
+
+:host ::ng-deep .editor-frame .ql-editor table,
+:host ::ng-deep .editor-frame .ql-editor .hr-doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5em 0;
+  border: none;
+}
+
+:host ::ng-deep .editor-frame .ql-editor table td,
+:host ::ng-deep .editor-frame .ql-editor table th,
+:host ::ng-deep .editor-frame .ql-editor .hr-doc-table td,
+:host ::ng-deep .editor-frame .ql-editor .hr-doc-table th {
+  border: none;
+  padding: 2px 6px;
+  vertical-align: top;
+}
+
+:host ::ng-deep .editor-frame .ql-editor table.hr-doc-table-bordered td,
+:host ::ng-deep .editor-frame .ql-editor table.hr-doc-table-bordered th {
+  border: 1px solid #000;
+  padding: 4px 6px;
+}
+
+:host ::ng-deep .editor-frame .ql-editor .page-break {
+  display: block;
+  page-break-before: always;
+  break-before: page;
+  height: 0;
+  margin: 12mm 0;
+  border: 0;
+  border-top: 1px dashed #cbd5e1;
+}
+
+:host ::ng-deep .editor-frame .ql-editor .hr-imported-doc {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 12pt;
+  line-height: 1.5;
+  color: #000;
+}
+
+:host ::ng-deep .editor-frame .ql-editor .hr-align-left,
+:host ::ng-deep .editor-frame .ql-editor .ql-align-left {
+  text-align: left;
+}
+:host ::ng-deep .editor-frame .ql-editor .hr-align-center,
+:host ::ng-deep .editor-frame .ql-editor .ql-align-center {
+  text-align: center;
+}
+:host ::ng-deep .editor-frame .ql-editor .hr-align-right,
+:host ::ng-deep .editor-frame .ql-editor .ql-align-right {
+  text-align: right;
+}
+:host ::ng-deep .editor-frame .ql-editor .hr-align-justify,
+:host ::ng-deep .editor-frame .ql-editor .ql-align-justify {
+  text-align: justify;
+}
+
+:host ::ng-deep .editor-frame .ql-editor ul,
+:host ::ng-deep .editor-frame .ql-editor ol {
+  padding-left: 1.4em;
+  margin: 0.4em 0;
 }
 
 :host ::ng-deep .ql-editor.ql-blank::before {
@@ -87,7 +305,8 @@
   }
 
   :host ::ng-deep .editor-frame .ql-editor,
-  :host ::ng-deep .editor-frame--blank .ql-editor {
+  :host ::ng-deep .editor-frame--blank .ql-editor,
+  :host ::ng-deep .editor-frame--imported .ql-editor {
     padding: 16px;
     min-height: 60vh;
   }

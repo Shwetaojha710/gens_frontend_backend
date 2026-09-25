@@ -76,11 +76,21 @@
             <div class="col-md-6">
               <label class="form-label fw-bold">Import document (optional)</label>
               <div>
-                <label class="btn btn-sm btn-outline-primary mb-0">
-                  Import HTML / TXT
-                  <input type="file" accept=".html,.htm,.txt,text/html,text/plain" hidden (change)="importDocumentFile($event)" />
+                <label class="btn btn-sm btn-outline-primary mb-0" [class.disabled]="importingDoc">
+                  {{ importingDoc ? 'Importing…' : 'Import Word / HTML / TXT' }}
+                  <input
+                    type="file"
+                    accept=".docx,.html,.htm,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/html,text/plain"
+                    hidden
+                    (change)="importDocumentFile($event)"
+                    [disabled]="importingDoc"
+                  />
                 </label>
-                <small class="text-muted d-block mt-1">Loads content into the editor so you can edit and add variables.</small>
+                <small class="text-muted d-block mt-1">
+                  Import Offer / Appointment / NDA / Service Agreement as <b>.docx</b> to keep letterhead, tables, images and page breaks.
+                  Old <b>.doc</b> files must be saved as <b>.docx</b> first. Placeholders like
+                  <code ngNonBindable>{{employee_name}}</code> stay intact for variable replacement.
+                </small>
               </div>
             </div>
           </div>
@@ -105,16 +115,57 @@
 
           <div class="mt-3">
             <label class="form-label fw-bold">Document body</label>
+
+            <!-- Formatting toolbar for Word-import (contenteditable) mode -->
+            <div class="dt-rich-toolbar" *ngIf="useRichEditor" (mousedown)="$event.preventDefault()">
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('bold')" title="Bold"><b>B</b></button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('italic')" title="Italic"><i>I</i></button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('underline')" title="Underline"><u>U</u></button>
+              <span class="dt-rich-sep"></span>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('justifyLeft')" title="Align left">Left</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('justifyCenter')" title="Align center">Center</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('justifyRight')" title="Align right">Right</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('justifyFull')" title="Justify">Justify</button>
+              <span class="dt-rich-sep"></span>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('outdent')" title="Tab left (outdent)">⇤ Tab</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('indent')" title="Tab right (indent)">Tab ⇥</button>
+              <span class="dt-rich-sep"></span>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('insertUnorderedList')" title="Bullet list">• List</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('insertOrderedList')" title="Numbered list 1,2,3…">1. 2. 3.</button>
+              <span class="dt-rich-sep"></span>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('removeFormat')" title="Clear formatting">Clear</button>
+            </div>
+
             <div class="a4-stage">
               <div
                 class="editor-frame"
                 [class.editor-frame--blank]="letterheadMode === 'blank'"
                 [class.editor-frame--image]="letterheadMode === 'image' && !!pageBackground"
+                [class.editor-frame--imported]="importedLayout || useRichEditor"
                 [style.background-image]="pageBackground && letterheadMode === 'image' ? 'url(' + pageBackground + ')' : null"
               >
-                <div #editorHost class="dt-quill-host"></div>
+                <!-- Wrap Quill so its toolbar (sibling of host) is destroyed with *ngIf -->
+                <div *ngIf="!useRichEditor" class="dt-quill-wrap">
+                  <div #editorHost class="dt-quill-host"></div>
+                </div>
+                <!-- Word import: contenteditable so DOCX HTML stays visible + editable -->
+                <div
+                  *ngIf="useRichEditor"
+                  #richHost
+                  class="dt-rich-host"
+                  contenteditable="true"
+                  spellcheck="true"
+                  (input)="onRichInput()"
+                  (keydown)="onRichKeydown($event)"
+                  (mouseup)="saveRichSelection()"
+                  (keyup)="saveRichSelection()"
+                  (click)="saveRichSelection()"
+                ></div>
               </div>
             </div>
+            <small class="text-muted" *ngIf="useRichEditor">
+              Word layout mode — text select karo, upar wale <b>B / I / U</b> buttons use karo (Quill toolbar nahi).
+            </small>
           </div>
 
           <div class="mt-3 d-flex gap-2">

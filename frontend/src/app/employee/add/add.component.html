@@ -101,6 +101,13 @@
                 </li>
                 <li class="nav-item" role="presentation">
                   <button class="nav-link tab-link waves-effect waves-light" data-bs-toggle="tab"
+                    data-bs-target="#insurance_docs" aria-selected="false" role="tab" tabindex="-1">
+                    <i class="icon-base ri ri-shield-check-line icon-sm me-2"></i>
+                    <span class="align-middle">Insurance</span>
+                  </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link tab-link waves-effect waves-light" data-bs-toggle="tab"
                     data-bs-target="#cancellation" aria-selected="false" role="tab" tabindex="-1">
                     <i class="icon-base ri ri-refresh-line icon-sm me-2"></i>
                     <span class="align-middle">Work Experience</span>
@@ -412,6 +419,9 @@
                 <!-- <router-outlet></router-outlet> -->
 
                 <app-qualification></app-qualification>
+              </div>
+              <div class="tab-pane fade" id="insurance_docs" role="tabpanel">
+                <app-insurance-documents></app-insurance-documents>
               </div>
               <div class="tab-pane fade" id="cancellation" role="tabpanel">
                 <app-experience></app-experience>

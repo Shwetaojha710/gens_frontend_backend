@@ -72,6 +72,20 @@ export const employeePortalRoutes: Routes = [
           ),
       },
       {
+        path: 'insurance-policy',
+        loadComponent: () =>
+          import('./insurance-policy/employee-portal-insurance-policy.component').then(
+            (m) => m.EmployeePortalInsurancePolicyComponent,
+          ),
+      },
+      {
+        path: 'e-insurance-card',
+        loadComponent: () =>
+          import('./e-insurance-card/employee-portal-e-insurance-card.component').then(
+            (m) => m.EmployeePortalEInsuranceCardComponent,
+          ),
+      },
+      {
         path: 'notifications',
         loadComponent: () =>
           import('./notifications/employee-portal-notifications.component').then(

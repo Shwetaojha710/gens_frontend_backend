@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import SignaturePad from 'signature_pad';
 import { EmployeePortalService } from '../services/employee-portal.service';
 import { Notyf } from 'notyf';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-employee-portal-documents',
@@ -19,6 +20,10 @@ export class EmployeePortalDocumentsComponent implements OnInit, AfterViewChecke
   tenant: any = {};
   notyf = new Notyf();
   downloading: string | null = null;
+  insuranceDocs: any[] = [];
+  insuranceLoading = true;
+  companyPolicyUrl: string | null = null;
+  companyPolicyLoading = true;
 
   /** Keep textarea newlines when injecting address into letter HTML */
   private formatMultilineHtml(value: string | null | undefined): string {
@@ -63,6 +68,39 @@ export class EmployeePortalDocumentsComponent implements OnInit, AfterViewChecke
       },
       error: () => { this.loading = false; this.notyf.error('Could not load documents.'); },
     });
+
+    this.portalService.getAppInsuranceDocs().subscribe({
+      next: (res) => {
+        this.insuranceLoading = false;
+        const list = Array.isArray(res?.data) ? res.data : [];
+        this.insuranceDocs = list.map((d: any) => ({
+          ...d,
+          fileUrl: this.buildUploadUrl(d.doc_name),
+        }));
+      },
+      error: () => {
+        this.insuranceLoading = false;
+        this.insuranceDocs = [];
+      },
+    });
+
+    this.portalService.getAppInsurancePolicy().subscribe({
+      next: (res) => {
+        this.companyPolicyLoading = false;
+        this.companyPolicyUrl = res?.data?.url || null;
+      },
+      error: () => {
+        this.companyPolicyLoading = false;
+        this.companyPolicyUrl = null;
+      },
+    });
+  }
+
+  private buildUploadUrl(docName: string): string {
+    if (!docName) return '';
+    if (/^https?:\/\//i.test(docName)) return docName;
+    const root = String(environment.apiUrl || '').replace(/\/api\/?$/, '/');
+    return `${root}upload/${docName}`;
   }
 
   ngAfterViewChecked(): void {

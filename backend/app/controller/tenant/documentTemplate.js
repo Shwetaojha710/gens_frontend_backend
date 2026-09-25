@@ -2,6 +2,8 @@ const DocumentTemplate = require('../../models/documentTemplate');
 const GeneratedDocument = require('../../models/generatedDocument');
 const empPersonal = require('../../models/empPersonal');
 const Tenant = require('../../models/tenant');
+const Designation = require('../../models/designation');
+const Department = require('../../models/department');
 const Helper = require('../../helper/helper');
 const { Op } = require('sequelize');
 const fs = require('fs');
@@ -199,6 +201,28 @@ async function buildVariableMap(tenantId, employeeId, hrName, issueDate) {
   const gender = String(emp.gender || '').toLowerCase();
   const isMale = gender === 'male';
 
+  // Resolve department / designation names from IDs
+  let designationName = BLANK;
+  let departmentName = BLANK;
+  try {
+    if (emp.designationId) {
+      const desig = await Designation.findOne({
+        where: { id: emp.designationId, tenantId },
+        attributes: ['name'],
+        raw: true,
+      });
+      if (desig?.name) designationName = desig.name;
+    }
+    if (emp.departmentId) {
+      const dept = await Department.findOne({
+        where: { id: emp.departmentId, tenantId },
+        attributes: ['name'],
+        raw: true,
+      });
+      if (dept?.name) departmentName = dept.name;
+    }
+  } catch (_) {}
+
   // Soft salary lookup — ignore failures
   let salaryItems = [];
   let annualCtc = 0;
@@ -253,8 +277,8 @@ async function buildVariableMap(tenantId, employeeId, hrName, issueDate) {
   return {
     employee_name: `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || BLANK,
     employee_id: emp.empCode || BLANK,
-    designation: emp.designation || emp.Designation || BLANK,
-    department: emp.department || BLANK,
+    designation: designationName,
+    department: departmentName,
     joining_date: fmtDate(emp.joiningDate),
     employment_type: emp.empType || BLANK,
     work_location: emp.city || emp.state || tenant?.companyAddress || BLANK,
@@ -281,7 +305,14 @@ async function buildVariableMap(tenantId, employeeId, hrName, issueDate) {
 
 function fillTemplate(bodyHtml, vars) {
   return String(bodyHtml || '').replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key) => {
-    return vars[key] != null && vars[key] !== '' ? String(vars[key]) : BLANK;
+    const raw = vars[key] != null && vars[key] !== '' ? String(vars[key]) : BLANK;
+    // salary_table is intentional HTML; escape everything else so layout markup stays intact
+    if (key === 'salary_table') return raw;
+    return raw
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   });
 }
 
@@ -301,10 +332,18 @@ async function getLetterheadBase64(tenantId) {
 
 function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl }) {
   const useImage = !letterheadBlank && letterheadDataUrl;
-  const spacer = letterheadBlank
-    ? `<div style="height:120mm;min-height:120mm">&nbsp;</div>`
-    : '';
-  const bodyPadTop = useImage ? '28mm' : letterheadBlank ? '0' : '18mm';
+  const body = String(filled || '');
+  const hasImportedLayout =
+    /hr-imported-doc|data-preserve-layout|hr-align-|text-align\s*:|hr-numbered|hr-doc-table/i.test(body);
+  // Pre-printed paper spacer only when template is blank-top AND not a full imported Word layout
+  const spacer =
+    letterheadBlank && !hasImportedLayout
+      ? `<div style="height:120mm;min-height:120mm">&nbsp;</div>`
+      : '';
+  // Match Manage Template editor padding so assign/preview looks identical
+  const bodyPadTop = hasImportedLayout ? '12mm' : useImage ? '36mm' : letterheadBlank ? '0' : '18mm';
+  const bodyPadX = hasImportedLayout ? '14mm' : '18mm';
+  const bodyPadBottom = hasImportedLayout ? '14mm' : '22mm';
   const bgCss = useImage
     ? `background-image:url('${letterheadDataUrl}');background-repeat:no-repeat;background-position:top center;background-size:100% auto;`
     : '';
@@ -323,13 +362,70 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl }) {
         width: 210mm;
         min-height: 297mm;
         box-sizing: border-box;
-        padding: ${bodyPadTop} 18mm 20mm;
+        padding: ${bodyPadTop} ${bodyPadX} ${bodyPadBottom};
         margin: 0 auto;
+        background: #fff;
       }
-      p { text-align: justify; margin: 8px 0; }
-      h1,h2,h3 { text-align: center; }
-      table { width: 100%; border-collapse: collapse; }
-      td, th { border: 1px solid #000; padding: 4px 6px; }
+      /* Keep template spacing — do not flatten */
+      p, h1, h2, h3, h4, h5, h6 { margin: 0.35em 0; }
+      p[style*="margin"], h1[style], h2[style], h3[style] { margin-top: unset; margin-bottom: unset; }
+      /* Do NOT force center on headings — template alignment wins */
+      h1, h2, h3 { font-weight: bold; }
+      img { max-width: 100%; height: auto; }
+      /* Layout tables (signature L/R) stay borderless by default — matches Word */
+      table, .hr-doc-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0.5em 0;
+        border: none;
+      }
+      td, th {
+        border: none;
+        padding: 2px 6px;
+        vertical-align: top;
+      }
+      /* Only show grid when template/table explicitly bordered */
+      table.hr-doc-table-bordered td,
+      table.hr-doc-table-bordered th,
+      table[border]:not([border="0"]) td,
+      table[border]:not([border="0"]) th {
+        border: 1px solid #000;
+        padding: 4px 6px;
+      }
+      ul, ol, .hr-doc-ul, .hr-doc-ol { padding-left: 1.6em; margin: 0.4em 0; }
+      ol, .hr-doc-ol { list-style-type: decimal !important; list-style-position: outside; }
+      ul, .hr-doc-ul { list-style-type: disc !important; list-style-position: outside; }
+      li { display: list-item !important; margin: 0.2em 0; }
+      .hr-numbered { margin: 0.35em 0; }
+      .page-break {
+        display: block;
+        page-break-before: always;
+        break-before: page;
+        height: 0;
+        margin: 12mm 0;
+        border: 0;
+        border-top: 1px dashed #cbd5e1;
+      }
+      .hr-imported-doc {
+        font-family: 'Times New Roman', Times, serif;
+        font-size: 12pt;
+        line-height: 1.5;
+        color: #000;
+      }
+      .hr-align-left, .ql-align-left { text-align: left !important; }
+      .hr-align-center, .ql-align-center { text-align: center !important; }
+      .hr-align-right, .ql-align-right { text-align: right !important; }
+      .hr-align-justify, .ql-align-justify { text-align: justify !important; }
+      u, span[style*="underline"] { text-decoration: underline !important; }
+      /* Preserve inline text-align from editor / Word */
+      [style*="text-align: right"], [style*="text-align:right"] { text-align: right !important; }
+      [style*="text-align: left"], [style*="text-align:left"] { text-align: left !important; }
+      [style*="text-align: center"], [style*="text-align:center"] { text-align: center !important; }
+      [style*="text-align: justify"], [style*="text-align:justify"] { text-align: justify !important; }
+      @media print {
+        .page { box-shadow: none; }
+        .page-break { page-break-before: always; break-before: page; border: 0; }
+      }
     </style></head><body><div class="page">${spacer}${filled}</div></body></html>`;
 }
 
@@ -417,11 +513,26 @@ exports.saveGeneratedDocument = async (req, res) => {
       const vars = await buildVariableMap(tenantId, employeeId, hrName);
       if (!vars) return Helper.response(false, 'Employee not found', {}, res, 404);
       snapshot = vars;
-      html = fillTemplate(template.bodyHtml, vars);
-      if (template.includeSalaryAnnexure) html += buildAnnexure(vars);
-      if (template.letterheadBlank) {
-        html = `<div style="height:120mm;min-height:120mm">&nbsp;</div>${html}`;
-      }
+      let filled = fillTemplate(template.bodyHtml, vars);
+      if (template.includeSalaryAnnexure) filled += buildAnnexure(vars);
+      const letterheadDataUrl = template.letterheadBlank
+        ? null
+        : await getLetterheadBase64(tenantId);
+      html = wrapPreviewHtml({
+        filled,
+        letterheadBlank: !!template.letterheadBlank,
+        letterheadDataUrl,
+      });
+    } else if (!/^\s*<!DOCTYPE html/i.test(html) && !/<html[\s>]/i.test(html)) {
+      // Body-only HTML from client — wrap so print/assign matches template layout
+      const letterheadDataUrl = template.letterheadBlank
+        ? null
+        : await getLetterheadBase64(tenantId);
+      html = wrapPreviewHtml({
+        filled: html,
+        letterheadBlank: !!template.letterheadBlank,
+        letterheadDataUrl,
+      });
     }
 
     const row = await GeneratedDocument.create({

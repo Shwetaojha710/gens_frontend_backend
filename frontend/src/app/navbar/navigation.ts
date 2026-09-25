@@ -48,6 +48,7 @@ export const APP_MENU_ITEMS: MenuItem[] = [
       { title: 'Apply Leave',   icon: 'ri-file-list-2-line',  link: '/layout/employee/apply-leave', permKey: 'emp-mgmt.leave' },
       { title: 'All Letters',   icon: 'ri-file-paper-2-line', link: '/layout/employee/all-letters', permKey: 'emp-mgmt.letters' },
       { title: 'Generate Letter', icon: 'ri-file-edit-line', link: '/layout/employee/generate-letter', permKey: 'emp-mgmt.letters' },
+      // { title: 'Insurance Documents', icon: 'ri-shield-check-line', link: '/layout/employee/insurance', permKey: 'emp-mgmt.insurance' },
     ]
   },
   {
@@ -120,6 +121,7 @@ export const APP_MENU_ITEMS: MenuItem[] = [
       { title: 'Salary Component',   icon: 'ri-wallet-2-line',    link: '/layout/master/salary-component', permKey: 'master.salary' },
       { title: 'Pay Slip Setup',     icon: 'ri-file-pdf-2-line',  link: '/layout/master/pay-slip',         permKey: 'master.payslip' },
       { title: 'Branch',             icon: 'ri-file-pdf-2-line',  link: '/layout/master/branch',           permKey: 'master.branch' },
+      { title: 'Insurance Policy',   icon: 'ri-shield-check-line', link: '/layout/master/insurance-policy', permKey: 'master.insurancePolicy' },
     ]
   },
   {
