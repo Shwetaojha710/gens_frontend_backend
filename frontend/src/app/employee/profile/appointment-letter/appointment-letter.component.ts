@@ -423,15 +423,14 @@ this.isDownload=true
   <head>
     <meta charset='utf-8'>
     <style>
-      body { font-family: 'Calibri'; line-height:1.6; }
-      table { border-collapse: collapse; width:100%; }
-      th, td { border:1px solid black; padding:5px; }
-      .highlight { background: yellow; font-weight: bold; }
-      .page-break { page-break-before: always; }
-      .page-break-spacer { page-break-before: always; height: 16px; margin-top: 16px; }
-      .force-page-break { page-break-before: always; mso-page-break-before: always; break-before: page; padding-top: 16px; }
-      h4.force-page-break { page-break-before: always; mso-page-break-before: always; break-before: page; }
-      .ord-sup { font-size: 0.65em; vertical-align: super; line-height: 0; }
+      @page { margin: 0; }
+      * { box-sizing: border-box; }
+      body { font-family: 'Calibri'; font-size: 11px; line-height: 1.6; padding: 15mm 20mm; color: #000; background: #fff; }
+      h3 { text-align: center; font-weight: bold; text-decoration: underline; margin-bottom: 30px; }
+      h4 { text-align: center; }
+      h4 + *, h4 + table { page-break-before: avoid; }
+      table { width: 100%; border-collapse: collapse; }
+      .header-table td { vertical-align: top; border: none !important; }
       .recipient-address, .address-lines {
         max-width: 300px;
         word-wrap: break-word;
@@ -441,6 +440,21 @@ this.isDownload=true
       }
       .ref-no-line, .ref-no-line span { white-space: nowrap !important; }
       .right { white-space: nowrap; }
+      .salary-table th, .salary-table td { border: 1px solid black; padding: 4px; font-size: 12px; }
+      .salary-table tr { page-break-inside: avoid; }
+      ol { padding-left: 20px; margin-top: 10px; }
+      li { font-size: 11px; margin-bottom: 6px; page-break-inside: avoid; }
+      p { font-size: 11px; margin: 6px 0; }
+      .page-break { page-break-before: always; }
+      .page-break-spacer { page-break-before: always; break-before: page; height: 16px; margin-top: 16px; }
+      .force-page-break { page-break-before: always; mso-page-break-before: always; break-before: page; padding-top: 16px; }
+      h4.force-page-break { page-break-before: always; mso-page-break-before: always; break-before: page; }
+      .ord-sup { font-size: 0.65em; vertical-align: super; line-height: 0; }
+      @media print {
+        .salary-table th, .salary-table td { border: 1px solid black; }
+        .salary-table tr { page-break-inside: avoid; }
+        li { page-break-inside: avoid; }
+      }
     </style>
   </head>
   <body>
