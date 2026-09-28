@@ -1,10 +1,10 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://gens.demoquaeretech.in/api/api/',
-  python_apiUrl: 'https://gens.demoquaeretech.in/resume_tracker/api/v1/ats',
+  apiUrl: 'https://gensdemo.demoquaeretech.in/api/api/',
+  python_apiUrl: 'https://gensdemo.demoquaeretech.in/resume_tracker/api/v1/ats',
   websitechatApiUrl: 'https://wonderful-den-garlic-disposal.trycloudflare.com/chat',
   transcribeApiUrl: 'https://wonderful-den-garlic-disposal.trycloudflare.com/api/transcribe',
-  aiHrmsApiUrl: 'https://gens.demoquaeretech.in/chatbot',
+  aiHrmsApiUrl: 'https://gensdemo.demoquaeretech.in/chatbot',
   chatApiUrl: 'https://gens.demoquaeretech.in/chatbot/api/ai/chat',
 
   firebase: {

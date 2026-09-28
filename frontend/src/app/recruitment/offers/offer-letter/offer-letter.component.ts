@@ -228,15 +228,33 @@ export class RecruitmentOfferLetterComponent implements OnInit {
     const day = date.getDate();
     const month = date.toLocaleString('en-US', { month: 'long' });
     const year = date.getFullYear();
-    return `${day}<sup>${this.getOrdinalSuffix(day)}</sup> ${month}, ${year}`;
+    return `${day}<sup style="font-size:0.65em;vertical-align:super;text-transform:none;font-weight:normal;">${this.getOrdinalSuffix(day)}</sup> ${month}, ${year}`;
   }
 
   formatAddressHtml(address: string | null | undefined): string {
+    return this.addressLines(address)
+      .map((line) =>
+        line
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/ {2}/g, ' &nbsp;'),
+      )
+      .join('<br>');
+  }
+
+  addressLines(address: string | null | undefined): string[] {
     return String(address || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/\r\n|\r|\n/g, '<br>');
+      .replace(/\\r\\n|\\n|\\r/g, '\n')
+      .split(/\r\n|\r|\n/)
+      .map((line) => line.replace(/\s+$/g, ''))
+      .filter((line) => line.length > 0);
+  }
+
+  fatherNameDisplay(name: string | null | undefined): string {
+    return String(name || '')
+      .replace(/^\s*(mr\.?|mrs\.?|ms\.?|miss)\s+/i, '')
+      .trim();
   }
 
   private getOrdinalSuffix(day: number): string {

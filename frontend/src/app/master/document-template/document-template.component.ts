@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import {
   ChangeDetectorRef,
   Component,
@@ -8,6 +8,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Router, RouterModule } from '@angular/router';
 import { Notyf } from 'notyf';
 import Quill from 'quill';
@@ -26,7 +27,10 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
   @ViewChild('editorHost') editorHost?: ElementRef<HTMLDivElement>;
   /** Contenteditable host used for Word imports (Quill cannot keep full DOCX HTML). */
   @ViewChild('richHost') richHost?: ElementRef<HTMLDivElement>;
-
+  previewOpen = false;
+  previewUrl: SafeResourceUrl | null = null;
+  private previewObjectUrl: string | null = null;
+  private lastPrintHtml = '';
   notyf = new Notyf();
   list: any[] = [];
   createFlag = false;
@@ -97,6 +101,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     public statusService: StatusService,
     private router: Router,
     private cdr: ChangeDetectorRef,
+    private sanitizer: DomSanitizer,
   ) {}
 
   ngOnInit(): void {
@@ -107,6 +112,15 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.destroyEditor();
+    this.revokePreviewUrl();
+  }
+
+  private revokePreviewUrl(): void {
+    if (this.previewObjectUrl) {
+      URL.revokeObjectURL(this.previewObjectUrl);
+      this.previewObjectUrl = null;
+    }
+    this.previewUrl = null;
   }
 
   get pageBackground(): string | null {
@@ -118,6 +132,329 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     this.form.letterheadBlank = this.letterheadMode === 'blank';
   }
 
+  private applyRichTextStyle(property: string, value: string): void {
+    if (!value) return;
+
+    const el = this.getRichEl();
+    if (!el) return;
+
+    if (!this.restoreRichSelection()) {
+      this.notyf.error('Pehle text select karo');
+      return;
+    }
+
+    const selection = window.getSelection();
+
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+
+    try {
+      const span = document.createElement('span');
+
+      span.style.setProperty(property, value);
+
+      const fragment = range.extractContents();
+      span.appendChild(fragment);
+      range.insertNode(span);
+
+      const newRange = document.createRange();
+      newRange.selectNodeContents(span);
+
+      selection.removeAllRanges();
+      selection.addRange(newRange);
+
+      this.richSavedRange = newRange.cloneRange();
+
+      this.onRichInput();
+    } catch (error) {
+      console.error('applyRichTextStyle failed:', error);
+    }
+  }
+
+  private applyParagraphSpacing(value: string): void {
+    if (!value) return;
+
+    const el = this.getRichEl();
+    if (!el) return;
+
+    if (!this.restoreRichSelection()) {
+      this.notyf.error('Pehle paragraph select/click karo');
+      return;
+    }
+
+    const block = this.getSelectionBlock();
+
+    if (!block) {
+      this.notyf.error('Paragraph select nahi hua');
+      return;
+    }
+
+    block.style.marginBottom = value;
+
+    this.form.bodyHtml = el.innerHTML;
+    this.saveRichSelection();
+  }
+
+
+  private applyParagraphStyle(property: string, value: string): void {
+    if (!value) return;
+
+    const el = this.getRichEl();
+    if (!el) return;
+
+    const block = this.getSelectionBlock();
+
+    if (!block) {
+      this.notyf.error('Paragraph select/click karo');
+      return;
+    }
+
+    block.style.setProperty(property, value);
+
+    this.form.bodyHtml = el.innerHTML;
+    this.saveRichSelection();
+  }
+
+
+  openPrintPreview(): void {
+    if (this.useRichEditor) {
+      const el = this.getRichEl();
+      if (el) this.form.bodyHtml = el.innerHTML;
+    } else if (this.quill) {
+      this.form.bodyHtml = this.quill.root.innerHTML;
+    }
+
+    const html = this.buildPrintHtml(this.form.bodyHtml || '');
+    this.lastPrintHtml = html;
+    this.revokePreviewUrl();
+    const blob = new Blob([html], { type: 'text/html' });
+    this.previewObjectUrl = URL.createObjectURL(blob);
+    this.previewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.previewObjectUrl);
+    this.previewOpen = true;
+  }
+
+  closePrintPreview(): void {
+    this.previewOpen = false;
+    this.revokePreviewUrl();
+    this.lastPrintHtml = '';
+  }
+
+  printDocument(): void {
+    const html = this.lastPrintHtml || this.buildPrintHtml(this.form.bodyHtml || '');
+    if (!html.replace(/<[^>]+>/g, '').trim()) {
+      this.notyf.error('Document body is empty');
+      return;
+    }
+    const w = window.open('', '_blank');
+    if (!w) {
+      this.notyf.error('Popup blocked â€” allow popups to print');
+      return;
+    }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => {
+      try {
+        w.focus();
+        w.print();
+      } catch (_) {}
+    }, 350);
+  }
+
+  /**
+   * Full printable HTML â€” same look as browser Print dialog / Generate Letter.
+   */
+  private buildPrintHtml(bodyHtml: string): string {
+    let filled = this.normalizeHtmlForPrint(String(bodyHtml || ''));
+    filled = this.wrapTrailingFooterForPrint(filled);
+
+    const useImage = this.letterheadMode === 'image' && !!this.pageBackground;
+    const letterheadBlank = this.letterheadMode === 'blank' || !!this.form.letterheadBlank;
+    const hasImportedLayout =
+      this.importedLayout ||
+      this.useRichEditor ||
+      /hr-imported-doc|data-preserve-layout|hr-align-|text-align\s*:|hr-numbered|hr-doc-table/i.test(filled);
+
+    const spacer =
+      letterheadBlank && !hasImportedLayout
+        ? `<div style="height:120mm;min-height:120mm">&nbsp;</div>`
+        : '';
+    const bodyPadTop = hasImportedLayout ? '14mm' : useImage ? '36mm' : letterheadBlank ? '0' : '18mm';
+    const bodyPadX = '16mm';
+    const bodyPadBottom = hasImportedLayout ? '10mm' : '18mm';
+    const bgUrl = useImage ? String(this.pageBackground).replace(/'/g, '%27') : '';
+    const bgCss = bgUrl
+      ? `background-image:url('${bgUrl}');background-repeat:no-repeat;background-position:top center;background-size:100% auto;`
+      : '';
+
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Print Preview</title>
+<style>
+  @page { size: A4; margin: 0; }
+  html, body { margin: 0; padding: 0; background: #d1d5db; }
+  body {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 11.5pt;
+    line-height: 1.4;
+    color: #000;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .sheet-wrap { padding: 20px 12px 40px; display: flex; justify-content: center; }
+  .page {
+    width: 210mm; min-height: 297mm; box-sizing: border-box;
+    padding: ${bodyPadTop} ${bodyPadX} ${bodyPadBottom};
+    margin: 0 auto; background: #fff; ${bgCss}
+    box-shadow: 0 4px 24px rgba(0,0,0,0.22); position: relative;
+  }
+  /* Force normal flow — Word absolute/float causes overlap on print */
+  .page * { position: static !important; float: none !important; transform: none !important; z-index: auto !important; }
+  .page-body { display: block; }
+  p, h1, h2, h3, h4, h5, h6, li, td, th {
+    margin-top: 0.25em !important; margin-bottom: 0.35em !important;
+    line-height: 1.4 !important; height: auto !important; max-height: none !important;
+    min-height: 0 !important; overflow: visible !important; max-width: 100%;
+  }
+  p:empty { display: none !important; }
+  h1, h2, h3 { font-weight: bold; margin-bottom: 0.5em !important; }
+  img {
+    max-width: 100% !important; height: auto !important; display: block !important;
+    margin: 4px auto !important; page-break-inside: avoid !important; break-inside: avoid !important;
+  }
+  table, .hr-doc-table { width: 100%; border-collapse: collapse; margin: 0.4em 0 !important; border: none; page-break-inside: avoid; }
+  td, th { border: none; padding: 2px 4px; vertical-align: top; }
+  table.hr-doc-table-bordered td, table.hr-doc-table-bordered th,
+  table[border]:not([border="0"]) td, table[border]:not([border="0"]) th { border: 1px solid #000; padding: 4px 6px; }
+  ul, ol, .hr-doc-ul, .hr-doc-ol {
+    display: block !important; padding-left: 1.6em !important; margin: 0.45em 0 !important;
+    list-style-position: outside !important;
+  }
+  ol, .hr-doc-ol { list-style-type: decimal !important; }
+  ul, .hr-doc-ul { list-style-type: disc !important; }
+  li { display: list-item !important; margin: 0.25em 0 !important; line-height: 1.4 !important; page-break-inside: avoid; }
+  .hr-numbered { margin: 0.3em 0 !important; display: block !important; }
+  .hr-clearfix { display: none !important; height: 0 !important; margin: 0 !important; }
+  .page-break {
+    display: block; page-break-before: always; break-before: page;
+    height: 0 !important; margin: 0 !important; padding: 0 !important; border: 0 !important;
+  }
+  /* Footer letterhead — keep whole band on one page */
+  .hr-print-footer {
+    display: block !important; margin-top: 14pt !important;
+    page-break-inside: avoid !important; break-inside: avoid !important;
+  }
+  .hr-print-footer img { page-break-inside: avoid !important; break-inside: avoid !important; margin: 2px auto !important; }
+  .hr-imported-doc { font-family: 'Times New Roman', Times, serif; font-size: 11.5pt; line-height: 1.4 !important; color: #000; }
+  .hr-align-left, .ql-align-left { text-align: left !important; }
+  .hr-align-center, .ql-align-center { text-align: center !important; }
+  .hr-align-right, .ql-align-right { text-align: right !important; }
+  .hr-align-justify, .ql-align-justify { text-align: justify !important; }
+  u, span[style*="underline"] { text-decoration: underline !important; }
+  [style*="text-align: right"], [style*="text-align:right"] { text-align: right !important; }
+  [style*="text-align: left"], [style*="text-align:left"] { text-align: left !important; }
+  [style*="text-align: center"], [style*="text-align:center"] { text-align: center !important; }
+  [style*="text-align: justify"], [style*="text-align:justify"] { text-align: justify !important; }
+  @media print {
+    html, body { background: #fff !important; }
+    .sheet-wrap { padding: 0 !important; }
+    .page { box-shadow: none !important; width: 210mm !important; min-height: 297mm !important; margin: 0 !important; }
+    .page-break { border: 0 !important; margin: 0 !important; page-break-before: always; break-before: page; }
+    .hr-print-footer { page-break-inside: avoid !important; break-inside: avoid !important; }
+  }
+</style></head><body spellcheck="false">
+<div class="sheet-wrap"><div class="page"><div class="page-body">${spacer}${filled}</div></div></div>
+</body></html>`;
+  }
+
+  private normalizeHtmlForPrint(html: string): string {
+    let out = this.sanitizeOverlappingLayoutHtml(String(html || ''));
+
+    out = out.replace(
+      /<(p|div|h[1-6])\b[^>]*>\s*(?:&nbsp;|\u00a0|<br\s*\/?>|\s)*<\/\1>/gi,
+      '',
+    );
+
+    out = out.replace(
+      /<div\b([^>]*class=["'][^"']*page-break[^"']*["'][^>]*)>/gi,
+      '<div$1 style="height:0;margin:0;border:0;page-break-before:always;">',
+    );
+
+    out = out.replace(/style\s*=\s*(["'])(.*?)\1/gi, (_m, q: string, style: string) => {
+      let s = String(style);
+
+      const clampLen = (prop: string, maxPt: number) => {
+        s = s.replace(
+          new RegExp(`(${prop})\\s*:\\s*(-?[\\d.]+)(pt|px|mm|cm|em|rem)`, 'gi'),
+          (_mm, p: string, num: string, unit: string) => {
+            let pt = parseFloat(num) || 0;
+            const u = unit.toLowerCase();
+            if (u === 'px') pt = pt * 0.75;
+            else if (u === 'mm') pt = pt * 2.83465;
+            else if (u === 'cm') pt = pt * 28.3465;
+            else if (u === 'em' || u === 'rem') pt = pt * 12;
+            if (pt < 0) pt = 0;
+            else pt = Math.min(pt, maxPt);
+            return `${p}:${pt.toFixed(1)}pt`;
+          },
+        );
+      };
+
+      clampLen('margin-top', 12);
+      clampLen('margin-bottom', 12);
+      clampLen('margin-left', 72);
+      clampLen('margin-right', 48);
+      clampLen('padding-top', 10);
+      clampLen('padding-bottom', 10);
+      clampLen('padding-left', 48);
+      clampLen('padding-right', 48);
+
+      s = s.replace(/margin\s*:\s*([^;]+)/gi, (_mm, val: string) => {
+        const parts = String(val).trim().split(/\s+/);
+        const mapped = parts.map((part) => {
+          const m = part.match(/^(-?[\d.]+)(pt|px|mm)$/i);
+          if (!m) return part;
+          let pt = parseFloat(m[1]);
+          const u = m[2].toLowerCase();
+          if (u === 'px') pt *= 0.75;
+          if (u === 'mm') pt *= 2.83465;
+          return `${Math.min(Math.max(pt, 0), 12).toFixed(1)}pt`;
+        });
+        return `margin:${mapped.join(' ')}`;
+      });
+
+      s = s.replace(/line-height\s*:\s*([\d.]+)(pt|px)?/gi, (_mm, num: string, unit?: string) => {
+        const n = parseFloat(num);
+        if (!unit) return `line-height:${Math.min(Math.max(n || 1.4, 1.2), 1.8).toFixed(2)}`;
+        let pt = n;
+        if (unit.toLowerCase() === 'px') pt = n * 0.75;
+        return `line-height:${Math.min(Math.max(pt, 14), 22).toFixed(1)}pt`;
+      });
+
+      s = s.replace(/line-height\s*:\s*0\s*;?/gi, 'line-height:1.4;');
+      s = s.replace(/height\s*:\s*0(?:px|pt)?\s*;?/gi, '');
+
+      return `style=${q}${s}${q}`;
+    });
+
+    return out;
+  }
+
+  /** Keep trailing letterhead footer images together (never split across pages). */
+  private wrapTrailingFooterForPrint(html: string): string {
+    let out = String(html || '');
+    if (/hr-print-footer/i.test(out)) return out;
+
+    const re =
+      /((?:(?:<div\b[^>]*hr-clearfix[^>]*>\s*<\/div>\s*)|(?:<p\b[^>]*>\s*(?:&nbsp;|\u00a0|<br\s*\/?>|\s)*<\/p>\s*))*<img\b[^>]*>\s*(?:<div\b[^>]*hr-clearfix[^>]*>\s*<\/div>\s*)*){1,}\s*$/i;
+    const m = out.match(re);
+    if (!m || m.index == null) return out;
+
+    const footer = m[0];
+    if (!(footer.match(/<img\b/gi) || []).length) return out;
+    return `${out.slice(0, m.index)}<div class="hr-print-footer">${footer}</div>`;
+  }
   loadCatalog(): void {
     this.master.getHrTemplateVariables().subscribe({
       next: (res: any) => {
@@ -144,6 +481,11 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
         if (res?.status) {
           this.letterheadUrl = res.data?.url || null;
           this.letterheadBase64 = res.data?.base64 || null;
+          // If letterhead exists and user hasn't forced blank, show it
+          if ((this.letterheadBase64 || this.letterheadUrl) && this.letterheadMode === 'image') {
+            this.form.letterheadBlank = false;
+          }
+          this.cdr.detectChanges();
         }
       },
       error: () => {},
@@ -220,7 +562,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     host.innerHTML = '';
     this.quill = new Quill(host, {
       theme: 'snow',
-      placeholder: 'Type your letter like in Word… Insert variables from the chips.',
+      placeholder: 'Type your letter like in Wordâ€¦ Insert variables from the chips.',
       modules: {
         toolbar: [
           [{ header: [1, 2, 3, false] }],
@@ -254,11 +596,11 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
    */
   private registerClipboardMatchers(): void {
     if (!this.quill) return;
-    // no-op soft matcher — keeps default paste behavior intact
+    // no-op soft matcher â€” keeps default paste behavior intact
   }
 
   /**
-   * Load HTML into Quill. Never assign quill.root.innerHTML directly —
+   * Load HTML into Quill. Never assign quill.root.innerHTML directly â€”
    * that desyncs Quill's Delta and the toolbar/caret stop working.
    */
   private setEditorHtml(html: string, _preserveLayout = false): void {
@@ -273,7 +615,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       this.form.bodyHtml = this.quill.root.innerHTML || safe;
     } catch (e) {
       console.warn('dangerouslyPasteHTML failed', e);
-      // Last resort — but prefer switching to rich editor for complex HTML
+      // Last resort â€” but prefer switching to rich editor for complex HTML
       this.useRichEditor = true;
       this.importedLayout = true;
       this.destroyEditor();
@@ -296,7 +638,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     if (this.editorHost?.nativeElement) {
       this.editorHost.nativeElement.innerHTML = '';
     }
-    // Quill snow theme inserts .ql-toolbar as a SIBLING of the host — remove orphans
+    // Quill snow theme inserts .ql-toolbar as a SIBLING of the host â€” remove orphans
     // so Word-import mode doesn't show a dead Quill toolbar.
     try {
       document
@@ -442,12 +784,48 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     }
   }
 
+
+  insertPageBreak(): void {
+    const el = this.getRichEl();
+    if (!el) return;
+
+    this.restoreRichSelection();
+    el.focus();
+
+    const selection = window.getSelection();
+
+    if (!selection || selection.rangeCount === 0) {
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+
+    const pageBreak = document.createElement('div');
+    pageBreak.className = 'page-break';
+    pageBreak.innerHTML = '<br>';
+
+    range.deleteContents();
+    range.insertNode(pageBreak);
+
+    // Cursor page break ke baad
+    const newRange = document.createRange();
+    newRange.setStartAfter(pageBreak);
+    newRange.collapse(true);
+
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+
+    this.richSavedRange = newRange.cloneRange();
+
+    this.form.bodyHtml = el.innerHTML;
+  }
+
   richCmd(command: string, value?: string): void {
     const el = this.getRichEl();
     if (!el) return;
 
     const hadSelection = this.restoreRichSelection();
-    // For indent/align, caret is enough — no need for a text selection
+    // For indent/align, caret is enough â€” no need for a text selection
     if (!hadSelection && this.richSavedRange) {
       try {
         const sel = window.getSelection();
@@ -470,7 +848,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       console.warn('richCmd execCommand failed', command, e);
     }
 
-    // Word HTML often ignores formatting — wrap selected text manually
+    // Word HTML often ignores formatting â€” wrap selected text manually
     if (hadSelection && ['bold', 'italic', 'underline'].includes(command)) {
       const alreadyOn = document.queryCommandState(command);
       if (!alreadyOn) {
@@ -600,10 +978,11 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
         this.uploadingLetterhead = false;
         input.value = '';
         if (res?.status) {
-          this.notyf.success('Letterhead uploaded');
+          this.notyf.success('Letterhead uploaded â€” now showing on template');
           this.letterheadMode = 'image';
           this.form.letterheadBlank = false;
           this.loadLetterhead();
+          this.cdr.detectChanges();
         } else {
           this.notyf.error(res?.message || 'Upload failed');
         }
@@ -663,6 +1042,19 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       }
 
       html = this.normalizeImportedHtml(html, isDocx);
+      html = this.sanitizeOverlappingLayoutHtml(html);
+
+      // Mammoth ignores Word headers â€” pull header images ONLY if body has no top logo yet
+      // (otherwise logo + Ref line stack/overlap like the Offer Letter glitch)
+      if (isDocx) {
+        const bodyAlreadyHasLogo = /<img\b/i.test(html.slice(0, 5000));
+        if (!bodyAlreadyHasLogo) {
+          const headerHtml = await this.extractDocxHeaderHtml(await file.arrayBuffer());
+          if (headerHtml) {
+            html = this.sanitizeOverlappingLayoutHtml(headerHtml + html);
+          }
+        }
+      }
 
       const plainCheck = html
         .replace(/<[^>]+>/g, ' ')
@@ -674,11 +1066,25 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
         return;
       }
 
-      // Word templates usually already include letterhead/logo — avoid double letterhead overlay
-      this.letterheadMode = 'blank';
-      this.form.letterheadBlank = true;
       this.importedLayout = true;
       this.useRichEditor = true;
+
+      // Letterhead decision:
+      // - Word body/header already has logo image â†’ blank (avoid double letterhead)
+      // - Otherwise use company uploaded letterhead if available
+      const hasEmbeddedLetterhead = /<img\b/i.test(html.slice(0, 4000));
+      const hasCompanyLetterhead = !!(this.letterheadBase64 || this.letterheadUrl);
+      if (hasEmbeddedLetterhead) {
+        this.letterheadMode = 'blank';
+        this.form.letterheadBlank = true;
+      } else if (hasCompanyLetterhead) {
+        this.letterheadMode = 'image';
+        this.form.letterheadBlank = false;
+      } else {
+        this.letterheadMode = 'blank';
+        this.form.letterheadBlank = true;
+      }
+
       this.destroyEditor();
       this.form.bodyHtml = html;
       this.cdr.detectChanges();
@@ -688,12 +1094,17 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
         this.renderRichHtml(html);
         setTimeout(() => {
           const shown = (this.richHost?.nativeElement?.innerText || '').replace(/\s+/g, '').trim();
-          if (!shown) {
+          if (!shown && !/<img\b/i.test(html)) {
             this.notyf.error('Import ran but content did not render. Try another .docx (Save As in Word).');
           } else {
+            const lhNote = this.letterheadMode === 'image'
+              ? ' â€” company letterhead applied'
+              : hasEmbeddedLetterhead
+                ? ' â€” Word letterhead kept in document'
+                : ' â€” no letterhead (upload one & select â€œUse uploaded letterheadâ€)';
             this.notyf.success(
               isDocx
-                ? 'Word template imported — content is in the editor below'
+                ? `Word template imported${lhNote}`
                 : 'Document imported into editor',
             );
           }
@@ -717,12 +1128,86 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Mammoth skips Word headers/footers. Extract images from word/header*.xml
+   * so appointment-letter letterhead logos still appear after import.
+   */
+  private async extractDocxHeaderHtml(arrayBuffer: ArrayBuffer): Promise<string> {
+    try {
+      const JSZipMod: any = await import('jszip');
+      const JSZip = JSZipMod.default ?? JSZipMod;
+      const zip = await JSZip.loadAsync(arrayBuffer);
+
+      const headerFiles = Object.keys(zip.files).filter(
+        (n) => /^word\/header\d*\.xml$/i.test(n),
+      );
+      if (!headerFiles.length) return '';
+
+      const mimeFor = (name: string) => {
+        const lower = name.toLowerCase();
+        if (lower.endsWith('.png')) return 'image/png';
+        if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+        if (lower.endsWith('.gif')) return 'image/gif';
+        if (lower.endsWith('.webp')) return 'image/webp';
+        if (lower.endsWith('.emf') || lower.endsWith('.wmf')) return '';
+        return 'image/png';
+      };
+
+      const imgs: string[] = [];
+      const seen = new Set<string>();
+
+      for (const headerPath of headerFiles) {
+        const headerXml: string = await zip.file(headerPath)!.async('string');
+        // Relationships file for this header
+        const relsPath = headerPath.replace('word/', 'word/_rels/') + '.rels';
+        const relsFile = zip.file(relsPath);
+        const rIdToTarget = new Map<string, string>();
+        if (relsFile) {
+          const relsXml: string = await relsFile.async('string');
+          for (const m of relsXml.matchAll(/Id="(rId\d+)"[^>]*Target="([^"]+)"/gi)) {
+            rIdToTarget.set(m[1], m[2].replace(/^\.\.\//, 'word/').replace(/^media\//, 'word/media/'));
+          }
+          for (const m of relsXml.matchAll(/Target="([^"]+)"[^>]*Id="(rId\d+)"/gi)) {
+            const target = m[1].replace(/^\.\.\//, 'word/').replace(/^media\//, 'word/media/');
+            rIdToTarget.set(m[2], target.startsWith('word/') ? target : `word/${target}`);
+          }
+        }
+
+        // a:blip r:embed="rIdX"
+        const embeds = [...headerXml.matchAll(/r:embed="(rId\d+)"/gi)].map((m) => m[1]);
+        for (const rId of embeds) {
+          let target = rIdToTarget.get(rId);
+          if (!target) continue;
+          if (!target.startsWith('word/')) {
+            target = target.startsWith('media/') ? `word/${target}` : `word/${target}`;
+          }
+          if (seen.has(target)) continue;
+          const media = zip.file(target);
+          if (!media) continue;
+          const mime = mimeFor(target);
+          if (!mime) continue;
+          const base64 = await media.async('base64');
+          seen.add(target);
+          imgs.push(
+            `<img class="hr-docx-header-img" src="data:${mime};base64,${base64}" style="max-width:100%;height:auto;display:block;margin:0 auto 8px;" alt="Letterhead" />`,
+          );
+        }
+      }
+
+      if (!imgs.length) return '';
+      return `<div class="hr-docx-header hr-imported-doc" style="text-align:center;margin:0 0 8px;">${imgs.join('')}</div>`;
+    } catch (err) {
+      console.warn('extractDocxHeaderHtml failed', err);
+      return '';
+    }
+  }
+
   private async convertDocxToHtml(file: File): Promise<string> {
     const mammothMod: any = await import('mammoth');
     const mammoth = mammothMod.default ?? mammothMod;
     let arrayBuffer = await file.arrayBuffer();
 
-    // Word stores 1,2,3… in numbering.xml (not as visible text). Inject labels so they survive.
+    // Word stores 1,2,3â€¦ in numbering.xml (not as visible text). Inject labels so they survive.
     arrayBuffer = await this.injectDocxNumberingLabels(arrayBuffer);
 
     // Alignment + spacing + indent from Word OOXML (twips)
@@ -777,7 +1262,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
 
     let html = this.applyAlignmentInlineStyles(String(result.value || '').trim());
     html = this.applyDocxParagraphStyles(html, paraStyles);
-    // Fallback: turn <ol><li> into "1. …" text so numbers always show in editor/print
+    // Fallback: turn <ol><li> into "1. â€¦" text so numbers always show in editor/print
     html = this.flattenOrderedListsToNumberedText(html);
     return html;
   }
@@ -842,7 +1327,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
           const rom = ['i','ii','iii','iv','v','vi','vii','viii','ix','x','xi','xii','xiii','xiv','xv','xvi','xvii','xviii','xix','xx'];
           return rom[n - 1] || String(n);
         }
-        if (f === 'bullet') return '•';
+        if (f === 'bullet') return 'â€¢';
         return String(n);
       };
 
@@ -876,7 +1361,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
         const next = (counters.get(cKey) ?? start - 1) + 1;
         counters.set(cKey, next);
 
-        // Build label from lvlText (%1, %2, …)
+        // Build label from lvlText (%1, %2, â€¦)
         let label = lvlText;
         for (let lv = 0; lv <= ilvl; lv++) {
           const v = counters.get(`${numId}:${lv}`) ?? (lv === ilvl ? next : start);
@@ -891,7 +1376,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
         const textBits = [...inner.matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g)].map((t) => t[1]).join('');
         const plainStart = textBits.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trimStart();
         if (/^(\d+|[ivxlcdm]+|[a-z])[.)]\s/i.test(plainStart) || plainStart.startsWith(label.trim())) {
-          // Already has a visible number — just strip numPr to avoid mammoth list without markers
+          // Already has a visible number â€” just strip numPr to avoid mammoth list without markers
           const cleaned = inner.replace(/<w:numPr\b[^>]*>[\s\S]*?<\/w:numPr>/, '');
           return `<w:p${sep}${cleaned}</w:p>`;
         }
@@ -921,7 +1406,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Convert <ol><li>…</li></ol> into paragraphs with visible "1. " text. */
+  /** Convert <ol><li>â€¦</li></ol> into paragraphs with visible "1. " text. */
   private flattenOrderedListsToNumberedText(html: string): string {
     if (!html || !/<ol\b/i.test(html)) return html;
     return html.replace(/<ol\b([^>]*)>([\s\S]*?)<\/ol>/gi, (_full, _attrs: string, inner: string) => {
@@ -929,7 +1414,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       const startMatch = String(_attrs || '').match(/\bstart\s*=\s*["']?(\d+)/i);
       if (startMatch) n = parseInt(startMatch[1], 10) || 1;
       return inner.replace(/<li\b([^>]*)>([\s\S]*?)<\/li>/gi, (_li, liAttrs: string, liBody: string) => {
-        // Drop nested tags wrapper carefully — keep inner HTML
+        // Drop nested tags wrapper carefully â€” keep inner HTML
         const body = String(liBody || '').trim();
         // Avoid double-numbering if already starts with "1."
         const plain = body.replace(/<[^>]+>/g, '').trim();
@@ -941,7 +1426,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Parse word/document.xml for alignment, spacing and indent (twips → CSS). */
+  /** Parse word/document.xml for alignment, spacing and indent (twips â†’ CSS). */
   private async extractDocxParagraphStyles(
     arrayBuffer: ArrayBuffer,
   ): Promise<Array<{ align?: string; style: string }>> {
@@ -983,13 +1468,24 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
           const after = attrs.match(/w:after="(\d+)"/);
           const line = attrs.match(/w:line="(\d+)"/);
           const lineRule = attrs.match(/w:lineRule="([^"]+)"/);
-          if (before) styles.push(`margin-top:${(parseInt(before[1], 10) / 20).toFixed(1)}pt`);
-          if (after) styles.push(`margin-bottom:${(parseInt(after[1], 10) / 20).toFixed(1)}pt`);
+          if (before) {
+            const pt = Math.min(parseInt(before[1], 10) / 20, 16);
+            styles.push(`margin-top:${pt.toFixed(1)}pt`);
+          }
+          if (after) {
+            const pt = Math.min(parseInt(after[1], 10) / 20, 16);
+            styles.push(`margin-bottom:${pt.toFixed(1)}pt`);
+          }
           if (line) {
             const lineVal = parseInt(line[1], 10);
             const rule = (lineRule?.[1] || 'auto').toLowerCase();
-            if (rule === 'auto') styles.push(`line-height:${(lineVal / 240).toFixed(2)}`);
-            else styles.push(`line-height:${(lineVal / 20).toFixed(1)}pt`);
+            if (rule === 'auto') {
+              const lh = Math.min(Math.max(lineVal / 240, 1), 2.2);
+              styles.push(`line-height:${lh.toFixed(2)}`);
+            } else {
+              const pt = Math.min(lineVal / 20, 28);
+              styles.push(`line-height:${pt.toFixed(1)}pt`);
+            }
           }
         }
 
@@ -1000,10 +1496,10 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
           const right = attrs.match(/w:(?:right|end)="(\d+)"/);
           const first = attrs.match(/w:firstLine="(\d+)"/);
           const hanging = attrs.match(/w:hanging="(\d+)"/);
-          if (left) styles.push(`margin-left:${(parseInt(left[1], 10) / 20).toFixed(1)}pt`);
-          if (right) styles.push(`margin-right:${(parseInt(right[1], 10) / 20).toFixed(1)}pt`);
-          if (first) styles.push(`text-indent:${(parseInt(first[1], 10) / 20).toFixed(1)}pt`);
-          if (hanging) styles.push(`text-indent:-${(parseInt(hanging[1], 10) / 20).toFixed(1)}pt`);
+          if (left) styles.push(`margin-left:${Math.min(parseInt(left[1], 10) / 20, 72).toFixed(1)}pt`);
+          if (right) styles.push(`margin-right:${Math.min(parseInt(right[1], 10) / 20, 72).toFixed(1)}pt`);
+          if (first) styles.push(`text-indent:${Math.min(parseInt(first[1], 10) / 20, 36).toFixed(1)}pt`);
+          if (hanging) styles.push(`text-indent:-${Math.min(parseInt(hanging[1], 10) / 20, 36).toFixed(1)}pt`);
         }
 
         return { align, style: styles.join(';') };
@@ -1120,12 +1616,14 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       .replace(/<br[^>]*type=["']page["'][^>]*\/?>/gi, '<div class="page-break" style="page-break-before:always;break-before:page;"></div>')
       .replace(/page-break-before\s*:\s*always/gi, 'page-break-before:always;break-before:page');
 
-    // Ensure images don't overflow the page
+    // Ensure images don't overflow / don't float over following text (Ref line overlap bug)
     html = html.replace(/<img\b([^>]*)>/gi, (_m, attrs: string) => {
+      const safe =
+        'max-width:100%;height:auto;display:block;position:static;float:none;margin:0 auto 8px;';
       if (/style=/i.test(attrs)) {
-        return `<img${attrs.replace(/style=(["'])/i, 'style=$1max-width:100%;height:auto;')}>`;
+        return `<img${attrs.replace(/style=(["'])/i, `style=$1${safe}`)}>`;
       }
-      return `<img${attrs} style="max-width:100%;height:auto;">`;
+      return `<img${attrs} style="${safe}">`;
     });
 
     // Tables: layout/signature tables stay borderless; only mark bordered when Word had borders
@@ -1148,7 +1646,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       return `<table${attrs} class="${cls}" style="${extra}">`;
     });
 
-    // Preserve numbered / bullet lists (1,2,3… must stay visible)
+    // Preserve numbered / bullet lists (1,2,3â€¦ must stay visible)
     html = html.replace(/<ol\b([^>]*)>/gi, (_m, attrs: string) => {
       const extra = 'list-style-type:decimal;padding-left:1.6em;margin:0.4em 0;';
       if (/style=/i.test(attrs)) {
@@ -1170,7 +1668,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       return `<li${attrs}>`;
     });
 
-    // Do NOT wrap in an outer <div> — Quill strips unknown block wrappers and leaves the editor blank.
+    // Do NOT wrap in an outer <div> â€” Quill strips unknown block wrappers and leaves the editor blank.
     // Mark paragraphs so CSS / preview can still detect an imported layout.
     if (fromDocx) {
       html = html.replace(/<(p|h1|h2|h3|h4|h5|h6)(\b[^>]*)>/gi, (full, tag: string, attrs: string) => {
@@ -1182,6 +1680,43 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       });
     }
     return html;
+  }
+
+  /**
+   * Word often exports absolute/float positioning that makes Ref/logo text stack on top
+   * of each other in HTML. Force normal document flow.
+   */
+  private sanitizeOverlappingLayoutHtml(html: string): string {
+    let out = String(html || '');
+
+    out = out.replace(/style\s*=\s*(["'])(.*?)\1/gi, (_m, q: string, style: string) => {
+      let s = String(style)
+        .replace(/position\s*:\s*[^;]+;?/gi, '')
+        .replace(/(?:^|;)\s*(?:top|left|right|bottom)\s*:\s*[^;]+;?/gi, ';')
+        .replace(/float\s*:\s*[^;]+;?/gi, '')
+        .replace(/z-index\s*:\s*[^;]+;?/gi, '')
+        .replace(/transform\s*:\s*[^;]+;?/gi, '')
+        .replace(/letter-spacing\s*:\s*-?[\d.]+(?:px|pt|em|rem)?;?/gi, '')
+        .replace(/word-spacing\s*:\s*-?[\d.]+(?:px|pt|em|rem)?;?/gi, '')
+        .replace(/margin-top\s*:\s*-\d[\d.]*(?:px|pt|em|rem|mm)?;?/gi, 'margin-top:0;')
+        .replace(/margin-bottom\s*:\s*-\d[\d.]*(?:px|pt|em|rem|mm)?;?/gi, 'margin-bottom:0;')
+        .replace(/text-indent\s*:\s*-\d[\d.]*(?:px|pt|em|rem|mm)?;?/gi, 'text-indent:0;')
+        .replace(/;;+/g, ';')
+        .replace(/^;|;$/g, '')
+        .trim();
+      return s ? `style=${q}${s}${q}` : '';
+    });
+
+    // Remove empty style="" left behind
+    out = out.replace(/\sstyle=(["'])\s*\1/gi, '');
+
+    // Clearfix after images so following "Ref:" line cannot ride up onto logo
+    out = out.replace(
+      /(<img\b[^>]*>)/gi,
+      '$1<div class="hr-clearfix" style="clear:both;height:0;margin:0;padding:0;border:0;"></div>',
+    );
+
+    return out;
   }
 
   private looksLikeFullLetterLayout(html: string): boolean {

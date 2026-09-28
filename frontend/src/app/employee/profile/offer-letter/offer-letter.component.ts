@@ -65,7 +65,86 @@ export class OfferLetterComponent implements OnInit {
           .catch(() => {});
       }
     });
+    this.resolveDesignationAndDepartment();
     this.loadData();
+  }
+
+  get designationLabel(): string {
+    return (
+      this.personalDetails?.designation ||
+      this.personalDetails?.designation_name ||
+      this.personalDetails?.designationName ||
+      this.personalDetails?.Designation ||
+      ''
+    );
+  }
+
+  get departmentLabel(): string {
+    return (
+      this.personalDetails?.department ||
+      this.personalDetails?.department_name ||
+      this.personalDetails?.departmentName ||
+      this.personalDetails?.Department ||
+      ''
+    );
+  }
+
+  /** Resolve names from designationId / departmentId when profile only has IDs. */
+  private resolveDesignationAndDepartment(): void {
+    const pd = this.personalDetails || {};
+
+    // Prefer any name already on the profile object
+    if (!String(pd.designation || '').trim()) {
+      const fromProfile =
+        pd.designation_name || pd.designationName || pd.Designation || '';
+      if (fromProfile) pd.designation = String(fromProfile).trim();
+    }
+    if (!String(pd.department || '').trim()) {
+      const fromProfile =
+        pd.department_name || pd.departmentName || pd.Department || '';
+      if (fromProfile) pd.department = String(fromProfile).trim();
+    }
+
+    const departmentId = pd.departmentId?.value || pd.departmentId;
+    const designationId = pd.designationId?.value || pd.designationId;
+
+    if (departmentId && !String(pd.department || '').trim()) {
+      this.masterService.Departmentsdd({}).subscribe({
+        next: (res: any) => {
+          if (!Array.isArray(res?.data)) return;
+          const match = res.data.find(
+            (d: any) => String(d.value) === String(departmentId),
+          );
+          if (match?.label) {
+            this.personalDetails.department = match.label;
+            this.personalDetails.department_name = match.label;
+          }
+        },
+        error: () => {},
+      });
+    }
+
+    if (designationId && !String(pd.designation || '').trim()) {
+      const loadDesignation = (deptKey: any) => {
+        this.masterService
+          .designationDD(deptKey ? { department: deptKey } : {})
+          .subscribe({
+            next: (res: any) => {
+              if (String(this.personalDetails?.designation || '').trim()) return;
+              if (!Array.isArray(res?.data)) return;
+              const match = res.data.find(
+                (d: any) => String(d.value) === String(designationId),
+              );
+              if (match?.label) {
+                this.personalDetails.designation = match.label;
+                this.personalDetails.designation_name = match.label;
+              }
+            },
+            error: () => {},
+          });
+      };
+      loadDesignation(departmentId);
+    }
   }
 
   loadData(): void {
@@ -74,9 +153,14 @@ export class OfferLetterComponent implements OnInit {
         if (res.status && res.data) {
           if (res.data.refNo) this.personalDetails.refNo = res.data.refNo;
           if (res.data.offerDate) this.personalDetails.offerDate = res.data.offerDate;
+          if (res.data.designation) this.personalDetails.designation = res.data.designation;
+          if (res.data.department) this.personalDetails.department = res.data.department;
         }
+        this.resolveDesignationAndDepartment();
       },
-      error: () => {}
+      error: () => {
+        this.resolveDesignationAndDepartment();
+      }
     });
   }
 
@@ -128,7 +212,7 @@ export class OfferLetterComponent implements OnInit {
     const month = date.toLocaleString('en-US', { month: 'long' });
     const year = date.getFullYear();
 
-    return `${day} ${this.getOrdinalSuffix(day)} ${month}, ${year}`;
+    return `${day}${this.getOrdinalSuffix(day)} ${month}, ${year}`;
   }
 
   formatOrdinalDateHtml(value: string | Date | null | undefined): string {
@@ -141,29 +225,49 @@ export class OfferLetterComponent implements OnInit {
     const month = date.toLocaleString('en-US', { month: 'long' });
     const year = date.getFullYear();
 
-    return `${day}<sup>${this.getOrdinalSuffix(day)}</sup> ${month}, ${year}`;
+    return `${day}<sup style="font-size:0.65em;vertical-align:super;text-transform:none;font-weight:normal;">${this.getOrdinalSuffix(day)}</sup> ${month}, ${year}`;
   }
 
   formatAddressHtml(address: string | null | undefined): string {
+    return this.addressLines(address)
+      .map((line) =>
+        line
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/ {2}/g, ' &nbsp;'),
+      )
+      .join('<br>');
+  }
+
+  /** Split permanent address on real or escaped newlines; keep spaces on each line. */
+  addressLines(address: string | null | undefined): string[] {
     return String(address || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/\r\n|\r|\n/g, '<br>');
+      .replace(/\\r\\n|\\n|\\r/g, '\n')
+      .split(/\r\n|\r|\n/)
+      .map((line) => line.replace(/\s+$/g, ''))
+      .filter((line, i, arr) => line.length > 0 || (i > 0 && i < arr.length - 1));
+  }
+
+  /** Strip honorific so we don't print "S/O Mr. Mr. Name". */
+  fatherNameDisplay(name: string | null | undefined): string {
+    return String(name || '')
+      .replace(/^\s*(mr\.?|mrs\.?|ms\.?|miss)\s+/i, '')
+      .trim();
   }
 
   private getOrdinalSuffix(day: number): string {
-    if (day >= 11 && day <= 13) return 'TH';
+    if (day >= 11 && day <= 13) return 'th';
 
     switch (day % 10) {
       case 1:
-        return 'ST';
+        return 'st';
       case 2:
-        return 'ND';
+        return 'nd';
       case 3:
-        return 'RD';
+        return 'rd';
       default:
-        return 'TH';
+        return 'th';
     }
   }
 printDoc() {
@@ -201,7 +305,7 @@ printDoc() {
 
             body {
               margin: 0;
-              font-family: "Times New Roman", serif;
+              font-family: "Calibri", "Calibri (Body)", Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif;
             }
 
             /* 🔥 APPLY BACKGROUND DIRECTLY TO YOUR DIV */
@@ -210,10 +314,18 @@ printDoc() {
               min-height: 29.7cm;
               padding: 100px 60px;
               position: relative;
+              font-family: "Calibri", "Calibri (Body)", Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif;
 
               background-image: url('${bgImage}');
               background-repeat: no-repeat;
               background-size: 100% 100%;
+            }
+
+            .address-lines,
+            .address-lines span {
+              display: block !important;
+              white-space: pre-wrap !important;
+              word-wrap: break-word;
             }
 
             input {

@@ -211,7 +211,7 @@ export class AllLettersComponent implements OnInit {
 <div style="margin:30px 0;line-height:1.8;font-size:11px;">
   <b>${name}</b><br>${parentPrefix} ${emp.fatherName || ''}<br>${this.formatMultilineHtml(emp.permanentAddress || emp.address || '')}
 </div>
-<p style="margin:20px 0;font-weight:bold;">Dear ${emp.firstName || ''},</p>
+<p style="margin:20px 0;font-weight:bold;font-size:11px;">Dear ${emp.firstName || ''},</p>
 <div style="font-size:11px;line-height:1.6;">
   <p>With reference to your application and subsequent interview with us, we are pleased to offer you employment in our Company as <b>${this.designationOf(emp)}</b> in the <b>${this.departmentOf(emp)}</b> at our Head Office - ${tenant.companyAddress || ''}, as per the mutually agreed terms and conditions discussed with you at the time of interview.</p>
   <p>You are requested to report for joining on or before <b>${this.fmtOrdinal(emp.joiningDate || emp.doj)}</b>.</p>
@@ -382,7 +382,7 @@ ${annexure}`;
     const day = d.getDate();
     const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     const suffix = (n: number) => n >= 11 && n <= 13 ? 'th' : n % 10 === 1 ? 'st' : n % 10 === 2 ? 'nd' : n % 10 === 3 ? 'rd' : 'th';
-    return `${day}<sup>${suffix(day)}</sup> ${months[d.getMonth()]}, ${d.getFullYear()}`;
+    return `${day}<sup style="font-size:0.65em;vertical-align:super;text-transform:none;font-weight:normal;">${suffix(day)}</sup> ${months[d.getMonth()]}, ${d.getFullYear()}`;
   }
 
   private numToWords(amount: number): string {

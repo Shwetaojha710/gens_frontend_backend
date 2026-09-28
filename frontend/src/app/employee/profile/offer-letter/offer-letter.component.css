@@ -3,7 +3,7 @@
   min-height: 1123px;
   margin: auto;
   /* padding: 40px; */
-  font-family: "Times New Roman", serif;
+  font-family: "Calibri", "Calibri (Body)", Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif;
   font-size: 14px;
   color: #000;
   background: #fff;
@@ -13,6 +13,10 @@
   background-repeat: no-repeat;
   background-position: center;
 
+}
+
+#offer-doc {
+  font-family: "Calibri", "Calibri (Body)", Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif;
 }
 .page-bg {
   background-image: url('/assets/img/Letterhead-1.png');
@@ -42,7 +46,7 @@
   left: 50px;
   right: 50px;
 
-  font-family: "Times New Roman", serif;
+  font-family: "Calibri", "Calibri (Body)", Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif;
   font-size: 14px;
 }
 /* HEADER */
@@ -66,6 +70,14 @@
   margin-top: 30px;
   line-height: 1.5;
   white-space: pre-line;
+}
+
+.address .address-lines,
+.address .address-lines span {
+  display: block;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 /* CONTENT */

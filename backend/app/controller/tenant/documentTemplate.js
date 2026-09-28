@@ -330,9 +330,20 @@ async function getLetterheadBase64(tenantId) {
   }
 }
 
+function wrapTrailingFooter(html) {
+  const src = String(html || '');
+  if (/hr-print-footer/i.test(src)) return src;
+  const re =
+    /((?:(?:<div\b[^>]*hr-clearfix[^>]*>\s*<\/div>\s*)|(?:<p\b[^>]*>\s*(?:&nbsp;|\u00a0|<br\s*\/?>|\s)*<\/p>\s*))*<img\b[^>]*>\s*(?:<div\b[^>]*hr-clearfix[^>]*>\s*<\/div>\s*)*){1,}\s*$/i;
+  const m = src.match(re);
+  if (!m || m.index == null) return src;
+  if (!(m[0].match(/<img\b/gi) || []).length) return src;
+  return `${src.slice(0, m.index)}<div class="hr-print-footer">${m[0]}</div>`;
+}
+
 function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl }) {
   const useImage = !letterheadBlank && letterheadDataUrl;
-  const body = String(filled || '');
+  const body = wrapTrailingFooter(String(filled || ''));
   const hasImportedLayout =
     /hr-imported-doc|data-preserve-layout|hr-align-|text-align\s*:|hr-numbered|hr-doc-table/i.test(body);
   // Pre-printed paper spacer only when template is blank-top AND not a full imported Word layout
@@ -371,8 +382,7 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl }) {
       p[style*="margin"], h1[style], h2[style], h3[style] { margin-top: unset; margin-bottom: unset; }
       /* Do NOT force center on headings — template alignment wins */
       h1, h2, h3 { font-weight: bold; }
-      img { max-width: 100%; height: auto; }
-      /* Layout tables (signature L/R) stay borderless by default — matches Word */
+      img { max-width: 100%; height: auto; display: block; page-break-inside: avoid; break-inside: avoid; }
       table, .hr-doc-table {
         width: 100%;
         border-collapse: collapse;
@@ -392,11 +402,15 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl }) {
         border: 1px solid #000;
         padding: 4px 6px;
       }
-      ul, ol, .hr-doc-ul, .hr-doc-ol { padding-left: 1.6em; margin: 0.4em 0; }
+      ul, ol, .hr-doc-ul, .hr-doc-ol { padding-left: 1.6em; margin: 0.4em 0; display: block; }
       ol, .hr-doc-ol { list-style-type: decimal !important; list-style-position: outside; }
       ul, .hr-doc-ul { list-style-type: disc !important; list-style-position: outside; }
-      li { display: list-item !important; margin: 0.2em 0; }
+      li { display: list-item !important; margin: 0.2em 0; line-height: 1.45 !important; }
       .hr-numbered { margin: 0.35em 0; }
+      .page * { position: static !important; float: none !important; transform: none !important; }
+      p, li, h1, h2, h3 { line-height: 1.45 !important; height: auto !important; overflow: visible !important; }
+      .hr-print-footer { page-break-inside: avoid !important; break-inside: avoid !important; margin-top: 12pt; }
+      .hr-print-footer img { page-break-inside: avoid !important; break-inside: avoid !important; }
       .page-break {
         display: block;
         page-break-before: always;
@@ -426,7 +440,7 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl }) {
         .page { box-shadow: none; }
         .page-break { page-break-before: always; break-before: page; border: 0; }
       }
-    </style></head><body><div class="page">${spacer}${filled}</div></body></html>`;
+    </style></head><body><div class="page">${spacer}${body}</div></body></html>`;
 }
 
 function buildAnnexure(vars) {

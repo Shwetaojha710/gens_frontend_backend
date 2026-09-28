@@ -275,7 +275,7 @@ export class EmployeePortalDocumentsComponent implements OnInit, AfterViewChecke
 <div style="margin:30px 0;line-height:1.8;font-size:11px;">
   <b>${e.firstName} ${e.lastName}</b><br>${parentPrefix} ${e.fatherName}<br>${this.formatMultilineHtml(e.permanentAddress || '')}
 </div>
-<p style="margin:20px 0;font-weight:bold;">Dear ${e.firstName},</p>
+<p style="margin:20px 0;font-weight:bold;font-size:11px;">Dear ${e.firstName},</p>
 <div style="font-size:11px;line-height:1.6;">
   <p>With reference to your application and subsequent interview with us, we are pleased to offer you employment in our Company as <b>${e.designation}</b> in the <b>${e.department}</b> at our Head Office &ndash; ${t.companyAddress}, as per the mutually agreed terms and conditions discussed with you at the time of interview.</p>
   <p>You are requested to report for joining on or before <b>${this.fmtOrdinal(e.joiningDate)}</b>.</p>
@@ -444,7 +444,7 @@ ${annexure}`;
     const day = d.getDate();
     const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     const suf = (n: number) => n >= 11 && n <= 13 ? 'th' : n % 10 === 1 ? 'st' : n % 10 === 2 ? 'nd' : n % 10 === 3 ? 'rd' : 'th';
-    return `${day}<sup>${suf(day)}</sup> ${months[d.getMonth()]}, ${d.getFullYear()}`;
+    return `${day}<sup style="font-size:0.65em;vertical-align:super;text-transform:none;font-weight:normal;">${suf(day)}</sup> ${months[d.getMonth()]}, ${d.getFullYear()}`;
   }
 
   private numToWords(amount: number): string {

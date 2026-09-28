@@ -13,14 +13,17 @@ if (dbPassword == null || typeof dbPassword !== "string") {
 
 const sequelize = new Sequelize({
     dialect:'postgres',
+    // Keep pool small: remote Postgres often has max_connections ~100 shared across all apps.
+    // A high max + nodemon restarts leaves idle backends and triggers 53300.
     pool: {
     max: 100,
     min: 0,
-    acquire: 60000,
-    idle: 10000
+    acquire: 30000,
+    idle: 5000,
+    evict: 1000
   },
   dialectOptions: {
-    connectTimeout: 60000
+    connectTimeout: 30000
   },
     host:process.env.DB_HOST,
     username:process.env.DB_USER,
@@ -35,6 +38,21 @@ sequelize.authenticate().then(() => {
   console.log('connected');
 }).catch((error) => {
   console.error('Error syncing database:', error);
+});
+
+const closePool = async () => {
+  try {
+    await sequelize.close();
+  } catch (_) {
+    /* ignore */
+  }
+};
+process.once("SIGINT", closePool);
+process.once("SIGTERM", closePool);
+process.once("SIGUSR2", async () => {
+  // nodemon restart signal on Windows/Unix
+  await closePool();
+  process.kill(process.pid, "SIGUSR2");
 });
 
 module.exports = sequelize;
