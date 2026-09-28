@@ -6,6 +6,7 @@
 .app-layout-shell {
   min-height: 100vh;
   display: flex;
+  flex-direction: row;       /* always row — sidebar is an overlay on mobile */
   align-items: stretch;
   background: linear-gradient(to top, #fff1eb 0%, #d1e8f3 100%);
 }
@@ -19,15 +20,12 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 .app-layout-content {
   flex: 1 1 auto;
   min-width: 0;
-}
-
-@media (max-width: 991.98px) {
-  .app-layout-shell {
-    flex-direction: column;
-  }
+  width: 100%;
+  overflow-x: hidden;
 }

@@ -6,7 +6,7 @@
   white-space: nowrap;
 }
 
-.bg-label-primary { background-color: rgba(13,110,253,.15) !important; color: #0d6efd !important; }
+.bg-label-primary { background-color: rgba(0,180,166,.15) !important; color: #00b4a6 !important; }
 .bg-label-success { background-color: rgba(25,135,84,.15) !important; color: #198754 !important; }
 .bg-label-info { background-color: rgba(13,202,240,.15) !important; color: #0dcaf0 !important; }
 .bg-label-warning { background-color: rgba(255,193,7,.15) !important; color: #ffc107 !important; }

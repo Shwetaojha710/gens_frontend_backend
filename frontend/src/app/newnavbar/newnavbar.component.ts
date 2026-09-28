@@ -52,6 +52,7 @@ export class NewnavbarComponent {
         // { title: 'Employee List', icon: 'ri-file-list-2-line', link: '/layout/employee/list' },
         { title: 'Add Employee', icon: 'ri-user-add-line', link: '/layout/employee/joining' },
         { title: 'Apply Leave', icon: 'ri-file-list-2-line', link: '/layout/employee/apply-leave' },
+        { title: 'Insurance Documents', icon: 'ri-shield-check-line', link: '/layout/employee/insurance' },
       ]
     },
 
@@ -64,6 +65,7 @@ export class NewnavbarComponent {
         { title: 'Holiday', icon: 'ri-barricade-fill', link: '/layout/attendance/holiday' },
         { title: 'Attendance Logs', icon: 'ri-calendar-line', link: '/layout/attendance/logs' },
         { title: 'Leaves', icon: 'ri-leaf-line', link: '/layout/attendance/leaves' },
+        { title: 'Leave Ledger', icon: 'ri-book-open-line', link: '/layout/attendance/leave-ledger' },
         { title: 'Upload Attendance', icon: 'ri-upload-cloud-line', link: '/layout/attendance/upload-attendance' },
         { title: 'Regularize', icon: 'ri-upload-cloud-line', link: '/layout/attendance/regularize' }
 
@@ -104,6 +106,7 @@ export class NewnavbarComponent {
         // { title: 'Currency', icon: 'ri-copper-coin-line', link: '/layout/master/currency' },
         { title: 'Pay Slip Setup', icon: 'ri-file-pdf-2-line', link: '/layout/master/pay-slip' },
         { title: 'Branch', icon: 'ri ri-layout-left-line', link: '/layout/master/branch' },
+        { title: 'Insurance Policy', icon: 'ri-shield-check-line', link: '/layout/master/insurance-policy' },
 
         // {title: 'Attendance Master', icon: 'ri-file-line', link: '/layout/master/salary-master'}
 

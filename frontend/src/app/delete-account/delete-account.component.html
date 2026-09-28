@@ -1,0 +1,67 @@
+<div class="authentication-wrapper authentication-cover">
+  <div class="authentication-inner"
+    style="background-image: url('assets/img/bg-login/Login1.png'); background-size: cover; background-repeat: no-repeat; background-position: center;">
+
+    <div class="form-panel"
+      style="background-image: url('assets/img/bg-login/Rectangle3.png'); background-size: cover; background-position: center; background-repeat: no-repeat;">
+
+      <div class="glass-outer">
+        <div class="glass-inner">
+
+          <!-- Logo -->
+          <div class="text-center mb-4">
+            <img src="assets/img/logo/gens-logo-color.png" alt="Quaere" style="height: 48px; object-fit: contain;" />
+          </div>
+
+          <!-- Step 1: Enter mobile -->
+          <ng-container *ngIf="!deleted">
+            <h4 class="mb-1 text-center">Delete Account</h4>
+            <p class="mb-4 text-center" style="color:#6b7a99; font-size:13px;">
+              Enter your registered mobile number to submit a deletion request.
+            </p>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold" style="font-size:13px;">Mobile Number</label>
+              <input
+                type="tel"
+                class="form-control"
+                [(ngModel)]="mobile"
+                placeholder="Enter your 10-digit mobile number"
+                maxlength="10"
+                (keypress)="!($event.key < '0' || $event.key > '9') || $event.preventDefault()"
+              />
+              <div class="text-danger mt-1" style="font-size:12px;" *ngIf="error">{{ error }}</div>
+            </div>
+
+            <button class="btn btn-danger d-grid w-100 mb-3" (click)="submit()">
+              Submit Request
+            </button>
+
+            <p class="text-center mb-0" style="font-size:12px; color:#9aabbf;">
+              ⚠️ This action is permanent and cannot be undone.
+            </p>
+          </ng-container>
+
+          <!-- Step 2: Success -->
+          <ng-container *ngIf="deleted">
+            <div class="text-center mb-3">
+              <div class="success-icon-circle mx-auto mb-3">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <h4 class="mb-2">Request Submitted Successfully!</h4>
+              <p style="color:#6b7a99; font-size:13px; line-height:1.7;">
+                Your account deletion request has been received.<br />
+                Our team will contact you within <strong style="color:#0d5f9d;">30 days</strong> to process your request.
+              </p>
+            </div>
+          </ng-container>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

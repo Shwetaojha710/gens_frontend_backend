@@ -45,6 +45,21 @@ const AttendanceRegularization = sequelize.define("attendance_regularization", {
     defaultValue: "pending",
   },
 
+  originalCheckIn: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+  },
+
+  originalCheckOut: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+  },
+
+  wasNewAttendance: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+  },
+
   approverId: {
     type: DataTypes.UUID,
     allowNull: true,
@@ -71,11 +86,11 @@ const AttendanceRegularization = sequelize.define("attendance_regularization", {
   },
 });
 
-// AttendanceRegularization.sync({alter:true})
-//     .then(() => {
-//         console.log("AttendanceRegularization table created or updated successfully.");
-//     })
-//     .catch((error) => {
-//         console.error("Error creating or updating AttendanceRegularization table:", error);
-//     });
+AttendanceRegularization.sync({alter:true})
+    .then(() => {
+        console.log("AttendanceRegularization table created or updated successfully.");
+    })
+    .catch((error) => {
+        console.error("Error creating or updating AttendanceRegularization table:", error);
+    });
 module.exports = AttendanceRegularization;

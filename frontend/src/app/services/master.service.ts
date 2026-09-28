@@ -20,7 +20,12 @@ export class MasterService {
       ? localStorage.getItem('base_url')?.replace(/["\\,]/g, '') || ''
       : localStorage.getItem('base_url')?.replace(/["\\,]/g, '') || '';
   }
-
+  getHeaderNotifications(body: any = {}): Observable<any> {
+    return this.http.post(`${this.baseUrl}header-notifications`, body || {});
+  }
+  markHeaderNotificationsRead(body: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}mark-header-notifications-read`, body || {});
+  }
   getImageUrl(filename: string): string {
     const base = this.getBaseUrl()
     return `${base}upload/${filename}`;
@@ -135,6 +140,17 @@ export class MasterService {
     return this.http.post(`${this.baseUrl}getDocumentDD`, {});
   }
 
+  /** Employee insurance documents (E-Insurance Card / Policy) */
+  getInsuranceDocs(obj: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}getInsuranceDocs`, obj);
+  }
+  upsertInsuranceDoc(formData: FormData): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}upsertInsuranceDoc`, formData);
+  }
+  deleteInsuranceDoc(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}deleteInsuranceDoc`, data);
+  }
+
   addSalaryMaster(dept: any): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}attendance-setting`, dept);
   }
@@ -169,6 +185,10 @@ export class MasterService {
 
   getemployeeList(): Observable<any> {
     return this.http.post(`${this.baseUrl}get-emp-list`, {});
+  }
+  /** Same endpoint but includes inactive employees — used only by Generated Salary page. */
+  getEmployeeListAll(): Observable<any> {
+    return this.http.post(`${this.baseUrl}get-emp-list`, { includeInactive: true });
   }
   getAttendanceYear(): Observable<any> {
     return this.http.post(`${this.baseUrl}get-attendance-year`, {});
@@ -306,7 +326,91 @@ export class MasterService {
   deleteBranch(data: any): Observable<any> {
     return this.http.post(`${this.baseUrl}deleteBranch`, data);
   }
-  //    getAttendanceSetting(): Observable<any> {
-  //     return this.http.post(`${this.baseUrl}get-attendance-setting`, {});
-  //   }
+
+  copyBranchMasterData(data: { sourceBranchId: string; targetBranchId: string }): Observable<any> {
+    return this.http.post(`${this.baseUrl}copy-branch-master-data`, data);
+  }
+
+  getContractualEmployees(): Observable<any> {
+    return this.http.get(`${this.baseUrl}contractual-employees`);
+  }
+
+  getContractualAttendanceList(body: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}contractual-attendance-list`, body);
+  }
+
+  approveContractualDay(body: { approvalId: string; status: string; remark?: string }): Observable<any> {
+    return this.http.post(`${this.baseUrl}contractual-approve`, body);
+  }
+
+  getBrandColors(): Observable<any> {
+    return this.http.post(`${this.baseUrl}get-brand-colors`, {});
+  }
+
+  saveBrandColors(colors: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}save-brand-colors`, colors);
+  }
+
+  getCompanyProfile(): Observable<any> {
+    return this.http.post(`${this.baseUrl}get-company-profile`, {});
+  }
+
+  /** HR Document Templates (Phase 1) */
+  getHrTemplateVariables(): Observable<any> {
+    return this.http.post(`${this.baseUrl}hr-template-variables`, {});
+  }
+  listHrTemplates(body: any = {}): Observable<any> {
+    return this.http.post(`${this.baseUrl}hr-template-list`, body);
+  }
+  getHrTemplate(id: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}hr-template-get`, { id });
+  }
+  createHrTemplate(body: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}hr-template-create`, body);
+  }
+  updateHrTemplate(body: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}hr-template-update`, body);
+  }
+  deleteHrTemplate(id: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}hr-template-delete`, { id });
+  }
+  previewHrTemplate(body: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}hr-template-preview`, body);
+  }
+  saveHrGenerated(body: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}hr-template-save-generated`, body);
+  }
+  listHrGenerated(body: any = {}): Observable<any> {
+    return this.http.post(`${this.baseUrl}hr-template-generated-list`, body);
+  }
+
+  getLetterhead(): Observable<any> {
+    return this.http.post(`${this.baseUrl}get-letterhead`, {});
+  }
+
+  uploadLetterhead(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('letterhead', file);
+    return this.http.post(`${this.baseUrl}upload-letterhead`, formData);
+  }
+
+  getHandbook(): Observable<any> {
+    return this.http.post(`${this.baseUrl}get-handbook`, {});
+  }
+
+  uploadHandbook(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('handbook', file);
+    return this.http.post(`${this.baseUrl}upload-handbook`, formData);
+  }
+
+  getInsurancePolicy(): Observable<any> {
+    return this.http.post(`${this.baseUrl}get-insurance-policy`, {});
+  }
+
+  uploadInsurancePolicy(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('insurancePolicy', file);
+    return this.http.post(`${this.baseUrl}upload-insurance-policy`, formData);
+  }
 }

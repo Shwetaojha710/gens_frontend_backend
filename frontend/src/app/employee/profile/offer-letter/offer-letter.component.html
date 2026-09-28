@@ -10,11 +10,16 @@
     <button type="button" class="btn btn-outline-primary me-2" (click)="saveData(); printDoc()" [disabled]="isDownload">
       <i class="fa fa-print mx-1"></i> Print
     </button>
-    <button type="button" class="btn btn-primary" (click)="saveData(); downloadPDF()" [disabled]="isDownload">
+    <!-- <button type="button" class="btn btn-primary me-2" (click)="saveData(); downloadPDF()" [disabled]="isDownload">
       <i class="fa fa-download mx-1"></i>
       <span *ngIf="isDownload">Generating...</span>
       <span *ngIf="!isDownload">Download PDF</span>
     </button>
+    <button type="button" class="btn btn-danger" (click)="saveData(); generateServerPdf()" [disabled]="isGeneratingPdf">
+      <i class="ri ri-file-pdf-line mx-1"></i>
+      <span *ngIf="isGeneratingPdf">Generating...</span>
+      <span *ngIf="!isGeneratingPdf">Download PDF (Server)</span>
+    </button> -->
   </div>
 </div>
 
@@ -24,7 +29,7 @@
     <table style="width:100%; font-size:11px; border: none;    margin-top: 50px; color: #000;">
       <tr>
         <td>
-          <b>Ref: Quaere/Emp/Offer/
+          <b>Ref: Quaere/Emp/OfferL/
             <span *ngIf="!isDownload">
               <input type="text" [(ngModel)]="personalDetails.refNo" (ngModelChange)="saveData()" class="form-control d-inline-block" style="width:80px; height:24px; font-size:12px;" />
             </span>
@@ -32,7 +37,7 @@
           </b>
         </td>
         <td style="text-align:right; color: #000;">
-          <b>Dated:
+          <b>
             <span *ngIf="!isDownload">
               <input type="date" [(ngModel)]="personalDetails.offerDate" (ngModelChange)="saveData()" class="form-control d-inline-block" style="width:140px; height:24px; font-size:12px;" />
             </span>
@@ -45,19 +50,30 @@
     </table>
 
     <!-- ADDRESS -->
-    <div class="address" style="margin: 30px 0; line-height: 1.8; font-size: 11px; color: #000;">
-      <b>{{personalDetails.firstName}} {{personalDetails.lastName}}</b><br>
-      <span *ngIf="personalDetails.gender=='Male'">S/O</span>
-      <span *ngIf="personalDetails.gender=='Female'">D/O</span> {{personalDetails.fatherName}}<br>
-      {{personalDetails.permanentAddress}}
+    <div class="address" style="margin: 30px 0; line-height: 1.45; font-size: 11px; color: #000; max-width: 300px; font-weight: bold; word-wrap: break-word; overflow-wrap: break-word;">
+      <div style="margin:0;">
+        <span *ngIf="personalDetails.gender=='Male'">Mr. </span>
+        <span *ngIf="personalDetails.gender=='Female'">Ms. </span>
+        {{personalDetails.firstName}} {{personalDetails.lastName}}
+      </div>
+      <div style="margin:0;" *ngIf="personalDetails.fatherName">
+        <span *ngIf="personalDetails.gender=='Male'">S/O Mr. </span>
+        <span *ngIf="personalDetails.gender=='Female'">D/O Mr. </span>
+        {{fatherNameDisplay(personalDetails.fatherName)}}
+      </div>
+      <div class="address-lines" style="margin:0; display:block; white-space:pre-wrap; word-wrap:break-word; overflow-wrap:break-word;">
+        <ng-container *ngFor="let line of addressLines(personalDetails.permanentAddress); let last = last">
+          <span style="display:block; white-space:pre-wrap;">{{ line }}</span>
+        </ng-container>
+      </div>
     </div>
 
-    <!-- GREETING -->
-    <p style="margin: 30px 0 20px 0; font-weight: bold;">Dear {{personalDetails.firstName}},</p>
+    <!-- GREETING — same size as address block above -->
+    <p style="margin: 30px 0 20px 0; font-size: 11px; color: #000;">Dear {{personalDetails.firstName}},</p>
 
     <!-- BODY -->
     <div style="font-size: 11px; line-height: 1.6; color: #000;">
-      <p>With reference to your application and subsequent interview with us, we are pleased to offer you employment in our Company as <b>{{personalDetails.designation}}</b> in the <b>{{personalDetails.department}}</b> at our Head Office &ndash; {{tenant.companyAddress}}, as per the mutually agreed terms and conditions discussed with you at the time of interview.</p>
+      <p>With reference to your application and subsequent interview with us, we are pleased to offer you employment in our Company as <b>{{ designationLabel || '________________' }}</b> in <b>{{ departmentLabel || '________________' }}</b> at our <b>Head Office</b> &ndash; <b>Lucknow</b>, as per the mutually agreed terms and conditions discussed with you at the time of interview.</p>
 
       <p>You are requested to report for joining on or before <b><span [innerHTML]="formatOrdinalDateHtml(personalDetails.joiningDate)"></span></b>.</p>
 
@@ -79,10 +95,11 @@
     </div>
 
     <!-- SIGNATURE TABLE -->
-    <table width="100%" style="margin-top:40px; font-size:11px;  color: #000;">
+    <table width="100%" style="margin-top:25px; font-size:11px;  color: #000;">
       <tr>
         <td style="width:50%; vertical-align:top;">
           <p>Thanks &amp; Regards</p>
+          <br>
           <br>
           <br>
           <!-- <p style="margin:20px 0;">_________________________________</p> -->
@@ -90,7 +107,10 @@
         </td>
         <td style="width:50%; text-align:right; vertical-align:top;">
           <p>Agreed &amp; Accepted</p>
-          <p style="margin-top:40px;">
+          <br>
+          <br>
+          <br>
+          <p style="padding-right: 10PX;">
             <b>{{personalDetails.firstName}} {{personalDetails.lastName}}</b>
           </p>
         </td>

@@ -1,0 +1,164 @@
+<!-- ═══ HERO ═══ -->
+<app-hero-section />
+
+<!-- ═══ TRUSTED BY ═══ -->
+<section class="py-12 bg-[var(--bg-secondary)] border-y border-[var(--border-color)]">
+  <div class="container-gens mb-4">
+    <p class="text-center text-sm font-semibold uppercase tracking-widest text-[var(--text-muted)]" appScrollReveal>
+      Trusted by 100+ forward-thinking organizations
+    </p>
+  </div>
+  <app-logo-marquee [companies]="trustedCompanies" />
+  <div class="container-gens mt-12">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8" appStaggerReveal>
+      @for (stat of stats; track stat.label) {
+        <div class="text-center p-6 rounded-2xl lattice-card">
+          <app-counter [stat]="stat" />
+        </div>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- ═══ PLATFORM ═══ -->
+<section class="section-padding">
+  <div class="container-gens">
+    <app-section-heading
+      badge="Platform"
+      titleBefore="High-performing teams are"
+      highlight="built here"
+      subtitle="GENS is your team's daily destination for HR — people management and AI tools in one place."
+    />
+    <div appScrollReveal>
+      <app-platform-showcase />
+    </div>
+  </div>
+</section>
+
+<!-- ═══ AI ASSISTANT ═══ -->
+<section id="ai-assistant" class="section-padding bg-[var(--bg-secondary)] overflow-hidden">
+  <div class="container-gens">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 xl:gap-20 items-center">
+      <div appScrollReveal animation="slide-left">
+        <app-section-heading
+          align="left"
+          badge="GENS AI"
+          titleBefore="Unblock work with your"
+          highlight="personal AI Agent"
+          subtitle="Surface insights, answer HR questions, and help managers act faster."
+        />
+        <div class="space-y-3 mt-8" appStaggerReveal childSelector=".ai-query" [stagger]="0.12">
+          @for (query of aiQueries; track query) {
+            <div class="ai-query flex items-center gap-3 px-5 py-3.5 rounded-2xl lattice-card cursor-default hover:border-gens-300">
+              <div class="w-8 h-8 rounded-lg bg-gens-100 dark:bg-gens-900 flex items-center justify-center shrink-0">
+                <span class="text-gens-600 text-sm">✦</span>
+              </div>
+              <span class="text-sm text-[var(--text-secondary)]">"{{ query }}"</span>
+            </div>
+          }
+        </div>
+      </div>
+      <div appScrollReveal animation="slide-right">
+        <app-ai-chat-showcase />
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ KEY FEATURES ═══ -->
+<section class="section-padding">
+  <div class="container-gens">
+    <app-section-heading
+      badge="Features"
+      titleBefore="Powerful tools for"
+      highlight="every HR need"
+      subtitle="Attendance, payroll, recruitment, and more — in one AI-powered suite."
+    />
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5" appStaggerReveal [stagger]="0.05">
+      @for (feature of keyFeatures; track feature.title) {
+        <app-feature-card [feature]="feature" />
+      }
+    </div>
+  </div>
+</section>
+
+<!-- ═══ TESTIMONIALS ═══ -->
+<section class="section-padding bg-[var(--bg-secondary)]">
+  <div class="container-gens">
+    <app-section-heading
+      badge="Testimonials"
+      titleBefore="Loved by HR Teams"
+      highlight="Everywhere"
+      subtitle="See why organizations of every size trust GENS.Ai to run their people operations."
+    />
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" appStaggerReveal>
+      @for (testimonial of testimonials; track testimonial.name) {
+        <app-testimonial-card [testimonial]="testimonial" />
+      }
+    </div>
+  </div>
+</section>
+
+<!-- ═══ PRICING ═══ -->
+<section id="pricing" class="section-padding">
+  <div class="container-gens">
+    <app-section-heading
+      badge="Pricing"
+      titleBefore="Simple,"
+      highlight="transparent pricing"
+      subtitle="GPS attendance, AI Face ID, payroll, ATS, and AI analytics — pick the plan that fits your team."
+    />
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 max-w-7xl mx-auto" appStaggerReveal [stagger]="0.08">
+      @for (plan of pricingTeaser; track plan.name) {
+        <app-pricing-card [plan]="plan" (ctaClick)="goToPricingPlan()" />
+      }
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FAQ ═══ -->
+<section class="section-padding bg-[var(--bg-secondary)]">
+  <div class="container-gens max-w-3xl">
+    <app-section-heading
+      badge="FAQ"
+      titleBefore="Frequently asked"
+      highlight="questions"
+      subtitle="Quick answers before you book a demo."
+    />
+    <div appScrollReveal>
+      <app-faq-accordion [items]="homeFaqs" />
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CONTACT ═══ -->
+<section id="contact" class="section-padding">
+  <div class="container-gens">
+    <app-section-heading
+      badge="Contact"
+      titleBefore="Ready to"
+      highlight="get started?"
+      subtitle="Tell us about your team — we'll recommend the right GENS plan."
+    />
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-5xl mx-auto">
+      <div appScrollReveal>
+        <app-contact-form />
+      </div>
+      <div appScrollReveal animation="slide-right" class="space-y-4">
+        @for (info of contactCards; track info.label) {
+          <div class="flex items-start gap-4 p-5 rounded-2xl lattice-card">
+            <div class="w-10 h-10 rounded-xl bg-gens-100 dark:bg-gens-900 flex items-center justify-center shrink-0">
+              <i class="ri text-gens-600 text-base" [ngClass]="info.icon"></i>
+            </div>
+            <div>
+              <p class="text-sm font-semibold mb-1">{{ info.label }}</p>
+              <p class="text-sm text-[var(--text-secondary)] whitespace-pre-line">{{ info.value }}</p>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</section>
+
+<app-cta-banner />

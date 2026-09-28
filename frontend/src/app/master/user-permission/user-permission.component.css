@@ -1,0 +1,96 @@
+/* ── User List Rows ───────────────────────────────────────────── */
+
+.user-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+  border-bottom: 1px solid #f1f1f1;
+  transition: background-color 0.15s ease;
+  user-select: none;
+}
+
+.user-row:hover {
+  background-color: #f8f9fa;
+}
+
+.user-row--active {
+  background-color: #eef2ff !important;
+  border-left: 3px solid #6366f1;
+}
+
+/* ── Avatar ──────────────────────────────────────────────────── */
+
+.user-avatar {
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.88rem;
+  flex-shrink: 0;
+}
+
+.user-avatar--lg {
+  width: 2.6rem;
+  height: 2.6rem;
+  font-size: 1.05rem;
+}
+
+/* ── User info ───────────────────────────────────────────────── */
+
+.user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #333;
+}
+
+.user-email {
+  font-size: 0.75rem;
+  color: #888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-role-badge {
+  font-size: 0.68rem;
+  flex-shrink: 0;
+  text-transform: capitalize;
+}
+
+/* ── Permission Table ────────────────────────────────────────── */
+
+.table th {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.table td {
+  vertical-align: middle;
+  font-size: 0.875rem;
+}
+
+.form-check-input[role="switch"] {
+  width: 2.2rem;
+  height: 1.15rem;
+  cursor: pointer;
+}
+
+.form-check-input[role="switch"]:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}

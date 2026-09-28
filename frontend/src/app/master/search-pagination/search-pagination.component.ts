@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -19,6 +19,14 @@ export class SearchPaginationComponent {
   @Output() pageChange = new EventEmitter<number>();
   @Output() pageSizeChange = new EventEmitter<number>();
   @Input() pageSizeOptions = [ 10,15, 25, 50, 100];
+  @ViewChild('searchInput') searchInputRef?: ElementRef<HTMLInputElement>;
+
+  /** Clears the search box without emitting a search event (used by parents after data changes). */
+  resetSearch(): void {
+    if (this.searchInputRef) {
+      this.searchInputRef.nativeElement.value = '';
+    }
+  }
 
 
 get pages() {

@@ -20,7 +20,7 @@ const LetterData = sequelize.define('letter_data', {
         allowNull: false
     },
     type: {
-        type: DataTypes.ENUM('nda', 'appointment', 'relieving', 'offer'),
+        type: DataTypes.ENUM('nda', 'appointment', 'relieving', 'offer', 'service'),
         allowNull: false
     },
     data: {

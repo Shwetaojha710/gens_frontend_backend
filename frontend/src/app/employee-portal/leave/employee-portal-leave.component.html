@@ -8,6 +8,181 @@
     From / To cannot be before today. Total days and duration options update after you pick dates.
   </p>
 
+  <!-- Leave balance KPI cards -->
+  <div class="row g-3 mb-4" *ngIf="leaveBalances.length > 0 || leaveBalanceLoading">
+    <ng-container *ngIf="leaveBalanceLoading">
+      <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+        <div class="ep-leave__kpi">
+          <p class="ep-leave__kpi-label">Loading…</p>
+        </div>
+      </div>
+    </ng-container>
+    <ng-container *ngIf="!leaveBalanceLoading">
+      <div
+        class="col-6 col-md-4 col-lg-3 col-xl-2"
+        *ngFor="let b of leaveBalances; let i = index"
+      >
+        <div class="ep-leave__kpi">
+          <div
+            class="ep-leave__kpi-icon"
+            [ngClass]="['ep-leave__kpi-icon--' + (['primary','success','warning','violet','slate','danger'][i % 6])]"
+          >
+            <i class="icon-base ri ri-calendar-check-line"></i>
+          </div>
+          <p class="ep-leave__kpi-value">{{ b.available_leave }}</p>
+          <p class="ep-leave__kpi-sub">of {{ b.total_leave }} days</p>
+          <p class="ep-leave__kpi-used">{{ b.used_leave || 0 }} used</p>
+          <p class="ep-leave__kpi-label">{{ b.name }}</p>
+
+        </div>
+      </div>
+    </ng-container>
+  </div>
+
+  <!-- Leave History Lookup -->
+  <!-- <div class="card ep-glass-card border-0 ep-leave-history-card mb-4">
+    <div class="card-body">
+      <h6 class="ep-leave-history-heading mb-3">
+        <i class="fas fa-history me-2 ep-leave-history-heading__icon"></i>Leave History Lookup
+        <span class="ep-leave-history-heading__hint">Select any filter and click Search</span>
+      </h6>
+
+      <div class="ep-leave-history-filters">
+        <div class="ep-leave-history-filter-item">
+          <label class="ep-leave-history-label">Leave Type</label>
+          <select
+            class="form-select form-select-sm"
+            [(ngModel)]="historyLeaveTypeId"
+            [ngModelOptions]="{ standalone: true }"
+          >
+            <option value="">All types</option>
+            <option *ngFor="let t of types" [value]="t.value">{{ t.label }}</option>
+          </select>
+        </div>
+
+        <div class="ep-leave-history-filter-item">
+          <label class="ep-leave-history-label">Month</label>
+          <select
+            class="form-select form-select-sm"
+            [(ngModel)]="historyMonth"
+            [ngModelOptions]="{ standalone: true }"
+          >
+            <option value="">All months</option>
+            <option *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]; let i = index" [value]="m.toString()">
+              {{ monthShort[i] }}
+            </option>
+          </select>
+        </div>
+
+        <div class="ep-leave-history-filter-item ep-leave-history-filter-item--year">
+          <label class="ep-leave-history-label">Year</label>
+          <select
+            class="form-select form-select-sm"
+            [(ngModel)]="historyYear"
+            [ngModelOptions]="{ standalone: true }"
+          >
+            <option value="">All years</option>
+            <option *ngFor="let y of historyYearOptions" [value]="y.toString()">{{ y }}</option>
+          </select>
+        </div>
+
+        <button
+          type="button"
+          class="btn btn-primary btn-sm ep-leave-history-search-btn"
+          (click)="searchLeaveHistory()"
+          [disabled]="historyLoading"
+        >
+          <i class="fas fa-search me-1" *ngIf="!historyLoading"></i>
+          <i class="fas fa-circle-notch fa-spin me-1" *ngIf="historyLoading"></i>
+          Search
+        </button>
+      </div>
+
+      <div *ngIf="historySearched && !historyLoading">
+        <div *ngIf="historyResults.length === 0" class="ep-leave-history-empty">
+          <i class="fas fa-inbox me-2"></i>No leave records found for selected filters.
+        </div>
+
+        <div *ngIf="historyResults.length > 0">
+          <div class="ep-leave-history-summary mb-2">
+            <span class="ep-leave-history-summary__count">{{ historyResults.length }} record{{ historyResults.length !== 1 ? 's' : '' }}</span>
+            <span class="ep-leave-history-summary__days">
+              — {{ historyTotalDays }} day{{ historyTotalDays !== 1 ? 's' : '' }} total
+            </span>
+            <div class="ep-leave-history-pagesize ms-auto">
+              <label class="ep-leave-pagesize__label">Show</label>
+              <select
+                class="form-select form-select-sm ep-leave-pagesize__select"
+                [(ngModel)]="historyPageSize"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="historyPage = 1"
+              >
+                <option *ngFor="let n of pageSizeOptions" [ngValue]="n">{{ n }}</option>
+              </select>
+              <span class="ep-leave-pagesize__label">rows</span>
+            </div>
+          </div>
+
+          <div class="ep-leave-history-table-wrap">
+            <table class="table table-sm align-middle mb-0 ep-leave-history-table">
+              <thead>
+                <tr>
+                  <th>Leave Type</th>
+                  <th>From</th>
+                  <th>To</th>
+                  <th class="text-end">Days</th>
+                  <th>Reason</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let r of historyPaged">
+                  <td>
+                    <span class="ep-leave-history-type">{{ $any(r).leaveName || '—' }}</span>
+                  </td>
+                  <td class="text-nowrap">{{ $any(r).fromDate | date: 'dd MMM yyyy' }}</td>
+                  <td class="text-nowrap">{{ $any(r).toDate | date: 'dd MMM yyyy' }}</td>
+                  <td class="text-end fw-semibold">{{ $any(r).days }}</td>
+                  <td class="ep-leave-history-reason" [title]="$any(r).reason || ''">
+                    {{ $any(r).reason || '—' }}
+                  </td>
+                  <td>
+                    <span [class]="leaveStatusClass($any(r).status)">{{ $any(r).status }}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <nav *ngIf="historyTotalPages > 1" class="ep-leave-pagination mt-2" aria-label="History pagination">
+            <button
+              class="ep-leave-pagination__btn"
+              [disabled]="historyPage === 1"
+              (click)="historyGoToPage(historyPage - 1)"
+              aria-label="Previous"
+            ><i class="fas fa-chevron-left"></i></button>
+            <button
+              *ngFor="let p of historyPageNumbers"
+              class="ep-leave-pagination__btn"
+              [class.ep-leave-pagination__btn--active]="p === historyPage"
+              (click)="historyGoToPage(p)"
+              [attr.aria-current]="p === historyPage ? 'page' : null"
+            >{{ p }}</button>
+            <button
+              class="ep-leave-pagination__btn"
+              [disabled]="historyPage === historyTotalPages"
+              (click)="historyGoToPage(historyPage + 1)"
+              aria-label="Next"
+            ><i class="fas fa-chevron-right"></i></button>
+            <span class="ep-leave-pagination__info">
+              {{ (historyPage - 1) * historyPageSize + 1 }}–{{ historyPageEnd }} of {{ historyResults.length }}
+            </span>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </div> -->
+
   <div class="row g-4 ep-leave-row">
     <div class="col-lg-4">
       <div class="card ep-glass-card border-0 h-100 ep-leave-form-card">
@@ -34,6 +209,30 @@
                 Restricted leave: any unused balance expires at the end of the calendar year (does not carry forward).
               </p>
             </div>
+            <!-- Comp-off earned date picker -->
+            <div class="mb-3" *ngIf="isCompOffSelected">
+              <label class="form-label ep-leave-label">Select comp-off earned date</label>
+              <div *ngIf="compOffListLoading" class="text-muted small">
+                <i class="fas fa-circle-notch fa-spin me-1"></i> Loading…
+              </div>
+              <div *ngIf="!compOffListLoading && compOffList.length === 0" class="text-danger small">
+                No comp-off balance available.
+              </div>
+              <div *ngIf="!compOffListLoading && compOffList.length > 0" class="ep-compoff-list">
+                <div
+                  *ngFor="let c of compOffList"
+                  class="ep-compoff-item"
+                  [class.ep-compoff-item--selected]="selectedCompOffId === c.id"
+                  (click)="selectedCompOffId = c.id"
+                  role="option"
+                  [attr.aria-selected]="selectedCompOffId === c.id"
+                >
+                  <span class="ep-compoff-date">{{ c.earnedDate | date: 'dd MMM yyyy' }}</span>
+                  <span class="ep-compoff-bal">{{ c.remainingDays }} day{{ c.remainingDays === 1 ? '' : 's' }}</span>
+                </div>
+              </div>
+            </div>
+
             <div class="row g-2 mb-3">
               <div class="col-sm-6">
                 <label class="form-label ep-leave-label">From</label>
@@ -147,26 +346,37 @@
               <span class="ep-leave-toolbar__label text-muted small">Period</span>
               <div class="ep-leave-toolbar__inputs">
                 <select
+                  class="form-select form-select-sm ep-leave-toolbar__type"
+                  [(ngModel)]="selectedLeaveTypeFilter"
+                  [ngModelOptions]="{ standalone: true }"
+                  (ngModelChange)="currentPage = 1"
+                  aria-label="Leave type"
+                >
+                  <option value="">All types</option>
+                  <option *ngFor="let t of types" [value]="t.value">{{ t.label }}</option>
+                </select>
+                <select
                   class="form-select form-select-sm ep-leave-toolbar__month"
                   [(ngModel)]="month"
                   [ngModelOptions]="{ standalone: true }"
                   (ngModelChange)="loadList()"
-                  [attr.aria-label]="'Month'"
+                  aria-label="Month"
                 >
-                  <option *ngFor="let m of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]" [ngValue]="m">
-                    {{ monthShort[m - 1] }}
+                  <option value="">All months</option>
+                  <option *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]; let i = index" [value]="m.toString()">
+                    {{ monthShort[i] }}
                   </option>
                 </select>
-                <input
-                  type="number"
-                  class="form-control form-control-sm ep-leave-toolbar__year"
+                <select
+                  class="form-select form-select-sm ep-leave-toolbar__year"
                   [(ngModel)]="year"
                   [ngModelOptions]="{ standalone: true }"
-                  (change)="loadList()"
-                  min="2000"
-                  max="2100"
+                  (ngModelChange)="loadList()"
                   aria-label="Year"
-                />
+                >
+                  <option value="">All years</option>
+                  <option *ngFor="let y of yearOptions" [value]="y.toString()">{{ y }}</option>
+                </select>
                 <button
                   type="button"
                   class="btn btn-sm ep-leave-toolbar__refresh"
@@ -341,7 +551,7 @@
                           <i class="fas fa-circle-notch fa-spin" *ngIf="approvingId == $any(row).id"></i>
                         </button>
                         <button
-                          *ngIf="(isApprover || isTeamLead) && ($any(row).status?.toLowerCase() == 'pending' || $any(row).status?.toLowerCase() == 'recommended')"
+                          *ngIf="(isApprover && ($any(row).status?.toLowerCase() == 'pending' || $any(row).status?.toLowerCase() == 'recommended')) || (isTeamLead && !isApprover && $any(row).status?.toLowerCase() == 'pending')"
                           type="button"
                           class="btn btn-sm btn-outline-danger"
                           (click)="declineLeave(row)"

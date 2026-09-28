@@ -1,0 +1,37 @@
+<app-page-hero
+  badge="Solutions"
+  title="HR Solutions for Everyone"
+  subtitle="Tailored tools for HR teams, managers, employees, and enterprises — every role gets exactly what it needs."
+/>
+
+<section class="section-padding">
+  <div class="container-gens space-y-16 md:space-y-24">
+    @for (solution of solutions; track solution.title; let i = $index) {
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center" appScrollReveal>
+        <div [class.lg:order-2]="i % 2 === 1">
+          <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-gens-500/20 to-accent/20 flex items-center justify-center mb-5">
+            <i class="text-2xl text-gens-600 dark:text-gens-400" [class]="'ri ' + solution.icon"></i>
+          </div>
+          <h2 class="font-display text-2xl md:text-3xl font-bold mb-4 tracking-tight">{{ solution.title }}</h2>
+          <p class="text-[var(--text-secondary)] leading-relaxed mb-6">{{ solution.description }}</p>
+          <ul class="space-y-3">
+            @for (benefit of solution.benefits; track benefit) {
+              <li class="flex items-center gap-2.5 text-sm">
+                <i class="ri ri-check-line text-lg text-green-500 shrink-0"></i>
+                {{ benefit }}
+              </li>
+            }
+          </ul>
+        </div>
+        <div [class.lg:order-1]="i % 2 === 1" class="glass-card p-10 min-h-[280px] flex items-center justify-center">
+          <div class="text-center">
+            <i class="ri text-6xl text-gens-500/30 mb-4 block" [class]="'ri ' + solution.icon"></i>
+            <p class="text-sm text-[var(--text-muted)]">{{ solution.title }} Dashboard Preview</p>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+</section>
+
+<app-cta-banner />

@@ -1,0 +1,15 @@
+<app-page-hero
+  badge="Blog"
+  title="HR Insights & Resources"
+  subtitle="Expert articles on HR technology, AI-powered attendance, payroll, and workforce management best practices."
+/>
+
+<section class="section-padding">
+  <div class="container-gens grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" appStaggerReveal>
+    @for (post of posts; track post.id) {
+      <app-blog-card [post]="post" />
+    }
+  </div>
+</section>
+
+<app-cta-banner />

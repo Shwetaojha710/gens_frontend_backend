@@ -58,6 +58,20 @@ export class SuperadminService {
     });
   }
 
+  forgotPassword(email: string): Observable<any> {
+    return this.http.post(`${this.resolvedBaseUrl()}superadmin/forgot-password`, { email }, {
+      withCredentials: true,
+      responseType: 'text',
+    });
+  }
+
+  resetPassword(token: string, newPassword: string): Observable<any> {
+    return this.http.post(`${this.resolvedBaseUrl()}superadmin/reset-password`, { token, newPassword }, {
+      withCredentials: true,
+      responseType: 'text',
+    });
+  }
+
   listTenants(): Observable<any> {
     return this.http.get(`${this.resolvedBaseUrl()}superadmin/tenants`, {
       headers: this.authHeaders(),
@@ -162,7 +176,7 @@ export class SuperadminService {
     });
   }
 
-  updateUser(userId: string, payload: { status?: 'active' | 'inactive'; role?: 'admin' | 'hr' | 'employee'; name?: string }): Observable<any> {
+  updateUser(userId: string, payload: { status?: 'active' | 'inactive'; role?: 'admin' | 'hr' | 'employee'; name?: string; newPassword?: string }): Observable<any> {
     return this.http.put(`${this.resolvedBaseUrl()}superadmin/users/${userId}`, payload, {
       headers: this.authHeaders(),
       withCredentials: true,

@@ -127,10 +127,13 @@ dist
 .yarn/unplugged
 .yarn/build-state.yml
 .yarn/install-state.gz
-.pnp.*
+.pnp.*  
 
 /public
 /documents
 /app_old
 /app.zip
 /app_new_13_jan
+
+/uploads
+/upload

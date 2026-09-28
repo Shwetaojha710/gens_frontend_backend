@@ -8,7 +8,7 @@
  */
 function isPlanFree(plan) {
   if (!plan) return true;
-  if (plan.billingCycle === "free") return true;
+  if (plan.billingCycle == "free") return true;
   const price = plan.price != null ? Number(plan.price) : 0;
   return price <= 0;
 }

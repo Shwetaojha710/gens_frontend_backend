@@ -18,7 +18,10 @@ const { attendanceMaster, getAttendanceSettings, updateAttendanceSettings, getMo
   BulkupdateAttendance,
   getWeekendAttendance,
   CreateManuallyCompoff,
-  listManuallyCompoff} = require('../controller/tenant/attendance');
+  listManuallyCompoff,
+  getContractualAttendanceList,
+  approveContractualDay,
+  getContractualEmployees} = require('../controller/tenant/attendance');
 const upload = require('../middleware/upload');
 const router = express.Router();
 const multer = require("multer");
@@ -61,5 +64,9 @@ router.post('/delete-reimbursement',Admin,deleteReimbursement);
 router.post('/create-manually-comp-off',Admin,CreateManuallyCompoff);
 router.post('/list-manually-comp-off',Admin,listManuallyCompoff);
 
+// Contractual employee attendance approval
+router.post('/contractual-attendance-list', Admin, getContractualAttendanceList);
+router.post('/contractual-approve', Admin, approveContractualDay);
+router.get('/contractual-employees', Admin, getContractualEmployees);
 
 module.exports = router;

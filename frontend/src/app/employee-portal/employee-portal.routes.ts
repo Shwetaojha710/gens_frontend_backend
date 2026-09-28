@@ -64,6 +64,34 @@ export const employeePortalRoutes: Routes = [
             (m) => m.EmployeePortalDocumentsComponent,
           ),
       },
+      {
+        path: 'handbook',
+        loadComponent: () =>
+          import('./handbook/employee-portal-handbook.component').then(
+            (m) => m.EmployeePortalHandbookComponent,
+          ),
+      },
+      {
+        path: 'insurance-policy',
+        loadComponent: () =>
+          import('./insurance-policy/employee-portal-insurance-policy.component').then(
+            (m) => m.EmployeePortalInsurancePolicyComponent,
+          ),
+      },
+      {
+        path: 'e-insurance-card',
+        loadComponent: () =>
+          import('./e-insurance-card/employee-portal-e-insurance-card.component').then(
+            (m) => m.EmployeePortalEInsuranceCardComponent,
+          ),
+      },
+      {
+        path: 'notifications',
+        loadComponent: () =>
+          import('./notifications/employee-portal-notifications.component').then(
+            (m) => m.EmployeePortalNotificationsComponent,
+          ),
+      },
     ],
   },
 ];

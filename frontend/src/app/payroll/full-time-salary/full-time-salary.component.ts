@@ -50,7 +50,52 @@ export class FullTimeSalaryComponent {
   ];
   yearList: any = [];
   notyf: Notyf;
-  obj: any = {}
+  obj: any = {};
+
+  penaltyTypeOptions = [
+    { value: 'percentage', label: 'Percentage (Days to Deduct)' },
+    { value: 'amount', label: 'Fixed Amount (₹)' },
+  ];
+
+  onRowPenaltyToggle(item: any) {
+    if (!item['rowPenaltyEnabled']) {
+      item['rowPenaltyType'] = 'percentage';
+      item['rowPenaltyValue'] = null;
+      item['penaltyAmount'] = 0;
+      item['basePay'] = item['_basePayBeforeRowPenalty'];
+    }
+  }
+
+  onPenaltyTypeChange(item: any) {
+    item['rowPenaltyValue'] = null;
+    item['penaltyAmount'] = 0;
+    item['basePay'] = item['_basePayBeforeRowPenalty'];
+  }
+
+  applyRowPenalty(item: any) {
+    const base = item['_basePayBeforeRowPenalty'] ?? item['basePay'];
+    const type = item['rowPenaltyType'] || 'percentage';
+    let value = Number(item['rowPenaltyValue'] || 0);
+
+    let penalty = 0;
+    if (value > 0) {
+      if (type == 'percentage') {
+        const maxDays = item['totalWorkingDays'] || 30;
+        if (value > maxDays) {
+          value = maxDays;
+          item['rowPenaltyValue'] = maxDays;
+        }
+        const perDay = item['TotalSalary'] / (item['totalWorkingDays'] || 30);
+        penalty = Math.round(value * perDay);
+      } else {
+        penalty = Math.min(Math.round(value), base);
+      }
+    }
+
+    item['penaltyAmount'] = penalty;
+    item['basePay'] = Math.max(0, base - penalty);
+  }
+
   constructor(public attendanceService: AttendanceService, private master: MasterService, private router: Router, private payroll: PayrollService, private statusService: StatusService) {
     this.notyf = new Notyf();
   }
@@ -118,6 +163,21 @@ export class FullTimeSalaryComponent {
     this.masterSelected = this.SalaryArr.every((item: any) => item.isSelected);
 
   }
+
+  attendanceMasterSelected: boolean = false;
+
+checkUncheckAllAttendance() {
+  this.attendanceList.forEach((item: any) => {
+    item.editable = this.attendanceMasterSelected;
+  });
+}
+
+isAllAttendanceSelected() {
+  this.attendanceMasterSelected =
+    this.attendanceList.length > 0 &&
+    this.attendanceList.every((item: any) => item.editable);
+}
+
   async getYear() {
     this.yearList = []
     this.master.getAttendanceYear().subscribe((data: { [x: string]: any; data: any; }) => {
@@ -407,10 +467,73 @@ export class FullTimeSalaryComponent {
       case 'leave':
         this.loadLeaveRequests();
         break;
+     case 'regularization':
+      this.loadRegularization();
+        break;
 
     }
 
   }
+
+  approveRegularization(item: any, status: string) {
+    this.master.UpdateApplyRegularizeStatus({
+      ids: item.id,
+      status,
+      employeeId: item.employeeId
+    }).subscribe({
+      next: (response: any) => {
+        const ok = this.statusService.handleResponseStatus(response.status, response.message);
+        if (ok === true) {
+          this.notyf.success(response.message);
+          this.loadRegularization(); // list refresh
+        }
+      },
+      error: (err) => this.notyf.error(err.error?.message)
+    });
+  }
+
+  loadRegularization() {
+    const empId = this.personalDetails?.employeeId;
+    const month = this.obj['month'];
+    const year = this.obj['year'];
+
+    if (!empId || !month || !year) {
+      this.regularizationList = [];
+      return;
+    }
+
+    const startDate = `${year}-${month}-01`;
+    const lastDay = new Date(Number(year), Number(month), 0).getDate();
+    const endDate = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+
+    const payload = {
+      emp_id: empId,
+      startDate,
+      endDate,
+      status: 'pending'   // backend default bhi pending hai; 'All' abhi kaam nahi karega
+    };
+
+    this.master.getRegularizeList(payload).subscribe({
+      next: (response: any) => {
+        const message = response.message || 'Data found Successfully';
+        const status = this.statusService.handleResponseStatus(response.status, message);
+
+        if (status === true) {
+          this.regularizationList = response.data || [];   // ✅ direct array
+        } else if (status === 'expired') {
+          this.router.navigate(['login']);
+        } else {
+          this.regularizationList = [];
+          this.notyf.error(message);
+        }
+      },
+      error: (err) => {
+        this.regularizationList = [];
+        this.notyf.error(err.error?.message);
+      }
+    });
+  }
+  regularizationList: any[] = [];
   //   changeTab(tab: string) {
 
   //     this.activeTab = tab;
@@ -518,6 +641,12 @@ export class FullTimeSalaryComponent {
 
   }
 
+  clearSalaryList() {
+    this.SalaryArr = [];
+    this.originalList = [];
+    this.filteredSalary = [];
+  }
+
   back() {
 
   }
@@ -558,8 +687,14 @@ export class FullTimeSalaryComponent {
         if (status == true) {
 
           this.notyf.success(message)
-          this.SalaryArr = response.data
-          this.originalList = response.data
+          this.SalaryArr = response.data.map((emp: any) => ({
+            ...emp,
+            _basePayBeforeRowPenalty: emp.basePay,
+            rowPenaltyEnabled: false,
+            rowPenaltyType: 'percentage',
+            rowPenaltyValue: null,
+          }));
+          this.originalList = [...this.SalaryArr];
 
           // pagination
           const start = (this.currentPage - 1) * this.pageSize;
@@ -729,8 +864,12 @@ this.modal.show();
 
         if (status === true) {
 
-          this.attendanceList = response.data?.attendanceList || [];
-
+          // this.attendanceList = response.data?.attendanceList || [];
+          this.attendanceList = (response.data?.attendanceList || []).map((a: any) => ({
+            ...a,
+            editable: !!a.editable,
+          }));
+          this.attendanceMasterSelected = false;
         }
         else if (status == "expired") {
           this.router.navigate(["login"]);

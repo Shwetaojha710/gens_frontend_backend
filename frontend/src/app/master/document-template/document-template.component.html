@@ -1,0 +1,349 @@
+<div class="container-fluid mt-4">
+  <div class="row mb-3" *ngIf="createFlag">
+    <div class="col-12">
+      <div class="card dt-editor-card">
+        <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <span>{{ updateFlag ? 'Edit' : 'Create' }} Document (Word-like editor)</span>
+          <button type="button" class="btn btn-sm btn-primary" (click)="back()">
+            <i class="fa-solid fa-arrow-left"></i> Back
+          </button>
+        </h5>
+        <div class="card-body">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Template Name</label>
+              <input class="form-control" [(ngModel)]="form.name" placeholder="e.g. Experience Letter" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-bold">Category</label>
+              <select class="form-select" [(ngModel)]="form.category">
+                <option *ngFor="let c of categories" [value]="c.value">{{ c.label }}</option>
+              </select>
+            </div>
+            <div class="col-md-2" *ngIf="updateFlag">
+              <label class="form-label fw-bold">Status</label>
+              <select class="form-select" [(ngModel)]="form.status">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-check mt-4">
+                <input type="checkbox" class="form-check-input" [(ngModel)]="form.includeSalaryAnnexure" />
+                Append salary annexure
+              </label>
+            </div>
+          </div>
+
+          <div class="row g-3 mt-1">
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Letterhead</label>
+              <div class="d-flex flex-wrap gap-3 align-items-center">
+                <label class="form-check mb-0">
+                  <input
+                    type="radio"
+                    class="form-check-input"
+                    name="lhMode"
+                    value="image"
+                    [(ngModel)]="letterheadMode"
+                    (ngModelChange)="syncLetterheadMode()"
+                  />
+                  Use uploaded letterhead
+                </label>
+                <label class="form-check mb-0">
+                  <input
+                    type="radio"
+                    class="form-check-input"
+                    name="lhMode"
+                    value="blank"
+                    [(ngModel)]="letterheadMode"
+                    (ngModelChange)="syncLetterheadMode()"
+                  />
+                  Blank top (pre-printed paper)
+                </label>
+              </div>
+              <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
+                <label class="btn btn-sm btn-outline-secondary mb-0">
+                  {{ uploadingLetterhead ? 'Uploading…' : 'Upload letterhead' }}
+                  <input type="file" accept="image/*" hidden (change)="onLetterheadFile($event)" [disabled]="uploadingLetterhead" />
+                </label>
+                <a class="btn btn-sm btn-link" routerLink="/layout/master/letterhead">Manage letterhead</a>
+                <small class="text-muted" *ngIf="!pageBackground && letterheadMode === 'image'">
+                  No letterhead yet — upload one or choose blank top.
+                </small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Import document (optional)</label>
+              <div>
+                <label class="btn btn-sm btn-outline-primary mb-0" [class.disabled]="importingDoc">
+                  {{ importingDoc ? 'Importing…' : 'Import Word / HTML / TXT' }}
+                  <input
+                    type="file"
+                    accept=".docx,.html,.htm,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/html,text/plain"
+                    hidden
+                    (change)="importDocumentFile($event)"
+                    [disabled]="importingDoc"
+                  />
+                </label>
+                <small class="text-muted d-block mt-1">
+                  Import Offer / Appointment / NDA as <b>.docx</b>. Agar Word header mein logo hai woh aa jayega;
+                  warna pehle <b>Upload letterhead</b> karo aur <b>Use uploaded letterhead</b> select rakho.
+                  Old <b>.doc</b> → Save As <b>.docx</b> first.
+                </small>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <label class="form-label fw-bold">Insert variable</label>
+            <div class="var-groups">
+              <div class="var-group" *ngFor="let group of ['employee','salary','company']">
+                <small class="text-muted text-uppercase">{{ group }}</small>
+                <div class="d-flex flex-wrap gap-1 mt-1">
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary btn-sm var-chip"
+                    *ngFor="let v of catalog[group]"
+                    (click)="insertVariable(v.key)"
+                    [title]="v.label"
+                  >{{'{{' + v.key + '}}'}}</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <label class="form-label fw-bold">Document body</label>
+
+            <!-- Formatting toolbar for Word-import (contenteditable) mode -->
+            <div class="dt-rich-toolbar" *ngIf="useRichEditor" (mousedown)="$event.preventDefault()">
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('bold')" title="Bold"><b>B</b></button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('italic')" title="Italic"><i>I</i></button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('underline')" title="Underline"><u>U</u></button>
+              <span class="dt-rich-sep"></span>
+
+              <!-- Font Family -->
+              <select
+                class="form-select form-select-sm dt-format-select"
+                (mousedown)="$event.stopPropagation()"
+                (change)="applyRichTextStyle('font-family', $any($event.target).value)"
+              >
+                <option value="">Font</option>
+                <option value="Arial">Arial</option>
+                <option value="Calibri">Calibri</option>
+                <option value="Times New Roman">Times New Roman</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Verdana">Verdana</option>
+                <option value="Tahoma">Tahoma</option>
+              </select>
+
+              <!-- Font Size -->
+              <select
+                class="form-select form-select-sm dt-format-select"
+                (mousedown)="$event.stopPropagation()"
+                (change)="applyRichTextStyle('font-size', $any($event.target).value)"
+              >
+                <option value="">Size</option>
+                <option value="10px">10</option>
+                <option value="11px">11</option>
+                <option value="12px">12</option>
+                <option value="14px">14</option>
+                <option value="16px">16</option>
+                <option value="18px">18</option>
+                <option value="20px">20</option>
+                <option value="24px">24</option>
+                <option value="28px">28</option>
+                <option value="32px">32</option>
+              </select>
+
+              <!-- Line Height -->
+              <select
+                class="form-select form-select-sm dt-format-select"
+                (mousedown)="$event.stopPropagation()"
+                (change)="applyParagraphStyle('line-height', $any($event.target).value)"
+              >
+                <option value="">Line Height</option>
+                <option value="1">1.0</option>
+                <option value="1.15">1.15</option>
+                <option value="1.5">1.5</option>
+                <option value="1.75">1.75</option>
+                <option value="2">2.0</option>
+                <option value="2.5">2.5</option>
+              </select>
+
+              <!-- Paragraph Spacing -->
+              <select
+                class="form-select form-select-sm dt-format-select"
+                (mousedown)="$event.stopPropagation()"
+                (change)="applyParagraphSpacing($any($event.target).value)"
+              >
+                <option value="">Paragraph Spacing</option>
+                <option value="0px">0</option>
+                <option value="5px">5</option>
+                <option value="10px">10</option>
+                <option value="15px">15</option>
+                <option value="20px">20</option>
+              </select>
+
+              <span class="dt-rich-sep"></span>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('justifyLeft')" title="Align left">Left</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('justifyCenter')" title="Align center">Center</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('justifyRight')" title="Align right">Right</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('justifyFull')" title="Justify">Justify</button>
+              <span class="dt-rich-sep"></span>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('outdent')" title="Tab left (outdent)">⇤ Tab</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('indent')" title="Tab right (indent)">Tab ⇥</button>
+              <span class="dt-rich-sep"></span>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('insertUnorderedList')" title="Bullet list">• List</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('insertOrderedList')" title="Numbered list 1,2,3…">1. 2. 3.</button>
+              <span class="dt-rich-sep"></span>
+
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary"
+                (mousedown)="$event.preventDefault()"
+                (click)="insertPageBreak()"
+                title="Start content from next page"
+              >
+                ↵ Page Break
+              </button>
+
+
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('removeFormat')" title="Clear formatting">Clear</button>
+            </div>
+
+            <div class="a4-stage">
+              <div
+                class="editor-frame"
+                [class.editor-frame--blank]="letterheadMode === 'blank'"
+                [class.editor-frame--image]="letterheadMode === 'image' && !!pageBackground"
+                [class.editor-frame--imported]="importedLayout || useRichEditor"
+                [style.background-image]="pageBackground && letterheadMode === 'image' ? 'url(' + pageBackground + ')' : null"
+              >
+                <!-- Wrap Quill so its toolbar (sibling of host) is destroyed with *ngIf -->
+                <div *ngIf="!useRichEditor" class="dt-quill-wrap">
+                  <div #editorHost class="dt-quill-host"></div>
+                </div>
+                <!-- Word import: contenteditable so DOCX HTML stays visible + editable -->
+                <div
+                  *ngIf="useRichEditor"
+                  #richHost
+                  class="dt-rich-host"
+                  contenteditable="true"
+                  spellcheck="true"
+                  (input)="onRichInput()"
+                  (keydown)="onRichKeydown($event)"
+                  (mouseup)="saveRichSelection()"
+                  (keyup)="saveRichSelection()"
+                  (click)="saveRichSelection()"
+                ></div>
+              </div>
+            </div>
+            <small class="text-muted" *ngIf="useRichEditor">
+              Word layout mode — text select karo, upar wale <b>B / I / U</b> buttons use karo (Quill toolbar nahi).
+            </small>
+          </div>
+
+          <div class="mt-3 d-flex gap-2">
+            <button type="button" class="btn btn-primary btn-sm" (click)="save()">
+              {{ updateFlag ? 'Update' : 'Save' }} Template
+            </button>
+            <a class="btn btn-outline-primary btn-sm" routerLink="/layout/employee/generate-letter">
+              Generate for employee
+            </a>
+          </div>
+
+          <button
+  type="button"
+  class="btn btn-outline-dark btn-sm"
+  (click)="openPrintPreview()"
+>
+  <i class="fa-solid fa-eye"></i>
+  Print Preview
+</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" *ngIf="!createFlag">
+    <div class="col-12">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <span>HR Document Templates</span>
+          <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-sm btn-outline-secondary" routerLink="/layout/master/letterhead">Letterhead</a>
+            <a class="btn btn-sm btn-outline-primary" routerLink="/layout/employee/generate-letter">Generate Letter</a>
+            <button type="button" class="btn btn-sm btn-primary" (click)="openCreate()">+ New Template</button>
+          </div>
+        </h5>
+        <div class="card-body table-responsive">
+          <table class="table table-bordered table-sm align-middle">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Letterhead</th>
+                <th>Salary Annexure</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of list; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>{{ row.name }}</td>
+                <td>{{ row.category }}</td>
+                <td>{{ letterheadLabel(row) }}</td>
+                <td>{{ row.includeSalaryAnnexure ? 'Yes' : 'No' }}</td>
+                <td>
+                  <span class="badge" [class.bg-success]="row.status==='active'" [class.bg-secondary]="row.status!=='active'">
+                    {{ row.status }}
+                  </span>
+                </td>
+                <td class="d-flex gap-2">
+                  <button type="button" class="btn btn-sm btn-outline-primary" (click)="openEdit(row)">Edit</button>
+                  <button type="button" class="btn btn-sm btn-outline-danger" (click)="remove(row)">Delete</button>
+                </td>
+              </tr>
+              <tr *ngIf="!list?.length">
+                <td colspan="7" class="text-center text-muted">No templates yet. Upload letterhead, then create a template.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- PRINT PREVIEW — iframe shows exact print layout -->
+  <div class="print-preview-backdrop" *ngIf="previewOpen">
+    <div class="print-preview-modal">
+      <div class="print-preview-header">
+        <div>
+          <strong>Print Preview</strong>
+          <small class="text-muted ms-2">A4 — jaisa print pe dikhega</small>
+        </div>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-dark btn-sm" (click)="printDocument()">
+            <i class="fa-solid fa-print"></i>
+            Print
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" (click)="closePrintPreview()">
+            <i class="fa-solid fa-xmark"></i>
+            Close
+          </button>
+        </div>
+      </div>
+      <div class="print-preview-body">
+        <iframe
+          *ngIf="previewUrl"
+          class="print-preview-iframe"
+          [src]="previewUrl"
+          title="Print preview"
+        ></iframe>
+      </div>
+    </div>
+  </div>
+</div>

@@ -26,13 +26,14 @@ import { OfferLetterComponent } from '../profile/offer-letter/offer-letter.compo
 import { ServiceAgreementComponent } from '../profile/service-agreement/service-agreement.component';
 import { AppointmentLetterComponent } from '../profile/appointment-letter/appointment-letter.component';
 import { RelevingLetterComponent } from '../profile/releving-letter/releving-letter.component';
+import { InsuranceDocumentsComponent } from '../profile/insurance-documents/insurance-documents.component';
 // import { DocumentRendererComponent } from '../profile/document-renderer/document-renderer.component';
 
 @Component({
   selector: 'app-add',
   standalone: true,
-  imports: [CommonModule, FormsModule, AssignLeaveComponent, NgSelectModule, RouterModule, NdaComponent,QualificationComponent, ExperienceComponent,
-     BankDetailsComponent,RelevingLetterComponent, BasicComponent, AllowancesComponent, TotalSalaryComponentComponent, DeductionsComponent, AssignLeaveComponent,OfferLetterComponent,ServiceAgreementComponent,AppointmentLetterComponent],
+  imports: [CommonModule, FormsModule, AssignLeaveComponent, NgSelectModule, RouterModule, NdaComponent, QualificationComponent, ExperienceComponent,
+    BankDetailsComponent, RelevingLetterComponent, BasicComponent, AllowancesComponent, TotalSalaryComponentComponent, DeductionsComponent, OfferLetterComponent, ServiceAgreementComponent, AppointmentLetterComponent, InsuranceDocumentsComponent],
   templateUrl: './add.component.html',
   styleUrls: ['./add.component.css']
 })
@@ -47,7 +48,13 @@ export class AddComponent {
 
     this.notyf = new Notyf();
     console.log(this.personalDetails, "personaldetails");
+         this.DepartmentDD()
+this.getDesignation(this.personalDetails.departmentId)
 
+     this.getEmploymentTypes();
+
+     this.loadEmployees()
+     this.getStateDistrict(this.personalDetails.pinCode)
   }
     role: any = [{ value: 'manager', label: 'Manager' }, { value: 'teamLeader', label: 'Team Leader' }, { value: 'employee', label: 'employee' }]
 
@@ -74,12 +81,10 @@ export class AddComponent {
     await this.getstates(this.personalDetails.country)
     await this.getcity(this.personalDetails.state)
     await this.navigateToLeave()
-    await this.DepartmentDD()
-    await this.getEmploymentTypes();
-    await this.loadEmployees()
-    await this.getDesignation(this.personalDetails.departmentId)
+
+
   }
-  async getEmploymentTypes() {
+   getEmploymentTypes() {
     let obj:any={}
     this.employmentTypes = [];
     obj["branchId"]=this.personalDetails['branchId']
@@ -87,9 +92,26 @@ export class AddComponent {
       this.employmentTypes = data.data || [];
     });
   }
+  getStateDistrict(pin_code: any) {
+  if (!pin_code) return;
+
+  let obj: any = {
+    pin_code: pin_code
+  };
+
+  this.employeeService.getStatesDistrict(obj).subscribe({
+    next: (data: any) => {
+      this.personalDetails['state'] = data?.data?.state_name || '';
+      this.personalDetails['city'] = data?.data?.district_name || '';
+    },
+    error: (err) => {
+      console.error('Error fetching state/district:', err);
+    }
+  });
+}
   employeeList: any = []
   cardData: any = {}
-  async loadEmployees() {
+   loadEmployees() {
 
     this.employeeList = []
 
@@ -121,7 +143,7 @@ export class AddComponent {
 
   }
   departmentDD: any = []
-  async DepartmentDD() {
+   DepartmentDD() {
     this.departmentDD = []
    let obj:any={}
     this.Documentervice.Departmentsdd(obj).subscribe({
@@ -130,7 +152,7 @@ export class AddComponent {
 
         if (response.status === true) {
           this.departmentDD = response.data;
-
+        console.log("department dropdown",this.departmentDD)
         }
         else if (response.status === "expired") {
           this.router.navigate(["login"]);
@@ -160,6 +182,7 @@ export class AddComponent {
 
         if (response.status === true) {
           this.designationDD = response.data;
+          console.log(this.designationDD,"designation data");
 
         }
         else if (response.status === "expired") {

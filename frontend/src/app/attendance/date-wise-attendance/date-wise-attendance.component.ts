@@ -89,9 +89,11 @@ export class DateWiseAttendanceComponent {
   //    console.log(this.obj)
   // }
   AttendanceMasterList: any = [];
+  filteredList: any[] = [];
   editingId: number | null = null;
   minDate: any
   fromDashboard: any = 'false'
+  dashboardStatusFilter: string = '';
   constructor(
     private master: MasterService,
     private attendanceService: AttendanceService,
@@ -101,6 +103,7 @@ export class DateWiseAttendanceComponent {
   ) {
     // Check if we came from the dashboard, e.g., via a query param
     this.fromDashboard = this.route.snapshot.queryParamMap.get('fromDashboard');
+    this.dashboardStatusFilter = this.route.snapshot.queryParamMap.get('status') || '';
     const today1 = new Date();
     if (this.fromDashboard == 'true') {
       this.obj['emp_id'] = 'All';
@@ -145,9 +148,8 @@ export class DateWiseAttendanceComponent {
   updateDisplayedList() {
     const start = (this.currentPage - 1) * this.itemsPerPage;
     const end = start + this.itemsPerPage;
-
-    this.AttendanceMasterList = this.originalList.slice(start, end);
-    this.totalPages = Math.ceil(this.originalList.length / this.itemsPerPage);
+    this.AttendanceMasterList = this.filteredList.slice(start, end);
+    this.totalPages = Math.ceil(this.filteredList.length / this.itemsPerPage);
   }
 
   goToPage(page: number) {
@@ -160,25 +162,21 @@ export class DateWiseAttendanceComponent {
     this.searchText = event?.target.value;
 
     if (!this.searchText || this.searchText.trim() === '') {
-      this.AttendanceMasterList = [...this.originalList];
-      this.updateDisplayedList();
-      return;
-    }
-
-    const search = this.searchText.toLowerCase();
-
-    this.AttendanceMasterList = this.originalList.filter((item: any) => {
-      return (
-        item.employee_name.toLowerCase().includes(search) ||
+      this.filteredList = [...this.originalList];
+    } else {
+      const search = this.searchText.toLowerCase();
+      this.filteredList = this.originalList.filter((item: any) =>
+        item.employee_name?.toLowerCase().includes(search) ||
         (item.date && item.date.toLowerCase().includes(search)) ||
         (item.status && item.status.toLowerCase().includes(search)) ||
-        (item.checkIn && item.checkIn.toLowerCase().includes(search)) ||
-        (item.checkOut && item.checkOut.toLowerCase().includes(search))
+        (item.checkIn && String(item.checkIn).toLowerCase().includes(search)) ||
+        (item.checkOut && String(item.checkOut).toLowerCase().includes(search))
       );
-    });
+    }
 
     this.currentPage = 1;
-    // this.updateDisplayedList();
+    this.updateDisplayedList();
+    this.updateVisiblePages();
   }
 
   async ngOnInit() {
@@ -212,10 +210,23 @@ export class DateWiseAttendanceComponent {
           status: statusMap[item.status] || item.status
 
         }));
-        this.originalList = this.AttendanceMasterList
+
+        // When navigating from dashboard with a status filter, keep only matching rows
+        if (this.fromDashboard === 'true' && this.dashboardStatusFilter) {
+          const filterMap: Record<string, string> = { present: 'P', absent: 'A', leave: 'L' };
+          const target = filterMap[this.dashboardStatusFilter.toLowerCase()];
+          if (target) {
+            this.AttendanceMasterList = this.AttendanceMasterList.filter((item: any) => item.status === target);
+          }
+        }
+
+        this.originalList = [...this.AttendanceMasterList];
+        this.filteredList = [...this.originalList];
+        this.searchText = '';
+        this.currentPage = 1;
         this.generateDayList(this.obj['startDate'], this.obj['endDate']);
         this.updateDisplayedList();
-        this.updateVisiblePages()
+        this.updateVisiblePages();
       } else if (status == false) {
         this.notyf.error(response.message)
       }
@@ -462,13 +473,14 @@ export class DateWiseAttendanceComponent {
     this.updateFlag = false;
   }
 
-  delete(id: number) {
-    this.attendanceService.deleteAttendance(id).subscribe((data: { [x: string]: any; data: any; }) => {
+  delete(item: any) {
+    this.attendanceService.deleteAttendance(item).subscribe((data: { [x: string]: any; data: any; }) => {
       if (data['status'] == true) {
         this.notyf.success(data['message']);
-        this.AttendanceMasterList = this.AttendanceMasterList.filter((item: any) => item.id !== id);
-        this.originalList = this.AttendanceMasterList; // Update original list for filtering
+        this.originalList = this.originalList.filter((row: any) => row.id !== item.id);
+        this.filteredList = this.filteredList.filter((row: any) => row.id !== item.id);
         this.updateDisplayedList();
+        this.updateVisiblePages();
       } else if (data['status'] == 'expired') {
         this.router.navigate(['login'])
       } else {

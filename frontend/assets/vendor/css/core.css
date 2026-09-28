@@ -3,7 +3,7 @@
 :root,
 [data-bs-theme=light] {
   --bs-blue: #26c6f9;
-  --bs-indigo: #005495;
+  --bs-indigo: #008f84;
   --bs-purple: #6f42c1;
   --bs-pink: #e83e8c;
   --bs-red: #ff4d49;
@@ -28,10 +28,11 @@
   --bs-gray-700: #676a7b;
   --bs-gray-800: #515569;
   --bs-gray-900: #3b4055;
-  --bs-primary: #0663a9;
+  --bs-primary: #00b4a6;
   --bs-secondary: #6d788d;
   --bs-success: #198754;
-  --bs-info: #26c6f9;
+  /* --bs-info: #26c6f9; */
+  --bs-info: #00b4a6;;
   --bs-warning: #fdb528;
   --bs-danger: #ff4d49;
   --bs-light: #dfdfe3;
@@ -95,10 +96,10 @@
   --bs-tertiary-bg: #dfdfe3;
   --bs-tertiary-bg-rgb: 223, 223, 227;
   --bs-heading-color: color-mix(in sRGB, #262b43 90%, #fff);
-  --bs-link-color: #005495;
+  --bs-link-color: #008f84;
   --bs-link-color-rgb: 102, 108, 255;
   --bs-link-decoration: none;
-  --bs-link-hover-color: #5c61e6;
+  --bs-link-hover-color: #00b4a6;
   --bs-link-hover-color-rgb: 92, 97, 230;
   --bs-code-color: #e83e8c;
   --bs-highlight-color: #676a7b;
@@ -114,7 +115,8 @@
   --bs-border-radius-xxl: 1rem;
   --bs-border-radius-2xl: var(--bs-border-radius-xxl);
   --bs-border-radius-pill: 50rem;
-  --bs-box-shadow: 0 0.25rem 0.875rem 0 rgba(38, 43, 67, 0.16);
+  /* --bs-box-shadow: 0 0.25rem 0.875rem 0 rgba(38, 43, 67, 0.16); */
+  --bs-box-shadow:0 0.25rem 0.875rem 0 rgb(176 230 226 / 70%);
   --bs-box-shadow-sm: 0 0.125rem 0.625rem 0 rgba(38, 43, 67, 0.16);
   --bs-box-shadow-lg: 0 0.375rem 1.25rem 0 rgba(38, 43, 67, 0.18);
   --bs-box-shadow-inset: inset 0 1px 2px rgba(38, 43, 67, 0.075);
@@ -3930,19 +3932,19 @@ fieldset:disabled .btn {
 
 .btn-primary {
   --bs-btn-color: #fff;
-  --bs-btn-bg: #005495;
-  --bs-btn-border-color: #005495;
+  --bs-btn-bg: #008f84;
+  --bs-btn-border-color: #008f84;
   --bs-btn-hover-color: #fff;
-  --bs-btn-hover-bg: #5c61e6;
-  --bs-btn-hover-border-color: #5256cc;
+  --bs-btn-hover-bg: #00b4a6;
+  --bs-btn-hover-border-color: #007a71;
   --bs-btn-focus-shadow-rgb: 125, 130, 255;
   --bs-btn-active-color: #fff;
-  --bs-btn-active-bg: #5c61e6;
-  --bs-btn-active-border-color: #4d51bf;
+  --bs-btn-active-bg: #00b4a6;
+  --bs-btn-active-border-color: #186760;
   --bs-btn-active-shadow: var(--bs-box-shadow-xs);
   --bs-btn-disabled-color: #fff;
-  --bs-btn-disabled-bg: #005495;
-  --bs-btn-disabled-border-color: #005495;
+  --bs-btn-disabled-bg: #008f84;
+  --bs-btn-disabled-border-color: #008f84;
   border: 0px;
 }
 
@@ -4083,19 +4085,19 @@ fieldset:disabled .btn {
 }
 
 .btn-outline-primary {
-  --bs-btn-color: #005495;
-  --bs-btn-border-color: #005495;
+  --bs-btn-color: #008f84;
+  --bs-btn-border-color: #008f84;
   --bs-btn-hover-color: #fff;
-  --bs-btn-hover-bg: #005495;
-  --bs-btn-hover-border-color: #005495;
+  --bs-btn-hover-bg: #008f84;
+  --bs-btn-hover-border-color: #008f84;
   --bs-btn-focus-shadow-rgb: 102, 108, 255;
   --bs-btn-active-color: #fff;
-  --bs-btn-active-bg: #005495;
-  --bs-btn-active-border-color: #005495;
+  --bs-btn-active-bg: #008f84;
+  --bs-btn-active-border-color: #008f84;
   --bs-btn-active-shadow: var(--bs-box-shadow-xs);
-  --bs-btn-disabled-color: #005495;
+  --bs-btn-disabled-color: #008f84;
   --bs-btn-disabled-bg: transparent;
-  --bs-btn-disabled-border-color: #005495;
+  --bs-btn-disabled-border-color: #008f84;
   --bs-gradient: none;
 }
 
@@ -6111,7 +6113,7 @@ fieldset:disabled .btn {
   --bs-progress-border-radius: 50rem;
   --bs-progress-box-shadow: var(--bs-box-shadow-inset);
   --bs-progress-bar-color: var(--bs-white);
-  --bs-progress-bar-bg: #005495;
+  --bs-progress-bar-bg: #008f84;
   --bs-progress-bar-transition: width 0.6s ease;
   display: flex;
   height: var(--bs-progress-height);
@@ -8311,7 +8313,7 @@ fieldset:disabled .btn {
 }
 
 .link-primary {
-  color: #0663a9 !important;
+  color: #00b4a6 !important;
   text-decoration-color: RGBA(var(--bs-primary-rgb), var(--bs-link-underline-opacity, 1)) !important;
 }
 
@@ -9145,7 +9147,7 @@ fieldset:disabled .btn {
   --bs-gray-700: #b2b3ca;
   --bs-gray-800: #c5c5dc;
   --bs-gray-900: #d7d8ee;
-  --bs-primary: #005495;
+  --bs-primary: #008f84;
   --bs-secondary: #6d788d;
   --bs-success: #72e128;
   --bs-info: #26c6f9;
@@ -9181,7 +9183,7 @@ fieldset:disabled .btn {
 /*
 ? styles specifically for apex-chart dark variant */
 .apexcharts-theme-dark {
-  --bs-primary: #005495;
+  --bs-primary: #008f84;
   --bs-secondary: #6d788d;
   --bs-success: #72e128;
   --bs-info: #26c6f9;
@@ -33869,12 +33871,27 @@ div.dt-container div.dt-search input {
   background: #555;
 }
 
-.btn-primary {
+/* .btn-primary {
 
   border-top: 0px solid;
   border-image-source: linear-gradient(90deg, #209AF7 0%, #025A9D 100%);
   background: linear-gradient(89.79deg, #209AF7 0.92%, #025A9D 99.82%);
 
+} */
+.btn-primary {
+  border-top: 0px solid;
+  border-image-source: none;
+  background: var(--app-primary, #00b4a6);
+  border-color: var(--app-primary, #00b4a6);
+  color: #fff;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+  background: color-mix(in sRGB, #000 10%, var(--app-primary, #00b4a6));
+  border-color: color-mix(in sRGB, #000 10%, var(--app-primary, #00b4a6));
+  color: #fff;
 }
 
 .ng-select.ng-select-single .ng-select-container {

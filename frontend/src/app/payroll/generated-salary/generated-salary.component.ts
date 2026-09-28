@@ -202,22 +202,18 @@ export class GeneratedSalaryComponent {
   EmpList: any = []
   async empList() {
     this.EmpList = []
-    this.master.getemployeeList().subscribe((data: { [x: string]: any; data: any; }) => {
+    // Use getEmployeeListAll so inactive employees also appear in the dropdown
+    // (this page is the only one that uses this variant; no other page is affected)
+    this.master.getEmployeeListAll().subscribe((data: { [x: string]: any; data: any; }) => {
       console.log(data)
       if (data['status'] == true) {
-        // this.notyf.success(data['message']);
         this.EmpList = data.data;
-        console.log(this.EmpList, "attendance master list");
-
+        console.log(this.EmpList, "employee list (including inactive)");
       }
       else if (data['status'] == 'expired') {
         this.router.navigate(['login'])
       }
-      else {
-        // this.notyf.error(data['message']);
-      }
     });
-
   }
 
   back() {
@@ -295,12 +291,175 @@ export class GeneratedSalaryComponent {
   DedArr: any = []
   personalDetails: any;
   EmployerDedArr: any = []
+  activeTab = 'salary';
+  attendanceList: any[] = [];
+  leaveList: any[] = [];
+  absentDaysList: any[] = [];
+  attendanceSettings: any = null;
+  joiningInMonth: boolean = false;
+  joiningDate: string | null = null;
+
+  changeTab(tab: string) {
+    this.activeTab = tab;
+    if (tab === 'attendance') this.loadAttendance();
+    if (tab === 'leave') this.loadLeaveRequests();
+    if (tab === 'absentDays') this.loadAbsentDays();
+  }
+
+  loadAbsentDays() {
+    this.payroll.empMonthlyLeaveAttDetails(this.buildAttLeavePayload()).subscribe({
+      next: (response: any) => {
+        const status = this.statusService.handleResponseStatus(response.status, response.message || 'OK');
+        if (status === true) {
+          const all: any[] = response.data?.attendanceList || [];
+          this.attendanceSettings = response.data?.attendanceSetting || null;
+          this.joiningInMonth = response.data?.joiningInMonth || false;
+          this.joiningDate = response.data?.joiningDate || null;
+
+          const lateAllowance: number = this.attendanceSettings?.lateAllowanceMin || 0;
+          let lateCount = 0;
+          const result: any[] = [];
+
+          // Process in date order so allowance is applied correctly
+          const sorted = [...all].sort((a, b) => a.date.localeCompare(b.date));
+
+          for (const item of sorted) {
+            const s = (item.status || '').toLowerCase();
+
+            if (s === 'absent' || s === 'half day') {
+              result.push({ ...item, deductionReason: s === 'absent' ? 'Absent - Full day deduction' : 'Half Day - 0.5 day deduction' });
+            } else if (s.startsWith('late by')) {
+              const minutesMatch = item.status.match(/\d+/g);
+              const totalMinutes = minutesMatch ? parseInt(minutesMatch[0], 10) : 0;
+              if (totalMinutes > 0) {
+                lateCount++;
+                if (lateCount > lateAllowance) {
+                  result.push({
+                    ...item,
+                    deductionReason: `Late attendance - Deduction (${lateCount - lateAllowance} extra, allowance: ${lateAllowance})`,
+                    isDeduction: true
+                  });
+                }
+              }
+            }
+          }
+
+          // Excess leave: expand each leave application into per-day entries,
+          // respecting first_half / second_half / full duration types
+          const leaveListData: any[] = response.data?.leaveList || [];
+          const allowedLeave = parseFloat(this.personalDetails?.allowed_leave || '0');
+          const leaveDayEntries: { date: string; dayValue: number; durationLabel: string; leaveType: string }[] = [];
+
+          for (const leave of leaveListData) {
+            if (!leave.fromDate) continue;
+            const fromMs = new Date(leave.fromDate).getTime();
+            const toMs = leave.toDate ? new Date(leave.toDate).getTime() : fromMs;
+            const days = Math.round((toMs - fromMs) / 86400000) + 1;
+            for (let d = 0; d < days; d++) {
+              const date = new Date(fromMs + d * 86400000).toISOString().split('T')[0];
+              const durType = d === 0
+                ? leave.duration_type
+                : (d === days - 1 ? (leave.to_duration_type || 'full') : 'full');
+              let dayValue = 1;
+              let durationLabel = 'Full Day';
+              if (durType === 'first_half') { dayValue = 0.5; durationLabel = 'First Half'; }
+              else if (durType === 'second_half') { dayValue = 0.5; durationLabel = 'Second Half'; }
+              leaveDayEntries.push({ date, dayValue, durationLabel, leaveType: leave.leave_type_name || 'Leave' });
+            }
+          }
+
+          leaveDayEntries.sort((a, b) => a.date.localeCompare(b.date));
+          let leaveCumulative = 0;
+          for (const entry of leaveDayEntries) {
+            leaveCumulative += entry.dayValue;
+            if (leaveCumulative > allowedLeave) {
+              const attEntry = sorted.find((r: any) => r.date === entry.date);
+              result.push({
+                date: entry.date,
+                day: attEntry?.day ?? new Date(entry.date).toLocaleDateString('en-US', { weekday: 'long' }),
+                checkIn: attEntry?.checkIn ?? null,
+                checkOut: attEntry?.checkOut ?? null,
+                status: entry.durationLabel === 'Full Day' ? 'On Leave' : entry.durationLabel,
+                deductionReason: `Leave without balance - ${entry.durationLabel} (${entry.leaveType}) deduction`,
+                isDeduction: true,
+                isExcessLeave: true
+              });
+            }
+          }
+
+          // Sort combined result by date
+          result.sort((a, b) => a.date.localeCompare(b.date));
+
+          this.absentDaysList = result;
+        } else if (status === 'expired') {
+          this.router.navigate(['login']);
+        } else {
+          this.notyf.error(response.message);
+        }
+      },
+      error: (err: any) => this.notyf.error(err.error?.message)
+    });
+  }
+
+  private buildAttLeavePayload() {
+    const newObj: any = {
+      employeeId: this.personalDetails?.employeeId,
+      month: this.personalDetails?.month,
+      year: this.personalDetails?.year,
+      // shift_name: this.personalDetails?.shift,
+    };
+    if (this.personalDetails?.shift) {
+      newObj['shift_name'] = this.personalDetails.shift;
+    }
+    return newObj;
+  }
+
+  loadAttendance() {
+    this.payroll.empMonthlyLeaveAttDetails(this.buildAttLeavePayload()).subscribe({
+      next: (response: any) => {
+        const status = this.statusService.handleResponseStatus(response.status, response.message || 'OK');
+        if (status === true) {
+          this.attendanceList = response.data?.attendanceList || [];
+        } else if (status === 'expired') {
+          this.router.navigate(['login']);
+        } else {
+          this.notyf.error(response.message);
+        }
+      },
+      error: (err: any) => this.notyf.error(err.error?.message)
+    });
+  }
+
+  loadLeaveRequests() {
+    this.payroll.empMonthlyLeaveAttDetails(this.buildAttLeavePayload()).subscribe({
+      next: (response: any) => {
+        const status = this.statusService.handleResponseStatus(response.status, response.message || 'OK');
+        if (status === true) {
+          this.leaveList = response.data?.leaveList || [];
+        } else if (status === 'expired') {
+          this.router.navigate(['login']);
+        } else {
+          this.notyf.error(response.message);
+        }
+      },
+      error: (err: any) => this.notyf.error(err.error?.message)
+    });
+  }
   getDaysInMonth(year: number, month: number): number {
     return new Date(year, month, 0).getDate();
   }
   view(item: any) {
+    this.activeTab = 'salary';
+    this.attendanceList = [];
+    this.leaveList = [];
+    this.absentDaysList = [];
+    this.attendanceSettings = null;
+    this.joiningInMonth = false;
+    this.joiningDate = null;
     const obj = Object.assign({}, item)
     this.personalDetails = obj
+    this.loadAbsentDays();
+    console.log(this.personalDetails, "personal details data --");
 
     this.personalDetails['totalWorkingDays'] = this.getDaysInMonth(this.personalDetails.year, this.personalDetails.month)
     console.log(this.personalDetails, "personal detailss");
@@ -484,9 +643,27 @@ export class GeneratedSalaryComponent {
     const grossSalary = earnings.reduce((sum: any, e: any) => sum + parseFloat(e.finalAmount), 0);
     const totalDeductions = deductions.reduce((sum: any, d: any) => sum + parseFloat(d.finalAmount), 0);
     const netSalary = grossSalary - totalDeductions;
-    const logoBase64 = await this.getBase64ImageFromURL('assets/img/logo/logo-quaere.png');
+    // const logoBase64 = await this.getBase64ImageFromURL('assets/img/logo/image.png');
     // Employee Details block
-
+    // ✅ Company from login (localStorage) — full company address like print-bill API
+    const tenant = JSON.parse(localStorage.getItem('tenant') || '{}');
+    const companyName = (tenant.companyName && String(tenant.companyName).trim())
+      || 'Quaere eTechnologies Pvt. Ltd.';
+    const companyAddress = (tenant.companyAddress && String(tenant.companyAddress).trim())
+      || '7th Floor, Cyber Tower, Pickup Road, Vibhuti Khand, Gomti Nagar, Lucknow-226010';
+    // ✅ Logo: tenant.image → upload URL, else default Quaere logo
+    let logoBase64 = '';
+    try {
+      const base = (this.master.getBaseUrl() || '').replace(/\/+$/, '');
+      const logoPath = tenant.image
+        ? (String(tenant.image).startsWith('http')
+          ? tenant.image
+          : `${base}/upload/${String(tenant.image).replace(/^\/+/, '').replace(/^upload\//, '')}`)
+        : 'assets/img/logo/quaere_logo_1.PNG';
+      logoBase64 = await this.getBase64ImageFromURL(logoPath);
+    } catch {
+      logoBase64 = await this.getBase64ImageFromURL('assets/img/logo/quaere_logo_1.PNG');
+    }
     const employeeHeadingTable: any = {
       style: 'tableExample',
       table: {
@@ -645,31 +822,27 @@ export class GeneratedSalaryComponent {
 
     const docDefinition: any = {
       content: [
-        {
-          image: logoBase64,
-          width: 140,
-
-          alignment: 'left',
-        },
+        ...(logoBase64
+          ? [{
+            image: logoBase64,
+            width: 140,
+            alignment: 'left',
+          }]
+          : []),
         {
           columns: [
-            { text: 'Quaere eTechnologies Pvt. Ltd.', style: 'header' },
-            { text: 'PAY SLIP', bold: true, alignment: 'right', fontWeight: 600, color: '#005495' }
+            { text: companyName, style: 'header' },
+            { text: 'PAY SLIP', bold: true, alignment: 'right', color: '#005495' }
           ]
         },
-        // { text: 'Quaere eTechnologies Pvt. Ltd.', style: 'header' },
-        { text: 'www.quaeretech.com | +91-522 406 7760', alignment: 'left', fontSize: 10, noWrap: true },
-        { text: '7th Floor, Cyber Tower, Pickup Road, Vibhuti Khand, Gomti Nagar, Lucknow-226010', alignment: 'left', fontSize: 10, margin: [0, 0, 0, 10] },
-        // { text: `Payslip for the month of ${MonthName?.label} , ${employee?.year}`, alignment: 'center', bold: true, fontSize: 14, margin: [0, 0, 0, 10] },
+        { text: companyAddress, alignment: 'left', fontSize: 10, margin: [0, 0, 0, 10] },
         {
           canvas: [
             { type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1 }
           ],
           margin: [0, 0, 0, 10]
         },
-        // { text: 'SALARY SLIP', style: 'title' },
         employeeHeadingTable,
-
         employeeDetailsTable,
 
         {
@@ -688,7 +861,14 @@ export class GeneratedSalaryComponent {
             paddingBottom: () => 4
           }
         },
-
+        {
+          text: 'This salary slip has been generated electronically by the system and does not require a signature.',
+          alignment: 'center',
+          fontSize: 9,
+          italics: true,
+          color: '#555555',
+          margin: [0, 20, 0, 0],
+        },
         // {
         //   columns: [
         //     { text: 'Employee Signature', alignment: 'left', margin: [40, 60, 0, 0] },
@@ -736,509 +916,557 @@ export class GeneratedSalaryComponent {
   }
 
   chequeNo: any = '';
-async generateDoc() {
+  async generateDoc() {
 
-  if (this.SalaryArr.length == 0) {
-    this.notyf.error('please Submit First then export');
-    return;
-  }
+    if (this.SalaryArr.length == 0) {
+      this.notyf.error('please Submit First then export');
+      return;
+    }
 
-  if (!this.chequeNo) {
-    this.notyf.error("Cheque No is required");
-    return;
-  }
+    if (!this.chequeNo) {
+      this.notyf.error("Cheque No is required");
+      return;
+    }
 
-  const {
-    Document,
-    Packer,
-    Paragraph,
-    TextRun,
-    AlignmentType,
-    Table,
-    TableRow,
-    TableCell,
-    WidthType,
-    ImageRun,
-    Header,
-    HorizontalPositionRelativeFrom,
-    VerticalPositionRelativeFrom,
-    TextWrappingType
-  } = await import("docx");
+    const {
+      Document,
+      Packer,
+      Paragraph,
+      TextRun,
+      AlignmentType,
+      Table,
+      TableRow,
+      TableCell,
+      WidthType,
+      ImageRun,
+      Header,
+      HorizontalPositionRelativeFrom,
+      VerticalPositionRelativeFrom,
+      TextWrappingType
+    } = await import("docx");
 
-  this.obj['totalAmount'] = this.totalAmount;
-  this.obj['chequeNo'] = this.chequeNo;
-  this.obj['bill_date'] = new Date();
-const today = new Date();
+    this.obj['totalAmount'] = this.totalAmount;
+    this.obj['chequeNo'] = this.chequeNo;
+    this.obj['bill_date'] = new Date();
+    const today = new Date();
 
-const day = today.getDate();
+    const day = today.getDate();
 
-// function to add st/nd/rd/th
-const getOrdinal = (n: number) => {
-  if (n > 3 && n < 21) return "th";
-  switch (n % 10) {
-    case 1: return "st";
-    case 2: return "nd";
-    case 3: return "rd";
-    default: return "th";
-  }
-};
+    // function to add st/nd/rd/th
+    const getOrdinal = (n: number) => {
+      if (n > 3 && n < 21) return "th";
+      switch (n % 10) {
+        case 1: return "st";
+        case 2: return "nd";
+        case 3: return "rd";
+        default: return "th";
+      }
+    };
 
-const month = today.toLocaleString('en-IN', { month: 'short' });
-const year = today.getFullYear();
+    const month = today.toLocaleString('en-IN', { month: 'short' });
+    const year = today.getFullYear();
 
-const formattedDate = `Dated: ${day}${getOrdinal(day)} ${month}, ${year}`;
+    const formattedDate = `Dated: ${day}${getOrdinal(day)} ${month}, ${year}`;
 
-  this.payroll.SubmitSalaryDoc(this.obj).subscribe(async () => {
+    this.payroll.SubmitSalaryDoc(this.obj).subscribe(async () => {
 
-    // ======================
-    // LOAD IMAGE FUNCTION
-    // ======================
+      // ======================
+      // LOAD IMAGE FUNCTION
+      // ======================
 
-    const loadImg = async (path:string,w:number,h:number)=>
-      new ImageRun({
-        data: await fetch(path).then(r=>r.arrayBuffer()),
-        type:'png',
-        transformation:{ width:w,height:h }
+      const loadImg = async (path: string, w: number, h: number) =>
+        new ImageRun({
+          type: "png",
+          data: await fetch(path).then(r => r.arrayBuffer()),
+          transformation: { width: w, height: h }
+        });
+
+      const letterhead = new ImageRun({
+        type: "png",
+        data: await fetch('assets/img/Letterhead-1.png').then(r => r.arrayBuffer()),
+        transformation: { width: 800, height: 1123 },
+        floating: {
+          behindDocument: true,
+          allowOverlap: true,
+          horizontalPosition: {
+            relative: HorizontalPositionRelativeFrom.PAGE,
+            offset: 0
+          },
+          verticalPosition: {
+            relative: VerticalPositionRelativeFrom.PAGE,
+            offset: 0
+          },
+          wrap: {
+            type: TextWrappingType.NONE
+          }
+        }
       });
 
-    const letterhead = new ImageRun({
-      data: await fetch('assets/img/Letterhead-1.png').then(r => r.arrayBuffer()),
-      type: 'png',
-      transformation: { width: 800, height: 1123 },
-      floating: {
-        behindDocument: true,
-        allowOverlap: true,
-        horizontalPosition: {
-          relative: HorizontalPositionRelativeFrom.PAGE,
-          offset: 0
-        },
-        verticalPosition: {
-          relative: VerticalPositionRelativeFrom.PAGE,
-          offset: 0
-        },
-        wrap: {
-          type: TextWrappingType.NONE
-        }
-      }
-    });
 
+      // ======================
+      // HEADER (LETTERHEAD BACKGROUND)
+      // ======================
 
-    // ======================
-    // HEADER (LETTERHEAD BACKGROUND)
-    // ======================
+      const header = new Header({
 
-    const header = new Header({
+        children: [
+          new Paragraph({
+            children: [letterhead]
+          })
 
-      children:[
-        new Paragraph({
-          children: [letterhead]
-        })
+        ]
 
-      ]
+      });
 
-    });
+      // ======================
+      // TABLE DATA
+      // ======================
 
-    // ======================
-    // TABLE DATA
-    // ======================
-
-    const rows:any[] = [];
-
-    rows.push(
-      new TableRow({
-        children:["S.No","Beneficiary Name","Beneficiary Ac No","IFSC","Amt","Remarks"]
-        .map(text=> new TableCell({
-          children:[ new Paragraph({
-            alignment:AlignmentType.CENTER,
-            children:[ new TextRun({ text, bold:true }) ]
-          })]
-        }))
-      })
-    );
-
-    this.SalaryArr.forEach((emp:any,index:number)=>{
+      const rows: any[] = [];
 
       rows.push(
         new TableRow({
-          children:[
-            new TableCell({children:[new Paragraph(String(index+1))]}),
-            new TableCell({children:[new Paragraph(emp.employeeName||"")]}),
-            new TableCell({children:[new Paragraph(emp.bankAccount||"")]}),
-            new TableCell({children:[new Paragraph(emp.ifscCode||"")]}),
-            new TableCell({children:[new Paragraph(emp.net_amount||"0")]}),
-            new TableCell({children:[new Paragraph(`SALARY ${this.monthObj[emp.month]}-${emp.year}`)]}),
-          ]
+          children: ["S.No", "Beneficiary Name", "Beneficiary Ac No", "IFSC", "Amt", "Remarks"]
+            .map(text => new TableCell({
+              children: [new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [new TextRun({ text, bold: true })]
+              })]
+            }))
         })
       );
 
-    });
+      this.SalaryArr.forEach((emp: any, index: number) => {
 
-    const table = new Table({
-      width:{size:100,type:WidthType.PERCENTAGE},
-      rows
-    });
+        rows.push(
+          new TableRow({
+            children: [
+              new TableCell({ children: [new Paragraph(String(index + 1))] }),
+              new TableCell({ children: [new Paragraph(emp.employeeName || "")] }),
+              new TableCell({ children: [new Paragraph(emp.bankAccount || "")] }),
+              new TableCell({ children: [new Paragraph(emp.ifscCode || "")] }),
+              new TableCell({ children: [new Paragraph(emp.net_amount || "0")] }),
+              new TableCell({ children: [new Paragraph(`SALARY ${this.monthObj[emp.month]}-${emp.year}`)] }),
+            ]
+          })
+        );
 
-    // ======================
-    // DOCUMENT
-    // ======================
+      });
 
-    const doc = new Document({
+      rows.push(
+        new TableRow({
+          children: [
+            new TableCell({
+              columnSpan: 4,
+              children: [
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  children: [new TextRun({ text: "TOTAL", bold: true })],
+                }),
+              ],
+            }),
+            new TableCell({
+              children: [
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  children: [
+                    new TextRun({ text: String(this.totalAmount ?? "0"), bold: true }),
+                  ],
+                }),
+              ],
+            }),
+            new TableCell({
+              children: [new Paragraph("")],
+            }),
+          ],
+        }),
+      );
 
-      sections:[{
+      const table = new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows
+      });
 
-        headers:{ default: header },
-        properties: {
-          page: {
-            margin: {
-              top: 900,
-              right: 720,
-              bottom: 720,
-              left: 720,
-              header: 0,
-              footer: 0
+      // ======================
+      // DOCUMENT
+      // ======================
+
+      const doc = new Document({
+
+        sections: [{
+
+          headers: { default: header },
+          properties: {
+            page: {
+              margin: {
+                top: 900,
+                right: 720,
+                bottom: 720,
+                left: 720,
+                header: 0,
+                footer: 0
+              }
             }
-          }
-        },
+          },
 
-        children:[
-        // new Paragraph(""),
-        new Paragraph({
-                      alignment:AlignmentType.RIGHT,
-                      children:[
-                        new TextRun({
-                          text:`${formattedDate}`,
-                          // bold:true,
-                          size:24
-                        })
-                      ]
-                    }),
-          new Paragraph(""),
-              new Paragraph(""),
-                  new Paragraph(""),
-          new Paragraph({
-            children: [new TextRun({ text: "To,", bold: true })]
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: "The Branch Manager", bold: true })]
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: "ICICI Bank", bold: true })]
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: "Gomti Nagar, Lucknow", bold: true })]
-          }),
+          children: [
+            // new Paragraph(""),
+            new Paragraph({
+              alignment: AlignmentType.RIGHT,
+              children: [
+                new TextRun({
+                  text: `${formattedDate}`,
+                  // bold:true,
+                  size: 24
+                })
+              ]
+            }),
+            new Paragraph(""),
+            new Paragraph(""),
+            new Paragraph(""),
+            new Paragraph({
+              children: [new TextRun({ text: "To,", bold: true })]
+            }),
+            new Paragraph({
+              children: [new TextRun({ text: "The Branch Manager", bold: true })]
+            }),
+            new Paragraph({
+              children: [new TextRun({ text: "ICICI Bank", bold: true })]
+            }),
+            new Paragraph({
+              children: [new TextRun({ text: "Gomti Nagar, Lucknow", bold: true })]
+            }),
 
-          new Paragraph(""),
+            new Paragraph(""),
 
-          new Paragraph({
-            alignment:AlignmentType.CENTER,
-            children:[ new TextRun({ text:"SUB: Amount Transfer", bold:true, size:28 }) ]
-          }),
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [new TextRun({ text: "SUB: Amount Transfer", bold: true, size: 28 })]
+            }),
 
-          new Paragraph(""),
-           new Paragraph({
-            children:[ new TextRun({
-              text:`Respected Sir/ Madam,`,
-              bold:true,
-              size:22
-            })]
-          }),
-              new Paragraph(""),
-          new Paragraph({
-            children:[ new TextRun({
-              text:`1) Enclosed please find Cheque No.${this.chequeNo} dated ${new Date().toLocaleDateString()} of Rs.${this.totalAmount}/- (${this.convertNumberToWords(this.totalAmount)}). Kindly transfer the amount as per details given below:`,
-              size:22
-            })]
-          }),
+            new Paragraph(""),
+            new Paragraph({
+              children: [new TextRun({
+                text: `Respected Sir/ Madam,`,
+                bold: true,
+                size: 22
+              })]
+            }),
+            new Paragraph(""),
+            // new Paragraph({
+            //   children:[ new TextRun({
+            //     text:`1) Enclosed please find Cheque No.${this.chequeNo} dated ${new Date().toLocaleDateString()} of Rs.${this.totalAmount}/- (${this.convertNumberToWords(this.totalAmount)}). Kindly transfer the amount as per details given below:`,
+            //     size:22
+            //   })]
+            // }),
 
-          new Paragraph(""),
-          table,
-          new Paragraph(""),
+            new Paragraph({
+              children: [
+                new TextRun({ text: "1) Enclosed please find ", size: 22 }),
+                new TextRun({ text: `Cheque No.${this.chequeNo}`, bold: true, size: 22 }),
+                new TextRun({ text: " dated ", size: 22 }),
+                new TextRun({ text: `${new Date().toLocaleDateString()}`, bold: true, size: 22 }),
+                new TextRun({ text: " of Rs.", size: 22 }),
+                new TextRun({
+                  text: `${this.totalAmount}/- (${this.convertNumberToWords(this.totalAmount)})`,
+                  bold: true,
+                  size: 22,
+                }),
+                new TextRun({
+                  text: ". Kindly transfer the amount as per details given below:",
+                  size: 22,
+                }),
+              ],
+            }),
 
-          new Paragraph({
-            alignment:AlignmentType.RIGHT,
-            children:[ new TextRun("Shiv Pal Singh") ]
-          }),
-new Paragraph(""),
-          new Paragraph({
-            alignment:AlignmentType.RIGHT,
-            children:[ new TextRun({ text:"Director",bold:true }) ]
-          }),
+            new Paragraph(""),
+            table,
+            new Paragraph(""),
 
-          new Paragraph(""),
-  new Paragraph(""),  new Paragraph(""),  new Paragraph(""),
-        ]
+            new Paragraph({
+              alignment: AlignmentType.RIGHT,
+              children: [new TextRun("Shiv Pal Singh")]
+            }),
+            new Paragraph(""),
+            new Paragraph({
+              alignment: AlignmentType.RIGHT,
+              children: [new TextRun({ text: "Director", bold: true })]
+            }),
 
-      }]
+            new Paragraph(""),
+            new Paragraph(""), new Paragraph(""), new Paragraph(""),
+          ]
+
+        }]
+      });
+
+      Packer.toBlob(doc).then(blob => {
+        saveAs(blob, "SalaryTransfer.docx");
+      });
+
     });
 
-    Packer.toBlob(doc).then(blob=>{
-      saveAs(blob,"SalaryTransfer.docx");
-    });
+  }
 
-  });
+  //   async generateDoc() {
 
-}
+  //   if (this.SalaryArr.length == 0) {
+  //     this.notyf.error('please Submit First then export');
+  //     return;
+  //   }
 
-//   async generateDoc() {
+  //   if (!this.chequeNo) {
+  //     this.notyf.error("Cheque No is required");
+  //     return;
+  //   }
 
-//   if (this.SalaryArr.length == 0) {
-//     this.notyf.error('please Submit First then export');
-//     return;
-//   }
+  //   const {
+  //     Document,
+  //     Packer,
+  //     Paragraph,
+  //     TextRun,
+  //     AlignmentType,
+  //     Table,
+  //     TableRow,
+  //     TableCell,
+  //     WidthType,
+  //     ImageRun,
+  //     Footer
+  //   } = await import("docx");
 
-//   if (!this.chequeNo) {
-//     this.notyf.error("Cheque No is required");
-//     return;
-//   }
+  //   this.obj['totalAmount'] = this.totalAmount;
+  //   this.obj['chequeNo'] = this.chequeNo;
+  //   this.obj['bill_date'] = new Date();
 
-//   const {
-//     Document,
-//     Packer,
-//     Paragraph,
-//     TextRun,
-//     AlignmentType,
-//     Table,
-//     TableRow,
-//     TableCell,
-//     WidthType,
-//     ImageRun,
-//     Footer
-//   } = await import("docx");
+  //   this.payroll.SubmitSalaryDoc(this.obj).subscribe(async (response:any)=>{
 
-//   this.obj['totalAmount'] = this.totalAmount;
-//   this.obj['chequeNo'] = this.chequeNo;
-//   this.obj['bill_date'] = new Date();
+  //     // ======================
+  //     // TABLE DATA
+  //     // ======================
 
-//   this.payroll.SubmitSalaryDoc(this.obj).subscribe(async (response:any)=>{
+  //     const rows:any[] = [];
 
-//     // ======================
-//     // TABLE DATA
-//     // ======================
+  //     rows.push(
+  //       new TableRow({
+  //         children:[
+  //           "S.No","Beneficiary Name","Beneficiary Ac No","IFSC","Amt","Remarks"
+  //         ].map(text => new TableCell({
+  //           children:[ new Paragraph({
+  //             alignment: AlignmentType.CENTER,
+  //             children:[ new TextRun({ text, bold:true }) ]
+  //           })]
+  //         }))
+  //       })
+  //     );
 
-//     const rows:any[] = [];
+  //     this.SalaryArr.forEach((emp:any,index:number)=>{
+  //       rows.push(
+  //         new TableRow({
+  //           children:[
+  //             new TableCell({children:[new Paragraph(String(index+1))]}),
+  //             new TableCell({children:[new Paragraph(emp.employeeName||"")]}),
+  //             new TableCell({children:[new Paragraph(emp.bankAccount||"")]}),
+  //             new TableCell({children:[new Paragraph(emp.ifscCode||"")]}),
+  //             new TableCell({children:[new Paragraph(emp.net_amount||"0")]}),
+  //             new TableCell({children:[new Paragraph(`SALARY ${emp.month}-${emp.year}`)]}),
+  //           ]
+  //         })
+  //       );
+  //     });
 
-//     rows.push(
-//       new TableRow({
-//         children:[
-//           "S.No","Beneficiary Name","Beneficiary Ac No","IFSC","Amt","Remarks"
-//         ].map(text => new TableCell({
-//           children:[ new Paragraph({
-//             alignment: AlignmentType.CENTER,
-//             children:[ new TextRun({ text, bold:true }) ]
-//           })]
-//         }))
-//       })
-//     );
+  //     const table = new Table({
+  //       width:{size:100,type:WidthType.PERCENTAGE},
+  //       rows
+  //     });
 
-//     this.SalaryArr.forEach((emp:any,index:number)=>{
-//       rows.push(
-//         new TableRow({
-//           children:[
-//             new TableCell({children:[new Paragraph(String(index+1))]}),
-//             new TableCell({children:[new Paragraph(emp.employeeName||"")]}),
-//             new TableCell({children:[new Paragraph(emp.bankAccount||"")]}),
-//             new TableCell({children:[new Paragraph(emp.ifscCode||"")]}),
-//             new TableCell({children:[new Paragraph(emp.net_amount||"0")]}),
-//             new TableCell({children:[new Paragraph(`SALARY ${emp.month}-${emp.year}`)]}),
-//           ]
-//         })
-//       );
-//     });
+  //     // ======================
+  //     // LOAD IMAGES
+  //     // ======================
 
-//     const table = new Table({
-//       width:{size:100,type:WidthType.PERCENTAGE},
-//       rows
-//     });
+  //     const loadImg = async(path:string,w:number,h:number)=> new ImageRun({
+  //       data: await fetch(path).then(r=>r.arrayBuffer()),
+  //       type: 'png',
+  //       transformation:{ width:w, height:h }
+  //     });
 
-//     // ======================
-//     // LOAD IMAGES
-//     // ======================
+  //     const logo = await loadImg('assets/img/logo/image.png',120,40);
 
-//     const loadImg = async(path:string,w:number,h:number)=> new ImageRun({
-//       data: await fetch(path).then(r=>r.arrayBuffer()),
-//       type: 'png',
-//       transformation:{ width:w, height:h }
-//     });
+  //     const soc2 = await loadImg('assets/img/footer1.png',45,45);
+  //     const cmmi = await loadImg('assets/img/footer_2.png',60,40);
+  //     // const msme = await loadImg('assets/img/footer/msme.png',50,40);
+  //     // const updesco = await loadImg('assets/img/footer/updesco.png',70,30);
 
-//     const logo = await loadImg('assets/img/logo/logo-quaere.png',120,40);
+  //     // ======================
+  //     // FOOTER
+  //     // ======================
 
-//     const soc2 = await loadImg('assets/img/footer1.png',45,45);
-//     const cmmi = await loadImg('assets/img/footer_2.png',60,40);
-//     // const msme = await loadImg('assets/img/footer/msme.png',50,40);
-//     // const updesco = await loadImg('assets/img/footer/updesco.png',70,30);
+  //     const footer = new Footer({
 
-//     // ======================
-//     // FOOTER
-//     // ======================
+  //       children:[
 
-//     const footer = new Footer({
+  //         new Paragraph({
+  //           border:{ top:{
+  //             color: "999999", size: 6,
+  //             style: 'nil'
+  //           } }
+  //         }),
 
-//       children:[
+  //         new Table({
+  //           width:{size:100,type:WidthType.PERCENTAGE},
 
-//         new Paragraph({
-//           border:{ top:{
-//             color: "999999", size: 6,
-//             style: 'nil'
-//           } }
-//         }),
+  //           rows:[ new TableRow({
 
-//         new Table({
-//           width:{size:100,type:WidthType.PERCENTAGE},
+  //             children:[
 
-//           rows:[ new TableRow({
+  //               // BLUE BAR
+  //               new TableCell({
+  //                 shading:{ fill:"1E73BE" },
+  //                 width:{ size:3, type:WidthType.PERCENTAGE },
+  //                 children:[ new Paragraph("") ]
+  //               }),
 
-//             children:[
+  //               // COMPANY TEXT
+  //               new TableCell({
+  //                 width:{ size:67, type:WidthType.PERCENTAGE },
+  //                 children:[
 
-//               // BLUE BAR
-//               new TableCell({
-//                 shading:{ fill:"1E73BE" },
-//                 width:{ size:3, type:WidthType.PERCENTAGE },
-//                 children:[ new Paragraph("") ]
-//               }),
+  //                   new Paragraph({
+  //                     children:[
+  //                       new TextRun({ text:"Quaere Technologies Private Limited ", bold:true }),
+  //                       new TextRun({ text:"AN ISO 9001 : 2015" })
+  //                     ]
+  //                   }),
 
-//               // COMPANY TEXT
-//               new TableCell({
-//                 width:{ size:67, type:WidthType.PERCENTAGE },
-//                 children:[
+  //                   new Paragraph("7th Floor, Cyber Tower, Vibhuti Khand,"),
+  //                   new Paragraph("Gomti Nagar, Lucknow, U.P.-226010"),
+  //                   new Paragraph("Web: www.quaeretech.com"),
+  //                   new Paragraph("E-mail: info@quaeretech.com | Tel: 0522-4067760"),
+  //                   new Paragraph({
+  //                     children:[ new TextRun({ text:"GSTN- 09AAACQ1581F1Z1", bold:true }) ]
+  //                   })
 
-//                   new Paragraph({
-//                     children:[
-//                       new TextRun({ text:"Quaere Technologies Private Limited ", bold:true }),
-//                       new TextRun({ text:"AN ISO 9001 : 2015" })
-//                     ]
-//                   }),
+  //                 ]
+  //               }),
 
-//                   new Paragraph("7th Floor, Cyber Tower, Vibhuti Khand,"),
-//                   new Paragraph("Gomti Nagar, Lucknow, U.P.-226010"),
-//                   new Paragraph("Web: www.quaeretech.com"),
-//                   new Paragraph("E-mail: info@quaeretech.com | Tel: 0522-4067760"),
-//                   new Paragraph({
-//                     children:[ new TextRun({ text:"GSTN- 09AAACQ1581F1Z1", bold:true }) ]
-//                   })
+  //               // ICONS RIGHT
+  //               new TableCell({
+  //                 width:{ size:30, type:WidthType.PERCENTAGE },
+  //                 children:[
+  //                   new Paragraph({
+  //                     alignment:AlignmentType.RIGHT,
+  //                     children:[
+  //                       soc2,new TextRun(" "),
+  //                       cmmi,new TextRun(" "),
+  //                       // msme,new TextRun(" "),
+  //                       // updesco
+  //                     ]
+  //                   })
+  //                 ]
+  //               })
 
-//                 ]
-//               }),
+  //             ]
 
-//               // ICONS RIGHT
-//               new TableCell({
-//                 width:{ size:30, type:WidthType.PERCENTAGE },
-//                 children:[
-//                   new Paragraph({
-//                     alignment:AlignmentType.RIGHT,
-//                     children:[
-//                       soc2,new TextRun(" "),
-//                       cmmi,new TextRun(" "),
-//                       // msme,new TextRun(" "),
-//                       // updesco
-//                     ]
-//                   })
-//                 ]
-//               })
+  //           }) ]
+  //         })
 
-//             ]
+  //       ]
 
-//           }) ]
-//         })
+  //     });
 
-//       ]
+  //     // ======================
+  //     // DOCUMENT
+  //     // ======================
 
-//     });
+  //     const doc = new Document({
 
-//     // ======================
-//     // DOCUMENT
-//     // ======================
+  //       sections:[{
 
-//     const doc = new Document({
+  //         footers:{ default: footer },
 
-//       sections:[{
+  //         children:[
 
-//         footers:{ default: footer },
+  //           new Table({
+  //             width:{size:100,type:WidthType.PERCENTAGE},
+  //             rows:[ new TableRow({
+  //               children:[
 
-//         children:[
+  //                 new TableCell({
+  //                   children:[ new Paragraph({ children:[logo] }) ]
+  //                 }),
 
-//           new Table({
-//             width:{size:100,type:WidthType.PERCENTAGE},
-//             rows:[ new TableRow({
-//               children:[
+  //                 new TableCell({
+  //                   children:[ new Paragraph({
+  //                     alignment:AlignmentType.RIGHT,
+  //                     children:[
+  //                       new TextRun({
+  //                         text:`Dated: ${new Date().toLocaleDateString()}`,
+  //                         bold:true,
+  //                         size:24
+  //                       })
+  //                     ]
+  //                   }) ]
+  //                 })
 
-//                 new TableCell({
-//                   children:[ new Paragraph({ children:[logo] }) ]
-//                 }),
+  //               ]
+  //             }) ]
+  //           }),
 
-//                 new TableCell({
-//                   children:[ new Paragraph({
-//                     alignment:AlignmentType.RIGHT,
-//                     children:[
-//                       new TextRun({
-//                         text:`Dated: ${new Date().toLocaleDateString()}`,
-//                         bold:true,
-//                         size:24
-//                       })
-//                     ]
-//                   }) ]
-//                 })
+  //           new Paragraph(""),
+  //           new Paragraph("To,"),
+  //           new Paragraph("The Branch Manager"),
+  //           new Paragraph("ICICI Bank"),
+  //           new Paragraph("Gomti Nagar, Lucknow"),
 
-//               ]
-//             }) ]
-//           }),
+  //           new Paragraph(""),
 
-//           new Paragraph(""),
-//           new Paragraph("To,"),
-//           new Paragraph("The Branch Manager"),
-//           new Paragraph("ICICI Bank"),
-//           new Paragraph("Gomti Nagar, Lucknow"),
+  //           new Paragraph({
+  //             alignment:AlignmentType.CENTER,
+  //             children:[
+  //               new TextRun({
+  //                 text:"SUB: Amount Transfer",
+  //                 bold:true,
+  //                 size:28
+  //               })
+  //             ]
+  //           }),
 
-//           new Paragraph(""),
+  //           new Paragraph(""),
 
-//           new Paragraph({
-//             alignment:AlignmentType.CENTER,
-//             children:[
-//               new TextRun({
-//                 text:"SUB: Amount Transfer",
-//                 bold:true,
-//                 size:28
-//               })
-//             ]
-//           }),
+  //           new Paragraph({
+  //             children:[
+  //               new TextRun({
+  //                 text:`1) Enclosed please find Cheque No.${this.chequeNo} dated ${new Date().toLocaleDateString()} of Rs.${this.totalAmount}/- (${this.convertNumberToWords(this.totalAmount)}). Kindly transfer the amount as per details given below:`,
+  //                 size:22
+  //               })
+  //             ]
+  //           }),
 
-//           new Paragraph(""),
+  //           new Paragraph(""),
+  //           table,
+  //           new Paragraph(""),
 
-//           new Paragraph({
-//             children:[
-//               new TextRun({
-//                 text:`1) Enclosed please find Cheque No.${this.chequeNo} dated ${new Date().toLocaleDateString()} of Rs.${this.totalAmount}/- (${this.convertNumberToWords(this.totalAmount)}). Kindly transfer the amount as per details given below:`,
-//                 size:22
-//               })
-//             ]
-//           }),
+  //           new Paragraph({
+  //             alignment:AlignmentType.RIGHT,
+  //             children:[ new TextRun("Shiv Pal Singh") ]
+  //           }),
 
-//           new Paragraph(""),
-//           table,
-//           new Paragraph(""),
+  //           new Paragraph({
+  //             alignment:AlignmentType.RIGHT,
+  //             children:[ new TextRun({ text:"Director", bold:true }) ]
+  //           })
 
-//           new Paragraph({
-//             alignment:AlignmentType.RIGHT,
-//             children:[ new TextRun("Shiv Pal Singh") ]
-//           }),
+  //         ]
 
-//           new Paragraph({
-//             alignment:AlignmentType.RIGHT,
-//             children:[ new TextRun({ text:"Director", bold:true }) ]
-//           })
+  //       }]
+  //     });
 
-//         ]
+  //     Packer.toBlob(doc).then(blob=>{
+  //       saveAs(blob,"SalaryTransfer.docx");
+  //     });
 
-//       }]
-//     });
+  //   });
 
-//     Packer.toBlob(doc).then(blob=>{
-//       saveAs(blob,"SalaryTransfer.docx");
-//     });
-
-//   });
-
-// }
+  // }
 
 
 
@@ -1367,7 +1595,7 @@ new Paragraph(""),
   //     // LOAD LOGO
   //     // ==========================
 
-  //     const logoBuffer = await fetch('assets/img/logo/logo-quaere.png').then(r => r.arrayBuffer());
+  //     const logoBuffer = await fetch('assets/img/logo/image.png').then(r => r.arrayBuffer());
 
   //     const logo = new ImageRun({
   //       data: logoBuffer,

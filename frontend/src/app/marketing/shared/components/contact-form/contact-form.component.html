@@ -1,0 +1,99 @@
+<div class="glass-card p-6 sm:p-8 shadow-premium">
+  @if (formEnabled()) {
+    <form (ngSubmit)="submitContact()" [formGroup]="contactForm" class="space-y-5" novalidate>
+      <div class="gens-field">
+        <label for="contact-full-name" class="gens-field__label">Full Name <em>*</em></label>
+        <input
+          id="contact-full-name"
+          class="gens-field__input"
+          type="text"
+          formControlName="fullName"
+          autocomplete="name"
+          placeholder="Your full name"
+        />
+        @if (fullNameCtrl?.invalid && fullNameCtrl?.touched) {
+          <p class="gens-field__error">
+            @if (fullNameCtrl?.errors?.['required']) {
+              Full name is required.
+            } @else if (fullNameCtrl?.errors?.['minlength']) {
+              Full name must be at least 2 characters.
+            } @else if (fullNameCtrl?.errors?.['maxlength']) {
+              Full name must be under 200 characters.
+            }
+          </p>
+        }
+      </div>
+
+      <div class="gens-field">
+        <label for="contact-email" class="gens-field__label">Email Address <em>*</em></label>
+        <input
+          id="contact-email"
+          class="gens-field__input"
+          type="email"
+          formControlName="email"
+          autocomplete="email"
+          placeholder="you@company.com"
+        />
+        @if (emailCtrl?.invalid && emailCtrl?.touched) {
+          <p class="gens-field__error">
+            @if (emailCtrl?.errors?.['required']) {
+              Email is required.
+            } @else if (emailCtrl?.errors?.['email']) {
+              Enter a valid email address.
+            }
+          </p>
+        }
+      </div>
+
+      <div class="gens-field">
+        <label for="contact-message" class="gens-field__label">Message <em>*</em></label>
+        <textarea
+          id="contact-message"
+          class="gens-field__input gens-field__textarea"
+          rows="5"
+          formControlName="message"
+          placeholder="Tell us how we can help..."
+        ></textarea>
+        @if (messageCtrl?.invalid && messageCtrl?.touched) {
+          <p class="gens-field__error">
+            @if (messageCtrl?.errors?.['required']) {
+              Message is required.
+            } @else if (messageCtrl?.errors?.['minlength']) {
+              Message must be at least 10 characters.
+            } @else if (messageCtrl?.errors?.['maxlength']) {
+              Message must be under 8000 characters.
+            }
+          </p>
+        }
+      </div>
+
+      @if (contactFeedback(); as feedback) {
+        <div
+          class="p-4 rounded-xl border text-sm flex items-start gap-2"
+          [ngClass]="feedback.ok
+            ? 'bg-green-50 border-green-200 text-green-700'
+            : 'bg-red-50 border-red-200 text-red-700'"
+        >
+          <i class="ri text-base mt-0.5" [ngClass]="feedback.ok ? 'ri-checkbox-circle-fill' : 'ri-error-warning-fill'"></i>
+          <span>{{ feedback.text }}</span>
+        </div>
+      }
+
+      <button type="submit" class="btn-primary w-full sm:w-auto" [disabled]="contactSubmitting()">
+        @if (contactSubmitting()) {
+          <span class="skeleton w-4 h-4 rounded-full inline-block"></span> Sending...
+        } @else {
+          <i class="ri ri-send-plane-fill text-base"></i> Send Message
+        }
+      </button>
+    </form>
+  } @else {
+    <div class="p-5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-sm flex items-start gap-2.5">
+      <i class="ri ri-information-line text-base mt-0.5"></i>
+      <span>
+        This form is currently closed — please reach us at
+        <a class="font-semibold underline" [href]="'mailto:' + contactInfo.salesEmail">{{ contactInfo.salesEmail }}</a>.
+      </span>
+    </div>
+  }
+</div>

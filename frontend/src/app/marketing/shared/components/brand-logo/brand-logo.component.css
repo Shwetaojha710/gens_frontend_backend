@@ -1,0 +1,90 @@
+:host {
+  display: inline-flex;
+}
+
+.gens-brand-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  text-decoration: none;
+  line-height: 1;
+}
+
+.gens-brand-logo__icon {
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+
+.gens-brand-logo:hover .gens-brand-logo__icon {
+  transform: scale(1.06);
+}
+
+.gens-brand-logo__text-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.gens-brand-logo__wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+
+.gens-brand-logo__gens {
+  color: #0b2b3a;
+}
+
+:host-context(.dark) .gens-brand-logo__gens {
+  color: #f8fafc;
+}
+
+.gens-brand-logo__dot {
+  color: #5ec8ef;
+  margin: 0 0.02em;
+}
+
+.gens-brand-logo__ai {
+  position: relative;
+  background: linear-gradient(180deg, #2DD4C8 0%, #7ED321 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  padding-right: 0.15em;
+}
+
+.gens-brand-logo__spark {
+  position: absolute;
+  top: -0.15em;
+  right: -0.05em;
+  width: 0.45em;
+  height: 0.45em;
+  color: #2DD4C8;
+}
+
+.gens-brand-logo__tagline {
+  font-size: 0.58em;
+  font-weight: 500;
+  color: #64748b;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+/* Sizes */
+.gens-brand-logo--sm .gens-brand-logo__icon { width: 36px; height: 40px; }
+.gens-brand-logo--sm .gens-brand-logo__wordmark { font-size: 1.15rem; }
+
+.gens-brand-logo--md .gens-brand-logo__icon { width: 48px; height: 54px; }
+.gens-brand-logo--md .gens-brand-logo__wordmark { font-size: 1.45rem; }
+
+.gens-brand-logo--lg .gens-brand-logo__icon { width: 58px; height: 66px; }
+.gens-brand-logo--lg .gens-brand-logo__wordmark { font-size: 1.75rem; }
+
+@media (min-width: 640px) {
+  .gens-brand-logo--lg .gens-brand-logo__icon { width: 64px; height: 72px; }
+  .gens-brand-logo--lg .gens-brand-logo__wordmark { font-size: 1.9rem; }
+}

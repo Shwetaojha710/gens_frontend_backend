@@ -1,4 +1,4 @@
-.ep-holidays-page__title {
+﻿.ep-holidays-page__title {
   font-weight: 700;
   color: #0f2942;
   margin-bottom: 0.25rem;
@@ -16,13 +16,13 @@
   background: #f7f9fe;
   box-shadow: 0 10px 36px rgba(15, 41, 66, 0.08);
   overflow: hidden;
-  border: 1px solid rgba(0, 95, 168, 0.1);
+  border: 1px solid rgba(0, 129, 201, 0.1);
 }
 
 .ep-holidays-card__head {
   padding: 1rem 1.35rem;
   background: linear-gradient(180deg, #e4edf8 0%, #eef4ff 100%);
-  border-bottom: 1px solid rgba(0, 95, 168, 0.12);
+  border-bottom: 1px solid rgba(0, 129, 201, 0.12);
 }
 
 .ep-holidays-card__heading {
@@ -39,11 +39,11 @@
   gap: 0.45rem;
   padding: 0.85rem 1.25rem 1rem;
   background: #f0f4fb;
-  border-bottom: 1px solid rgba(0, 95, 168, 0.08);
+  border-bottom: 1px solid rgba(0, 129, 201, 0.08);
 }
 
 .ep-holidays-chip {
-  border: 1px solid rgba(0, 95, 168, 0.22);
+  border: 1px solid rgba(0, 129, 201, 0.22);
   background: #fff;
   color: #4e6b8a;
   border-radius: 999px;
@@ -59,15 +59,15 @@
 }
 
 .ep-holidays-chip:hover {
-  border-color: rgba(0, 95, 168, 0.35);
-  color: #005fa8;
+  border-color: rgba(0, 129, 201, 0.35);
+  color: #0081c9;
 }
 
 .ep-holidays-chip--active {
-  background: #005fa8;
+  background: #0081c9;
   color: #fff;
-  border-color: #005fa8;
-  box-shadow: 0 3px 10px rgba(0, 95, 168, 0.28);
+  border-color: #0081c9;
+  box-shadow: 0 3px 10px rgba(0, 129, 201, 0.28);
 }
 
 .ep-holidays-card__body {
@@ -80,7 +80,7 @@
   align-items: flex-start;
   gap: 0.85rem;
   padding: 0.95rem 1.35rem;
-  border-bottom: 1px solid rgba(0, 95, 168, 0.07);
+  border-bottom: 1px solid rgba(0, 129, 201, 0.07);
 }
 
 .ep-holiday-row:last-child {
@@ -97,7 +97,7 @@
   font-size: 1.35rem;
   background: #eef4ff;
   border-radius: 0.6rem;
-  border: 1px solid rgba(0, 95, 168, 0.1);
+  border: 1px solid rgba(0, 129, 201, 0.1);
   margin-top: 0.05rem;
   overflow: hidden;
   position: relative;

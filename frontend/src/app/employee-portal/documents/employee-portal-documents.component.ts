@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import SignaturePad from 'signature_pad';
 import { EmployeePortalService } from '../services/employee-portal.service';
 import { Notyf } from 'notyf';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-employee-portal-documents',
@@ -19,6 +20,22 @@ export class EmployeePortalDocumentsComponent implements OnInit, AfterViewChecke
   tenant: any = {};
   notyf = new Notyf();
   downloading: string | null = null;
+  insuranceDocs: any[] = [];
+  insuranceLoading = true;
+  companyPolicyUrl: string | null = null;
+  companyPolicyLoading = true;
+
+  /** Keep textarea newlines when injecting address into letter HTML */
+  private formatMultilineHtml(value: string | null | undefined): string {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\r\n|\r|\n/g, '<br>');
+  }
+
+  isLoadingPdfs = false;
+  letterPdfUrls: Record<string, string | null> | null = null;
 
   // ─── signature ────────────────────────────────────────────────────────────
   showSignPanel = false;
@@ -51,6 +68,39 @@ export class EmployeePortalDocumentsComponent implements OnInit, AfterViewChecke
       },
       error: () => { this.loading = false; this.notyf.error('Could not load documents.'); },
     });
+
+    this.portalService.getAppInsuranceDocs().subscribe({
+      next: (res) => {
+        this.insuranceLoading = false;
+        const list = Array.isArray(res?.data) ? res.data : [];
+        this.insuranceDocs = list.map((d: any) => ({
+          ...d,
+          fileUrl: this.buildUploadUrl(d.doc_name),
+        }));
+      },
+      error: () => {
+        this.insuranceLoading = false;
+        this.insuranceDocs = [];
+      },
+    });
+
+    this.portalService.getAppInsurancePolicy().subscribe({
+      next: (res) => {
+        this.companyPolicyLoading = false;
+        this.companyPolicyUrl = res?.data?.url || null;
+      },
+      error: () => {
+        this.companyPolicyLoading = false;
+        this.companyPolicyUrl = null;
+      },
+    });
+  }
+
+  private buildUploadUrl(docName: string): string {
+    if (!docName) return '';
+    if (/^https?:\/\//i.test(docName)) return docName;
+    const root = String(environment.apiUrl || '').replace(/\/api\/?$/, '/');
+    return `${root}upload/${docName}`;
   }
 
   ngAfterViewChecked(): void {
@@ -223,9 +273,9 @@ export class EmployeePortalDocumentsComponent implements OnInit, AfterViewChecke
   </tr>
 </table>
 <div style="margin:30px 0;line-height:1.8;font-size:11px;">
-  <b>${e.firstName} ${e.lastName}</b><br>${parentPrefix} ${e.fatherName}<br>${e.permanentAddress || ''}
+  <b>${e.firstName} ${e.lastName}</b><br>${parentPrefix} ${e.fatherName}<br>${this.formatMultilineHtml(e.permanentAddress || '')}
 </div>
-<p style="margin:20px 0;font-weight:bold;">Dear ${e.firstName},</p>
+<p style="margin:20px 0;font-weight:bold;font-size:11px;">Dear ${e.firstName},</p>
 <div style="font-size:11px;line-height:1.6;">
   <p>With reference to your application and subsequent interview with us, we are pleased to offer you employment in our Company as <b>${e.designation}</b> in the <b>${e.department}</b> at our Head Office &ndash; ${t.companyAddress}, as per the mutually agreed terms and conditions discussed with you at the time of interview.</p>
   <p>You are requested to report for joining on or before <b>${this.fmtOrdinal(e.joiningDate)}</b>.</p>
@@ -299,7 +349,7 @@ export class EmployeePortalDocumentsComponent implements OnInit, AfterViewChecke
     <td style="vertical-align:top;">
       <p style="margin:0;font-weight:bold;">${e.firstName} ${e.lastName}</p>
       <p style="margin:0;font-weight:bold;">${e.gender === 'Female' ? 'D/O' : 'S/O'} ${e.fatherName}</p>
-      <p style="margin:0;font-weight:bold;">${e.permanentAddress || ''}</p>
+      <p style="margin:0;font-weight:bold;">${this.formatMultilineHtml(e.permanentAddress || '')}</p>
     </td>
     <td style="text-align:right;vertical-align:top;">
       <p style="margin:0;font-weight:bold;">Date: ${fmtJoining}</p>
@@ -374,7 +424,7 @@ ${annexure}`;
   </tr>
 </table>
 <div style="margin:20px 0;line-height:1.8;">
-  ${e.firstName} ${e.lastName}<br>${parentPrefix} <b>${e.fatherName}</b><br>${e.permanentAddress || ''}
+  ${e.firstName} ${e.lastName}<br>${parentPrefix} <b>${e.fatherName}</b><br>${this.formatMultilineHtml(e.permanentAddress || '')}
 </div>
 <div style="margin:30px 0 20px;">Subject: <b><u>Relieving Cum Experience Letter</u></b></div>
 <div style="margin:20px 0;font-weight:bold;">Dear ${salutation} ${e.firstName} ${e.lastName},</div>
@@ -394,7 +444,7 @@ ${annexure}`;
     const day = d.getDate();
     const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     const suf = (n: number) => n >= 11 && n <= 13 ? 'th' : n % 10 === 1 ? 'st' : n % 10 === 2 ? 'nd' : n % 10 === 3 ? 'rd' : 'th';
-    return `${day}<sup>${suf(day)}</sup> ${months[d.getMonth()]}, ${d.getFullYear()}`;
+    return `${day}<sup style="font-size:0.65em;vertical-align:super;text-transform:none;font-weight:normal;">${suf(day)}</sup> ${months[d.getMonth()]}, ${d.getFullYear()}`;
   }
 
   private numToWords(amount: number): string {
@@ -410,6 +460,31 @@ ${annexure}`;
       return n2w(Math.floor(n / 10000000)) + ' crore' + (n % 10000000 ? ' ' + n2w(n % 10000000) : '');
     };
     return n2w(Math.floor(amount));
+  }
+
+  downloadAllServerPdfs(): void {
+    this.isLoadingPdfs = true;
+    this.letterPdfUrls = null;
+    this.portalService.getAppLetterPdfs().subscribe({
+      next: (res: any) => {
+        if (res.status && res.data) {
+          this.letterPdfUrls = res.data;
+          const count = Object.values(res.data).filter(Boolean).length;
+          if (count === 0) {
+            this.notyf.error('No letters have been generated yet.');
+          } else {
+            this.notyf.success(`${count} letter PDF(s) ready for download.`);
+          }
+        } else {
+          this.notyf.error(res.message || 'Could not generate PDFs.');
+        }
+        this.isLoadingPdfs = false;
+      },
+      error: () => {
+        this.notyf.error('Server error. Please try again.');
+        this.isLoadingPdfs = false;
+      }
+    });
   }
 
   private getBase64FromSrc(src: string): Promise<string> {

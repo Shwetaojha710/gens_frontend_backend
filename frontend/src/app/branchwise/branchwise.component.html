@@ -1,15 +1,477 @@
+<!-- ─── Floating palette button ─── -->
+<button class="bw-settings-fab" (click)="openSettings()" title="Brand & Colors">
+  <i class="ri ri-palette-line"></i>
+</button>
+
+<!-- ─── Module Access FAB (admin/superadmin only) ─── -->
+<button class="bw-perm-fab" *ngIf="isAdmin" (click)="openPermDrawer()" title="Module Access Control">
+  <i class="ri ri-shield-keyhole-line"></i>
+</button>
+
+<!-- ─── Module Permission Drawer Overlay ─── -->
+<div class="bw-perm-overlay" [class.bw-perm-overlay--open]="permDrawerOpen" (click)="closePermDrawer()"></div>
+
+<!-- ─── Module Permission Drawer ─── -->
+<div class="bw-perm-drawer" [class.bw-perm-drawer--open]="permDrawerOpen">
+
+  <!-- Header -->
+  <div class="bw-perm-head">
+    <div>
+      <p class="bw-drawer-eyebrow">Admin Control</p>
+      <h6 class="bw-drawer-title">
+        <i class="ri ri-shield-keyhole-line me-1"></i>Module Access
+      </h6>
+    </div>
+    <button class="bw-drawer-close" (click)="closePermDrawer()">
+      <i class="ri ri-close-line"></i>
+    </button>
+  </div>
+
+  <!-- Body: left = user list, right = module toggles -->
+  <div class="bw-perm-body">
+
+    <!-- ── Left Panel: User list ── -->
+    <div class="bw-perm-users">
+      <div class="bw-perm-search">
+        <i class="ri ri-search-line bw-perm-search-icon"></i>
+        <input type="text" class="bw-perm-search-input" placeholder="Search users..."
+          [(ngModel)]="permSearchQuery" (input)="searchPermUsers()" />
+      </div>
+
+      <div class="bw-perm-user-list">
+        <div *ngIf="permLoadingUsers" class="bw-perm-empty">
+          <span class="spinner-border spinner-border-sm text-primary me-1"></span> Loading…
+        </div>
+        <div *ngIf="!permLoadingUsers && permFilteredUsers.length === 0" class="bw-perm-empty">
+          No users found
+        </div>
+        <div *ngFor="let user of permFilteredUsers"
+          class="bw-perm-user-row"
+          [class.bw-perm-user-row--active]="permSelectedUser?.id === user.id"
+          (click)="selectPermUser(user)">
+          <div class="bw-perm-avatar"
+            [style.background]="getPermRoleColor(user.role) + '22'"
+            [style.color]="getPermRoleColor(user.role)">
+            {{ getPermInitial(user.name) }}
+          </div>
+          <div class="bw-perm-uinfo">
+            <div class="bw-perm-uname">{{ user.name }}</div>
+            <div class="bw-perm-uemail">{{ user.email }}</div>
+            <div class="bw-perm-urole">{{ user.role }}</div>
+          </div>
+          <i class="ri ri-arrow-right-s-line bw-perm-arrow"
+            *ngIf="permSelectedUser?.id === user.id"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Right Panel: Portal/Detail ── -->
+    <div class="bw-perm-right">
+
+      <!-- No user selected -->
+      <div *ngIf="!permSelectedUser" class="bw-perm-placeholder">
+        <i class="ri ri-user-3-line"></i>
+        <p>Select a user from the list<br>to manage their module access</p>
+      </div>
+
+      <!-- Loading modules -->
+      <div *ngIf="permSelectedUser && permLoadingModules" class="bw-perm-placeholder">
+        <span class="spinner-border text-primary"></span>
+        <p class="mt-2 mb-0">Loading permissions…</p>
+      </div>
+
+      <!-- ── User header bar (always shown once user selected) ── -->
+      <div *ngIf="permSelectedUser && !permLoadingModules" class="bw-perm-user-bar">
+        <div class="bw-perm-avatar bw-perm-avatar--bar"
+          [style.background]="getPermRoleColor(permSelectedUser.role) + '22'"
+          [style.color]="getPermRoleColor(permSelectedUser.role)">
+          {{ getPermInitial(permSelectedUser.name) }}
+        </div>
+        <div>
+          <div class="fw-semibold" style="font-size:.9rem;color:#1f2937">{{ permSelectedUser.name }}</div>
+          <div style="font-size:.72rem;color:#6b7280">{{ permSelectedUser.email }}</div>
+        </div>
+        <span class="bw-perm-role-badge ms-1"
+          [style.background]="getPermRoleColor(permSelectedUser.role) + '22'"
+          [style.color]="getPermRoleColor(permSelectedUser.role)">
+          {{ permSelectedUser.role }}
+        </span>
+        <span *ngIf="permHasCustom" class="bw-perm-custom-badge ms-1">Custom</span>
+      </div>
+
+      <!-- ══ VIEW 1: 3 Portal cards ══ -->
+      <ng-container *ngIf="permSelectedUser && !permLoadingModules && permView === 'portals'">
+
+        <div class="bw-portal-grid">
+          <div class="bw-portal-card"
+            *ngFor="let portal of permPortals"
+            [class.bw-portal-card--clickable]="portal.sections.length > 0"
+            [style.backgroundImage]="'url(' + portal.bgImg + ')'"
+            (click)="openPortalDetail(portal)">
+
+            <div class="bw-portal-glass"
+              [class.bw-portal-glass--off]="portalStatus(portal) === 'none'">
+
+              <h2 class="bw-portal-name">{{ portal.label | uppercase }}</h2>
+
+              <p class="bw-portal-meta">
+                {{ portal.sections.length > 0 ? (portalTotalMenus(portal) + ' menus') : 'Not configured' }}
+              </p>
+
+              <span class="bw-portal-pill bw-portal-pill--full"
+                *ngIf="portalStatus(portal) === 'full'">
+                <i class="ri ri-checkbox-circle-fill me-1"></i>Full Access
+              </span>
+              <span class="bw-portal-pill bw-portal-pill--partial"
+                *ngIf="portalStatus(portal) === 'partial'">
+                <i class="ri ri-error-warning-fill me-1"></i>Partial
+              </span>
+              <span class="bw-portal-pill bw-portal-pill--none"
+                *ngIf="portalStatus(portal) === 'none'">
+                <i class="ri ri-forbid-line me-1"></i>No Access
+              </span>
+
+              <button class="bw-portal-btn" *ngIf="portal.sections.length > 0">
+                Manage &rarr;
+              </button>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Save button in portal view -->
+        <div class="bw-perm-footer">
+          <button class="bw-perm-save-btn" [disabled]="permSaving" (click)="saveModulePermissions()">
+            <span *ngIf="permSaving" class="spinner-border spinner-border-sm me-1"></span>
+            <i *ngIf="!permSaving" class="ri ri-save-line me-1"></i>
+            {{ permSaving ? 'Saving…' : 'Save All Access' }}
+          </button>
+          <p class="bw-perm-note">
+            <i class="ri ri-information-line me-1"></i>
+            User will be auto-logged out to apply changes.
+          </p>
+        </div>
+      </ng-container>
+
+      <!-- ══ VIEW 2: Portal detail (sections + children) ══ -->
+      <ng-container *ngIf="permSelectedUser && !permLoadingModules && permView === 'detail' && permActivePortal">
+
+        <!-- Detail header: back + portal name + master toggle -->
+        <div class="bw-perm-detail-head">
+          <button class="bw-perm-back-btn" (click)="backToPortals()">
+            <i class="ri ri-arrow-left-s-line"></i> Back
+          </button>
+          <i [class]="permActivePortal.icon + ' bw-perm-detail-icon'"></i>
+          <span class="bw-perm-detail-name">{{ permActivePortal.label }}</span>
+          <div class="form-check form-switch mb-0 ms-auto">
+            <input class="form-check-input bw-perm-switch" type="checkbox" role="switch"
+              [id]="'portal-master-' + permActivePortal.key"
+              [checked]="isPortalAllOn(permActivePortal)"
+              (change)="togglePortalAll(permActivePortal)" />
+          </div>
+        </div>
+
+        <!-- Sections scroll area -->
+        <div class="bw-perm-detail-scroll">
+          <ng-container *ngFor="let section of permActivePortal.sections">
+
+            <!-- Section header row -->
+            <div class="bw-perm-section-head"
+              [class.bw-perm-section-head--off]="!section.enabled">
+              <div class="bw-perm-section-icon"
+                [style.background]="section.enabled ? '#dbeafe' : '#f3f4f6'"
+                [style.color]="section.enabled ? '#0d5f9d' : '#9ca3af'">
+                <i [class]="section.icon"></i>
+              </div>
+              <div class="bw-perm-section-info">
+                <span class="bw-perm-section-name">{{ section.label }}</span>
+                <span class="bw-perm-section-count">
+                  {{ section.children.length > 0 ? section.children.length + ' items' : 'Single page' }}
+                </span>
+              </div>
+              <div class="form-check form-switch mb-0 ms-auto">
+                <input class="form-check-input bw-perm-switch"
+                  type="checkbox" role="switch"
+                  [id]="'sec-' + section.key"
+                  [checked]="section.enabled"
+                  (change)="togglePermModule(section)" />
+              </div>
+            </div>
+
+            <!-- Single-page placeholder -->
+            <div *ngIf="section.children.length === 0"
+              class="bw-perm-child-item bw-perm-child-item--indented"
+              [class.bw-perm-child-item--off]="!section.enabled">
+              <i class="ri ri-layout-line bw-perm-child-arrow"></i>
+              <span class="bw-perm-child-label" style="color:#9ca3af;font-style:italic">
+                Single-page module
+              </span>
+            </div>
+
+            <!-- Children list -->
+            <div *ngFor="let child of section.children"
+              class="bw-perm-child-item bw-perm-child-item--indented"
+              [class.bw-perm-child-item--off]="!child.enabled || !section.enabled">
+              <i class="ri ri-corner-down-right-line bw-perm-child-arrow"></i>
+              <span class="bw-perm-child-label">{{ child.label }}</span>
+              <div class="form-check form-switch mb-0 ms-auto">
+                <input class="form-check-input bw-perm-switch"
+                  type="checkbox" role="switch"
+                  [id]="'ci-' + child.key"
+                  [checked]="child.enabled && section.enabled"
+                  [disabled]="!section.enabled"
+                  (change)="togglePermChild(section, child)" />
+              </div>
+            </div>
+
+          </ng-container>
+        </div>
+
+        <!-- Save in detail view -->
+        <div class="bw-perm-footer">
+          <button class="bw-perm-save-btn" [disabled]="permSaving" (click)="saveModulePermissions()">
+            <span *ngIf="permSaving" class="spinner-border spinner-border-sm me-1"></span>
+            <i *ngIf="!permSaving" class="ri ri-save-line me-1"></i>
+            {{ permSaving ? 'Saving…' : 'Save Access' }}
+          </button>
+          <p class="bw-perm-note">
+            <i class="ri ri-information-line me-1"></i>
+            User will be auto-logged out to apply changes.
+          </p>
+        </div>
+
+      </ng-container>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Drawer overlay ─── -->
+<div class="bw-drawer-overlay" [class.bw-drawer-overlay--open]="settingsOpen" (click)="closeSettings()"></div>
+
+<!-- ─── Settings drawer ─── -->
+<div class="bw-settings-drawer" [class.bw-settings-drawer--open]="settingsOpen">
+  <div class="bw-drawer-head">
+    <div>
+      <p class="bw-drawer-eyebrow">Appearance</p>
+      <h6 class="bw-drawer-title">Brand &amp; Colors</h6>
+    </div>
+    <button class="bw-drawer-close" (click)="closeSettings()">
+      <i class="ri ri-close-line"></i>
+    </button>
+  </div>
+
+  <div class="bw-drawer-body">
+    <!-- Apply to modules -->
+    <div class="bw-section mb-4">
+      <p class="bw-section-label">Apply colors to</p>
+      <div class="bw-module-list">
+        <label class="bw-module-item">
+          <input type="checkbox" [(ngModel)]="applyTo.hrAdmin" />
+          <span class="bw-module-icon"><i class="ri ri-briefcase-4-line"></i></span>
+          <span class="bw-module-text">Employee Management</span>
+        </label>
+        <label class="bw-module-item">
+          <input type="checkbox" [(ngModel)]="applyTo.recruitment" />
+          <span class="bw-module-icon"><i class="ri ri-group-line"></i></span>
+          <span class="bw-module-text">Recruitment</span>
+        </label>
+        <label class="bw-module-item">
+          <input type="checkbox" [(ngModel)]="applyTo.employeePortal" />
+          <span class="bw-module-icon"><i class="ri ri-user-smile-line"></i></span>
+          <span class="bw-module-text">Employee Portal</span>
+        </label>
+      </div>
+    </div>
+
+    <div style="height:1px;background:#e8edf3;"></div>
+
+    <!-- Color pickers -->
+    <div class="bw-section mt-4">
+      <p class="bw-section-label">Colors</p>
+
+      <div class="bw-color-row">
+        <div class="bw-color-info">
+          <span class="bw-color-label">Primary Color</span>
+          <span class="bw-color-hint">Buttons &amp; active nav</span>
+        </div>
+        <div class="bw-color-controls">
+          <input type="color" class="bw-color-swatch" [(ngModel)]="colors.primaryColor" (input)="previewColors()" />
+          <input type="text" class="bw-hex-field" [(ngModel)]="colors.primaryColor" (change)="previewColors()" maxlength="7" />
+        </div>
+      </div>
+
+      <div class="bw-color-row">
+        <div class="bw-color-info">
+          <span class="bw-color-label">Sidebar</span>
+          <span class="bw-color-hint">Navigation background</span>
+        </div>
+        <div class="bw-color-controls">
+          <input type="color" class="bw-color-swatch" [(ngModel)]="colors.sidebarColor" (input)="previewColors()" />
+          <input type="text" class="bw-hex-field" [(ngModel)]="colors.sidebarColor" (change)="previewColors()" maxlength="7" />
+        </div>
+      </div>
+
+      <div class="bw-color-row">
+        <div class="bw-color-info">
+          <span class="bw-color-label">Page Background</span>
+          <span class="bw-color-hint">Top &amp; bottom gradient</span>
+        </div>
+        <div class="bw-color-controls" style="gap:0.5rem;">
+          <div style="display:flex;align-items:center;gap:4px;">
+            <input type="color" class="bw-color-swatch" [(ngModel)]="colors.pageBgEnd" (input)="previewColors()" />
+            <span class="bw-mini-label">Top</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <input type="color" class="bw-color-swatch" [(ngModel)]="colors.pageBgStart" (input)="previewColors()" />
+            <span class="bw-mini-label">Bottom</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bw-color-row">
+        <div class="bw-color-info">
+          <span class="bw-color-label">Hero Banner</span>
+          <span class="bw-color-hint">Dashboard banner gradient</span>
+        </div>
+        <div class="bw-color-controls" style="gap:0.5rem;">
+          <div style="display:flex;align-items:center;gap:4px;">
+            <input type="color" class="bw-color-swatch" [(ngModel)]="colors.heroBgStart" (input)="previewColors()" />
+            <span class="bw-mini-label">Left</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <input type="color" class="bw-color-swatch" [(ngModel)]="colors.heroBgEnd" (input)="previewColors()" />
+            <span class="bw-mini-label">Right</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mini preview -->
+    <div class="bw-section mt-4">
+      <p class="bw-section-label">Preview</p>
+      <div class="bw-preview-wrap">
+        <div class="bw-preview-sidebar"
+          [style.background]="'linear-gradient(180deg,' + colors.sidebarColor + 'f5 0%,' + colors.sidebarColor + 'eb 100%)'">
+          <div class="bw-preview-nav-active" [style.background]="colors.primaryColor">Dashboard</div>
+          <div class="bw-preview-nav-item">Employees</div>
+          <div class="bw-preview-nav-item">Attendance</div>
+        </div>
+        <div class="bw-preview-content"
+          [style.background]="'linear-gradient(to top,' + colors.pageBgStart + ' 0%,' + colors.pageBgEnd + ' 100%)'">
+          <div class="bw-preview-hero"
+            [style.background]="'linear-gradient(90deg,' + colors.heroBgStart + ' 0%,' + colors.heroBgEnd + ' 100%)'">
+          </div>
+          <div class="bw-preview-btn" [style.background]="colors.primaryColor"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bw-drawer-footer">
+    <button class="bw-btn-save" [disabled]="saving" (click)="saveSettings()">
+      <i class="fas fa-circle-notch fa-spin me-1" *ngIf="saving"></i>
+      <i class="ri ri-save-line me-1" *ngIf="!saving"></i>
+      {{ saving ? 'Saving…' : 'Save Colors' }}
+    </button>
+    <button class="bw-btn-reset" (click)="resetSettings()">
+      <i class="ri ri-refresh-line me-1"></i>Reset
+    </button>
+  </div>
+</div>
+
+
+<!-- ─── Main branchwise page ─── -->
 <div class="authentication-wrapper authentication-basic container-p-y p-4 p-sm-0"
-  style="background-image: url('/assets/img/bg-login/bg-branch.jpg');background-size: cover;background-repeat: no-repeat;">
+  style="background:
+    radial-gradient(ellipse 60% 50% at 15% 20%, rgba(0, 180, 166, 0.16) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 85% 15%, rgba(255, 140, 66, 0.14) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 50% 95%, rgba(126, 211, 33, 0.12) 0%, transparent 60%),
+    linear-gradient(180deg, #eaf6f5 0%, #f7fbfa 100%);
+  background-size: cover;background-repeat: no-repeat;">
   <div class="bg-1">
 <div class="col-12 text-end d-flex gap-2 justify-content-end">
               <button type="button" class="btn btn-outline-primary bg-white waves-effect waves-light"
                 data-bs-toggle="modal" data-bs-target="#addBranchModal" (click)="openAddBranchModal()">
                 <i class="bx bx-plus"></i>&nbsp;Add Branch
               </button>
+              <button type="button" class="btn btn-outline-warning bg-white waves-effect waves-light"
+                data-bs-toggle="modal" data-bs-target="#copyMasterDataModal" (click)="openCopyMasterModal()">
+                <i class="bx bx-copy"></i>&nbsp;Copy Master Data
+              </button>
               <button type="button" class="btn btn-outline-success bg-white waves-effect waves-light"
                 (click)="gotoList()">
                 Pending Employee List
               </button>
+            </div>
+
+            <!-- Copy Master Data Modal -->
+            <div class="modal fade" id="copyMasterDataModal" tabindex="-1" aria-labelledby="copyMasterDataModalLabel" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="copyMasterDataModalLabel">
+                      <i class="bx bx-copy me-1"></i>Copy Master Data to Branch
+                    </h5>
+                    <button type="button" class="btn-close" id="closeCopyMasterModal" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <p class="text-muted small mb-3">
+                      Copy master data (departments, designations, shifts, leave policies, salary components, etc.) from one branch to another. Existing records in the target branch will be skipped.
+                    </p>
+                    <div class="row g-3">
+                      <div class="col-12">
+                        <label class="form-label">Source Branch <span class="text-danger">*</span></label>
+                        <ng-select
+                          [items]="allBranchList"
+                          bindLabel="name"
+                          bindValue="id"
+                          [(ngModel)]="copyMaster.sourceBranchId"
+                          placeholder="Select source branch">
+                        </ng-select>
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label">Target Branch <span class="text-danger">*</span></label>
+                        <ng-select
+                          [items]="allBranchList"
+                          bindLabel="name"
+                          bindValue="id"
+                          [(ngModel)]="copyMaster.targetBranchId"
+                          placeholder="Select target branch">
+                        </ng-select>
+                      </div>
+                      <div class="col-12" *ngIf="copyMasterResult">
+                        <div class="alert alert-success py-2 mb-0">
+                          <strong>Copy complete!</strong> From <em>{{ copyMasterResult.source }}</em> to <em>{{ copyMasterResult.target }}</em>
+                          <ul class="mb-0 mt-1 small">
+                            <li>Departments: {{ copyMasterResult.summary.departments }}</li>
+                            <li>Designations: {{ copyMasterResult.summary.designations }}</li>
+                            <li>Employment Types: {{ copyMasterResult.summary.employmentTypes }}</li>
+                            <li>Document Types: {{ copyMasterResult.summary.documentTypes }}</li>
+                            <li>Holiday Types: {{ copyMasterResult.summary.holidayTypes }}</li>
+                            <li>Salary Components: {{ copyMasterResult.summary.masterComponents }}</li>
+                            <li>Shifts: {{ copyMasterResult.summary.shifts }}</li>
+                            <li>Leave Policies: {{ copyMasterResult.summary.leaveMasters }}</li>
+                            <li>Attendance Settings: {{ copyMasterResult.summary.attendanceSettings }}</li>
+                            <li>Currencies: {{ copyMasterResult.summary.currencies }}</li>
+                            <li>Prefixes: {{ copyMasterResult.summary.prefixes }}</li>
+                            <li>Round Types: {{ copyMasterResult.summary.roundTypes }}</li>
+                            <li>Interview Rounds: {{ copyMasterResult.summary.interviewRounds }}</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning waves-effect waves-light"
+                      (click)="submitCopyMasterData()" [disabled]="copyMasterLoading">
+                      <span *ngIf="copyMasterLoading" class="spinner-border spinner-border-sm me-1"></span>
+                      <i *ngIf="!copyMasterLoading" class="bx bx-copy me-1"></i>
+                      {{ copyMasterLoading ? 'Copying...' : 'Copy Data' }}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Add Branch Modal -->
@@ -176,13 +638,12 @@
 
 
             <!-- Logo -->
-            <div class="app-brand justify-content-center">
+            <!-- <div class="app-brand justify-content-center">
               <a href="/" class="app-brand-link gap-2 mb-2">
-                <img src="/assets/img/logo/logo-quaere.png" width="200">
-                <!-- <img [src]="tenantDetails?.image" alt="Document" width="250" height="auto" style="cursor: pointer" /> -->
+                <img src="/assets/img/marketing/gens-logo.png" width="260">
               </a>
 
-            </div>
+            </div> -->
             <div class="app-brand justify-content-center">
               <div class="text-center">
                 <h4 class="mb-0 company-text">

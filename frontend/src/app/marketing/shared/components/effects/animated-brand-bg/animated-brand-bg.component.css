@@ -1,0 +1,124 @@
+:host {
+  display: contents;
+}
+
+.gens-animated-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.gens-animated-bg__layer {
+  position: absolute;
+  inset: -40%;
+  filter: blur(40px);
+}
+
+/* Primary flow: very soft teal to mint */
+.gens-animated-bg__layer--primary {
+  background: linear-gradient(
+    115deg,
+    #f8fcfb 0%,
+    #eef7f6 25%,
+    #e8f5f0 50%,
+    #eef7f6 75%,
+    #f8fcfb 100%
+  );
+  background-size: 400% 400%;
+  animation: gensBgFlow 16s ease-in-out infinite;
+  opacity: 0.75;
+}
+
+/* Secondary: ultra-soft accent tints */
+.gens-animated-bg__layer--secondary {
+  background: linear-gradient(
+    245deg,
+    transparent 0%,
+    #3fb8aa18 30%,
+    #ffb34715 50%,
+    #7ed32118 70%,
+    transparent 100%
+  );
+  background-size: 350% 350%;
+  animation: gensBgFlowAlt 20s ease-in-out infinite reverse;
+  opacity: 0.4;
+}
+
+/* Accent shimmer sweep */
+.gens-animated-bg__layer--accent {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(126, 211, 33, 0.05) 25%,
+    rgba(63, 184, 170, 0.07) 50%,
+    rgba(255, 179, 71, 0.04) 75%,
+    transparent 100%
+  );
+  background-size: 250% 100%;
+  animation: gensBgShimmer 8s linear infinite;
+  opacity: 0.45;
+}
+
+/* Soft white veil so foreground content stays readable */
+.gens-animated-bg__veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.75) 0%,
+    rgba(255, 255, 255, 0.55) 40%,
+    rgba(255, 255, 255, 0.65) 100%
+  );
+}
+
+:host-context(.dark) .gens-animated-bg__layer--primary {
+  background: linear-gradient(
+    115deg,
+    #0b1120 0%,
+    #0f3d4c55 25%,
+    #1a807544 45%,
+    #7ed32133 65%,
+    #0b1120 100%
+  );
+  opacity: 0.85;
+}
+
+:host-context(.dark) .gens-animated-bg__layer--secondary {
+  background: linear-gradient(
+    245deg,
+    transparent 0%,
+    #1a807533 30%,
+    #ffb34722 55%,
+    #3fb8aa33 80%,
+    transparent 100%
+  );
+}
+
+:host-context(.dark) .gens-animated-bg__veil {
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(11, 17, 32, 0.6), transparent 70%);
+}
+
+@keyframes gensBgFlow {
+  0%, 100% { background-position: 0% 50%; transform: rotate(0deg); }
+  50% { background-position: 100% 50%; transform: rotate(2deg); }
+}
+
+@keyframes gensBgFlowAlt {
+  0%, 100% { background-position: 100% 0%; }
+  50% { background-position: 0% 100%; }
+}
+
+@keyframes gensBgShimmer {
+  0% { background-position: -100% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gens-animated-bg__layer--primary,
+  .gens-animated-bg__layer--secondary,
+  .gens-animated-bg__layer--accent {
+    animation: none !important;
+  }
+}

@@ -2,9 +2,202 @@
   width: 800px;
   margin: auto;
   padding: 40px;
-  font-family: 'Times New Roman';
+  font-family: 'Times New Roman', Times, serif;
   background: #fff;
   position: relative;
+}
+
+.nda-content {
+  max-width: 794px;
+  margin: 0 auto;
+  padding: 50px 25px 16px;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 12pt;
+  line-height: 1.0;
+  color: #000;
+  background: #fff;
+}
+
+/*
+  Letterhead blank on first page — padding is more reliable than empty-div height
+  (empty divs often collapse in print / Word).
+*/
+.nda-first-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 1123px; /* ~A4 at 96dpi screen preview */
+}
+
+.nda-letterhead-spacer {
+  display: block;
+
+  /* height: 180mm;
+  min-height: 180mm; */
+
+  height: 120mm;
+  min-height: 120mm;
+  width: 100%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.nda-letterhead-spacer::after {
+  content: '\00a0';
+  display: block;
+  height: 120mm;
+  line-height: 120mm;
+  font-size: 1px;
+}
+
+/* Push page-1 text block to the bottom of the page */
+.nda-page1-body {
+  margin-top: auto;
+  padding-bottom: 8px;
+}
+
+.nda-first-page .nda-title {
+  margin-top: 0;
+}
+
+/* Continuation pages — top margin so content is not stuck to edge */
+.nda-clause2-continue,
+.nda-content > ol.nda-terms {
+  margin-top: 8px;
+}
+
+.nda-content > .nda-page-break + .nda-clause2-continue {
+  padding-top: 24px;
+
+}
+
+.nda-first-page {
+  display: block;
+  box-sizing: border-box;
+  height: auto;
+  min-height: 0;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.nda-first-page .nda-page1-end {
+  margin-top: 12px;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.nda-title {
+  text-align: center;
+  text-decoration: underline;
+  font-weight: bold;
+  margin: 0 0 14px;
+  font-size: 12pt;
+}
+
+.nda-intro,
+.nda-content p,
+.nda-clause2-continue {
+  text-align: justify;
+}
+
+.nda-intro {
+  margin: 10px 0 16px;
+}
+
+.nda-terms {
+  padding-left: 22px;
+  margin: 12px 0;
+}
+
+.nda-terms li {
+  margin-bottom: 10px;
+  text-align: justify;
+}
+
+.nda-clause2-continue {
+  margin: 0 0 14px 22px;
+}
+
+.nda-meta {
+  margin-top: 0;
+}
+
+.nda-sign-table {
+  margin-top: 40px !important;
+  border-collapse: collapse;
+}
+
+.nda-sign-table td {
+  vertical-align: top;
+  padding-top: 8px;
+}
+
+.nda-mid-page,
+.nda-last-page {
+  min-height: 0;
+  height: auto;
+  display: block;
+  box-sizing: border-box;
+}
+
+.nda-mid-page {
+  margin-top: 8px;
+}
+
+.nda-last-page {
+  padding-top: 16px;
+}
+
+.nda-end-block {
+  margin-top: 18px;
+  padding-top: 12px;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.nda-page-break {
+  display: none;
+}
+
+/* PRINT only — push ending content to page bottom (no empty gap) */
+@media print {
+  .nda-first-page {
+
+    /* min-height: 400mm; */
+
+    display: flex;
+    flex-direction: column;
+    min-height: 257mm;
+    height: 257mm;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .nda-letterhead-spacer {
+    height: 100mm;
+    min-height: 100mm;
+  }
+
+  .nda-letterhead-spacer::after {
+    height: 100mm;
+    line-height: 100mm;
+  }
+
+  .nda-page1-body {
+    margin-top: auto;
+    padding-bottom: 4mm;
+  }
+
+  .nda-first-page .nda-title {
+    margin-top: 0;
+  }
+
+  .nda-content > .nda-page-break + .nda-clause2-continue {
+    padding-top: 24px;
+  }
+
+  .nda-page-break {
+    display: none;
+  }
 }
 
 .header {
@@ -46,21 +239,13 @@
   margin-top: 10px;
 }
 
+.ord-sup {
+  font-size: 0.65em;
+  vertical-align: super;
+  line-height: 0;
+}
+
 .actions {
   text-align: center;
   margin-top: 20px;
 }
-
-
-/* .date-section p {
-  margin: 5px 0;
-  font-family: 'Times New Roman';
-}
-
-.input-inline {
-  border: none;
-  border-bottom: 1px solid #000;
-  outline: none;
-  font-family: 'Times New Roman';
-  width: 180px;
-} */

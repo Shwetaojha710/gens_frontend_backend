@@ -1,0 +1,41 @@
+<div class="epip-page">
+
+  <div class="epip-header mb-4">
+    <h5 class="epip-title mb-1">Insurance Policy</h5>
+    <p class="text-muted small mb-0">Company insurance policy document — view and download.</p>
+  </div>
+
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary"></div>
+    <p class="mt-2 text-muted small">Loading…</p>
+  </div>
+
+  <div *ngIf="!loading" class="row g-3">
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="epip-card">
+        <div class="epip-card__icon-wrap">
+          <i class="ri ri-shield-check-line"></i>
+        </div>
+        <div class="epip-card__body">
+          <div class="epip-card__label">Insurance Policy Document</div>
+
+          <ng-container *ngIf="policyUrl; else notAvailable">
+            <div class="epip-badge epip-badge--ready mb-2">
+              <i class="ri ri-check-line me-1"></i>Available
+            </div>
+            <a [href]="policyUrl" target="_blank" class="epip-action-btn epip-action-btn--download">
+              <i class="ri ri-file-pdf-line me-1"></i>View / Download
+            </a>
+          </ng-container>
+
+          <ng-template #notAvailable>
+            <div class="epip-badge epip-badge--pending">
+              <i class="ri ri-time-line me-1"></i>Not yet uploaded by HR
+            </div>
+          </ng-template>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

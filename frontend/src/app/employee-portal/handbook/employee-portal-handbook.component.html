@@ -1,0 +1,42 @@
+<div class="eph-page">
+
+  <div class="eph-header mb-4">
+    <h5 class="eph-title mb-1">Employee Handbook</h5>
+    <p class="text-muted small mb-0">View and download your company's employee handbook.</p>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary"></div>
+    <p class="mt-2 text-muted small">Loading…</p>
+  </div>
+
+  <div *ngIf="!loading" class="row g-3">
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="eph-card">
+        <div class="eph-card__icon-wrap">
+          <i class="ri ri-book-2-line"></i>
+        </div>
+        <div class="eph-card__body">
+          <div class="eph-card__label">Employee Handbook</div>
+
+          <ng-container *ngIf="handbookUrl; else notAvailable">
+            <div class="eph-badge eph-badge--ready mb-2">
+              <i class="ri ri-check-line me-1"></i>Available
+            </div>
+            <a [href]="handbookUrl" target="_blank" class="eph-action-btn eph-action-btn--download">
+              <i class="ri ri-file-pdf-line me-1"></i>View / Download
+            </a>
+          </ng-container>
+
+          <ng-template #notAvailable>
+            <div class="eph-badge eph-badge--pending">
+              <i class="ri ri-time-line me-1"></i>Not yet uploaded by HR
+            </div>
+          </ng-template>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

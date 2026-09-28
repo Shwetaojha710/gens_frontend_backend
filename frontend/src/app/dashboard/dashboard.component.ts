@@ -66,9 +66,22 @@ export class DashboardComponent {
   trackingList: any[] = [];
   birthdays: any[] = [];
   anniversaries: any[] = [];
+  /** Celebrations card tabs */
+  celebrationTab: 'all' | 'upcoming' = 'all';
+  /** Today's birthday popup (matches Happy Birthday card design) */
+  showBirthdayModal = false;
+  birthdayModalPerson: any = null;
+  birthdayModalQueue: any[] = [];
+  birthdayModalIndex = 0;
   attendanceChart: any = null;
   attendanceByDepartment: any[] = [];
+  teamwiseAttendance: any[] = [];
+  teamwiseDate: string = '';
+  teamwiseIsMultiBranch: boolean = false;
+  selectedTeamBranch: string = 'All';
+  expandedDepartments: Set<string> = new Set();
   baseurl: any;
+  userRole: string = '';
   Event: any = [];
   selectedEmployeeTableRange = 'This Week';
   selectedAttendanceChartRange = 'This Week';
@@ -89,8 +102,21 @@ export class DashboardComponent {
 
   ngOnInit(): void {
     this.baseurl = this.masterService.getBaseUrl();
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    this.userRole = user?.role || '';
     this.resetDashboardState();
     this.loadDashboard();
+    if (this.isManagerRole) {
+      this.loadTeamwiseAttendance();
+    }
+  }
+
+  get isManagerRole(): boolean {
+    return ['admin', 'hr', 'superadmin', 'manager', 'director'].includes(this.userRole);
+  }
+
+  get isManagerDirectorRole(): boolean {
+    return this.userRole === 'manager' || this.userRole === 'director';
   }
 
   resetDashboardState() {
@@ -107,6 +133,66 @@ export class DashboardComponent {
     this.anniversaries = [];
     this.attendanceChart = null;
     this.attendanceByDepartment = [];
+    this.teamwiseAttendance = [];
+    this.teamwiseIsMultiBranch = false;
+    this.selectedTeamBranch = 'All';
+  }
+
+  loadTeamwiseAttendance(date?: string) {
+    const branchId = this.isManagerDirectorRole ? this.selectedTeamBranch : undefined;
+    this.dashboardService.getTeamwiseAttendance(date, branchId).subscribe({
+      next: (res: any) => {
+        if (res.status === true) {
+          this.teamwiseAttendance = res.data?.teamData || [];
+          this.teamwiseDate = res.data?.date || '';
+          this.teamwiseIsMultiBranch = res.data?.isMultiBranch || false;
+        }
+      },
+      error: () => {}
+    });
+  }
+
+  setTeamBranch(branchId: string) {
+    this.selectedTeamBranch = branchId;
+    this.expandedDepartments.clear();
+    this.loadTeamwiseAttendance();
+  }
+
+  get teamwiseBranches(): string[] {
+    if (!this.teamwiseIsMultiBranch) return [];
+    return [...new Set(this.teamwiseAttendance.map((d: any) => d.branchName).filter(Boolean))];
+  }
+
+  get teamBranchItems(): { id: string; name: string }[] {
+    return [{ id: 'All', name: 'All Branches' }, ...(this.branchList || [])];
+  }
+
+  getDeptsByBranch(branchName: string): any[] {
+    return this.teamwiseAttendance.filter((d: any) => d.branchName === branchName);
+  }
+
+  toggleDepartment(deptId: string) {
+    if (this.expandedDepartments.has(deptId)) {
+      this.expandedDepartments.delete(deptId);
+    } else {
+      this.expandedDepartments.add(deptId);
+    }
+  }
+
+  isDepartmentExpanded(deptId: string): boolean {
+    return this.expandedDepartments.has(deptId);
+  }
+
+  getMemberStatusClass(status: string): string {
+    if (status === 'Present') return 'text-success';
+    if (status === 'On Leave') return 'text-warning';
+    return 'text-danger';
+  }
+
+  getMemberStatusBadge(status: string): string {
+    if (status === 'Present') return 'bg-label-success';
+    if (status === 'On Leave') return 'bg-label-warning';
+    return 'bg-label-danger';
   }
 
   loadDashboard() {
@@ -131,6 +217,7 @@ export class DashboardComponent {
           this.attendanceByDepartment = res.data.attendanceByDepartment || [];
           this.Event = res.data;
           this.setAttendanceDonutChart();
+          this.maybeShowTodayBirthdayModal();
           return;
         }
 
@@ -273,18 +360,138 @@ export class DashboardComponent {
   }
 
   get celebrationsList(): any[] {
-    return [
+    const list = [
       ...this.birthdays.map((item: any) => ({
         ...item,
         cardTitle: 'Birthday',
-        dateLabel: item?.dateOfBirth ? new Date(item.dateOfBirth).toLocaleDateString('en-GB') : 'NA'
+        cardKind: 'birthday',
+        dateLabel: this.formatCelebrationDate(item),
+        dateLong: this.formatCelebrationDateLong(item),
       })),
       ...this.anniversaries.map((item: any) => ({
         ...item,
         cardTitle: 'Anniversary',
-        dateLabel: item?.joiningDate ? new Date(item.joiningDate).toLocaleDateString('en-GB') : 'NA'
-      }))
-    ].slice(0, 2);
+        cardKind: 'anniversary',
+        dateLabel: this.formatCelebrationDate(item),
+        dateLong: this.formatCelebrationDateLong(item),
+      })),
+    ].sort((a: any, b: any) => (a.daysUntil ?? 999) - (b.daysUntil ?? 999));
+
+    if (this.celebrationTab === 'upcoming') {
+      // Today + next 30 days
+      return list.filter(
+        (item: any) =>
+          item.isUpcoming === true ||
+          (typeof item.daysUntil === 'number' && item.daysUntil >= 0 && item.daysUntil <= 30),
+      );
+    }
+
+    // All: celebrations in the current calendar month (past + remaining)
+    return list.filter((item: any) => item.inCurrentMonth === true || item.isToday === true);
+  }
+
+  get todaysBirthdays(): any[] {
+    return (this.birthdays || []).filter(
+      (b: any) => b.isToday === true || Number(b.daysUntil) === 0,
+    );
+  }
+
+  private formatCelebrationDate(item: any): string {
+    const raw = item?.nextOccurrence || item?.eventDate || item?.dateOfBirth || item?.joiningDate;
+    if (!raw) return 'NA';
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return 'NA';
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+  }
+
+  formatCelebrationDateLongPublic(item: any): string {
+    return this.formatCelebrationDateLong(item);
+  }
+
+  private formatCelebrationDateLong(item: any): string {
+    const raw = item?.nextOccurrence || item?.eventDate || item?.dateOfBirth || item?.joiningDate;
+    if (!raw) return '';
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return '';
+    const day = d.getDate();
+    const month = d.toLocaleDateString('en-GB', { month: 'long' });
+    const year = new Date().getFullYear();
+    return `${day} ${month} ${year}`;
+  }
+
+  setCelebrationTab(tab: 'all' | 'upcoming'): void {
+    this.celebrationTab = tab;
+  }
+
+  /** Show Happy Birthday popup once per day per person (session). */
+  maybeShowTodayBirthdayModal(): void {
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const dismissedRaw = sessionStorage.getItem('bdayModalDismissed') || '{}';
+    let dismissed: Record<string, string> = {};
+    try {
+      dismissed = JSON.parse(dismissedRaw);
+    } catch {
+      dismissed = {};
+    }
+
+    const queue = this.todaysBirthdays.filter((b: any) => {
+      const id = String(b.id || b.employeeId || `${b.firstName}-${b.lastName}`);
+      return dismissed[id] !== todayKey;
+    });
+
+    if (!queue.length) {
+      this.showBirthdayModal = false;
+      this.birthdayModalPerson = null;
+      this.birthdayModalQueue = [];
+      return;
+    }
+
+    this.birthdayModalQueue = queue;
+    this.birthdayModalIndex = 0;
+    this.birthdayModalPerson = queue[0];
+    this.showBirthdayModal = true;
+  }
+
+  closeBirthdayModal(): void {
+    const person = this.birthdayModalPerson;
+    if (person) {
+      const todayKey = new Date().toISOString().slice(0, 10);
+      const id = String(person.id || person.employeeId || `${person.firstName}-${person.lastName}`);
+      let dismissed: Record<string, string> = {};
+      try {
+        dismissed = JSON.parse(sessionStorage.getItem('bdayModalDismissed') || '{}');
+      } catch {
+        dismissed = {};
+      }
+      dismissed[id] = todayKey;
+      sessionStorage.setItem('bdayModalDismissed', JSON.stringify(dismissed));
+    }
+
+    const next = this.birthdayModalIndex + 1;
+    if (next < this.birthdayModalQueue.length) {
+      this.birthdayModalIndex = next;
+      this.birthdayModalPerson = this.birthdayModalQueue[next];
+      this.showBirthdayModal = true;
+    } else {
+      this.showBirthdayModal = false;
+      this.birthdayModalPerson = null;
+      this.birthdayModalQueue = [];
+    }
+  }
+
+  openBirthdayCelebration(item?: any): void {
+    const person = item || this.birthdayModalPerson;
+    if (!person) return;
+    this.closeBirthdayModal();
+    this.celebrationTab = 'all';
+  }
+
+  openTodayBirthday(item: any): void {
+    if (!item) return;
+    this.birthdayModalQueue = [item];
+    this.birthdayModalIndex = 0;
+    this.birthdayModalPerson = item;
+    this.showBirthdayModal = true;
   }
 
   onImageError(event: Event, data: any, imageType: string) {
@@ -303,17 +510,11 @@ export class DashboardComponent {
   }
 
   getLeaveStatusClass(status: string): string {
-    const normalizedStatus = String(status || '').toLowerCase();
-
-    if (normalizedStatus === 'approved') {
-      return 'bg-label-success';
-    }
-
-    if (normalizedStatus === 'rejected') {
-      return 'bg-label-danger';
-    }
-
-    return 'bg-label-warning';
+    const s = String(status || '').toLowerCase();
+    if (s == 'approved') return 'leave-approved';
+    if (s == 'rejected' || s == 'self_declined') return 'leave-rejected';
+    if (s == 'recommended') return 'leave-recommended';
+    return 'leave-pending'; // pending / escalate etc.
   }
 
   onBranchChange(branchId: any) {
@@ -369,7 +570,15 @@ export class DashboardComponent {
       }
     });
   }
-
+  deptPct(dept: any, type: 'present' | 'leave' | 'absent'): number {
+    const total = Number(dept?.total) || 0;
+    if (!total) return 0;
+    const n =
+      type === 'present' ? Number(dept?.presentCount) || 0 :
+      type === 'leave'   ? Number(dept?.onLeaveCount) || 0 :
+                           Number(dept?.absentCount) || 0;
+    return Math.round((n / total) * 1000) / 10; // e.g. 87.5
+  }
   openLeaveApproval(item: any) {
     this.confirmLeaveStatusChange(item, 'approved');
   }
@@ -527,4 +736,50 @@ export class DashboardComponent {
       }
     });
   }
+
+// ── Employee table search + pagination ──
+tableSearch = '';
+currentPage = 1;
+pageSize = 10;
+readonly Math = Math;
+
+get filteredTableRows(): any[] {
+  const q = this.tableSearch.trim().toLowerCase();
+  const source =
+    this.activeEmployeeSectionTab === 'leave' ? this.leaveList : this.employeeList;
+  if (!q) return source || [];
+  return (source || []).filter((item: any) =>
+    JSON.stringify(item).toLowerCase().includes(q),
+  );
+}
+
+get pagedTableRows(): any[] {
+  const start = (this.currentPage - 1) * this.pageSize;
+  return this.filteredTableRows.slice(start, start + this.pageSize);
+}
+
+get totalPages(): number {
+  return Math.max(1, Math.ceil(this.filteredTableRows.length / this.pageSize) || 1);
+}
+
+get pageNumbers(): number[] {
+  const total = this.totalPages;
+  const pages: number[] = [];
+  for (let i = 1; i <= total; i++) pages.push(i);
+  return pages;
+}
+
+onTableSearch(): void {
+  this.currentPage = 1;
+}
+
+goToPage(p: number): void {
+  if (p < 1 || p > this.totalPages) return;
+  this.currentPage = p;
+}
+
+onPageSizeChange(size: any): void {
+  this.pageSize = Number(size) || 10;
+  this.currentPage = 1;
+}
 }

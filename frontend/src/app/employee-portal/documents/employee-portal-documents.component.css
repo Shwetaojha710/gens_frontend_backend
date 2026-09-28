@@ -1,4 +1,4 @@
-.epd-page {
+﻿.epd-page {
   padding: 1.5rem;
 }
 
@@ -118,7 +118,7 @@
 }
 
 .epd-action-btn--print {
-  background: #e0f2fe;
+  background: #e0f7f5;
   color: #0369a1;
 }
 

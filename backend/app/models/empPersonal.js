@@ -85,6 +85,18 @@ const empPersonal = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    guarantorAge: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    guarantorRelation: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    guarantorAddress: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
     bloodGroup: {
       type: DataTypes.ENUM("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"),
       allowNull: true,
@@ -169,6 +181,10 @@ const empPersonal = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    webToken: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
     deviceId: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -192,6 +208,15 @@ const empPersonal = sequelize.define(
       allowNull: true,
       defaultValue: false,
     },
+    isContractual: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: false,
+    },
+    hourlyRate: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+    },
   },
 
   {
@@ -208,12 +233,12 @@ const empPersonal = sequelize.define(
   },
 );
 
-// empPersonal.sync({ alter: true })
-//   .then(() => {
-//     console.log("empPersonal model synced successfully");
-//   })
-//   .catch((error) => {
-//     console.error("Error syncing empPersonal model:", error);
-//   });
+empPersonal.sync({ alter: true })
+  .then(() => {
+    console.log("empPersonal model synced successfully");
+  })
+  .catch((error) => {
+    console.error("Error syncing empPersonal model:", error);
+  });
 
 module.exports = empPersonal;

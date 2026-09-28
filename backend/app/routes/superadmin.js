@@ -4,6 +4,8 @@ const router = express.Router();
 const { SuperAdmin } = require("../middleware/auth");
 const {
   login,
+  forgotPassword,
+  resetPassword,
   listTenants,
   updateTenantStatus,
   upsertSubscription,
@@ -23,6 +25,8 @@ const {
 } = require("../controller/superadmin/superadmin");
 
 router.post("/superadmin/login", login);
+router.post("/superadmin/forgot-password", forgotPassword);
+router.post("/superadmin/reset-password", resetPassword);
 router.get("/superadmin/stats", SuperAdmin, getStats);
 router.get("/superadmin/plans", SuperAdmin, listPlans);
 router.post("/superadmin/plans", SuperAdmin, createPlan);

@@ -1,0 +1,229 @@
+<div class="container-fluid mt-5">
+  <div class="row g-4">
+
+    <!-- ══════════════════════════════════════════════════════════
+         LEFT PANEL — User List
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="col-xl-3 col-lg-4 col-md-4">
+      <div class="card" style="height: calc(100vh - 130px); display:flex; flex-direction:column">
+
+        <!-- Header -->
+        <div class="card-header d-flex align-items-center justify-content-between py-3">
+          <h6 class="mb-0 fw-bold">
+            <i class="ri ri-team-line me-1 text-primary"></i>
+            Users
+          </h6>
+          <span class="badge bg-primary rounded-pill">{{ users.length }}</span>
+        </div>
+
+        <!-- Search -->
+        <div class="px-3 py-2 border-bottom">
+          <div class="input-group input-group-sm">
+            <span class="input-group-text bg-transparent border-end-0">
+              <i class="ri ri-search-line text-muted"></i>
+            </span>
+            <input
+              type="text"
+              class="form-control border-start-0 ps-0"
+              placeholder="Search name, email or role…"
+              [(ngModel)]="searchQuery"
+              (ngModelChange)="onSearch()"
+            />
+          </div>
+        </div>
+
+        <!-- List body -->
+        <div class="overflow-auto flex-grow-1">
+
+          <!-- Loading -->
+          <div *ngIf="loadingUsers" class="d-flex align-items-center justify-content-center p-5">
+            <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+            <span class="text-muted small">Loading users…</span>
+          </div>
+
+          <!-- Empty -->
+          <div *ngIf="!loadingUsers && filteredUsers.length === 0"
+               class="d-flex flex-column align-items-center justify-content-center p-4 text-muted">
+            <i class="ri ri-user-search-line mb-2" style="font-size:2rem; opacity:.4"></i>
+            <span class="small fst-italic">No users found</span>
+          </div>
+
+          <!-- User rows -->
+          <div
+            *ngFor="let user of filteredUsers"
+            class="user-row"
+            [class.user-row--active]="selectedUser?.id === user.id"
+            (click)="selectUser(user)"
+          >
+            <!-- Avatar -->
+            <div class="user-avatar"
+                 [style.background-color]="roleColor(user.role) + '22'"
+                 [style.color]="roleColor(user.role)">
+              {{ getInitial(user.name) }}
+            </div>
+
+            <!-- Info -->
+            <div class="user-info">
+              <div class="user-name">{{ user.name }}</div>
+              <div class="user-email">{{ user.email }}</div>
+            </div>
+
+            <!-- Role badge -->
+            <span class="badge {{ roleBadgeClass(user.role) }} user-role-badge">
+              {{ user.role }}
+            </span>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         RIGHT PANEL — Permission Matrix
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="col-xl-9 col-lg-8 col-md-8">
+
+      <!-- Empty state -->
+      <div *ngIf="!selectedUser"
+           class="card d-flex align-items-center justify-content-center"
+           style="height: calc(100vh - 130px)">
+        <div class="text-center text-muted p-5">
+          <i class="ri ri-user-settings-line mb-3"
+             style="font-size:3.5rem; opacity:.25; display:block"></i>
+          <p class="mb-0 fw-semibold">Select a user to manage their sidebar access</p>
+          <small>Click any user from the list on the left</small>
+        </div>
+      </div>
+
+      <!-- Permission Panel -->
+      <div *ngIf="selectedUser" class="card">
+
+        <!-- Header -->
+        <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2 py-3">
+          <div class="d-flex align-items-center gap-3">
+            <!-- Big avatar -->
+            <div class="user-avatar user-avatar--lg"
+                 [style.background-color]="roleColor(selectedUser.role) + '22'"
+                 [style.color]="roleColor(selectedUser.role)">
+              {{ getInitial(selectedUser.name) }}
+            </div>
+            <div>
+              <div class="fw-bold" style="font-size:1rem">{{ selectedUser.name }}</div>
+              <small class="text-muted">{{ selectedUser.email }}</small>
+            </div>
+            <span class="badge {{ roleBadgeClass(selectedUser.role) }} px-2 py-1">
+              {{ selectedUser.role }}
+            </span>
+            <span *ngIf="hasCustomPerms" class="badge bg-label-warning">
+              <i class="ri ri-shield-check-line me-1"></i>Custom Access
+            </span>
+            <span *ngIf="!hasCustomPerms" class="badge bg-label-secondary">
+              <i class="ri ri-shield-line me-1"></i>Role Default
+            </span>
+          </div>
+
+          <!-- Action buttons -->
+          <div class="d-flex gap-2">
+            <button *ngIf="hasCustomPerms" type="button"
+                    class="btn btn-xs btn-outline-danger" (click)="resetToDefault()">
+              <i class="fa-solid fa-rotate-left"></i>&nbsp;Reset Default
+            </button>
+            <button type="button" class="btn btn-xs btn-primary" (click)="save()">
+              <i class="fa-solid fa-floppy-disk"></i>&nbsp;Save Access
+            </button>
+          </div>
+        </div>
+
+        <!-- Info bar -->
+        <div class="card-body border-bottom py-2">
+          <small class="text-muted">
+            <i class="ri ri-information-line me-1"></i>
+            Toggle which <strong>sidebar menus</strong> are visible for this user.
+            Changes take effect on their next login.
+          </small>
+        </div>
+
+        <!-- Loading -->
+        <div *ngIf="panelLoading" class="p-5 text-center text-muted">
+          <div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading permissions…
+        </div>
+
+        <!-- Permission Table -->
+        <div *ngIf="!panelLoading" class="table-responsive">
+          <table class="table table-hover dataTable mb-0">
+            <thead>
+              <tr>
+                <th style="min-width:220px">Menu / Section</th>
+                <th *ngFor="let role of allRoles"
+                    class="text-center"
+                    [style.color]="roleColor(role)">
+                  {{ roleLabels[role] }}
+                </th>
+              </tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+
+              <ng-container *ngFor="let section of sections">
+
+                <!-- Parent Row -->
+                <tr class="table-light" style="cursor:pointer" (click)="toggleExpand(section.key)">
+                  <td>
+                    <span class="me-2 text-muted" style="font-size:.8rem">
+                      <i class="fa-solid"
+                        [class.fa-chevron-down]="isExpanded(section.key)"
+                        [class.fa-chevron-right]="!isExpanded(section.key)"></i>
+                    </span>
+                    <i class="ri {{ section.icon }} me-1 text-primary"></i>
+                    <strong>{{ section.label }}</strong>
+                    <span class="badge bg-label-info ms-2" *ngIf="section.children?.length">
+                      {{ section.children!.length }} items
+                    </span>
+                  </td>
+                  <td *ngFor="let role of allRoles" class="text-center"
+                      (click)="$event.stopPropagation()">
+                    <div class="form-check form-switch d-flex justify-content-center m-0">
+                      <input class="form-check-input" type="checkbox" role="switch"
+                        [checked]="hasRole(section.roles, role)"
+                        (change)="toggleParentRole(section, role)" />
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Child Rows -->
+                <ng-container *ngIf="isExpanded(section.key) && section.children">
+                  <tr *ngFor="let child of section.children">
+                    <td style="padding-left:2.5rem">
+                      <span class="text-muted me-2">—</span>{{ child.label }}
+                    </td>
+                    <td *ngFor="let role of allRoles" class="text-center">
+                      <div class="form-check form-switch d-flex justify-content-center m-0">
+                        <input class="form-check-input" type="checkbox" role="switch"
+                          [checked]="hasRole(child.roles, role)"
+                          [disabled]="!hasRole(section.roles, role)"
+                          (change)="toggleRole(child.roles, role)" />
+                      </div>
+                    </td>
+                  </tr>
+                </ng-container>
+
+              </ng-container>
+
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="card-footer">
+          <small class="text-muted">
+            <i class="ri ri-information-line me-1"></i>
+            Click <strong>Save Access</strong> to apply. Greyed toggles are disabled when the parent section is off.
+            <strong>Reset Default</strong> removes custom settings and reverts to role-based access.
+          </small>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>

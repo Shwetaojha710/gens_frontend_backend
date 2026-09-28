@@ -36,7 +36,7 @@ const documentType = sequelize.define("documentType", {
     timestamps: true,
 })
 
-sequelize.sync({ alter: true }).then(() => {
+documentType.sync({ alter: true }).then(() => {
     console.log('DocumentType model synced successfully');
 }).catch((error) => {
     console.error('Error syncing DocumentType model:', error);

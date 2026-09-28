@@ -1,0 +1,155 @@
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-8 xl:gap-10 items-start">
+  <!-- Feature selector -->
+  <div class="xl:col-span-4 space-y-3 order-2 xl:order-1 xl:max-h-[34rem] xl:overflow-y-auto xl:pr-1">
+    @for (feature of features; track feature.title; let i = $index) {
+      <button
+        type="button"
+        (click)="selectFeature(i)"
+        class="w-full text-left p-4 sm:p-5 rounded-2xl border transition-all duration-300 group"
+        [ngClass]="active() === i
+          ? 'border-gens-400 bg-gens-50 dark:bg-gens-950 shadow-card-hover'
+          : 'border-[var(--border-color)] bg-[var(--bg-primary)] hover:border-gens-300'"
+      >
+        <div class="flex items-start gap-3.5">
+          <div
+            class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 bg-gradient-to-br"
+            [ngClass]="active() === i ? 'from-gens-600 to-accent-light scale-105' : 'from-gens-500/15 to-accent-light/15'"
+          >
+            <i
+              class="ri text-xl"
+              [ngClass]="[feature.icon, active() === i ? 'text-white' : 'text-gens-600']"
+            ></i>
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2 mb-1 flex-wrap">
+              <h3 class="font-display font-bold text-base sm:text-lg leading-tight">{{ feature.title }}</h3>
+              @if (feature.badge) {
+                <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-gens-600 text-white">{{ feature.badge }}</span>
+              }
+            </div>
+            <p class="text-sm text-[var(--text-secondary)] leading-relaxed">{{ feature.description }}</p>
+          </div>
+        </div>
+      </button>
+    }
+  </div>
+
+  <!-- Dashboard image + floating badges -->
+  <div class="xl:col-span-8 order-1 xl:order-2">
+    <div class="relative px-2 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <!-- Soft glow -->
+      <div class="absolute inset-4 rounded-[2rem] bg-gradient-to-br from-gens-500/20 via-accent-light/10 to-transparent blur-2xl pointer-events-none" aria-hidden="true"></div>
+
+      <!-- Floating location icons around the image -->
+      <div class="pointer-events-none absolute inset-0 z-20 hidden sm:block" aria-hidden="true">
+        <div class="float-icon absolute -left-1 top-[18%] lg:-left-2">
+          <div class="pulse-ring relative w-12 h-12 rounded-full bg-gens-600 text-white shadow-lg flex items-center justify-center">
+            <i class="ri ri-map-pin-fill text-xl"></i>
+          </div>
+        </div>
+        <div class="float-icon absolute -right-1 top-[22%] lg:-right-3">
+          <div class="w-11 h-11 rounded-2xl bg-emerald-500 text-white shadow-lg flex items-center justify-center rotate-6">
+            <i class="ri ri-crosshair-2-line text-lg"></i>
+          </div>
+        </div>
+        <div class="float-icon absolute left-[6%] -top-1">
+          <div class="w-10 h-10 rounded-full bg-violet-500 text-white shadow-lg flex items-center justify-center -rotate-6">
+            <i class="ri ri-navigation-fill text-base"></i>
+          </div>
+        </div>
+        <div class="float-icon absolute right-[10%] -top-2">
+          <div class="w-10 h-10 rounded-xl bg-orange-500 text-white shadow-lg flex items-center justify-center rotate-3">
+            <i class="ri ri-pushpin-fill text-base"></i>
+          </div>
+        </div>
+        <div class="float-icon absolute -left-1 bottom-[20%] lg:-left-3">
+          <div class="w-11 h-11 rounded-2xl bg-sky-500 text-white shadow-lg flex items-center justify-center -rotate-3">
+            <i class="ri ri-route-line text-lg"></i>
+          </div>
+        </div>
+        <div class="float-icon absolute -right-1 bottom-[16%] lg:-right-2">
+          <div class="pulse-ring relative w-12 h-12 rounded-full bg-rose-500 text-white shadow-lg flex items-center justify-center">
+            <i class="ri ri-map-pin-2-fill text-xl"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard frame -->
+      <div class="relative z-10 rounded-2xl md:rounded-3xl overflow-hidden border border-[var(--border-color)] shadow-lattice bg-[var(--bg-primary)]">
+        <div class="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="flex gap-1.5 shrink-0">
+              <div class="w-2.5 h-2.5 rounded-full bg-red-400"></div>
+              <div class="w-2.5 h-2.5 rounded-full bg-amber-400"></div>
+              <div class="w-2.5 h-2.5 rounded-full bg-green-400"></div>
+            </div>
+            <div class="flex items-center gap-2 min-w-0">
+              <i class="ri ri-map-2-line text-gens-600 text-base shrink-0"></i>
+              <span class="text-xs sm:text-sm font-semibold truncate">GENS.AI — Location Tracking</span>
+            </div>
+          </div>
+          <div class="hidden sm:flex items-center gap-2">
+            <span class="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full bg-gens-100 dark:bg-gens-900 text-gens-700 dark:text-gens-300 font-semibold">
+              <i class="ri ri-map-pin-line text-sm"></i>
+              Lucknow
+            </span>
+            <span class="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-semibold">
+              <span class="relative flex h-1.5 w-1.5">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+              </span>
+              Live
+            </span>
+          </div>
+        </div>
+
+        <div class="relative bg-slate-100 dark:bg-slate-900">
+          <img
+            src="assets/img/marketing/location-tracking-dashboard.png"
+            alt="GENS.AI location tracking dashboard with live map routes in Lucknow"
+            class="block w-full h-auto"
+            width="1400"
+            height="900"
+            loading="lazy"
+          />
+
+          <!-- Soft edge fade so floating icons feel attached -->
+          <div class="absolute inset-0 pointer-events-none ring-1 ring-inset ring-black/5 dark:ring-white/5"></div>
+
+          <!-- Floating glass tip on the image -->
+          <div class="absolute bottom-3 left-3 sm:bottom-5 sm:left-5 max-w-[240px] rounded-2xl bg-white/92 dark:bg-slate-950/90 backdrop-blur-md border border-white/50 dark:border-white/10 shadow-lg p-3.5">
+            <div class="flex items-center gap-2 mb-1.5">
+              <span class="w-8 h-8 rounded-full bg-gens-600 text-white flex items-center justify-center shrink-0">
+                <i class="ri text-base" [ngClass]="activeFeature().icon"></i>
+              </span>
+              <div class="min-w-0">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Active feature</p>
+                <p class="text-sm font-semibold truncate">{{ activeFeature().title }}</p>
+              </div>
+            </div>
+            <p class="text-xs text-[var(--text-secondary)] leading-relaxed">{{ activeFeature().stat }} &middot; {{ activeFeature().statHint }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Marker legend under image -->
+      <div class="relative z-10 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 mt-5">
+        @for (marker of markers; track marker.code) {
+          <div class="inline-flex items-center gap-2 px-3 py-2 rounded-full lattice-card !shadow-none">
+            <span
+              class="w-7 h-7 rounded-full text-white text-[10px] font-bold flex items-center justify-center"
+              [ngClass]="markerColorClass(marker.code)"
+            >{{ marker.code }}</span>
+            <span class="text-sm font-medium text-[var(--text-secondary)]">{{ marker.label }}</span>
+          </div>
+        }
+        <div class="inline-flex items-center gap-2 px-3 py-2 rounded-full lattice-card !shadow-none">
+          <span class="w-7 h-7 rounded-full bg-gens-600 text-white flex items-center justify-center">
+            <i class="ri ri-map-pin-line text-sm"></i>
+          </span>
+          <span class="text-sm font-medium text-[var(--text-secondary)]">Live GPS</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

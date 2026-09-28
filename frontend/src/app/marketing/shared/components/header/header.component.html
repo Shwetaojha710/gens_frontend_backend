@@ -1,0 +1,116 @@
+<header
+  class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b"
+  [class.glass]="true"
+  [class.shadow-lg]="scrolled()"
+  [class.border-transparent]="!scrolled()"
+  [class.border-[var(--border-color)]]="scrolled()"
+  [class.py-3]="!scrolled()"
+  [class.py-2]="scrolled()"
+>
+  <div class="container-gens flex items-center gap-3 xl:gap-6">
+    <a routerLink="/Home" class="flex items-center shrink-0 group" aria-label="GENS.Ai Home">
+      <img
+        src="assets/img/marketing/gens-logo.png"
+        alt="GENS.Ai - Global Employee Network System"
+        class="h-9 sm:h-10 md:h-11 w-auto max-w-[200px] sm:max-w-[230px] object-contain object-left transition-transform duration-300 group-hover:scale-[1.02]"
+      />
+    </a>
+
+    <!-- Desktop Nav -->
+    <nav class="hidden lg:flex flex-1 items-center justify-center gap-0.5 min-w-0" aria-label="Main navigation">
+      @for (link of navLinks; track link.path) {
+        <a
+          [routerLink]="link.path"
+          routerLinkActive="text-gens-600 dark:text-gens-400 bg-gens-50 dark:bg-gens-950"
+          [routerLinkActiveOptions]="{ exact: link.path === '/Home' }"
+          class="px-2.5 py-2 rounded-lg text-sm font-medium text-[var(--text-secondary)] hover:text-gens-600 dark:hover:text-gens-400 transition-colors whitespace-nowrap"
+        >
+          {{ link.label }}
+        </a>
+      }
+    </nav>
+
+    <!-- Actions -->
+    <div class="hidden lg:flex items-center gap-3 ml-auto shrink-0">
+      <a routerLink="/login" class="text-xs font-medium text-[var(--text-muted)] hover:text-gens-600 dark:hover:text-gens-400 transition-colors whitespace-nowrap">
+        Company Login
+      </a>
+      <a routerLink="/employee-portal/login" class="text-xs font-medium text-[var(--text-muted)] hover:text-gens-600 dark:hover:text-gens-400 transition-colors whitespace-nowrap">
+        Employee Login
+      </a>
+
+      <button
+        type="button"
+        (click)="themeService.toggle()"
+        [attr.aria-label]="themeService.isDark() ? 'Switch to light mode' : 'Switch to dark mode'"
+        class="w-9 h-9 inline-flex items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-gens-50 dark:hover:bg-gens-950 transition-colors"
+      >
+        <i class="ri" [ngClass]="themeService.isDark() ? 'ri-sun-line' : 'ri-moon-line'"></i>
+      </button>
+
+      <a routerLink="/contact" class="btn-primary btn-shine !py-2.5 !px-5 !text-sm whitespace-nowrap">
+        Request a Demo
+      </a>
+    </div>
+
+    <!-- Mobile-only actions: theme toggle + hamburger -->
+    <div class="flex lg:hidden items-center gap-1 ml-auto shrink-0">
+      <button
+        type="button"
+        (click)="themeService.toggle()"
+        [attr.aria-label]="themeService.isDark() ? 'Switch to light mode' : 'Switch to dark mode'"
+        class="w-10 h-10 inline-flex items-center justify-center rounded-xl text-[var(--text-secondary)] hover:bg-gens-50 dark:hover:bg-gens-950 transition-colors"
+      >
+        <i class="ri" [ngClass]="themeService.isDark() ? 'ri-sun-line' : 'ri-moon-line'"></i>
+      </button>
+
+      <button
+        type="button"
+        class="inline-flex items-center justify-center w-10 h-10 rounded-xl text-[var(--text-secondary)] hover:bg-gens-50 dark:hover:bg-gens-950 transition-colors"
+        (click)="mobileOpen.set(!mobileOpen())"
+        [attr.aria-expanded]="mobileOpen()"
+        aria-label="Toggle menu"
+      >
+        <i class="ri" [ngClass]="mobileOpen() ? 'ri-close-line' : 'ri-menu-line'"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile menu -->
+  @if (mobileOpen()) {
+    <nav class="lg:hidden glass mt-2 mx-4 rounded-2xl p-4 shadow-glass border border-[var(--border-color)]" aria-label="Mobile navigation">
+      @for (link of navLinks; track link.path) {
+        <a
+          [routerLink]="link.path"
+          routerLinkActive="text-gens-600 bg-gens-50 dark:bg-gens-950"
+          [routerLinkActiveOptions]="{ exact: link.path === '/Home' }"
+          (click)="closeMobileMenu()"
+          class="block px-4 py-3 rounded-lg text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors"
+        >
+          {{ link.label }}
+        </a>
+      }
+
+      <div class="mt-2 pt-2 border-t border-[var(--border-color)]">
+        <a
+          routerLink="/login"
+          (click)="closeMobileMenu()"
+          class="block px-4 py-3 rounded-lg text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] transition-colors"
+        >
+          Tenant Login
+        </a>
+        <a
+          routerLink="/employee-portal/login"
+          (click)="closeMobileMenu()"
+          class="block px-4 py-3 rounded-lg text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] transition-colors"
+        >
+          Employee Portal
+        </a>
+      </div>
+
+      <a routerLink="/contact" (click)="closeMobileMenu()" class="btn-primary w-full mt-3 !text-sm">
+        Request a Demo
+      </a>
+    </nav>
+  }
+</header>

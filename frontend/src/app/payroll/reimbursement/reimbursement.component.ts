@@ -167,11 +167,12 @@ export class ReimbursementComponent {
   }
 
   getStatusClass(status: any): string {
-    switch (status) {
-      case 'active': return 'badge-outline-success';
-      case 'inactive': return 'badge-outline-danger';
-      case 'completed': return 'bg-light-success';
-      default: return 'bg-light-secondary';
+    switch ((status || '').toLowerCase()) {
+      case 'approved': return 'badge-outline-success';
+      case 'rejected': return 'badge-outline-danger';
+      case 'pending': return 'badge-outline-warning';
+      case 'recommended': return 'badge-outline-info';
+      default: return 'badge-outline-secondary';
     }
   }
   isExcel(mimeType: string): boolean {
@@ -237,14 +238,28 @@ export class ReimbursementComponent {
 
   fileType: any;
   originalList: any = []
+  statusFilter: string = 'all';
+
+  readonly statusOptions = [
+    { value: 'all', label: 'All' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'recommended', label: 'Recommended' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'rejected', label: 'Rejected' },
+  ];
+
+  setStatusFilter(status: string) {
+    this.statusFilter = status;
+    this.fetchReimbursement();
+  }
+
   async fetchReimbursement() {
     this.ReimbursementList = [];
     this.originalList = [];
 
-    this.payroll.fetchReimbursementList().subscribe({
+    this.payroll.fetchReimbursementList(this.statusFilter).subscribe({
       next: (data) => {
         if (data['status'] === true) {
-          // Map the reimbursement list and fix the image URL path
           this.ReimbursementList = data.data.map((item: any) => ({
             ...item,
             files: item.files.map((f: any) => ({
@@ -252,8 +267,6 @@ export class ReimbursementComponent {
               image: `${this.baseurl}${f.image}`
             }))
           }));
-
-
           this.originalList = [...this.ReimbursementList];
         } else {
           this.notyf.error(data['message']);
@@ -491,17 +504,55 @@ export class ReimbursementComponent {
   }
 
 
-  imageUrls: any;
-  openModal1(imageUrl: any) {
-    this.imageUrls = imageUrl;
-    setTimeout(() => {
-      const modalElement = document.getElementById('imageModal1');
-      if (modalElement) {
-        const modal = new bootstrap.Modal(modalElement);
-        modal.show();
-      }
-    }, 0);
+  // imageUrls: any;
+  // openModal1(imageUrl: any) {
+  //   this.imageUrls = imageUrl;
+  //   setTimeout(() => {
+  //     const modalElement = document.getElementById('imageModal1');
+  //     if (modalElement) {
+  //       const modal = new bootstrap.Modal(modalElement);
+  //       modal.show();
+  //     }
+  //   }, 0);
+  // }
+
+
+
+  modalFileUrl: string = '';
+modalFileType: string = '';
+modalFileName: string = 'document';
+
+openModal1(file: any) {
+  this.modalFileUrl = file?.image || file; // string ya object dono
+  this.modalFileType = file?.doc_type || 'image/jpeg';
+  this.modalFileName = (file?.image || 'document').split('/').pop() || 'document';
+
+  setTimeout(() => {
+    const el = document.getElementById('imageModal1');
+    if (el) new bootstrap.Modal(el).show();
+  }, 0);
+}
+
+/** Cross-origin pe <a download> fail hota hai — blob se download */
+async downloadFile(url: string, filename: string) {
+  if (!url) {
+    this.notyf.error('File URL missing');
+    return;
   }
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename || 'reimbursement-file';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch (e) {
+    // fallback: new tab
+    window.open(url, '_blank');
+  }
+}
+
   statuschange(item: any, status: any) {
     let newObj: any = {}
     newObj = Object.assign({}, item)

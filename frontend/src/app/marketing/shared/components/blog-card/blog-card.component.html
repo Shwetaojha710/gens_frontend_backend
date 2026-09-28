@@ -1,0 +1,29 @@
+<article class="glass-card overflow-hidden card-hover group h-full flex flex-col">
+  <div
+    class="h-44 bg-gradient-to-br from-gens-500/30 to-accent/30 relative overflow-hidden blog-thumb"
+    [ngClass]="'blog-thumb--' + post.image"
+  >
+    <div class="absolute inset-0 flex items-center justify-center">
+      <div class="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
+        <i class="ri ri-newspaper-line text-2xl text-white"></i>
+      </div>
+    </div>
+    <span class="absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-semibold bg-white/90 dark:bg-slate-800/90 text-gens-600">
+      {{ post.category }}
+    </span>
+  </div>
+  <div class="p-6 flex flex-col flex-1">
+    <div class="flex items-center gap-2 text-xs text-[var(--text-muted)] mb-3">
+      <span>{{ post.date }}</span>
+      <span>&middot;</span>
+      <span>{{ post.readTime }}</span>
+    </div>
+    <h3 class="font-display font-semibold text-lg mb-2 text-navy dark:text-white group-hover:text-gens-600 transition-colors">
+      {{ post.title }}
+    </h3>
+    <p class="text-sm text-[var(--text-secondary)] mb-4 flex-1">{{ post.excerpt }}</p>
+    <a [routerLink]="['/blog', post.slug]" class="text-sm font-semibold text-gens-600 hover:text-gens-500 transition-colors">
+      Read More &rarr;
+    </a>
+  </div>
+</article>

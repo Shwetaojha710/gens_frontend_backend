@@ -10,6 +10,7 @@ const Designation = require("../../models/designation.js");
 const DeviceLocationLog = require("../../models/device_location_logs.js");
 const Shift = require("../../models/shift");
 const AttendanceSetting = require("../../models/attendanceSetting");
+const Branch = require("../../models/branch.js");
 const { Op, Sequelize } = require("sequelize");
 const moment = require("moment");
 
@@ -471,10 +472,16 @@ const buildDepartmentAttendanceData = (baseData) => {
 };
 
 const buildDashboardStats = (baseData, trackingList) => {
-  const { totalEmployees, activeEmployees, todayPresentCount, monthlyAttendance } = baseData;
+  const { totalEmployees, activeEmployees, monthlyAttendance, todayLeaves, todayAttendanceRows } = baseData;
   const metrics = getAttendanceMetrics(baseData);
   const today = moment();
   const workingDaysInMonth = Helper.getWorkingDays(today.year(), today.month() + 1);
+
+  // Exclude on-leave employees from the present count so the two buckets don't overlap
+  const onLeaveTodayIds = new Set((todayLeaves || []).map((l) => l.employeeId));
+  const todayPresentCount = (todayAttendanceRows || []).filter(
+    (r) => !onLeaveTodayIds.has(r.employeeId),
+  ).length;
 
   let monthlyAttendanceOverview = 0;
   if (monthlyAttendance.length) {
@@ -495,7 +502,7 @@ const buildDashboardStats = (baseData, trackingList) => {
   return [
     {
       title: "Total Employees",
-      value: String(totalEmployees),
+      value: String(activeEmployees),
       change: `+${activeEmployeePercent}%`,
       changeLabel: "active",
       changeDirection: "up",
@@ -566,7 +573,7 @@ const mapEmployees = (employees, designations) => {
     role: designationMap[employee.designationId] || "N/A",
     badge: designationMap[employee.designationId] || "N/A",
     badgeColor: BADGE_COLORS[index % BADGE_COLORS.length],
-    profileImage: employee.profileImage ? `${process.env.BASE_URL}${employee.profileImage}` : null,
+    profileImage: employee.profileImage ? `${process.env.IMG_BASE_URL}/${employee.profileImage}` : null,
     joiningDate: employee.joiningDate ? Helper.newDateFormat(employee.joiningDate) : "NA",
   }));
 };
@@ -623,24 +630,69 @@ const mapLeaves = async (leaves, leaveMasterList, tenantId, branchId) => {
 
 const mapCelebrations = (employees, designations, key, today) => {
   const designationMap = Object.fromEntries(designations.map((item) => [item.id, item.name]));
+  const todayStart = today.clone().startOf("day");
+  const monthStart = today.clone().startOf("month");
+  const monthEnd = today.clone().endOf("month");
+  const upcomingEnd = today.clone().add(30, "days").endOf("day");
 
   return employees
-    .filter((employee) => {
+    .map((employee) => {
       const value = employee[key];
-      if (!value) {
-        return false;
+      if (!value) return null;
+
+      const event = moment(value);
+      if (!event.isValid()) return null;
+
+      // Next occurrence of this month/day (today or future)
+      let nextOccurrence = moment({
+        year: today.year(),
+        month: event.month(),
+        date: event.date(),
+      }).startOf("day");
+      if (nextOccurrence.isBefore(todayStart, "day")) {
+        nextOccurrence = nextOccurrence.add(1, "year");
       }
-      const currentDate = new Date(value);
-      if (key === "joiningDate") {
-        return currentDate.getDate() === today.date() && currentDate.getMonth() + 1 === today.month() + 1;
+
+      // Same calendar date within the current month (may already have passed)
+      const thisMonthDate = moment({
+        year: today.year(),
+        month: event.month(),
+        date: event.date(),
+      }).startOf("day");
+      const inCurrentMonth =
+        event.month() === today.month() &&
+        thisMonthDate.isSameOrAfter(monthStart, "day") &&
+        thisMonthDate.isSameOrBefore(monthEnd, "day");
+
+      const daysUntil = nextOccurrence.diff(todayStart, "days");
+      const isUpcoming = daysUntil >= 0 && daysUntil <= 30;
+      const isToday = daysUntil === 0;
+
+      // Include if in current month (for All) or upcoming in next 30 days
+      if (!inCurrentMonth && !isUpcoming) {
+        return null;
       }
-      return currentDate.getMonth() + 1 === today.month() + 1;
+
+      return {
+        ...employee,
+        badgeColor: BADGE_COLORS[0],
+        designationName: designationMap[employee.designationId] || "No Designation",
+        profileImage: employee.profileImage
+          ? `${process.env.IMG_BASE_URL}/${employee.profileImage}`
+          : null,
+        eventDate: thisMonthDate.format("YYYY-MM-DD"),
+        nextOccurrence: nextOccurrence.format("YYYY-MM-DD"),
+        daysUntil,
+        inCurrentMonth,
+        isUpcoming,
+        isToday,
+      };
     })
+    .filter(Boolean)
+    .sort((a, b) => a.daysUntil - b.daysUntil)
     .map((employee, index) => ({
       ...employee,
       badgeColor: BADGE_COLORS[index % BADGE_COLORS.length],
-      designationName: designationMap[employee.designationId] || "No Designation",
-      profileImage: employee.profileImage ? `${process.env.BASE_URL}${employee.profileImage}` : null,
     }));
 };
 
@@ -748,6 +800,130 @@ exports.getAttendanceByDepartment = async (req, res) => {
     const range = req.body?.range || "This Week";
     const baseData = await getDashboardBaseData(context.tenantId, context.branchId, range);
     return Helper.response(true, "Attendance by department data found successfully", buildDepartmentAttendanceData(baseData), res, 200);
+  } catch (error) {
+    return Helper.response(false, error?.message, {}, res, 500);
+  }
+};
+
+exports.getTeamwiseAttendance = async (req, res) => {
+  try {
+    const context = getRequestContext(req);
+    if (context.error) {
+      return Helper.response(false, context.error, {}, res, context.statusCode);
+    }
+
+    const { tenantId, branchId } = context;
+    const role = req.users?.role;
+    const date = req.body?.date || moment().format("YYYY-MM-DD");
+    const requestedBranchId = req.body?.branchId;
+
+    const isMultiBranch =
+      requestedBranchId === "All" ||
+      (requestedBranchId == null && (role === "manager" || role === "director"));
+
+    let branchIds;
+    let branchMap = {};
+
+    if (isMultiBranch) {
+      const allBranches = await Branch.findAll({
+        where: { tenantId, status: "active" },
+        attributes: ["id", "name"],
+        raw: true,
+        order: [["name", "ASC"]],
+      });
+      branchIds = allBranches.map((b) => b.id);
+      branchMap = Object.fromEntries(allBranches.map((b) => [b.id, b.name]));
+    } else {
+      branchIds = [requestedBranchId || branchId];
+    }
+
+    const [departments, employees, attendanceRows, todayLeaves] = await Promise.all([
+      Department.findAll({
+        where: { tenantId, branchId: { [Op.in]: branchIds }, status: "active" },
+        attributes: ["id", "name", "branchId"],
+        raw: true,
+        order: [["name", "ASC"]],
+      }),
+      empPersonal.findAll({
+        where: { tenantId, branchId: { [Op.in]: branchIds }, status: "active" },
+        attributes: ["id", "firstName", "lastName", "empCode", "departmentId", "designationId", "profileImage", "gender", "branchId"],
+        raw: true,
+      }),
+      attendance.findAll({
+        where: { tenantId, branchId: { [Op.in]: branchIds }, date },
+        attributes: ["employeeId", "check_in_time", "check_out_time", "is_present"],
+        raw: true,
+      }),
+      leaveApplication.findAll({
+        where: {
+          tenantId,
+          branchId: { [Op.in]: branchIds },
+          fromDate: { [Op.lte]: date },
+          toDate: { [Op.gte]: date },
+          status: { [Op.in]: ["pending", "approved"] },
+        },
+        attributes: ["employeeId"],
+        raw: true,
+      }),
+    ]);
+
+    const designationIds = [...new Set(employees.map((e) => e.designationId).filter(Boolean))];
+    const designations = designationIds.length
+      ? await Designation.findAll({
+          where: { id: designationIds },
+          attributes: ["id", "name"],
+          raw: true,
+        })
+      : [];
+
+    const designationMap = Object.fromEntries(designations.map((d) => [d.id, d.name]));
+    const attendanceMap = Object.fromEntries(attendanceRows.map((a) => [a.employeeId, a]));
+    const onLeaveIds = new Set(todayLeaves.map((l) => l.employeeId));
+
+    const teamData = departments.map((dept, index) => {
+      const deptEmployees = employees.filter((e) => e.departmentId === dept.id);
+      const memberList = deptEmployees.map((emp) => {
+        const att = attendanceMap[emp.id];
+        let status = "Absent";
+        if (onLeaveIds.has(emp.id)) {
+          status = "On Leave";
+        } else if (att?.is_present || att?.check_in_time) {
+          status = "Present";
+        }
+        return {
+          id: emp.id,
+          name: `${emp.firstName} ${emp.lastName}`.trim(),
+          empCode: emp.empCode || "N/A",
+          designation: designationMap[emp.designationId] || "N/A",
+          profileImage: emp.profileImage ? `${process.env.IMG_BASE_URL}/${emp.profileImage}` : null,
+          gender: emp.gender || "N/A",
+          status,
+          checkIn: att?.check_in_time ? String(att.check_in_time).split(" ").pop() : null,
+          checkOut: att?.check_out_time ? String(att.check_out_time).split(" ").pop() : null,
+        };
+      });
+
+      const presentCount = memberList.filter((m) => m.status === "Present").length;
+      const onLeaveCount = memberList.filter((m) => m.status === "On Leave").length;
+      const absentCount = memberList.filter((m) => m.status === "Absent").length;
+      const total = memberList.length;
+
+      return {
+        departmentId: dept.id,
+        departmentName: dept.name,
+        branchId: dept.branchId,
+        branchName: isMultiBranch ? (branchMap[dept.branchId] || "Unknown Branch") : null,
+        color: DEPARTMENT_COLORS[index % DEPARTMENT_COLORS.length],
+        total,
+        presentCount,
+        onLeaveCount,
+        absentCount,
+        presentPercent: total ? Number(((presentCount / total) * 100).toFixed(0)) : 0,
+        members: memberList,
+      };
+    });
+
+    return Helper.response(true, "Team-wise attendance fetched successfully", { date, teamData, isMultiBranch }, res, 200);
   } catch (error) {
     return Helper.response(false, error?.message, {}, res, 500);
   }

@@ -3,6 +3,7 @@ const Helper = require("../../helper/helper");
 const HolidayType = require("../../models/HolidayType");
 const salary_order = require("../../models/salary_order");
 const master_components = require("../../models/master_components");
+const { writeAudit, toPlain } = require("../../helper/auditLog");
 
 exports.createEmploymentType = async (req, res) => {
   const { name, status, duration_type } = req.body;
@@ -292,6 +293,15 @@ exports.createHolidayType = async (req, res) => {
       updatedBy: req.users && req.users.id,
     });
 
+    await writeAudit({
+      req,
+      actionType: "HOLIDAY_TYPE_CREATE",
+      referenceId: employmentTypeData.id,
+      oldValue: null,
+      newValue: employmentTypeData,
+      remarks: `Holiday type created: ${name}`,
+    });
+
     return Helper.response(
       true,
       "Holiday Type created successfully",
@@ -408,6 +418,8 @@ exports.editHolidayType = async (req, res) => {
       return Helper.response(false, "Name is required", {}, res, 400);
     }
 
+    const oldType = toPlain(employmentType);
+
     employmentType.name = name;
     employmentType.branchId = branchId || employmentType.branchId;
 
@@ -415,6 +427,15 @@ exports.editHolidayType = async (req, res) => {
     employmentType.updatedBy = req.users && req.users.id;
 
     await employmentType.save();
+
+    await writeAudit({
+      req,
+      actionType: "HOLIDAY_TYPE_UPDATE",
+      referenceId: employmentType.id,
+      oldValue: oldType,
+      newValue: employmentType,
+      remarks: `Holiday type updated: ${name}`,
+    });
 
     return Helper.response(
       true,
@@ -460,7 +481,18 @@ exports.deleteHolidayType = async (req, res) => {
       return Helper.response(false, "Holiday Type not found", {}, res, 404);
     }
 
+    const oldType = toPlain(employmentType);
+
     await employmentType.destroy();
+
+    await writeAudit({
+      req,
+      actionType: "HOLIDAY_TYPE_DELETE",
+      referenceId: id,
+      oldValue: oldType,
+      newValue: null,
+      remarks: `Holiday type deleted: ${oldType?.name || id}`,
+    });
 
     return Helper.response(
       true,

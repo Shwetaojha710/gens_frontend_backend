@@ -2,7 +2,7 @@ const express = require('express');
 const { readdirSync } = require('fs');
 const app = express();
 const cookieParser = require('cookie-parser');
-require('dotenv').config();
+require('dotenv').config({ path: require('path').resolve(__dirname, '.env') });
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
@@ -13,7 +13,26 @@ const DeviceLocationLog = require('./app/models/device_location_logs');
 const salarydoc = require('./app/models/salarydoc');
 const interview_round = require('./app/models/interview_round');
 const round_type = require('./app/models/round_type');
+const UserPermission = require('./app/models/userPermission');
+const DocumentTemplate = require('./app/models/documentTemplate');
+const GeneratedDocument = require('./app/models/generatedDocument');
+const employeeOldSalary = require('./app/models/employeeOldSalary');
+// employeeOldSalary.sync({ alter: false }).catch(err =>
+//   console.error('employeeOldSalary sync error:', err)
+// );
 require('./app/models/index');
+
+// Auto-create user_permissions table if it doesn't exist
+UserPermission.sync({ alter: false }).catch(err =>
+  console.error('UserPermission sync error:', err)
+);
+
+DocumentTemplate.sync({ alter: false }).catch(err =>
+  console.error('DocumentTemplate sync error:', err)
+);
+GeneratedDocument.sync({ alter: false }).catch(err =>
+  console.error('GeneratedDocument sync error:', err)
+);
 
 // const skills = require('./app/models/skills');
 // const job_requirement = require('./app/models/job_requirement');
@@ -49,7 +68,7 @@ app.use(bodyParser.json({ limit: '100mb' }));
 app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 
 
-app.use(express.static("upload"));
+app.use(express.static(path.join(__dirname, 'upload')));
 app.use('/upload', express.static(path.join(__dirname, 'upload')));
 
 

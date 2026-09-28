@@ -1,0 +1,16 @@
+<div class="floating-particles" aria-hidden="true">
+  @for (p of particles; track p.id) {
+    <span
+      class="floating-particle"
+      [class.animate-float]="p.variant === 'float'"
+      [class.animate-float-delayed]="p.variant === 'float-delayed'"
+      [style.left.%]="p.left"
+      [style.top.%]="p.top"
+      [style.width.px]="p.size"
+      [style.height.px]="p.size"
+      [style.animation-delay.s]="p.delay"
+      [style.animation-duration.s]="p.duration"
+      [style.opacity]="p.opacity"
+    ></span>
+  }
+</div>

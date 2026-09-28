@@ -1,0 +1,257 @@
+// GENS HR Management System — Super Admin Module
+// Covers: tenant management, subscriptions, plans, platform modules, users, branches, audit
+
+Project GENS_SuperAdmin {
+  database_type: 'PostgreSQL'
+  Note: 'Super Admin module — tenant lifecycle, subscriptions, platform access, auth'
+}
+
+// ─────────────────────────────────────────────
+// TENANT CORE
+// ─────────────────────────────────────────────
+
+Table tenants {
+  id uuid [pk]
+  companyName varchar
+  companyAddress text
+  image varchar
+  companyCode varchar [unique]
+  status varchar [default: 'active', note: 'active | inactive']
+  plan varchar [default: 'basic']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table branches {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  name varchar
+  description text
+  latitude decimal
+  longitude decimal
+  image varchar
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table users {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  name varchar
+  email varchar [unique]
+  password varchar
+  role varchar [note: 'admin | hr | employee | superadmin']
+  status varchar [default: 'active']
+  token text
+  webcamtoken text
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+// ─────────────────────────────────────────────
+// PLANS & SUBSCRIPTIONS
+// ─────────────────────────────────────────────
+
+Table plan_masters {
+  id uuid [pk]
+  name varchar [unique]
+  code varchar [unique]
+  price decimal
+  billingCycle varchar [note: 'monthly | yearly | one_time']
+  durationDays integer
+  maxUsers integer
+  description text
+  status varchar [default: 'active']
+  metadata jsonb
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table subscriptions {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  plan varchar
+  status varchar [default: 'active', note: 'active | expired | cancelled']
+  startsAt timestamp
+  endsAt timestamp
+  seats integer
+  notes text
+  metadata jsonb
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+// ─────────────────────────────────────────────
+// PLATFORM MODULES & ACCESS
+// ─────────────────────────────────────────────
+
+Table platform_modules {
+  id uuid [pk]
+  name varchar
+  code varchar [unique, note: 'superadmin | attendance_employee_management | recruitment_tracking']
+  description text
+  displayOrder integer
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table tenant_module_access {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  moduleId uuid [ref: > platform_modules.id]
+  planId uuid [ref: > plan_masters.id]
+  isEnabled boolean [default: true]
+  startsAt timestamp
+  endsAt timestamp
+  settings jsonb [default: '{}']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+
+  indexes {
+    (tenantId, moduleId) [unique]
+  }
+}
+
+// ─────────────────────────────────────────────
+// LANDING PAGE
+// ─────────────────────────────────────────────
+
+Table landing_contact_submissions {
+  id uuid [pk]
+  fullName varchar
+  email varchar
+  message text
+  ipAddress varchar
+  userAgent varchar
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table landing_site_contents {
+  id uuid [pk]
+  slug varchar [unique, default: 'default']
+  payload jsonb [default: '{}']
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+// ─────────────────────────────────────────────
+// AUDIT & AUTH
+// ─────────────────────────────────────────────
+
+Table logs {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  employeeId uuid
+  actionType varchar
+  referenceId uuid
+  oldValue json
+  newValue json
+  remarks varchar
+  ipAddress varchar
+  createdBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+  deletedAt timestamp [note: 'soft delete']
+}
+
+Table otps {
+  id uuid [pk]
+  deviceId varchar
+  type varchar
+  otp bigint
+  expiry_time varchar
+  phone varchar
+  ip varchar
+  created_by uuid
+  status boolean [default: true]
+}
+
+// ─────────────────────────────────────────────
+// GEO / REFERENCE DATA
+// ─────────────────────────────────────────────
+
+Table countries {
+  id integer [pk, increment]
+  shortname varchar [unique]
+  name varchar
+  phonecode integer
+  branchId uuid
+}
+
+Table states {
+  id integer [pk, increment]
+  name varchar
+  country_id integer [ref: > countries.id]
+  branchId uuid
+}
+
+Table cities {
+  id integer [pk, increment]
+  name varchar
+  state_id integer [ref: > states.id]
+  branchId uuid
+}
+
+Table pin_code_master {
+  id varchar [pk]
+  office_name varchar
+  pin_code bigint
+  division_name varchar
+  circle_name varchar
+  taluka varchar
+  district_name varchar
+  state_name varchar
+}
+
+// ─────────────────────────────────────────────
+// TABLE GROUPS
+// ─────────────────────────────────────────────
+
+TableGroup tenant_core {
+  tenants
+  branches
+  users
+}
+
+TableGroup billing {
+  plan_masters
+  subscriptions
+  tenant_module_access
+  platform_modules
+}
+
+TableGroup landing {
+  landing_contact_submissions
+  landing_site_contents
+}
+
+TableGroup audit_auth {
+  logs
+  otps
+}
+
+TableGroup geo_data {
+  countries
+  states
+  cities
+  pin_code_master
+}

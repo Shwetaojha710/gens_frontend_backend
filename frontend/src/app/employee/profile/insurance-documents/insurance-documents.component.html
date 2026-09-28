@@ -1,0 +1,136 @@
+<div class="mt-2 insurance-docs">
+  <div class="row mb-6" *ngIf="createFlag">
+    <div class="col-md">
+      <h5 class="card-header d-flex justify-content-between align-items-center">
+        <span>{{ updateFlag ? 'Replace Insurance Document' : 'Upload Insurance Document' }}</span>
+        <button type="button" class="btn btn-xs btn-primary float-end" (click)="back()">
+          <i class="fa-solid fa-arrow-left"></i>&nbsp;back
+        </button>
+      </h5>
+
+      <div class="row mt-5">
+        <div class="col-4">
+          <label class="form-label">Document Type</label>
+          <ng-select
+            [items]="docTypeOptions"
+            bindLabel="label"
+            bindValue="value"
+            [(ngModel)]="obj['insuranceDocType']"
+            [multiple]="false"
+            [disabled]="updateFlag"
+            placeholder="Select type"
+            name="insuranceDocType">
+          </ng-select>
+        </div>
+
+        <div class="col-4">
+          <label class="form-label">File (PDF / Image)</label>
+          <input
+            #fileInput
+            class="form-control"
+            type="file"
+            (change)="onFileChange($event)"
+            accept="image/png,image/jpeg,image/jpg,application/pdf" />
+          <div *ngIf="sanitizedImage" class="mt-2 position-relative">
+            <button type="button" class="btn-close position-absolute" style="right:0;top:0;z-index:1"
+              (click)="closeFile()" aria-label="Clear"></button>
+            <div *ngIf="fileType?.startsWith('image')">
+              <img [src]="sanitizedImage" alt="Preview" class="img-thumbnail"
+                style="max-width: 100px; max-height: 100px; object-fit: cover;" />
+            </div>
+            <div *ngIf="fileType === 'application/pdf'">
+              <a [href]="sanitizedImage" target="_blank" class="btn btn-sm btn-success">Preview / Download PDF</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-4" *ngIf="updateFlag">
+          <label class="form-label">Status</label>
+          <ng-select
+            [items]="statusOptions"
+            bindLabel="label"
+            bindValue="value"
+            [(ngModel)]="obj['status']"
+            [multiple]="false"
+            placeholder="Select Status"
+            name="status">
+          </ng-select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-12 mt-3">
+          <button *ngIf="!updateFlag" type="button" class="btn btn-sm btn-primary" (click)="onSubmit()">
+            Upload
+          </button>
+          <button *ngIf="updateFlag" type="button" class="btn btn-sm btn-primary" (click)="updatedata()">
+            Replace
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mb-6">
+    <div class="col-md">
+      <h5 class="card-header d-flex justify-content-between align-items-center">
+        <span>Insurance Documents</span>
+        <button *ngIf="!createFlag" type="button" class="btn btn-xs btn-primary float-end" (click)="opencreate()">
+          <i class="fa-solid fa-plus"></i>&nbsp;Add
+        </button>
+      </h5>
+      <br />
+      <div class="table-responsive table-striped">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>SI.No</th>
+              <th>Type</th>
+              <th>File</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="!DocumentList?.length">
+              <td colspan="5" class="text-muted text-center py-4">No insurance documents uploaded yet.</td>
+            </tr>
+            <tr *ngFor="let item of DocumentList; let i = index">
+              <th scope="row">{{ i + 1 }}</th>
+              <td>{{ item.typeLabel || item.insuranceDocType }}</td>
+              <td>
+                <ng-container *ngIf="item.doc_type?.startsWith('image/'); else pdfBlock">
+                  <a [href]="item.fileUrl" target="_blank" rel="noopener">
+                    <img [src]="item.fileUrl" alt="Insurance doc" width="90" height="auto"
+                      style="cursor: pointer; border-radius: 4px; border: 1px solid #e5e7eb;" />
+                  </a>
+                </ng-container>
+                <ng-template #pdfBlock>
+                  <a [href]="item.fileUrl" target="_blank" download class="btn btn-sm btn-primary">
+                    View / Download
+                  </a>
+                  <div class="small text-muted mt-1" *ngIf="item.originalName">{{ item.originalName }}</div>
+                </ng-template>
+              </td>
+              <td>
+                <span class="badge" [class.bg-label-success]="item.status === 'active'"
+                  [class.bg-label-secondary]="item.status !== 'active'">
+                  {{ item.status }}
+                </span>
+              </td>
+              <td>
+                <button type="button" class="btn btn-outline-success btn-sm" (click)="update(item)" title="Replace">
+                  <i class="fas fa-edit"></i>
+                </button>
+                &nbsp;
+                <button type="button" class="btn btn-sm btn-outline-danger" (click)="delete(item)" title="Delete">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

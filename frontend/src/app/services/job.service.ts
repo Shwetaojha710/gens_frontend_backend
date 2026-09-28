@@ -141,6 +141,14 @@ export class JobService {
     return this.http.post<any>(`${this.baseUrl}check-duplicate-offer-letter`, payload);
   }
 
+  generateRecruitmentOfferLetterPdf(id: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}generate-offer-letter-pdf`, { id });
+  }
+
+  getOfferLetterByPhone(mobileNo: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}get-offer-letter-by-phone`, { mobileNo });
+  }
+
   saveJobLink(payload: {
     job_id: string;
     slug: string;

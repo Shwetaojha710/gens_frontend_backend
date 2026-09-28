@@ -1,14 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Notyf } from 'notyf';
 import { SuperadminService } from '../superadmin.service';
 
 @Component({
   selector: 'app-superadmin-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './superadmin-login.component.html',
   styleUrl: './superadmin-login.component.css',
 })

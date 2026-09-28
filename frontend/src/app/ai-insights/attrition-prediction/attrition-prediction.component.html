@@ -1,0 +1,100 @@
+<div class="container-fluid mt-2 ai-page ai-page--rose">
+  <header class="ai-hero ai-hero--rose mb-4">
+    <div class="ai-hero__icon"><i class="ri ri-alarm-warning-line"></i></div>
+    <div class="min-w-0">
+      <p class="ai-hero__eyebrow mb-1">AI Insights</p>
+      <h4 class="ai-hero__title mb-1">Attrition Prediction</h4>
+      <p class="ai-hero__sub mb-0">Spot employees at risk of leaving, ranked by AI-estimated risk score and contributing factors.</p>
+    </div>
+  </header>
+
+  <div class="card ai-panel border-0 mb-4">
+    <div class="card-body p-3">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label">Scope</label>
+          <select class="form-select" [(ngModel)]="mode">
+            <option value="all">All Employees</option>
+            <option value="single">Single Employee</option>
+          </select>
+        </div>
+        <div class="col-md-4" *ngIf="mode === 'single'">
+          <label class="form-label">Employee</label>
+          <ng-select [items]="employeeOptions" bindLabel="label" bindValue="value" placeholder="Select employee"
+            [(ngModel)]="employeeId"></ng-select>
+        </div>
+        <div class="col-md-3">
+          <button type="button" class="btn ai-run-btn w-100" [disabled]="loading" (click)="run()">
+            <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+            <i class="ri ri-radar-line me-1" *ngIf="!loading"></i>Predict
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ai-loading-state" *ngIf="loading && !result">
+    <span class="spinner-border" role="status"></span>
+    <p>Crunching attrition signals…</p>
+  </div>
+
+  <ng-container *ngIf="result">
+    <div class="card ai-panel border-0 mb-3" *ngIf="result.ai_insight">
+      <div class="card-body p-3">
+        <p class="ai-panel__label mb-2"><i class="ri ri-sparkling-line"></i>AI summary</p>
+        <div [innerHTML]="formatSummary(result.ai_insight)"></div>
+      </div>
+    </div>
+
+    <div class="card ai-panel border-0" *ngIf="result.predictions?.length">
+      <div class="card-body p-3">
+        <div class="table-responsive">
+          <table class="table table-sm ai-table align-middle mb-0">
+            <thead><tr><th>Employee</th><th>Risk</th><th>Level</th><th>Factors</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let p of sortedPredictions()">
+                <td class="fw-semibold">{{ p.employee_name }}</td>
+                <td>
+                  <div class="ai-meter-row ai-meter-row--sm">
+                    <span class="ai-meter-track">
+                      <span class="ai-meter-fill" [ngClass]="riskFillClass(p.risk_level)" [style.width.%]="p.risk_score"></span>
+                    </span>
+                    <span class="ai-meter-value">{{ p.risk_score }}</span>
+                  </div>
+                </td>
+                <td><span class="badge rounded-pill" [ngClass]="riskBadgeClass(p.risk_level)">{{ p.risk_level }}</span></td>
+                <td>
+                  <span class="badge bg-label-secondary rounded-pill mx-1" *ngFor="let f of p.factors">{{ f }}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card ai-panel border-0" *ngIf="result.risk_level">
+      <div class="card-body p-3">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+          <div>
+            <p class="ai-panel__label mb-1"><i class="ri ri-user-line"></i>Employee</p>
+            <h5 class="mb-0">{{ result.employee_name }}</h5>
+          </div>
+          <div class="d-flex align-items-center gap-3">
+            <div class="ai-donut" [style.--ai-donut-pct]="result.risk_score">
+              <span class="ai-donut__value">{{ result.risk_score }}</span>
+            </div>
+            <span class="badge rounded-pill align-self-center" [ngClass]="riskBadgeClass(result.risk_level)">{{ result.risk_level }} risk</span>
+          </div>
+        </div>
+        <p class="ai-panel__label mb-2"><i class="ri ri-list-check-2"></i>Contributing factors</p>
+        <span class="badge bg-label-secondary rounded-pill me-2 mb-2" *ngFor="let f of result.factors">{{ f }}</span>
+      </div>
+    </div>
+
+    <div class="ai-empty-state" *ngIf="!result.predictions?.length && !result.risk_level">
+      <i class="ri ri-inbox-line"></i>
+      <p>No attrition data available for this selection.</p>
+    </div>
+  </ng-container>
+</div>

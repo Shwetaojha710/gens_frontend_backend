@@ -173,6 +173,21 @@
               </small>
             </div>
             <div class="col-md-3">
+              <label class="col-form-label fw-bold">Guarantor Age</label>
+              <input type="number" class="form-control" placeholder="Enter Guarantor Age"
+                [(ngModel)]="personalDetails.guarantorAge" name="guarantorAge" />
+            </div>
+            <div class="col-md-3">
+              <label class="col-form-label fw-bold">Guarantor Relation</label>
+              <input type="text" class="form-control" placeholder="e.g. elder sister"
+                [(ngModel)]="personalDetails.guarantorRelation" name="guarantorRelation" />
+            </div>
+            <div class="col-md-6">
+              <label class="col-form-label fw-bold">Guarantor Address</label>
+              <textarea class="form-control" rows="2" placeholder="Enter Guarantor Address"
+                [(ngModel)]="personalDetails.guarantorAddress" name="guarantorAddress"></textarea>
+            </div>
+            <div class="col-md-3">
               <label class="col-form-label fw-bold">Nationality
                 <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
               </label>
@@ -358,6 +373,10 @@
                 (click)="submitForm()">
                 Submit
               </button> -->
+              <button *ngIf="updateFlag == true && createFlag == true" type="button"
+                class="btn btn-danger me-2" (click)="rejectform()">
+                Reject
+              </button>&nbsp;
               <button *ngIf="updateFlag == true && createFlag == true" type="button" class="btn btn-primary"
                 (click)="updateform()">
                 Approved
@@ -448,7 +467,11 @@
                       <!-- <button type="button" class="badge badge-center bg-label-secondary"  title="Approved"
                       (click)="changeStatus(item)">
                       <i class="fas fa-location"></i></button>&nbsp; -->
-                      <button type="button" class="btn btn-sm btn-outline-danger" title="Edit"
+                      <button type="button" class="btn btn-sm btn-outline-danger" title="Reject"
+                        (click)="rejectEmployee(item)">
+                        <i class="fas fa-times"></i>
+                      </button> &nbsp;
+                      <button type="button" class="btn btn-sm btn-outline-info" title="Edit"
                         (click)="update(item)">
                         <i class="fas fa-edit"></i>
                       </button>

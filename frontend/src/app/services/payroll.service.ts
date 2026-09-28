@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs/internal/Observable';
+import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 
@@ -99,8 +99,10 @@ baseUrl=environment.apiUrl
    addReimbursement(obj: any): Observable<any> {
     return this.http.post(`${this.baseUrl}add-reimbursement`, obj);
   }
-   fetchReimbursementList(): Observable<any> {
-    return this.http.post(`${this.baseUrl}fetchReimbursement`, {});
+  fetchReimbursementList(status?: string): Observable<any> {
+    const body: Record<string, string> = {};
+    if (status && status !== 'all') body['status'] = status;
+    return this.http.post(`${this.baseUrl}fetchReimbursement`, body);
   }
     updateReimbursement(obj: any): Observable<any> {
     return this.http.post(`${this.baseUrl}update-reimbursement`, obj);
@@ -117,5 +119,61 @@ baseUrl=environment.apiUrl
   }
   SubmitSalaryDoc(data: any): Observable<any> {
     return this.http.post(`${this.baseUrl}SubmitSalaryDoc`, data);
+  }
+
+  getAppraisalEmployees(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}appraisal/employees`, data);
+  }
+  getAppraisalDetail(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}appraisal/detail`, data);
+  }
+  previewAppraisal(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}appraisal/preview`, data);
+  }
+  applyAppraisal(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}appraisal/apply`, data);
+  }
+
+  getEmployeeSalaryHistory(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}get-employee-salary-history`, data);
+  }
+  calculateArrear(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}calculate-arrear`, data);
+  }
+  getArrearSalaryList(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}get-arrear-salary-list`, data);
+  }
+  createArrear(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}create-arrear`, data);
+  }
+  createBulkArrear(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}create-bulk-arrear`, data);
+  }
+  updateArrear(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}update-arrear`, data);
+  }
+  getArrearDetails(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}get-arrear-details`, data);
+  }
+  getArrearList(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}get-arrear-list`, data);
+  }
+  getPendingArrears(data: any = {}): Observable<any> {
+    return this.http.post(`${this.baseUrl}get-pending-arrears`, data);
+  }
+  submitArrear(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}submit-arrear`, data);
+  }
+  approveArrear(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}approve-arrear`, data);
+  }
+  rejectArrear(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}reject-arrear`, data);
+  }
+  getApprovedArrearsForSalary(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}get-approved-arrears-for-salary`, data);
+  }
+  getArrearStatusHistory(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}get-arrear-status-history`, data);
   }
 }

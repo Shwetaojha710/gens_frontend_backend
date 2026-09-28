@@ -1,0 +1,67 @@
+.authentication-wrapper {
+  display: flex;
+  flex-basis: 100%;
+  width: 100%;
+  min-height: 100vh;
+}
+
+.authentication-wrapper.authentication-cover {
+  align-items: flex-start;
+}
+
+.authentication-inner {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Right panel (same as login Rectangle3 panel) ── */
+.form-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 460px;
+  min-height: 100vh;
+  padding: 40px 24px;
+}
+
+/* ── Glassmorphism layers (matches login page) ── */
+.glass-outer {
+  padding: 20px;
+  background: linear-gradient(110.78deg, rgba(255,255,255,0.55) 7.01%, rgba(255,255,255,0.08) 106.22%),
+              linear-gradient(0deg, rgba(255,255,255,0.15), rgba(255,255,255,0.15));
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.4);
+  box-shadow: 0 8px 32px rgba(13,95,157,0.10);
+  width: 100%;
+}
+
+.glass-inner {
+  padding: 36px 32px;
+  background: rgba(255,255,255,0.82);
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.7);
+  box-shadow: 0 4px 24px rgba(13,95,157,0.08);
+  width: 100%;
+}
+
+/* ── Success icon ── */
+.success-icon-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0b6db6, #0d5f9d);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(13, 95, 157, 0.28);
+}
+
+.success-icon-circle svg {
+  width: 30px;
+  height: 30px;
+  color: #fff;
+}

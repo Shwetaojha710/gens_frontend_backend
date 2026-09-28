@@ -161,13 +161,19 @@ document.addEventListener('DOMContentLoaded', function () {
   window.Helpers.switchImage(storedStyle);
 
   // Update light/dark image based on current style
-  window.Helpers.setTheme(window.Helpers.getPreferredTheme());
+  try {
+    window.Helpers.setTheme(window.Helpers.getPreferredTheme());
+  } catch (e) {
+    window.Helpers.setTheme('light');
+  }
 
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-    const storedTheme = window.Helpers.getStoredTheme();
-    if (storedTheme !== 'light' && storedTheme !== 'dark') {
-      window.Helpers.setTheme(window.Helpers.getPreferredTheme());
-    }
+    try {
+      const storedTheme = window.Helpers.getStoredTheme();
+      if (storedTheme !== 'light' && storedTheme !== 'dark') {
+        window.Helpers.setTheme(window.Helpers.getPreferredTheme());
+      }
+    } catch (e) {}
   });
 
   function getScrollbarWidth() {
@@ -176,7 +182,11 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   getScrollbarWidth();
   window.addEventListener('DOMContentLoaded', () => {
-    window.Helpers.showActiveTheme(window.Helpers.getPreferredTheme());
+    try {
+      window.Helpers.showActiveTheme(window.Helpers.getPreferredTheme());
+    } catch (e) {
+      window.Helpers.showActiveTheme('light');
+    }
     getScrollbarWidth();
     // Toggle Universal Sidebar
     window.Helpers.initSidebarToggle();

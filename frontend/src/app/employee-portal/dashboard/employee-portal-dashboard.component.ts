@@ -1,6 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { AfterViewChecked, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import {
   ApexAxisChartSeries,
@@ -16,7 +18,8 @@ import {
 } from 'ng-apexcharts';
 import { Notyf } from 'notyf';
 import { EmployeePortalService } from '../services/employee-portal.service';
-
+import { environment } from '../../../environments/environment';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 type EpDonutOptions = Partial<{
   series: ApexNonAxisChartSeries;
   chart: ApexChart;
@@ -38,6 +41,36 @@ type EpBarOptions = Partial<{
   colors: string[];
   grid: ApexGrid;
 }>;
+
+interface TeamMember {
+  employeeId: string;
+  employee_name: string;
+  status: string;
+  checkIn: string | null;
+  checkOut: string | null;
+  designation: string | null;
+  department: string | null;
+  branchName: string | null;
+  profileImage: string | null;
+}
+
+interface TeamDeptGroup {
+  departmentName: string;
+  members: TeamMember[];
+  presentCount: number;
+  absentCount: number;
+  leaveCount: number;
+}
+
+interface TeamBranchGroup {
+  branchName: string;
+  departments: TeamDeptGroup[];
+  total: number;
+  presentCount: number;
+  absentCount: number;
+  leaveCount: number;
+  lateCount: number;
+}
 
 const STATUS_BUCKET_COLORS: Record<string, string> = {
   'On time': '#16a34a',
@@ -142,11 +175,11 @@ const EP_DASH_TIPS: readonly string[] = [
 @Component({
   selector: 'app-employee-portal-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, NgApexchartsModule],
+  imports: [CommonModule, FormsModule, RouterLink, NgApexchartsModule],
   templateUrl: './employee-portal-dashboard.component.html',
   styleUrls: ['./employee-portal-dashboard.component.css'],
 })
-export class EmployeePortalDashboardComponent implements OnInit {
+export class EmployeePortalDashboardComponent implements OnInit, AfterViewChecked {
   loading = true;
   chartsLoading = true;
   profileLoading = true;
@@ -176,19 +209,571 @@ export class EmployeePortalDashboardComponent implements OnInit {
   /** Per leave type from get-emp-leave-list */
   leaveBalancesLoading = false;
   leaveBalances: Record<string, unknown>[] = [];
+  /** Team attendance (manager / director / teamLeader) */
+  teamAttendanceLoading = false;
+  teamAttendanceRaw: Record<string, unknown>[] = [];
+  teamBranchGroups: TeamBranchGroup[] = [];
+  teamBranchNames: string[] = ['All'];
+  teamBranchFilter = 'All';
+  private teamBranchIdMap: Map<string, string> = new Map();
+  expandedTeamBranches: Set<string> = new Set();
+  teamDetailPanel: { title: string; members: TeamMember[] } | null = null;
+  leavesActionLoading: Set<string> = new Set();
+  teamReimbursements: Record<string, unknown>[] = [];
+  teamReimbLoading = false;
+  reimbActionLoading: Set<string> = new Set();
+  userRole = '';
+  userBranchId = '';
 
-  constructor(private api: EmployeePortalService) {}
+  // ── Chatbot ──────────────────────────────────────────────────────────────
+  isChatOpen = false;
+  chatMessages: { role: 'user' | 'bot'; text: string }[] = [];
+  chatInput = '';
+  chatLoading = false;
+  isListening = false;
+  micLang: 'hi-IN' | 'en-IN' = 'hi-IN';
+  recordingLabel = '● Listening…';
+  private recognition: any = null;
+  private readonly CHAT_API = environment.chatApiUrl;
+
+  private greetingText(): string {
+    return this.micLang === 'hi-IN' ? 'नमस्ते! मैं आपकी कैसे मदद कर सकता हूँ?' : 'Hi! How can I help you today?';
+  }
+
+  canMarkWebAttendance(): boolean {
+    return this.profile?.['isofflineAtt'] == true;
+  }
+
+  toggleChat(): void {
+    const wasOpen = this.isChatOpen;
+    this.isChatOpen = !this.isChatOpen;
+
+    if (wasOpen && !this.isChatOpen) {
+      if (this.isListening) {
+        this.toggleMic();
+      }
+      this.chatMessages = [];
+      this.chatInput = '';
+    }
+
+    if (this.isChatOpen && this.chatMessages.length === 0) {
+      this.chatMessages.push({ role: 'bot', text: this.greetingText() });
+    }
+    if (this.isChatOpen) {
+      this.shouldScroll = true;
+    }
+  }
+
+  switchLang(): void {
+    this.micLang = this.micLang === 'hi-IN' ? 'en-IN' : 'hi-IN';
+    if (this.chatMessages.length === 1 && this.chatMessages[0].role === 'bot') {
+      this.chatMessages[0] = { role: 'bot', text: this.greetingText() };
+    }
+  }
+   @ViewChild('chatBody') chatBody!: ElementRef;
+
+  private shouldScroll = false;
+
+  ngAfterViewChecked(): void {
+    if (this.shouldScroll) {
+      this.scrollToBottom();
+      this.shouldScroll = false;
+    }
+  }
+
+  private scrollToBottom(): void {
+    try {
+      const element = this.chatBody.nativeElement;
+      element.scrollTop = element.scrollHeight;
+    } catch (err) {}
+  }
+
+  sendChatMessage(): void {
+    const text = this.chatInput.trim();
+    if (!text || this.chatLoading) return;
+    this.chatMessages.push({ role: 'user', text });
+    this.chatInput = '';
+    this.chatLoading = true;
+    this.shouldScroll = true;
+
+    let tenantId = '';
+    try {
+      const t = JSON.parse(localStorage.getItem('empPortalTenant') || '{}') as { id?: string };
+      tenantId = t.id != null ? String(t.id) : '';
+    } catch {
+      tenantId = '';
+    }
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+      'X-Tenant-Id': tenantId,
+    });
+
+    const lang = this.micLang === 'hi-IN' ? 'hi' : 'en';
+    this.http
+      .post<{ answer?: string; reply?: string; message?: string; response?: string }>(
+        this.CHAT_API,
+        { employee_id: this.myEmployeeId || 'guest', message: text, lang },
+        { headers },
+      )
+      .subscribe({
+        next: (res) => {
+          const fallback = this.micLang === 'hi-IN' ? 'हो गया!' : 'Done!';
+          const reply = res.answer ?? res.reply ?? res.message ?? res.response ?? fallback;
+          this.chatMessages.push({ role: 'bot', text: reply });
+          this.chatLoading = false;
+          this.shouldScroll = true;
+        },
+        error: () => {
+          const errText = this.micLang === 'hi-IN'
+            ? 'क्षमा करें, कुछ गड़बड़ हो गई। कृपया फिर से प्रयास करें।'
+            : 'Sorry, something went wrong. Please try again.';
+          this.chatMessages.push({ role: 'bot', text: errText });
+          this.chatLoading = false;
+          this.shouldScroll = true;
+        },
+      });
+  }
+
+  onChatKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      this.sendChatMessage();
+    }
+  }
+
+  /**
+   * Angular's ngModel re-writes the input's `.value` after every keystroke,
+   * which resets the caret to the end even when the string is unchanged —
+   * very noticeable when editing mid-text (e.g. Hindi transliteration).
+   * Restore the caret the user actually had, right after that rewrite.
+   */
+  preserveCaret(el: HTMLInputElement): void {
+    const { selectionStart, selectionEnd } = el;
+    Promise.resolve().then(() => {
+      if (document.activeElement === el) {
+        el.setSelectionRange(selectionStart, selectionEnd);
+      }
+    });
+  }
+
+  toggleMic(): void {
+    if (this.isListening) {
+      this.isListening = false;
+      this.recordingLabel = this.micLang === 'hi-IN' ? '● सुन रहा हूँ…' : '● Listening…';
+      this.recognition?.stop();
+      return;
+    }
+
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      this.notyf.error('Speech recognition is not supported in this browser. Use Chrome or Edge.');
+      return;
+    }
+
+    this.recognition = new SR();
+    this.recognition.lang = this.micLang;
+    this.recognition.interimResults = true;
+    this.recognition.continuous = true;
+    this.recognition.maxAlternatives = 5;
+
+    this.isListening = true;
+    this.chatInput = '';
+    this.recordingLabel = '● Listening…';
+    let finalText = '';
+    let lowConfidenceWarned = false;
+    const LOW_CONFIDENCE_THRESHOLD = 0.5;
+
+    this.recognition.onresult = (event: any) => {
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        // Pick the highest-confidence alternative instead of always [0] —
+        // hi-IN in particular returns weak/garbled top picks for code-mixed speech.
+        let best = result[0];
+        for (let a = 1; a < result.length; a++) {
+          if ((result[a].confidence || 0) > (best.confidence || 0)) best = result[a];
+        }
+        if (result.isFinal) {
+          finalText += best.transcript + ' ';
+          if (this.micLang === 'hi-IN' && best.confidence > 0 && best.confidence < LOW_CONFIDENCE_THRESHOLD && !lowConfidenceWarned) {
+            lowConfidenceWarned = true;
+            this.notyf.error('Hindi voice recognition sounded unclear — please check the text before sending.');
+          }
+        } else {
+          interim = best.transcript;
+        }
+      }
+      this.chatInput = (finalText + interim).trim();
+      const listeningFallback = this.micLang === 'hi-IN' ? 'सुन रहा हूँ…' : 'Listening…';
+      this.recordingLabel = `● ${this.chatInput || listeningFallback}`;
+    };
+
+    this.recognition.onerror = (event: any) => {
+      if (event.error === 'no-speech' || event.error === 'network') return;
+      this.isListening = false;
+      this.recordingLabel = this.micLang === 'hi-IN' ? '● सुन रहा हूँ…' : '● Listening…';
+      if (event.error === 'not-allowed') {
+        this.notyf.error('Microphone access denied. Allow mic in browser settings and reload.');
+      } else {
+        this.notyf.error('Mic error: ' + event.error);
+      }
+    };
+
+    this.recognition.onend = () => {
+      if (this.isListening) {
+        try { this.recognition.start(); } catch { /* ignore */ }
+      }
+    };
+
+    try {
+      this.recognition.start();
+    } catch {
+      this.isListening = false;
+      this.notyf.error('Could not start microphone.');
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
+  constructor(private api: EmployeePortalService, private http: HttpClient, private sanitizer: DomSanitizer) {}
 
   ngOnInit(): void {
     try {
-      const u = JSON.parse(localStorage.getItem('empPortalUser') || '{}') as { id?: string };
+      const u = JSON.parse(localStorage.getItem('empPortalUser') || '{}') as {
+        id?: string;
+        role?: string;
+        branchId?: string;
+      };
       this.myEmployeeId = u.id != null ? String(u.id) : '';
+      this.userRole = u.role != null ? String(u.role).toLowerCase().trim() : '';
+      this.userBranchId = u.branchId != null ? String(u.branchId) : '';
     } catch {
       this.myEmployeeId = '';
     }
     this.refresh();
-    console.log(this.chartsLoading,this.latePolicyVisible,">>>>>");
+    if (this.showTeamAttendance) {
+      if (this.isBranchView) {
+        this.loadTenantBranches();
+      }
+      this.loadTeamAttendance();
+    }
+    if (this.showManagerActions) {
+      this.loadTeamReimbursements();
+    }
+    console.log(this.chartsLoading, this.latePolicyVisible, '>>>>>');
+  }
 
+  get showTeamAttendance(): boolean {
+    return ['manager', 'director', 'teamleader'].includes(this.userRole);
+  }
+
+  get isBranchView(): boolean {
+    return this.userRole === 'manager' || this.userRole === 'director';
+  }
+
+  private refreshTeamBranchNames(): void {
+    // fallback: derive from attendance data if tenant branch load failed
+    this.teamBranchIdMap.clear();
+    for (const r of this.teamAttendanceRaw) {
+      const name = String(r['branchName'] || 'Unknown');
+      const id = String(r['branchId'] || '');
+      if (id && !this.teamBranchIdMap.has(name)) {
+        this.teamBranchIdMap.set(name, id);
+      }
+    }
+    this.teamBranchNames = ['All', ...new Set(this.teamAttendanceRaw.map((r) => String(r['branchName'] || 'Unknown')))];
+  }
+
+  loadTenantBranches(): void {
+    this.api.getTenantBranches().subscribe({
+      next: (branches) => {
+        if (branches.length === 0) return;
+        this.teamBranchIdMap.clear();
+        for (const b of branches) {
+          this.teamBranchIdMap.set(b.name, b.id);
+        }
+        this.teamBranchNames = ['All', ...branches.map((b) => b.name)];
+      },
+      error: () => { /* pills fall back to attendance-derived list */ },
+    });
+  }
+
+  loadTeamAttendance(): void {
+    this.teamAttendanceLoading = true;
+    const filter = this.isBranchView ? 'All' : undefined;
+    this.api.getTeamsAttendance(filter).subscribe({
+      next: (rows) => {
+        this.teamAttendanceRaw = rows;
+        if (this.teamBranchNames.length <= 1) {
+          this.refreshTeamBranchNames();
+        }
+        const required = this.isBranchView ? [...this.teamBranchIdMap.keys()] : undefined;
+        this.teamBranchGroups = this.buildBranchGroups(rows, required);
+        this.teamAttendanceLoading = false;
+        if (this.teamBranchGroups.length > 0) {
+          this.expandedTeamBranches.add(this.teamBranchGroups[0].branchName);
+        }
+      },
+      error: () => {
+        this.teamAttendanceRaw = [];
+        this.teamBranchGroups = [];
+        this.teamAttendanceLoading = false;
+      },
+    });
+  }
+
+  onTeamBranchFilterChange(branchName: string): void {
+    if (this.teamBranchFilter === branchName || this.teamAttendanceLoading) return;
+    this.teamBranchFilter = branchName;
+    this.expandedTeamBranches.clear();
+    this.teamDetailPanel = null;
+    this.teamAttendanceLoading = true;
+
+    const branchId = branchName === 'All' ? 'All' : (this.teamBranchIdMap.get(branchName) ?? 'All');
+
+    this.api.getTeamsAttendance(branchId).subscribe({
+      next: (rows) => {
+        this.teamAttendanceRaw = rows;
+        if (branchName === 'All') {
+          this.refreshTeamBranchNames();
+        }
+        // For "All": seed every known branch. For specific branch: seed just that one.
+        const required = branchName === 'All'
+          ? [...this.teamBranchIdMap.keys()]
+          : [branchName];
+        this.teamBranchGroups = this.buildBranchGroups(rows, required);
+        if (this.teamBranchGroups.length > 0) {
+          this.expandedTeamBranches.add(this.teamBranchGroups[0].branchName);
+        }
+        this.teamAttendanceLoading = false;
+      },
+      error: () => {
+        this.teamAttendanceLoading = false;
+      },
+    });
+  }
+
+  private buildBranchGroups(rows: Record<string, unknown>[], requiredBranches?: string[]): TeamBranchGroup[] {
+    const branchMap = new Map<string, TeamMember[]>();
+    // Pre-seed required branches so 0-member branches still appear
+    for (const name of (requiredBranches ?? [])) {
+      branchMap.set(name, []);
+    }
+    for (const r of rows) {
+      const bn = String(r['branchName'] || 'Unknown');
+      if (!branchMap.has(bn)) branchMap.set(bn, []);
+      branchMap.get(bn)!.push(r as unknown as TeamMember);
+    }
+    return Array.from(branchMap.entries()).map(([branchName, members]) => {
+      const deptMap = new Map<string, TeamMember[]>();
+      for (const m of members) {
+        const dn = m.department || 'Unknown';
+        if (!deptMap.has(dn)) deptMap.set(dn, []);
+        deptMap.get(dn)!.push(m);
+      }
+      const departments: TeamDeptGroup[] = Array.from(deptMap.entries()).map(([departmentName, dm]) => ({
+        departmentName,
+        members: dm,
+        presentCount: dm.filter((x) => this.isPresent(x.status)).length,
+        absentCount: dm.filter((x) => x.status === 'Absent').length,
+        leaveCount: dm.filter((x) => x.status.toLowerCase().includes('leave')).length,
+      }));
+      const total = members.length;
+      const presentCount = members.filter((x) => this.isPresent(x.status)).length;
+      const absentCount = members.filter((x) => x.status === 'Absent').length;
+      const leaveCount = members.filter((x) => x.status.toLowerCase().includes('leave')).length;
+      const lateCount = members.filter((x) => x.status.toLowerCase().startsWith('late')).length;
+      return { branchName, departments, total, presentCount, absentCount, leaveCount, lateCount };
+    });
+  }
+
+  private isPresent(status: string): boolean {
+    const s = status.toLowerCase();
+    return s === 'on time' || s.startsWith('late');
+  }
+
+  toggleTeamBranch(name: string): void {
+    if (this.expandedTeamBranches.has(name)) {
+      this.expandedTeamBranches.delete(name);
+    } else {
+      this.expandedTeamBranches.add(name);
+    }
+  }
+
+  isTeamBranchExpanded(name: string): boolean {
+    return this.expandedTeamBranches.has(name);
+  }
+
+  showPresentDetail(bg: TeamBranchGroup, event: Event): void {
+    event.stopPropagation();
+    const members = bg.departments.flatMap((d) => d.members).filter((m) => this.isPresent(m.status));
+    this.teamDetailPanel = { title: `Present · ${bg.branchName}`, members };
+  }
+
+  showLeaveDetail(bg: TeamBranchGroup, event: Event): void {
+    event.stopPropagation();
+    const members = bg.departments.flatMap((d) => d.members).filter((m) => m.status.toLowerCase().includes('leave'));
+    this.teamDetailPanel = { title: `On Leave · ${bg.branchName}`, members };
+  }
+
+  showAbsentDetail(bg: TeamBranchGroup, event: Event): void {
+    event.stopPropagation();
+    const members = bg.departments.flatMap((d) => d.members).filter((m) => m.status === 'Absent');
+    this.teamDetailPanel = { title: `Absent · ${bg.branchName}`, members };
+  }
+
+  showLateDetail(bg: TeamBranchGroup, event: Event): void {
+    event.stopPropagation();
+    const members = bg.departments.flatMap((d) => d.members).filter((m) => m.status.toLowerCase().startsWith('late'));
+    this.teamDetailPanel = { title: `Late · ${bg.branchName}`, members };
+  }
+
+  closeTeamDetail(): void {
+    this.teamDetailPanel = null;
+  }
+
+  get showManagerActions(): boolean {
+    return this.userRole === 'manager' || this.userRole === 'director';
+  }
+
+  isLeaveActionable(row: unknown): boolean {
+    const r = row as Record<string, unknown>;
+    const s = String(r['status'] ?? '').toLowerCase().trim();
+    return s === 'pending' || s === 'recommended';
+  }
+
+  isLeaveActionLoading(row: unknown): boolean {
+    const r = row as Record<string, unknown>;
+    return this.leavesActionLoading.has(String(r['id'] ?? ''));
+  }
+
+  approveTeamLeave(row: unknown): void {
+    const r = row as Record<string, unknown>;
+    const id = String(r['id'] ?? '');
+    if (!id || this.leavesActionLoading.has(id)) return;
+    this.leavesActionLoading.add(id);
+    this.api.approveLeave(id).subscribe({
+      next: () => {
+        this.leavesActionLoading.delete(id);
+        r['status'] = 'approved';
+        this.notyf.success('Leave approved');
+      },
+      error: (err: Error) => {
+        this.leavesActionLoading.delete(id);
+        this.notyf.error(err.message || 'Could not approve leave');
+      },
+    });
+  }
+
+  rejectTeamLeave(row: unknown): void {
+    const r = row as Record<string, unknown>;
+    const id = String(r['id'] ?? '');
+    if (!id || this.leavesActionLoading.has(id)) return;
+    this.leavesActionLoading.add(id);
+    this.api.declineLeave(id).subscribe({
+      next: () => {
+        this.leavesActionLoading.delete(id);
+        r['status'] = 'rejected';
+        this.notyf.success('Leave rejected');
+      },
+      error: (err: Error) => {
+        this.leavesActionLoading.delete(id);
+        this.notyf.error(err.message || 'Could not reject leave');
+      },
+    });
+  }
+
+  loadTeamReimbursements(): void {
+    this.teamReimbLoading = true;
+    this.api.getTeamReimbursements().subscribe({
+      next: (rows) => {
+        this.teamReimbursements = rows;
+        this.teamReimbLoading = false;
+      },
+      error: () => {
+        this.teamReimbursements = [];
+        this.teamReimbLoading = false;
+      },
+    });
+  }
+
+  isReimbActionable(row: unknown): boolean {
+    const r = row as Record<string, unknown>;
+    const s = String(r['status'] ?? '').toLowerCase().trim();
+    return s === 'pending';
+  }
+
+  isReimbActionLoading(row: unknown): boolean {
+    const r = row as Record<string, unknown>;
+    return this.reimbActionLoading.has(String(r['id'] ?? ''));
+  }
+
+  reimbStatusPillClass(status: unknown): string {
+    const s = String(status ?? '').toLowerCase().trim();
+    if (s === 'approved') return 'ep-dash-status ep-dash-status--ok';
+    if (s === 'rejected') return 'ep-dash-status ep-dash-status--bad';
+    return 'ep-dash-status ep-dash-status--warn';
+  }
+
+  approveTeamReimb(row: unknown): void {
+    const r = row as Record<string, unknown>;
+    const id = String(r['id'] ?? '');
+    if (!id || this.reimbActionLoading.has(id)) return;
+    this.reimbActionLoading.add(id);
+    this.api.updateAppReimbursementStatus(id, 'approved').subscribe({
+      next: () => {
+        this.reimbActionLoading.delete(id);
+        r['status'] = 'approved';
+        this.notyf.success('Reimbursement approved');
+      },
+      error: (err: Error) => {
+        this.reimbActionLoading.delete(id);
+        this.notyf.error(err.message || 'Could not approve reimbursement');
+      },
+    });
+  }
+
+  rejectTeamReimb(row: unknown): void {
+    const r = row as Record<string, unknown>;
+    const id = String(r['id'] ?? '');
+    if (!id || this.reimbActionLoading.has(id)) return;
+    this.reimbActionLoading.add(id);
+    this.api.updateAppReimbursementStatus(id, 'rejected').subscribe({
+      next: () => {
+        this.reimbActionLoading.delete(id);
+        r['status'] = 'rejected';
+        this.notyf.success('Reimbursement rejected');
+      },
+      error: (err: Error) => {
+        this.reimbActionLoading.delete(id);
+        this.notyf.error(err.message || 'Could not reject reimbursement');
+      },
+    });
+  }
+
+  teamMemberStatusClass(status: string): string {
+    const s = (status || '').toLowerCase();
+    if (s === 'on time') return 'ep-dash-status ep-dash-status--ok';
+    if (s.startsWith('late')) return 'ep-dash-status ep-dash-status--warn';
+    if (s.includes('leave')) return 'ep-dash-status ep-dash-status--neutral';
+    if (s === 'holiday') return 'ep-dash-status ep-dash-status--muted';
+    return 'ep-dash-status ep-dash-status--bad';
+  }
+
+  teamMemberInitials(name: string): string {
+    const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return 'TM';
+  }
+
+  get teamPresentMembers(): TeamMember[] {
+    const all = this.teamBranchGroups.flatMap((b) => b.departments.flatMap((d) => d.members));
+    return all.filter((m) => this.isPresent(m.status)).slice(0, 8);
+  }
+
+  get teamAbsentLeaveMembers(): TeamMember[] {
+    const all = this.teamBranchGroups.flatMap((b) => b.departments.flatMap((d) => d.members));
+    return all.filter((m) => !this.isPresent(m.status)).slice(0, 8);
   }
 
   get greeting(): string {
@@ -534,14 +1119,15 @@ export class EmployeePortalDashboardComponent implements OnInit {
     });
 
     const t = new Date();
-    const month = t.getMonth() + 1;
-    const year = t.getFullYear();
+    const month:any = t.getMonth() + 1;
+    const year:any = t.getFullYear();
 
     this.api.getAppliedLeaves(month, year).subscribe({
       next: (res) => {
         const data = res['data'];
         let rows = res['status'] === true && Array.isArray(data) ? data : [];
-        if (this.myEmployeeId) {
+        // manager/director see all team leaves; others see only own
+        if (this.myEmployeeId && !this.showManagerActions) {
           rows = rows.filter(
             (r) => String((r as Record<string, unknown>)['employeeId']) === this.myEmployeeId,
           );
@@ -846,4 +1432,16 @@ export class EmployeePortalDashboardComponent implements OnInit {
       },
     });
   }
+
+  formatText(text: string): SafeHtml {
+    const escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    const withBold = escaped
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>');
+    return this.sanitizer.bypassSecurityTrustHtml(withBold);
+  }
+
 }

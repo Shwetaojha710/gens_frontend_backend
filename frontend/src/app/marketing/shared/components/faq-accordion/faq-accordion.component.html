@@ -1,0 +1,25 @@
+<div class="faq-accordion">
+  <div
+    *ngFor="let item of items; let i = index"
+    class="faq-row rounded-xl border border-[var(--border-color)] bg-[var(--bg-primary)] mb-3 overflow-hidden"
+  >
+    <button
+      type="button"
+      class="w-full flex items-center justify-between gap-4 text-left px-6 py-4"
+      [attr.aria-expanded]="openIndex() === i"
+      (click)="toggle(i)"
+    >
+      <span class="font-semibold text-navy dark:text-white">{{ item.question }}</span>
+      <i
+        class="ri ri-arrow-down-s-line text-xl text-gens-600 dark:text-gens-400 shrink-0 transition-transform duration-300"
+        [class.rotate-180]="openIndex() === i"
+      ></i>
+    </button>
+
+    <div class="faq-row__panel" [class.faq-row__panel--open]="openIndex() === i">
+      <div class="overflow-hidden">
+        <p class="px-6 pb-4 text-[var(--text-secondary)] leading-relaxed">{{ item.answer }}</p>
+      </div>
+    </div>
+  </div>
+</div>

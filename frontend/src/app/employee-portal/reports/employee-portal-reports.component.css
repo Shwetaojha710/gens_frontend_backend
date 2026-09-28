@@ -1,11 +1,11 @@
-@import '../employee-portal-glass.css';
+﻿@import '../employee-portal-glass.css';
 
 .ep-ep-page__back {
   display: inline-flex;
   align-items: center;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #005fa8;
+  color: #0081c9;
   text-decoration: none;
   margin-bottom: 1rem;
 }
@@ -79,7 +79,7 @@
   gap: 0.25rem;
   font-weight: 600;
   font-size: 0.9rem;
-  color: #005fa8;
+  color: #0081c9;
   text-decoration: none;
 }
 
@@ -122,7 +122,7 @@
 }
 
 .ep-reports__insight--neutral {
-  border-left-color: #005fa8;
+  border-left-color: #0081c9;
 }
 
 .ep-reports__insight--watch {
@@ -160,6 +160,6 @@
 }
 
 .ep-reports__insight--neutral .ep-reports__insight-badge {
-  background: rgba(0, 95, 168, 0.1);
-  color: #005fa8;
+  background: rgba(0, 129, 201, 0.1);
+  color: #0081c9;
 }

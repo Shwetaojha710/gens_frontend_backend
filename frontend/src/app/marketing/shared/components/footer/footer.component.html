@@ -1,0 +1,92 @@
+<footer class="bg-[var(--bg-secondary)] border-t border-[var(--border-color)]">
+  <div class="container-gens section-padding !pb-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-10">
+      <!-- Brand -->
+      <div class="lg:col-span-2">
+        <a routerLink="/Home" class="inline-block mb-4" aria-label="GENS.Ai Home">
+          <img
+            src="assets/img/marketing/gens-logo.png"
+            alt="GENS.Ai - Global Employee Network System"
+            class="h-10 sm:h-11 w-auto max-w-[220px] object-contain object-left"
+          />
+        </a>
+        <p class="text-sm text-[var(--text-secondary)] mb-6 max-w-xs">
+          Global Employee Network System — AI-powered HRMS for modern organizations. Transform your HR operations today.
+        </p>
+        <!-- Newsletter -->
+        <div class="glass-card p-4">
+          <p class="text-sm font-semibold mb-2">Subscribe to our newsletter</p>
+          <div class="flex gap-2">
+            <input
+              type="email"
+              [(ngModel)]="email"
+              name="newsletterEmail"
+              placeholder="Enter your email"
+              class="flex-1 px-3 py-2 rounded-lg text-sm bg-[var(--bg-primary)] border border-[var(--border-color)] focus:outline-none focus:ring-2 focus:ring-gens-500"
+              aria-label="Email for newsletter"
+            />
+            <button (click)="subscribe()" class="btn-primary !px-4 !py-2 !text-sm">Subscribe</button>
+          </div>
+          @if (subscribed) {
+            <p class="text-xs text-green-500 mt-2">Thank you for subscribing!</p>
+          }
+        </div>
+      </div>
+
+      <!-- Products -->
+      <div>
+        <h4 class="font-semibold mb-4 text-sm uppercase tracking-wider text-[var(--text-muted)]">Products</h4>
+        <ul class="space-y-2">
+          @for (link of footerLinks.products; track link.path) {
+            <li><a [routerLink]="link.path" class="text-sm text-[var(--text-secondary)] hover:text-gens-600 transition-colors">{{ link.label }}</a></li>
+          }
+        </ul>
+      </div>
+
+      <!-- Resources -->
+      <div>
+        <h4 class="font-semibold mb-4 text-sm uppercase tracking-wider text-[var(--text-muted)]">Resources</h4>
+        <ul class="space-y-2">
+          @for (link of footerLinks.resources; track link.path) {
+            <li><a [routerLink]="link.path" class="text-sm text-[var(--text-secondary)] hover:text-gens-600 transition-colors">{{ link.label }}</a></li>
+          }
+        </ul>
+      </div>
+
+      <!-- Company -->
+      <div>
+        <h4 class="font-semibold mb-4 text-sm uppercase tracking-wider text-[var(--text-muted)]">Company</h4>
+        <ul class="space-y-2">
+          @for (link of footerLinks.company; track link.path) {
+            <li><a [routerLink]="link.path" class="text-sm text-[var(--text-secondary)] hover:text-gens-600 transition-colors">{{ link.label }}</a></li>
+          }
+        </ul>
+      </div>
+
+      <!-- Support -->
+      <div>
+        <h4 class="font-semibold mb-4 text-sm uppercase tracking-wider text-[var(--text-muted)]">Support</h4>
+        <ul class="space-y-2">
+          @for (link of footerLinks.support; track link.path) {
+            <li><a [routerLink]="link.path" class="text-sm text-[var(--text-secondary)] hover:text-gens-600 transition-colors">{{ link.label }}</a></li>
+          }
+        </ul>
+      </div>
+    </div>
+
+    <!-- Bottom bar -->
+    <div class="mt-12 pt-8 border-t border-[var(--border-color)] flex flex-col md:flex-row items-center justify-between gap-4">
+      <p class="text-sm text-[var(--text-muted)]">
+        &copy; {{ year }} {{ contactInfo.company }}. All rights reserved.
+      </p>
+      <div class="flex items-center gap-4">
+        @for (social of socialLinks; track social.url) {
+          <a [href]="social.url" target="_blank" rel="noopener noreferrer" [attr.aria-label]="social.label"
+             class="w-9 h-9 rounded-lg flex items-center justify-center bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-gens-600 hover:text-white transition-all">
+            <i class="ri" [class]="socialIconClass(social.icon)"></i>
+          </a>
+        }
+      </div>
+    </div>
+  </div>
+</footer>

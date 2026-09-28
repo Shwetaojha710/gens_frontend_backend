@@ -99,7 +99,7 @@
                 <td>{{ app.createdAt | date:'dd-MM-yyyy' }}</td>
                 <td>
                   <span class="badge badge-success px-2" [ngClass]="getStageBadgeClass(app.stage)">
-                    {{ app.stage?.replace('_', ' ') || 'N/A' }}
+                    {{ app.stage.replace('_', ' ') || 'N/A' }}
                   </span>
                   <small *ngIf="app.ats" class="d-block text-primary mt-1">
                     ATS: {{ app.ats.ats_score | number:'1.0-0' }}

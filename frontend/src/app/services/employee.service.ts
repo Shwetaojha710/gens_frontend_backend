@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs/internal/Observable';
+import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -17,8 +17,13 @@ createEmp(data: any): Observable<any> {
   return this.http.post(`${this.baseUrl}createEmp`, data);
 }
 
+checkEmpByMobile(data: any): Observable<any> {
+  return this.http.post(`${this.baseUrl}checkEmpByMobile`, data);
+}
+
 getEmp(): Observable<any[]> {
-  return this.http.post<any[]>(`${this.baseUrl}getEmp`, {});
+  const branchId = localStorage.getItem('branchId') || '';
+  return this.http.post<any[]>(`${this.baseUrl}getEmp`, { branchId });
 }
 
 getCountry(): Observable<any[]> {
@@ -105,8 +110,11 @@ assignedLeave(data: any): Observable<any> {
   return this.http.post(`${this.baseUrl}assign-leave`, data);
 }
 
-getAssignLeaveList(obj: any): Observable<any> {
+  getAssignLeaveList(obj: any): Observable<any> {
   return this.http.post(`${this.baseUrl}get-leave-by-emp`, obj);
+}
+getLeaveLedger(obj: any): Observable<any> {
+  return this.http.post(`${this.baseUrl}get-leave-ledger`, obj);
 }
 updateAssignedLeave(id: any, dept: any): Observable<any> {
   return this.http.post<any>(`${this.baseUrl}update-assign-leave`, dept);
@@ -120,16 +128,24 @@ activeLocation(obj:any): Observable<any> {
   return this.http.post<any>(`${this.baseUrl}update-active-location`, obj);
 }
 
-saveLetterData(employeeId: string, type: 'nda' | 'appointment' | 'relieving' | 'offer', data: any): Observable<any> {
+saveLetterData(employeeId: string, type: 'nda' | 'appointment' | 'relieving' | 'offer' | 'service', data: any): Observable<any> {
   return this.http.post<any>(`${this.baseUrl}save-letter-data`, { employeeId, type, data });
 }
 
-getLetterData(employeeId: string, type: 'nda' | 'appointment' | 'relieving' | 'offer'): Observable<any> {
+getLetterData(employeeId: string, type: 'nda' | 'appointment' | 'relieving' | 'offer' | 'service'): Observable<any> {
   return this.http.post<any>(`${this.baseUrl}get-letter-data`, { employeeId, type });
 }
 
 getLetterStats(): Observable<any> {
   return this.http.post<any>(`${this.baseUrl}get-letter-stats`, {});
+}
+
+generateLetterPdf(employeeId: string, type: 'appointment' | 'offer' | 'relieving'): Observable<any> {
+  return this.http.post<any>(`${this.baseUrl}generate-letter-pdf`, { employeeId, type });
+}
+
+generateAllLettersPdf(): Observable<any> {
+  return this.http.post<any>(`${this.baseUrl}generate-all-letters-pdf`, {});
 }
 
 }

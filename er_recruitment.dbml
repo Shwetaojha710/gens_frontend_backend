@@ -1,0 +1,347 @@
+// GENS HR Management System — Recruitment & Tracking Module
+// Covers: candidates, job postings, applications, ATS, interviews, offer letters, field tracking
+
+Project GENS_Recruitment {
+  database_type: 'PostgreSQL'
+  Note: 'Recruitment & Tracking module — ATS, interview pipeline, offer letters, field tracking'
+}
+
+// ─────────────────────────────────────────────
+// SHARED REFERENCES (owned by Super Admin / Employee Management)
+// ─────────────────────────────────────────────
+
+Table tenants {
+  id uuid [pk]
+  companyName varchar
+  companyCode varchar [unique]
+  status varchar [default: 'active']
+  createdAt timestamp
+  updatedAt timestamp
+
+  Note: 'Shared — owned by Super Admin module'
+}
+
+Table branches {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  name varchar
+  status varchar [default: 'active']
+  createdAt timestamp
+  updatedAt timestamp
+
+  Note: 'Shared — owned by Super Admin module'
+}
+
+Table departments {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  name varchar
+  status varchar [default: 'active']
+  createdAt timestamp
+  updatedAt timestamp
+
+  Note: 'Shared — owned by Employee Management module'
+}
+
+Table designations {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  department uuid [ref: > departments.id]
+  name varchar
+  status varchar [default: 'active']
+  createdAt timestamp
+  updatedAt timestamp
+
+  Note: 'Shared — owned by Employee Management module'
+}
+
+Table employment_types {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  name varchar
+  duration_type varchar [note: 'full_paid | half_paid']
+  status varchar [default: 'active']
+  createdAt timestamp
+  updatedAt timestamp
+
+  Note: 'Shared — owned by Employee Management module'
+}
+
+// ─────────────────────────────────────────────
+// CANDIDATE & JOB POSTING
+// ─────────────────────────────────────────────
+
+Table candidates {
+  id uuid [pk]
+  name varchar
+  email varchar [unique]
+  phone varchar
+  current_company varchar
+  skills text [note: 'stored as JSON string']
+  resume_url text
+  experience varchar
+  current_ctc varchar
+  expected_ctc varchar
+  notice_period varchar
+  cover_letter text
+  remark text
+  last_company varchar
+  current_location varchar
+  relocate varchar
+  home_town varchar
+  roles_and_responsibilities text
+  project text
+  tools text
+  offer_in_hand text
+  family_background text
+  highest_qualification varchar
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table skills {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  name varchar
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table job_requirements {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  job_id varchar
+  job_title varchar
+  slug varchar
+  emp_type uuid [ref: > employment_types.id]
+  department uuid [ref: > departments.id]
+  designation varchar
+  mode varchar
+  location varchar
+  candidate_preference varchar [note: 'male | female | both']
+  interview_round jsonb
+  qualification varchar
+  no_of_opening varchar
+  skills text [note: 'stored as JSON string']
+  experience varchar
+  budget_ctc varchar
+  notice_period varchar
+  job_description text
+  url text
+  token varchar
+  expires_days integer [default: 0]
+  expires_at timestamp
+  status varchar [default: 'draft']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+// ─────────────────────────────────────────────
+// APPLICATION & ATS SCORING
+// ─────────────────────────────────────────────
+
+Table applications {
+  id uuid [pk]
+  candidate_id uuid [ref: > candidates.id]
+  job_posting_id uuid [ref: > job_requirements.id]
+  stage varchar [default: 'candidate_applied']
+  status varchar [default: 'submitted']
+  applied_at timestamp
+  ats_status varchar [default: 'queued']
+  ats_score float
+  manual_score float
+  final_score float
+  confirmation_email_sent boolean [default: false]
+  createdAt timestamp
+  updatedAt timestamp
+
+  indexes {
+    (candidate_id, job_posting_id) [unique]
+  }
+}
+
+Table candidate_ats_scores {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  application_id uuid [unique, ref: > applications.id]
+  ats_score float [default: 0]
+  manual_score float [default: 0]
+  final_score float [default: 0]
+  notes text
+  shortlisted boolean [default: false]
+  scanned_at timestamp
+  scanned_by uuid
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+// ─────────────────────────────────────────────
+// INTERVIEW PIPELINE
+// ─────────────────────────────────────────────
+
+Table round_types {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  name varchar
+  status varchar [default: 'active']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table interview_rounds {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  round_name varchar
+  round_type uuid [ref: > round_types.id]
+  order_sequence integer
+  duration_minutes integer
+  is_mandatory boolean
+  status varchar [default: 'draft']
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table interview_panel_users {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  first_name varchar
+  last_name varchar
+  email varchar
+  mobile_no varchar
+  department uuid [ref: > departments.id]
+  designation uuid [ref: > designations.id]
+  gender varchar [note: 'male | female | other']
+  status varchar [default: 'active']
+  password varchar
+  token text
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table candidate_interview_rounds {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  application_id uuid [ref: > applications.id]
+  round_id uuid [ref: > interview_rounds.id]
+  round_name varchar
+  round_type varchar
+  sequence integer [default: 1]
+  interviewer_id uuid [ref: > interview_panel_users.id]
+  interviewer_name varchar
+  interviewer_email varchar
+  scheduled_at timestamp
+  duration_minutes integer
+  mode varchar
+  meeting_link text
+  status varchar [default: 'pending', note: 'pending | scheduled | completed | cancelled']
+  feedback_submitted boolean [default: false]
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table candidate_interview_feedback {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  application_id uuid [ref: > applications.id]
+  round_id uuid [ref: > interview_rounds.id]
+  interviewer_name varchar
+  interviewer_email varchar
+  rating float [default: 0]
+  recommendation varchar [default: 'hold', note: 'selected | hold | rejected']
+  strengths text
+  concerns text
+  notes text
+  submitted_at timestamp
+  createdBy uuid
+  updatedBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+// ─────────────────────────────────────────────
+// OFFER LETTERS
+// ─────────────────────────────────────────────
+
+Table offer_letters {
+  id uuid [pk]
+  tenantId uuid [ref: > tenants.id]
+  branchId uuid [ref: > branches.id]
+  firstName varchar
+  lastName varchar
+  fatherName varchar
+  gender varchar [note: 'Male | Female | Other']
+  dob date
+  aadhaarNo varchar
+  mobileNo varchar
+  email varchar
+  permanentAddress text
+  designation varchar
+  department varchar
+  headOffice varchar
+  joiningDate date
+  offerDate date
+  refNo varchar
+  pdfUrl text
+  pdfFileName varchar
+  pdfGeneratedAt timestamp
+  createdBy uuid
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+// ─────────────────────────────────────────────
+// TABLE GROUPS
+// ─────────────────────────────────────────────
+
+TableGroup shared_infrastructure {
+  tenants
+  branches
+  departments
+  designations
+  employment_types
+}
+
+TableGroup candidate_pipeline {
+  candidates
+  skills
+  job_requirements
+  applications
+  candidate_ats_scores
+}
+
+TableGroup interview_pipeline {
+  round_types
+  interview_rounds
+  interview_panel_users
+  candidate_interview_rounds
+  candidate_interview_feedback
+}
+
+TableGroup offer_management {
+  offer_letters
+}

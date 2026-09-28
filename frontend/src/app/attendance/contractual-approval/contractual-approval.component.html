@@ -1,0 +1,194 @@
+<div class="container-fluid mt-4">
+
+  <!-- Page header -->
+  <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+    <div>
+      <h4 class="mb-0 fw-semibold">Contractual Attendance Approval</h4>
+      <p class="text-muted small mb-0">Review and approve daily hours for contractual employees</p>
+    </div>
+    <span class="badge bg-label-primary px-3 py-2" style="font-size:.8rem;">
+      Total: {{ rows.length }} records
+    </span>
+  </div>
+
+  <!-- Filter card -->
+  <div class="card mb-4 border-0 shadow-sm">
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+
+        <div class="col-12 col-md-3">
+          <label class="form-label fw-medium">From Date <span class="text-danger">*</span></label>
+          <input type="date" class="form-control" [(ngModel)]="startDate" />
+        </div>
+
+        <div class="col-12 col-md-3">
+          <label class="form-label fw-medium">To Date <span class="text-danger">*</span></label>
+          <input type="date" class="form-control" [(ngModel)]="endDate" />
+        </div>
+
+        <div class="col-12 col-md-3">
+          <label class="form-label fw-medium">Employee</label>
+          <ng-select [items]="empList" bindLabel="label" bindValue="value"
+            [(ngModel)]="selectedEmpId" placeholder="All contractual employees" [clearable]="true">
+          </ng-select>
+        </div>
+
+        <div class="col-12 col-md-3">
+          <button type="button" class="btn btn-primary w-100" (click)="load()" [disabled]="loading">
+            <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+            <i *ngIf="!loading" class="ri ri-search-line me-1"></i>
+            {{ loading ? 'Loading…' : 'Search' }}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Results table -->
+  <div class="card border-0 shadow-sm">
+
+    <!-- Bulk action bar -->
+    <div *ngIf="selectedIds.size > 0"
+      class="d-flex align-items-center gap-2 px-3 py-2 border-bottom bg-light-primary rounded-top">
+      <span class="fw-medium small me-2">{{ selectedIds.size }} selected</span>
+      <button type="button" class="btn btn-sm btn-success" (click)="bulkApprove()" [disabled]="bulkLoading">
+        <span *ngIf="bulkLoading" class="spinner-border spinner-border-sm me-1"></span>
+        <i *ngIf="!bulkLoading" class="ri ri-check-double-line me-1"></i>
+        Approve All
+      </button>
+      <button type="button" class="btn btn-sm btn-danger" (click)="bulkReject()" [disabled]="bulkLoading">
+        <i class="ri ri-close-circle-line me-1"></i>
+        Reject All
+      </button>
+    </div>
+
+    <div class="card-body p-0">
+
+      <!-- Empty state -->
+      <div *ngIf="!loading && rows.length === 0" class="text-center py-5 text-muted">
+        <i class="ri ri-time-line" style="font-size:2.5rem;"></i>
+        <p class="mt-2 mb-0">No records loaded. Select a date range and click Search.</p>
+      </div>
+
+      <!-- Table -->
+      <div *ngIf="rows.length > 0" class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <!-- Select-all checkbox -->
+              <th class="ps-3" style="width:44px;">
+                <input type="checkbox" class="form-check-input"
+                  [checked]="allPageSelected"
+                  [indeterminate]="somePageSelected"
+                  (change)="toggleSelectAll()"
+                  title="Select all pending on this page" />
+              </th>
+              <th>#</th>
+              <th>Employee</th>
+              <th>Date</th>
+              <th>Check In</th>
+              <th>Check Out</th>
+              <th>Hours Worked</th>
+              <th>Required Hrs</th>
+              <th>Est. Pay</th>
+              <th>Status</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of pagedRows; let i = index; trackBy: trackById"
+              [class.table-active]="isSelected(row)">
+
+              <!-- Row checkbox (only for pending) -->
+              <td class="ps-3">
+                <input *ngIf="row.status === 'pending'" type="checkbox" class="form-check-input"
+                  [checked]="isSelected(row)" (change)="toggleRow(row)" />
+              </td>
+
+              <td class="text-muted">{{ showingFrom + i }}</td>
+
+              <td>
+                <div class="fw-semibold">{{ row.employeeName }}</div>
+                <small class="text-muted">{{ row.empCode || '—' }}</small>
+              </td>
+
+              <td>{{ row.date | date: 'dd MMM yyyy' }}</td>
+              <td>{{ row.checkIn }}</td>
+              <td>{{ row.checkOut }}</td>
+
+              <td>
+                <span [class]="hoursClass(row)">
+                  {{ row.totalHours }}
+                  <span *ngIf="row.hoursComplete" class="ms-1" title="Hours complete">✓</span>
+                </span>
+              </td>
+
+              <td>{{ row.requiredHours }} hrs</td>
+              <td>{{ estimatedPay(row) }}</td>
+
+              <td>
+                <span class="badge" [ngClass]="statusClass(row.status)">{{ row.status }}</span>
+              </td>
+
+              <td class="text-center">
+                <ng-container *ngIf="row.status === 'pending'; else noAction">
+                  <button type="button" class="ca-icon-btn ca-icon-btn--approve me-1"
+                    [disabled]="isActionLoading(row) || bulkLoading" title="Approve"
+                    (click)="approve(row)">
+                    <span *ngIf="isActionLoading(row)" class="spinner-border spinner-border-sm"></span>
+                    <i *ngIf="!isActionLoading(row)" class="ri ri-check-line"></i>
+                  </button>
+                  <button type="button" class="ca-icon-btn ca-icon-btn--reject"
+                    [disabled]="isActionLoading(row) || bulkLoading" title="Reject"
+                    (click)="reject(row)">
+                    <i class="ri ri-close-line"></i>
+                  </button>
+                </ng-container>
+                <ng-template #noAction>
+                  <span class="text-muted small">—</span>
+                </ng-template>
+              </td>
+
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination bar -->
+      <div *ngIf="rows.length > 0"
+        class="d-flex justify-content-between align-items-center px-3 py-2 border-top flex-wrap gap-2">
+
+        <!-- Page size dropdown -->
+        <div class="d-flex align-items-center gap-2">
+          <label class="text-muted small mb-0">Rows per page:</label>
+          <select class="form-select form-select-sm" style="width:80px;"
+            [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
+            <option *ngFor="let s of pageSizeOptions" [value]="s">{{ s }}</option>
+          </select>
+          <small class="text-muted">
+            Showing {{ showingFrom }}–{{ showingTo }} of {{ rows.length }}
+          </small>
+        </div>
+
+        <!-- Page buttons -->
+        <div *ngIf="totalPages > 1" class="btn-group btn-group-sm">
+          <button class="btn btn-outline-secondary" [disabled]="currentPage === 1"
+            (click)="currentPage = currentPage - 1">‹</button>
+          <ng-container *ngFor="let p of pageNumbers">
+            <span *ngIf="p === -1" class="btn btn-outline-secondary disabled" style="pointer-events:none;">…</span>
+            <button *ngIf="p !== -1" class="btn"
+              [class.btn-primary]="p === currentPage"
+              [class.btn-outline-secondary]="p !== currentPage"
+              (click)="currentPage = p">{{ p }}</button>
+          </ng-container>
+          <button class="btn btn-outline-secondary" [disabled]="currentPage === totalPages"
+            (click)="currentPage = currentPage + 1">›</button>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,94 @@
+.eph-page {
+  padding: 1.5rem;
+}
+
+.eph-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* Card */
+.eph-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.15rem 1.25rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  border-left: 4px solid #3b82f6;
+  transition: box-shadow 0.15s;
+}
+
+.eph-card:hover {
+  box-shadow: 0 4px 14px rgba(0,0,0,0.10);
+}
+
+.eph-card__icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.eph-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.eph-card__label {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: #1e293b;
+  margin-bottom: 0.3rem;
+}
+
+/* Badges */
+.eph-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 20px;
+  padding: 2px 10px;
+  margin-bottom: 0.5rem;
+}
+
+.eph-badge--ready {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.eph-badge--pending {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* Action button */
+.eph-action-btn {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.eph-action-btn--download {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.eph-action-btn--download:hover {
+  background: #bbf7d0;
+}

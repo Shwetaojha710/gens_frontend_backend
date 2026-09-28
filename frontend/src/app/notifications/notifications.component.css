@@ -1,0 +1,129 @@
+.notif-page__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.notif-page__tab {
+  border: 1px solid #dbe3ee;
+  background: #f8fafc;
+  color: #475569;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.notif-page__tab span {
+  background: #e2e8f0;
+  color: #334155;
+  border-radius: 999px;
+  min-width: 20px;
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.notif-page__tab.active {
+  background: #0f5c99;
+  border-color: #0f5c99;
+  color: #fff;
+}
+
+.notif-page__tab.active span {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.notif-page__list {
+  display: flex;
+  flex-direction: column;
+}
+
+.notif-page__row {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid #eef2f7;
+  background: transparent;
+  padding: 14px 8px;
+  cursor: pointer;
+}
+
+.notif-page__row:last-child {
+  border-bottom: 0;
+}
+
+.notif-page__row:hover {
+  background: #f5f9fc;
+}
+
+.notif-page__row.unread {
+  background: #f0f7fc;
+}
+
+.notif-page__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e8f2fa;
+  color: #0f5c99;
+  flex-shrink: 0;
+}
+
+.notif-page__icon[data-type='birthday'] {
+  background: #fff1f2;
+  color: #e11d48;
+}
+
+.notif-page__icon[data-type='anniversary'] {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.notif-page__icon i {
+  font-size: 20px;
+}
+
+.notif-page__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-page__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.notif-page__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e11d48;
+  display: inline-block;
+}
+
+.notif-page__msg {
+  font-size: 13px;
+  color: #475569;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.notif-page__mark {
+  flex-shrink: 0;
+  white-space: nowrap;
+}

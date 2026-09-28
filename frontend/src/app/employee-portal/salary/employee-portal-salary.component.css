@@ -1,4 +1,4 @@
-@import '../employee-portal-glass.css';
+﻿@import '../employee-portal-glass.css';
 
 :host {
   display: block;
@@ -14,7 +14,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: #005fa8;
+  color: #0081c9;
   margin: 0;
 }
 
@@ -107,11 +107,11 @@
 
 .ep-salary__net-card {
   border-radius: 1rem;
-  box-shadow: 0 12px 40px rgba(0, 95, 168, 0.1);
+  box-shadow: 0 12px 40px rgba(0, 129, 201, 0.1);
 }
 
 .ep-salary__net-highlight {
-  background: linear-gradient(145deg, #025a9d 0%, #0ea5e9 48%, #0369a1 100%);
+  background: linear-gradient(145deg, #0081c9 0%, #00d2b4 48%, #0369a1 100%);
   color: #fff;
 }
 
@@ -170,7 +170,7 @@
 
 .ep-salary__empty-icon {
   font-size: 2.5rem;
-  color: rgba(0, 95, 168, 0.35);
+  color: rgba(0, 129, 201, 0.35);
 }
 
 @media (max-width: 991.98px) {

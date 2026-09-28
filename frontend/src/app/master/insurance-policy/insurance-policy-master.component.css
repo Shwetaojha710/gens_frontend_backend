@@ -1,0 +1,27 @@
+.ip-hero {
+  background: linear-gradient(90deg, #0e7490 0%, #0891b2 100%);
+  color: #fff;
+  border: none;
+}
+.ip-hero-kicker { font-size: 0.72rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; opacity: .7; margin-bottom: 4px; }
+.ip-hero-title  { font-size: 1.5rem; font-weight: 700; }
+.ip-hero-subtitle { font-size: 0.88rem; opacity: .85; margin-top: 4px; max-width: 40rem; }
+
+.ip-pdf-icon { font-size: 2.4rem; color: #dc2626; }
+
+.ip-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 160px; border: 2px dashed #e2e8f0; border-radius: 10px; text-align: center;
+}
+.ip-empty-icon { font-size: 3rem; color: #cbd5e1; margin-bottom: .5rem; }
+
+.ip-drop-zone {
+  border: 2px dashed #c9d9f0;
+  border-radius: 10px;
+  padding: 2rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+.ip-drop-zone:hover { border-color: #0891b2; background: #f0f9ff; }
+.ip-drop-icon { font-size: 2.4rem; color: #dc2626; display: block; margin-bottom: .5rem; }

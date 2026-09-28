@@ -1,0 +1,67 @@
+:host {
+  display: block;
+}
+
+.gens-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.gens-field__label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
+}
+
+.gens-field__label em {
+  color: #1a8075;
+  font-style: normal;
+}
+
+.gens-field__input {
+  width: 100%;
+  border: 1.5px solid var(--border-color);
+  border-radius: 0.875rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 0.8rem 1rem;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.gens-field__input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+
+.gens-field__input:hover {
+  border-color: #9bd5cd;
+}
+
+.gens-field__input:focus {
+  border-color: #1a8075;
+  box-shadow: 0 0 0 3px rgba(26, 128, 117, 0.12);
+}
+
+.gens-field__textarea {
+  resize: vertical;
+  min-height: 8rem;
+}
+
+.gens-field__error {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #dc2626;
+  margin: 0;
+}

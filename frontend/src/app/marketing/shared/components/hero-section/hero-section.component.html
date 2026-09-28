@@ -1,0 +1,61 @@
+<section class="relative min-h-screen flex items-center pt-24 pb-10 lg:pb-6 overflow-hidden">
+  <app-floating-particles />
+  <div class="absolute inset-0 bg-gradient-to-b from-white/40 via-transparent to-transparent dark:from-gens-950/30"></div>
+
+  <!-- Animated orbs -->
+  <div class="hero-orb absolute top-1/4 -left-20 w-[500px] h-[500px] bg-gens-400/20 rounded-full blur-3xl"></div>
+  <div class="hero-orb absolute bottom-1/4 -right-20 w-[500px] h-[500px] bg-accent-light/15 rounded-full blur-3xl"></div>
+  <div class="hero-orb absolute top-1/3 right-0 w-[420px] h-[420px] bg-gens-300/25 rounded-full blur-3xl"></div>
+
+  <div class="container-gens relative z-10 grid grid-cols-1 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.25fr)] gap-8 lg:gap-6 xl:gap-4 items-center">
+    <div #heroContent class="relative z-20 min-w-0 max-w-2xl">
+      <div class="hero-badge inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs md:text-sm font-semibold
+                  bg-white dark:bg-gens-950 border border-gens-200 dark:border-gens-800 text-gens-700 dark:text-gens-300 mb-6 shadow-card">
+        <span class="w-2 h-2 rounded-full bg-accent-light animate-pulse"></span>
+        Global Employee Network System
+      </div>
+
+      <h1 class="hero-title font-display text-4xl md:text-5xl xl:text-[3.35rem] font-bold leading-[1.12] mb-5 tracking-tight">
+        <span class="hero-line block text-navy dark:text-white">HR + AI:</span>
+        <span class="hero-line block gradient-text">Succeeding Together</span>
+      </h1>
+
+      <p class="hero-sub text-sm md:text-[0.95rem] text-[var(--text-secondary)] leading-relaxed mb-8 max-w-xl">
+        Join forward-thinking teams using GENS to manage <br> people, payroll, and performance — all on one <br> AI-powered platform.
+      </p>
+
+      <div class="hero-cta flex flex-col sm:flex-row gap-4">
+        <a routerLink="/contact" class="btn-primary btn-shine text-base !py-3.5 !px-6" appMagneticHover>
+          <i class="ri ri-calendar-line"></i>
+          Request a Demo
+        </a>
+        <a routerLink="/features" class="btn-secondary text-base !py-3.5 !px-6 group" appMagneticHover>
+          <i class="ri ri-play-circle-line group-hover:scale-110 transition-transform"></i>
+          Take a Tour
+        </a>
+      </div>
+
+      <div class="hero-stats flex flex-wrap gap-8 mt-10 pt-8 border-t border-[var(--border-color)]">
+        @for (stat of quickStats; track stat.label) {
+          <div>
+            <p class="text-2xl md:text-3xl font-bold gradient-text">{{ stat.value }}</p>
+            <p class="text-sm text-[var(--text-muted)]">{{ stat.label }}</p>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div #heroVisual class="relative hero-visual z-0 min-w-0 w-full">
+      <div class="hero-visual__glow" aria-hidden="true"></div>
+      <img
+        src="assets/img/marketing/gens-hero-dashboard-removebg-preview.png"
+        alt="GENS.Ai Employee Management Dashboard with AI Assistant"
+        class="hero-visual__img relative w-full h-auto object-contain animate-float"
+        width="1200"
+        height="800"
+        loading="eager"
+        fetchpriority="high"
+      />
+    </div>
+  </div>
+</section>

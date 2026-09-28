@@ -1,0 +1,674 @@
+<div class="container-fluid mt-5">
+  <!-- Create Form -->
+  <div class="row mb-6" *ngIf="createFlag">
+    <div class="col-md">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center">
+          <span>Create Arrear</span>
+          <button type="button" class="btn btn-xs btn-primary float-end" (click)="back()">
+            <i class="fa-solid fa-arrow-left"></i>&nbsp;back
+          </button>
+        </h5>
+
+        <div class="card-body">
+          <div class="row g-2">
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label class="form-label">Select Employee <span style="color: red">*</span></label>
+              <ng-select
+                [items]="EmpList"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="obj['employeeId']"
+                [multiple]="false"
+                placeholder="Select Employee"
+                name="employeeId"
+              >
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label class="form-label">From Year <span style="color: red">*</span></label>
+              <ng-select
+                [items]="yearList"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="obj['fromYear']"
+                [multiple]="false"
+                placeholder="From Year"
+                name="fromYear"
+              >
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label class="form-label">From Month <span style="color: red">*</span></label>
+              <ng-select
+                [items]="monthList"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="obj['fromMonth']"
+                [multiple]="false"
+                placeholder="From Month"
+                name="fromMonth"
+              >
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label class="form-label">To Year <span style="color: red">*</span></label>
+              <ng-select
+                [items]="yearList"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="obj['toYear']"
+                [multiple]="false"
+                placeholder="To Year"
+                name="toYear"
+              >
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label class="form-label">To Month <span style="color: red">*</span></label>
+              <ng-select
+                [items]="monthList"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="obj['toMonth']"
+                [multiple]="false"
+                placeholder="To Month"
+                name="toMonth"
+              >
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label class="form-label">Percentage (%)</label>
+              <input
+                type="number"
+                class="form-control"
+                [(ngModel)]="obj['percentage']"
+                name="percentage"
+                min="0"
+                step="0.01"
+                placeholder="e.g. 10"
+              />
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label class="form-label">Effective Date <span style="color: red">*</span></label>
+              <input
+                type="date"
+                class="form-control"
+                [(ngModel)]="obj['effectiveDate']"
+                name="effectiveDate"
+              />
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label class="form-label">Payout Year</label>
+              <ng-select
+                [items]="yearList"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="obj['payoutYear']"
+                [multiple]="false"
+                placeholder="Payout Year"
+                name="payoutYear"
+              >
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label class="form-label">Payout Month</label>
+              <ng-select
+                [items]="monthList"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="obj['payoutMonth']"
+                [multiple]="false"
+                placeholder="Default: To + 1 month"
+                name="payoutMonth"
+              >
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-md-6">
+              <label class="form-label">Remark</label>
+              <textarea
+                class="form-control"
+                rows="2"
+                [(ngModel)]="obj.remark"
+                name="remark"
+                placeholder="Enter remark"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="row mt-3">
+            <div class="col-12">
+              <button
+                type="button"
+                class="btn btn-sm btn-primary waves-effect waves-light me-2"
+                (click)="getSalaryList()"
+                [disabled]="calculating"
+              >
+                {{ calculating ? 'Loading...' : 'Get Salary List' }}
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-info waves-effect waves-light me-2"
+                (click)="applyPercentage()"
+                [disabled]="calculating || !salaryRows.length"
+              >
+                Apply Percentage &amp; Calculate
+              </button>
+              <!-- <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary waves-effect waves-light me-2"
+                (click)="saveSelected(false)"
+                [disabled]="loading || !selectedCount"
+              >
+                Save Draft ({{ selectedCount }})
+              </button> -->
+              <button
+                type="button"
+                class="btn btn-sm btn-success waves-effect waves-light"
+                (click)="saveSelected(true)"
+                [disabled]="loading || !selectedCount"
+              >
+                Save &amp; Submit ({{ selectedCount }})
+              </button>
+            </div>
+          </div>
+
+          <div class="alert alert-info mt-3 mb-0" role="alert">
+            Formula:
+            <strong>(Monthly Salary × Percentage%) × Number of Months</strong>
+            <br />
+            <!-- Example: Salary ₹44,000 + 10% appraisal → ₹4,400/month × 4 months = <strong>₹17,600</strong> -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Salary + Arrear list -->
+  <div class="row mb-6" *ngIf="createFlag && salaryRows?.length">
+    <div class="col-md">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <span>
+            Employee Salary List
+            <!-- <span class="badge bg-primary ms-2">{{ filteredSalaryRows.length }}</span> -->
+            <!-- <span class="badge bg-label-secondary ms-1" *ngIf="salarySearchTerm && salaryOriginal.length">
+              of {{ salaryOriginal.length }}
+            </span> -->
+            <span class="badge bg-success ms-1" *ngIf="selectedCount">{{ selectedCount }} selected</span>
+          </span>
+          <div class="d-flex align-items-center gap-2" style="min-width: 220px; max-width: 320px;">
+            <input
+              type="text"
+              class="form-control form-control-sm"
+              placeholder="Search employee / code..."
+              [(ngModel)]="salarySearchTerm"
+              (ngModelChange)="applySalarySearch()"
+              name="salarySearchTerm"
+            />
+          </div>
+        </h5>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table dataTable">
+              <thead>
+                <tr>
+                  <th>
+                    <input
+                      type="checkbox"
+                      [(ngModel)]="masterSelected"
+                      (change)="checkUncheckAll()"
+                      name="masterSelected"
+                    />
+                  </th>
+                  <th>SI.No</th>
+                  <th>Employee</th>
+                  <th>Emp Code</th>
+                  <th class="text-end">Monthly Salary</th>
+                  <th style="min-width: 110px;">Percentage %</th>
+                  <th class="text-end">Hike / Month</th>
+                  <th class="text-end">After Hike</th>
+                  <th class="text-end">Months</th>
+                  <th class="text-end">Total Arrear</th>
+                  <th>View</th>
+                </tr>
+              </thead>
+              <tbody class="table-border-bottom-0">
+                <tr *ngFor="let row of filteredSalaryRows; let i = index">
+                  <td>
+                    <input
+                      type="checkbox"
+                      [(ngModel)]="row.isSelected"
+                      (change)="isAllSelected()"
+                      [name]="'sel_' + row.employeeId"
+                    />
+                  </td>
+                  <td>{{ i + 1 }}</td>
+                  <td>{{ row.employeeName }}</td>
+                  <td>{{ row.empCode }}</td>
+                  <td class="text-end">₹{{ row.monthlySalary | number: '1.0-2' }}</td>
+                  <td>
+                    <input
+                      type="number"
+                      class="form-control form-control-sm"
+                      [(ngModel)]="row.percentage"
+                      (ngModelChange)="onRowPercentageChange(row)"
+                      min="0"
+                      step="0.01"
+                      [name]="'pct_' + row.employeeId"
+                      placeholder="%"
+                    />
+                  </td>
+                  <td class="text-end">₹{{ row.monthlyIncrement | number: '1.0-2' }}</td>
+                  <td class="text-end">
+                    <strong>₹{{ row.revisedAfterHike | number: '1.0-2' }}</strong>
+                  </td>
+                  <td class="text-end">{{ row.monthCount }}</td>
+                  <td class="text-end">
+                    <strong>₹{{ row.totalArrear | number: '1.0-2' }}</strong>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="btn btn-xs btn-outline-primary"
+                      title="View breakup"
+                      (click)="openBreakupModal(row)"
+                    >
+                      <i class="fa-solid fa-eye"></i>&nbsp;View
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="!filteredSalaryRows?.length">
+                  <td colspan="11" class="text-center text-muted">No employees found</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Saved Arrear List -->
+  <div class="row mb-6" *ngIf="!createFlag">
+    <div class="col-md">
+      <div class="card mb-4">
+        <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <span>Filters</span>
+          <button type="button" class="btn btn-xs btn-primary" (click)="opencreate()">
+            <i class="fa-solid fa-plus"></i>&nbsp;Add
+          </button>
+        </h5>
+        <div class="card-body">
+          <div class="row g-2">
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label class="form-label">Select Employee</label>
+              <ng-select
+                [items]="EmpList"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="filterObj['employeeId']"
+                [multiple]="false"
+                placeholder="Select Employee"
+                name="filterEmployeeId"
+              >
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label class="form-label">Status</label>
+              <ng-select
+                [items]="statusOptions"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="filterObj['status']"
+                [multiple]="false"
+                placeholder="Select Status"
+                name="filterStatus"
+              >
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label class="form-label">Payout Year</label>
+              <ng-select
+                [items]="filterYearList"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="filterObj['year']"
+                [multiple]="false"
+                placeholder="Select Year"
+                name="filterYear"
+              >
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label class="form-label">Payout Month</label>
+              <ng-select
+                [items]="filterMonthList"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="filterObj['month']"
+                [multiple]="false"
+                placeholder="Select Month"
+                name="filterMonth"
+              >
+              </ng-select>
+            </div>
+
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+              <label class="form-label">Effective Date</label>
+              <input
+                type="date"
+                class="form-control"
+                [(ngModel)]="filterObj['effectiveDate']"
+                name="filterEffectiveDate"
+              />
+            </div>
+          </div>
+
+          <div class="row mt-3">
+            <div class="col-12">
+              <button
+                type="button"
+                class="btn btn-sm btn-primary waves-effect waves-light me-2"
+                (click)="fetchList()"
+                [disabled]="loading"
+              >
+                {{ loading ? 'Loading...' : 'Submit' }}
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary waves-effect waves-light"
+                (click)="resetListFilters()"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <span>Arrear Management</span>
+          <!-- <div class="d-flex align-items-center gap-2 flex-wrap"> -->
+            <!-- <div class="d-flex flex-wrap gap-1">
+              <button
+                *ngFor="let opt of statusOptions"
+                type="button"
+                class="btn btn-xs"
+                [ngClass]="statusFilter === opt.value ? 'btn-primary' : 'btn-outline-secondary'"
+                (click)="setStatusFilter(opt.value)"
+              >
+                {{ opt.label }}
+              </button>
+            </div> -->
+
+          <!-- </div> -->
+        </h5>
+
+        <app-search-pagination
+          [totalItems]="arrearList.length"
+          [pageSize]="itemsPerPage"
+          [currentPage]="currentPage"
+          (search)="onSearch($event)"
+          (pageChange)="onPageChange($event)"
+          (pageSizeChange)="onPageSizeChange($event)"
+        >
+          <div class="table-responsive">
+            <table class="table dataTable">
+              <thead>
+                <tr>
+                  <th>SI.No</th>
+                  <th>Employee</th>
+                  <th>Emp Code</th>
+                  <th>Effective Date</th>
+                  <th>Period</th>
+                  <th>Payout Month</th>
+                  <th class="text-end">%</th>
+                  <th class="text-end">Total Arrear</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody class="table-border-bottom-0">
+                <tr *ngFor="let row of filteredList; let i = index">
+                  <td>{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+                  <td>{{ row.employeeName }}</td>
+                  <td>{{ row.empCode }}</td>
+                  <td>{{ row.effectiveDate ? (row.effectiveDate | date: 'dd-MM-yyyy') : '-' }}</td>
+                  <td>{{ row.effectiveLabel }} – {{ row.implementationLabel }}</td>
+                  <td>{{ row.payoutLabel }}</td>
+                  <td class="text-end">{{ row.percentage != null ? row.percentage + '%' : '-' }}</td>
+                  <td class="text-end">₹{{ row.totalArrear | number: '1.0-2' }}</td>
+                  <td>
+                    <span class="badge" [ngClass]="getStatusClass(row.status)">{{
+                      row.status | titlecase
+                    }}</span>
+                  </td>
+                  <td>{{ row.createdAt | date: 'dd-MM-yyyy' }}</td>
+                  <td>
+                    <div class="d-flex gap-1 flex-wrap">
+                      <button
+                        type="button"
+                        class="btn btn-xs btn-outline-primary"
+                        title="View"
+                        (click)="viewDetails(row)"
+                      >
+                        <i class="fa-solid fa-eye"></i>
+                      </button>
+                      <!-- <button
+                        *ngIf="row.status === 'draft'"
+                        type="button"
+                        class="btn btn-xs btn-outline-info"
+                        title="Submit"
+                        (click)="submitRow(row)"
+                      >
+                        <i class="fa-solid fa-paper-plane"></i>
+                      </button> -->
+                      <button
+                        *ngIf="row.status === 'pending'"
+                        type="button"
+                        class="btn btn-xs btn-outline-success"
+                        title="Approve"
+                        (click)="approveRow(row)"
+                      >
+                        <i class="fa-solid fa-check"></i>
+                      </button>
+                      <button
+                        *ngIf="row.status === 'pending'"
+                        type="button"
+                        class="btn btn-xs btn-outline-danger"
+                        title="Reject"
+                        (click)="rejectRow(row)"
+                      >
+                        <i class="fa-solid fa-xmark"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr *ngIf="!filteredList?.length">
+                  <td colspan="11" class="text-center text-muted">No arrears found</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </app-search-pagination>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Breakup Modal (Create list View) -->
+<div
+  class="modal fade"
+  id="ArrearBreakupModal"
+  tabindex="-1"
+  aria-labelledby="ArrearBreakupModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content" *ngIf="previewRow">
+      <div class="modal-header">
+        <h5 class="modal-title" id="ArrearBreakupModalLabel">
+          Arrear Breakup — {{ previewRow.employeeName }}
+          <small class="text-muted" *ngIf="previewRow.empCode">({{ previewRow.empCode }})</small>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row mb-3">
+          <div class="col-md-2">
+            <small class="text-muted">Monthly Salary</small>
+            <div>₹{{ previewRow.monthlySalary | number: '1.0-2' }}</div>
+          </div>
+          <div class="col-md-2">
+            <small class="text-muted">Percentage</small>
+            <div>{{ previewRow.percentage }}%</div>
+          </div>
+          <div class="col-md-2">
+            <small class="text-muted">Hike / Month</small>
+            <div>₹{{ previewRow.monthlyIncrement | number: '1.0-2' }}</div>
+          </div>
+          <div class="col-md-3">
+            <small class="text-muted">After Hike</small>
+            <div><strong>₹{{ previewRow.revisedAfterHike | number: '1.0-2' }}</strong></div>
+          </div>
+          <div class="col-md-3">
+            <small class="text-muted">Total Arrear</small>
+            <div><strong>₹{{ previewRow.totalArrear | number: '1.0-2' }}</strong></div>
+          </div>
+        </div>
+        <div class="small text-muted mb-2" *ngIf="previewRow.formula">{{ previewRow.formula }}</div>
+        <div class="table-responsive">
+          <table class="table dataTable">
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th class="text-end">Salary</th>
+                <th class="text-end">Hike ({{ previewRow.percentage }}%)</th>
+                <th class="text-end">After Hike</th>
+                <th class="text-end">Arrear</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let m of previewRow.months">
+                <td>{{ m.monthLabel }}</td>
+                <td class="text-end">₹{{ m.actualPaid | number: '1.0-2' }}</td>
+                <td class="text-end">₹{{ m.monthlyIncrement || m.arrearAmount | number: '1.0-2' }}</td>
+                <td class="text-end">₹{{ m.revisedSalary | number: '1.0-2' }}</td>
+                <td class="text-end">₹{{ m.arrearAmount | number: '1.0-2' }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <th colspan="4" class="text-end">Total Arrear</th>
+                <th class="text-end">₹{{ previewRow.totalArrear | number: '1.0-2' }}</th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div
+  class="modal fade"
+  id="ArrearDetailModal"
+  tabindex="-1"
+  aria-labelledby="ArrearDetailModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content" *ngIf="selectedDetail">
+      <div class="modal-header">
+        <h5 class="modal-title" id="ArrearDetailModalLabel">
+          Arrear Details — {{ selectedDetail.employeeName }}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row mb-3">
+          <div class="col-md-3">
+            <small class="text-muted">Effective Date</small>
+            <div>
+              {{
+                selectedDetail.effectiveDate
+                  ? (selectedDetail.effectiveDate | date: 'dd-MM-yyyy')
+                  : '-'
+              }}
+            </div>
+          </div>
+          <div class="col-md-3">
+            <small class="text-muted">Period</small>
+            <div>{{ selectedDetail.effectiveLabel }} – {{ selectedDetail.implementationLabel }}</div>
+          </div>
+          <div class="col-md-2">
+            <small class="text-muted">Percentage</small>
+            <div>{{ selectedDetail.percentage != null ? selectedDetail.percentage + '%' : '-' }}</div>
+          </div>
+          <div class="col-md-2">
+            <small class="text-muted">Payout</small>
+            <div>{{ selectedDetail.payoutLabel }}</div>
+          </div>
+          <div class="col-md-2">
+            <small class="text-muted">Total Arrear</small>
+            <div><strong>₹{{ selectedDetail.totalArrear | number: '1.0-2' }}</strong></div>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table dataTable">
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th class="text-end">Salary</th>
+                <th class="text-end">Hike</th>
+                <th class="text-end">Arrear</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let m of selectedDetail.details">
+                <td>{{ m.monthLabel }}</td>
+                <td class="text-end">₹{{ m.actualPaid | number: '1.0-2' }}</td>
+                <td class="text-end">₹{{ m.difference | number: '1.0-2' }}</td>
+                <td class="text-end">₹{{ m.arrearAmount | number: '1.0-2' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mt-3" *ngIf="historyLogs?.length">
+          <h6>Status History</h6>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item px-0" *ngFor="let h of historyLogs">
+              <span class="badge bg-label-primary me-2">{{ h.actionType }}</span>
+              {{ h.remarks || '' }}
+              <small class="text-muted float-end">{{ h.createdAt | date: 'dd-MM-yyyy HH:mm' }}</small>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -253,7 +253,7 @@ export class TrackingComponent implements OnInit, AfterViewInit, OnDestroy {
       fadeAnimation: false,
       zoomAnimation: true,
       markerZoomAnimation: false
-    }).setView([26.8687, 81.0066], 5);
+    }).setView([20.5937, 78.9629], 5);
 
     this.addTileLayer(this.mapType);
     this.buildMapControls();

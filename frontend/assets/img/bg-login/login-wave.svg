@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1776 1000" preserveAspectRatio="none">
+  <defs>
+    <linearGradient id="waveLight" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#eef8f7"/>
+      <stop offset="45%" stop-color="#eef8f7"/>
+      <stop offset="78%" stop-color="#eef8f7" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#eef8f7" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="waveTeal" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#17a398"/>
+      <stop offset="42%" stop-color="#1fada3"/>
+      <stop offset="68%" stop-color="#4cc2b7" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#8fd9d0" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <path fill="url(#waveLight)"
+    d="M0,760 C140,680 240,590 330,580
+       C450,610 550,630 660,660
+       C810,700 890,760 960,810
+       C1060,860 1210,900 1310,940
+       C1460,970 1620,990 1776,1000
+       L1776,1000 L0,1000 Z" />
+
+  <path fill="url(#waveTeal)"
+    d="M0,830 C130,760 220,680 300,660
+       C420,690 520,700 620,720
+       C760,750 820,800 880,850
+       C980,900 1080,930 1150,970
+       C1300,990 1500,1000 1776,1000
+       L1776,1000 L0,1000 Z" />
+</svg>

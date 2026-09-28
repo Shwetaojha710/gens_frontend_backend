@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { EmployeeService } from '../../services/employee.service';
 import { CommonModule } from '@angular/common';
@@ -19,6 +19,7 @@ import Swal from 'sweetalert2';
   styleUrl: './joining.component.css'
 })
 export class JoiningComponent {
+  @ViewChild(SearchPaginationComponent) searchPaginationRef?: SearchPaginationComponent;
   notyf: Notyf
   maxDate: any
   constructor(public dataService: DataService, private employeeService: EmployeeService, private master: MasterService, public statusService: StatusService, private router: Router,) {
@@ -58,7 +59,6 @@ export class JoiningComponent {
 
   pageSize = 10;
   currentPage = 1;
-  itemsPerPage = 10;
   searchTerm = '';
   onSearch(term: string) {
     if (!term) {
@@ -87,7 +87,6 @@ export class JoiningComponent {
   searchText: any = ''
   originalList: any = []
   applyFilters() {
-    let data = [...this.employees];
     const value = this.searchTerm || '';
     this.searchText = value.trim();
     if (this.searchText === '') {
@@ -100,7 +99,41 @@ export class JoiningComponent {
     // pagination
     const start = (this.currentPage - 1) * this.pageSize;
     const end = start + this.pageSize;
-    this.filteredDesignation = data.slice(start, end);
+    this.filteredDesignation = this.employees.slice(start, end);
+  }
+
+  /** Clears any active search filter, e.g. after data has been added/edited/deleted. */
+  clearSearch(): void {
+    this.searchTerm = '';
+    this.searchText = '';
+    this.currentPage = 1;
+    this.searchPaginationRef?.resetSearch();
+  }
+
+  onMobileChange() {
+    const mobile = String(this.personalDetails.mobile || '');
+    if (mobile.length !== 10 || this.updateFlag) return; // edit mode skip optional
+
+    this.employeeService.checkEmpByMobile({ mobile }).subscribe({
+      next: async (res: any) => {
+        if (!res?.status) return;
+
+        const emp = res.data;
+        if (!emp) return; // new number
+
+        if (emp.emp_status === 'approved') {
+          this.notyf.error('Phone number already exists');
+          this.personalDetails.mobile = '';
+          return;
+        }
+
+        if (emp.emp_status === 'pending') {
+          await this.update(emp); // existing fill method ~line 513
+          this.notyf.success('Pending employee data loaded');
+        }
+      },
+      error: (err) => this.notyf.error(err?.error?.message || 'Check failed'),
+    });
   }
 
   async getEmploymentTypes() {
@@ -285,7 +318,6 @@ stats:any
      if (
       !this.validateField(this.personalDetails.firstName, 'First Name') ||
       !this.validateField(this.personalDetails.lastName, 'Last Name') ||
-      !this.validateField(this.personalDetails.email, 'Email') ||
       !this.validateField(this.personalDetails.mobile, 'Mobile Number') ||
       // !this.validateField(this.personalDetails.adhaarNo, 'Aadhaar Number') ||
       !this.validateField(this.personalDetails.dateOfBirth, 'Date of Birth')
@@ -423,6 +455,7 @@ stats:any
   employeeList: any = []
   cardData: any = {}
   async loadEmployees() {
+    this.clearSearch();
     // this.filteredDesignation = []
     this.employees = []
     this.employeeList = []
@@ -524,9 +557,9 @@ stats:any
   }
 
   inActiveFlag: any = false
-  activeFlag: any = false
+  activeFlag: any = true
   newJoinerFlag: any = false
-  totalEmpFlag: any = true
+  totalEmpFlag: any = false
 
   async checkStatus() {
     this.inActiveFlag = true
@@ -560,12 +593,20 @@ stats:any
     this.createFlag = false;
     this.listflag = true;
     this.updateFlag = false;
+    let dob: any;
+    let obj: any =Object.assign({}, this.personalDetails);
 
-    const dob = new Date(this.personalDetails.dateOfBirth);
+    //  if(!this.personalDetails.dateOfBirth){
+       dob = new Date(this.personalDetails.dateOfBirth);
     const formattedDob = `${dob.getDate().toString().padStart(2, '0')}/${(dob.getMonth() + 1).toString().padStart(2, '0')}/${dob.getFullYear()}`;;
-    const obj = Object.assign({}, this.personalDetails);
+     obj = Object.assign({}, this.personalDetails);
     obj.dateOfBirth = formattedDob;
-    const aadhaarRaw = obj.adhaarNo.replace(/\D/g, '');
+    //  }
+     let aadhaarRaw: any;
+     if(obj.adhaarNo){
+      aadhaarRaw = obj.adhaarNo.replace(/\D/g, '');
+     }
+
     // if (aadhaarRaw.length !== 12) {
     //   this.notyf.error('Please enter a valid 12 digit Aadhaar number');
     //   return;
@@ -703,6 +744,9 @@ stats:any
     }
     else if(type=="attendanceAllTime"){
      obj['isofflineAllTimeAtt'] = !obj['isofflineAllTimeAtt']
+     if(obj['isofflineAllTimeAtt']){
+        obj['isofflineAtt'] =true
+     }
     }
     else {
       obj['isLocation'] = !obj['isLocation']

@@ -1,0 +1,99 @@
+<div class="container-fluid py-4 ins-overview-page">
+
+  <div class="ins-overview-header mb-4">
+    <div>
+      <h4 class="ins-overview-title mb-1">Insurance Documents</h4>
+      <p class="text-muted mb-0 small">
+        Select an employee to upload, view, replace or delete E-Insurance Card and Policy documents.
+      </p>
+    </div>
+  </div>
+
+  <!-- Manage selected employee -->
+  <div *ngIf="selectedEmployee" class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom d-flex align-items-center justify-content-between py-3">
+      <div class="d-flex align-items-center gap-2">
+        <div class="ins-avatar">
+          {{ (selectedEmployee.firstName?.[0] || '') + (selectedEmployee.lastName?.[0] || '') | uppercase }}
+        </div>
+        <div>
+          <div class="fw-semibold">
+            {{ selectedEmployee.firstName }} {{ selectedEmployee.lastName }}
+          </div>
+          <div class="text-muted small">
+            {{ selectedEmployee.empCode }}
+            <span *ngIf="selectedEmployee.department_name"> · {{ selectedEmployee.department_name }}</span>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="clearSelection()">
+        <i class="ri-arrow-left-line me-1"></i>Back to list
+      </button>
+    </div>
+    <div class="card-body">
+      <app-insurance-documents [employee]="selectedEmployee"></app-insurance-documents>
+    </div>
+  </div>
+
+  <!-- Employee list -->
+  <div *ngIf="!selectedEmployee" class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom d-flex align-items-center justify-content-between py-3">
+      <h6 class="mb-0 fw-semibold">Employees</h6>
+      <span class="badge bg-primary">{{ filteredEmployees.length }} employees</span>
+    </div>
+
+    <app-search-pagination
+      [totalItems]="filteredEmployees.length"
+      [pageSize]="pageSize"
+      [currentPage]="currentPage"
+      (search)="onSearch($event)"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)">
+
+      <div *ngIf="loading" class="text-center py-5">
+        <div class="spinner-border text-primary"></div>
+        <p class="mt-2 text-muted small">Loading employees…</p>
+      </div>
+
+      <div class="table-responsive" *ngIf="!loading">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width:48px">SI</th>
+              <th>Employee</th>
+              <th>Department</th>
+              <th>Designation</th>
+              <th class="text-end" style="width:160px">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="!pagedEmployees.length">
+              <td colspan="5" class="text-center text-muted py-4">No employees found.</td>
+            </tr>
+            <tr *ngFor="let emp of pagedEmployees; let i = index">
+              <td class="text-muted small">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="ins-avatar">
+                    {{ (emp.firstName?.[0] || '') + (emp.lastName?.[0] || '') | uppercase }}
+                  </div>
+                  <div>
+                    <div class="fw-semibold small">{{ emp.firstName }} {{ emp.lastName }}</div>
+                    <div class="text-muted" style="font-size:0.72rem">{{ emp.empCode }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="small">{{ emp.department_name || '—' }}</td>
+              <td class="small">{{ emp.designation_name || '—' }}</td>
+              <td class="text-end">
+                <button type="button" class="btn btn-sm btn-primary" (click)="manageInsurance(emp)">
+                  <i class="ri-shield-check-line me-1"></i>Manage
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </app-search-pagination>
+  </div>
+</div>
