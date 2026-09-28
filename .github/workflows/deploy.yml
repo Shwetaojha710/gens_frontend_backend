@@ -1,1 +1,108 @@
+name: Deploy GENS to Live Server
 
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # =========================
+      # CHECKOUT CODE
+      # =========================
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+
+      # =========================
+      # NODE SETUP
+      # =========================
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+
+      # =========================
+      # FRONTEND BUILD
+      # =========================
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build Angular Frontend
+        working-directory: frontend
+        run: npm run build -- --configuration production
+
+
+      # =========================
+      # SSH SETUP
+      # =========================
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_rsa
+
+          chmod 600 ~/.ssh/id_rsa
+
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+
+      # =========================
+      # CREATE SERVER DIRECTORIES
+      # =========================
+      - name: Prepare Server
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+
+            mkdir -p /var/www/gensdemo/frontend
+            mkdir -p /var/www/gensdemo/backend
+
+          EOF
+
+
+      # =========================
+      # DEPLOY FRONTEND
+      # =========================
+      - name: Deploy Angular Frontend
+        run: |
+          rsync -avz --delete \
+          frontend/dist/gens-frontend/browser/ \
+          ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/var/www/gensdemo/frontend/
+
+
+      # =========================
+      # DEPLOY BACKEND
+      # =========================
+      - name: Deploy Node.js Backend
+        run: |
+          rsync -avz \
+          --exclude=node_modules \
+          --exclude=.env \
+          --exclude=uploads \
+          --exclude=.git \
+          backend/ \
+          ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/var/www/gensdemo/backend/
+
+
+      # =========================
+      # INSTALL & RESTART BACKEND
+      # =========================
+      - name: Install Dependencies and Restart PM2
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+
+            cd /var/www/gensdemo/backend
+
+            npm ci --omit=dev
+
+            pm2 restart gens || pm2 start server.js --name gens
+
+            pm2 save
+
+          EOF
