@@ -91,11 +91,11 @@
           <p class="ref-no-line"
             style="text-align: right; margin: 0 !important; padding: 0; font-weight: bold; line-height: 1.5; white-space: nowrap;">
             <span *ngIf="isDownload==false" style="white-space: nowrap;">
-              Ref No:&nbsp;{{ appointRefPrefix }}<input type="text" [(ngModel)]="refSuffix" (ngModelChange)="onRefSuffixChange()"
+              Ref. No:&nbsp;{{ appointRefPrefix }}<input type="text" [(ngModel)]="refSuffix" (ngModelChange)="onRefSuffixChange()"
                 class="form-control w-80 h-30" placeholder="e.g.44"
                 style="display: inline-block; width: 90px; vertical-align: middle; height: 28px; padding: 2px 6px; margin-left: 2px;" />
             </span>
-            <span *ngIf="isDownload" style="white-space: nowrap;">Ref No:&nbsp;{{ fullAppointRefNo }}</span>
+            <span *ngIf="isDownload" style="white-space: nowrap;">Ref. No:&nbsp;{{ fullAppointRefNo }}</span>
           </p>
         </td>
 

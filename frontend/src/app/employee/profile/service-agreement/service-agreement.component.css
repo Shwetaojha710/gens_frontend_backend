@@ -440,7 +440,7 @@ input.edit-field[type='number']::-webkit-inner-spin-button {
 /* SIGNATURE — keep block together (do not absolute-pin; avoids page-break split) */
 .signature {
   position: relative;
-  margin-top: 150px;
+  margin-top: 100px;
   display: flex;
   justify-content: space-between;
   font-weight: bold;
