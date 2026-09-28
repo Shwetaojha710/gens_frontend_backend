@@ -30,6 +30,10 @@ jobs:
       # =========================
       # FRONTEND BUILD
       # =========================
+      # =========================
+      # FRONTEND BUILD
+      # =========================
+
       - name: Install Frontend Dependencies
         working-directory: frontend
         run: npm ci --legacy-peer-deps
