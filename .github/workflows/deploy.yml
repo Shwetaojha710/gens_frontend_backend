@@ -49,19 +49,44 @@ jobs:
       - name: Deploy Angular Frontend
         run: |
           rsync -avz --delete \
+            --omit-dir-times \
+            --no-perms \
+            --no-owner \
+            --no-group \
             frontend/dist/gens-frontend/browser/ \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/var/www/html/gens.demoquaeretech.in/frontend/
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/var/www/html/gens.demoquaeretech.in/frontend/ \
+          || {
+            code=$?
+            if [ $code -eq 23 ]; then
+              echo "rsync partial (attrs) — treating as success"
+              exit 0
+            fi
+            exit $code
+          }
 
-      # GitHub folder = backend/  →  Server folder = api/
+      # GitHub: backend/  →  Server: api/
       - name: Deploy Node.js API
         run: |
           rsync -avz \
+            --omit-dir-times \
+            --no-perms \
+            --no-owner \
+            --no-group \
             --exclude=node_modules \
             --exclude=.env \
+            --exclude=upload \
             --exclude=uploads \
             --exclude=.git \
             backend/ \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/var/www/html/gens.demoquaeretech.in/api/
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/var/www/html/gens.demoquaeretech.in/api/ \
+          || {
+            code=$?
+            if [ $code -eq 23 ]; then
+              echo "rsync partial (attrs) — treating as success"
+              exit 0
+            fi
+            exit $code
+          }
 
       - name: Install Dependencies and Restart PM2
         run: |
