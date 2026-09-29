@@ -33,6 +33,8 @@ export class InsuranceDocumentsComponent implements OnInit, OnChanges {
   editingId: string | null = null;
   selectedFile: File | null = null;
   sanitizedImage: any = null;
+  /** Raw URL/data-URL for PDF preview in new tab */
+  previewSourceUrl: string | null = null;
   fileType: string | null = null;
   isFileInvalid = false;
 
@@ -109,6 +111,7 @@ export class InsuranceDocumentsComponent implements OnInit, OnChanges {
     this.editingId = null;
     this.selectedFile = null;
     this.sanitizedImage = null;
+    this.previewSourceUrl = null;
     this.fileType = null;
   }
 
@@ -144,18 +147,113 @@ export class InsuranceDocumentsComponent implements OnInit, OnChanges {
     this.fileType = file.type;
     const reader = new FileReader();
     reader.onload = () => {
-      this.sanitizedImage = this.sanitizer.bypassSecurityTrustUrl(reader.result as string);
+      const dataUrl = reader.result as string;
+      this.previewSourceUrl = dataUrl;
+      if (file.type === 'application/pdf') {
+        this.sanitizedImage = this.sanitizer.bypassSecurityTrustResourceUrl(dataUrl);
+      } else {
+        this.sanitizedImage = this.sanitizer.bypassSecurityTrustUrl(dataUrl);
+      }
     };
     reader.readAsDataURL(file);
   }
 
   closeFile(): void {
     this.sanitizedImage = null;
+    this.previewSourceUrl = null;
     this.selectedFile = null;
     this.isFileInvalid = false;
     this.fileType = null;
     if (this.fileInput?.nativeElement) {
       this.fileInput.nativeElement.value = '';
+    }
+  }
+
+  /** Open PDF / image in a new browser tab (native PDF reader) */
+  openSelectedPreview(): void {
+    if (!this.previewSourceUrl && !this.sanitizedImage) {
+      this.notyf.error('No file to preview');
+      return;
+    }
+    const url = this.previewSourceUrl || (typeof this.sanitizedImage === 'string' ? this.sanitizedImage : '');
+    this.openPdfReader(url);
+  }
+
+  /** Open saved list item in a new browser tab */
+  openListPreview(item: any): void {
+    if (!item?.fileUrl) {
+      this.notyf.error('File URL missing');
+      return;
+    }
+    this.openPdfReader(item.fileUrl);
+  }
+
+  /** Download list file (force download, not just open) */
+  async downloadListFile(item: any): Promise<void> {
+    const url = item?.fileUrl;
+    if (!url) {
+      this.notyf.error('File URL missing');
+      return;
+    }
+    const filename =
+      item.originalName ||
+      item.doc_name ||
+      (item.doc_type?.includes('pdf') ? 'insurance-document.pdf' : 'insurance-document');
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(a.href);
+    } catch {
+      // Fallback: open URL (browser may download or preview)
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+  }
+
+  openPdfReader(url: string): void {
+    if (!url && !this.selectedFile) {
+      this.notyf.error('File URL missing');
+      return;
+    }
+    // Prefer blob URL for just-selected files (more reliable than huge data: URLs)
+    let openUrl = url;
+    if (this.selectedFile && (!url || url.startsWith('data:'))) {
+      openUrl = URL.createObjectURL(this.selectedFile);
+    }
+    if (!openUrl) {
+      this.notyf.error('File URL missing');
+      return;
+    }
+    // Do NOT pass 'noopener' as features — browsers then return null even when the tab opens,
+    // which falsely triggers a "popup blocked" message.
+    const win = window.open(openUrl, '_blank');
+    if (win) {
+      try {
+        win.opener = null;
+      } catch {
+        /* ignore */
+      }
+    } else {
+      // Fallback: same-tab navigation if popup really blocked
+      const a = document.createElement('a');
+      a.href = openUrl;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
     }
   }
 
@@ -198,16 +296,19 @@ export class InsuranceDocumentsComponent implements OnInit, OnChanges {
       status: item.status || 'active',
       doc_name: item.fileUrl,
       doc_type: item.doc_type,
+      originalName: item.originalName,
     };
     this.editingId = item.id;
     this.createFlag = true;
     this.updateFlag = true;
     this.selectedFile = null;
     this.fileType = item.doc_type;
+    this.previewSourceUrl = item.fileUrl;
     if (item.doc_type?.startsWith('image/')) {
-      this.sanitizedImage = this.sanitizer.bypassSecurityTrustResourceUrl(item.fileUrl);
+      this.sanitizedImage = this.sanitizer.bypassSecurityTrustUrl(item.fileUrl);
     } else {
-      this.sanitizedImage = item.fileUrl;
+      this.sanitizedImage = this.sanitizer.bypassSecurityTrustResourceUrl(item.fileUrl);
+      this.fileType = item.doc_type || 'application/pdf';
     }
   }
 

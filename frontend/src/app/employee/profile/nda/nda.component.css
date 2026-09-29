@@ -31,11 +31,10 @@
 .nda-letterhead-spacer {
   display: block;
 
-  /* height: 180mm;
-  min-height: 180mm; */
-
-  height: 120mm;
-  min-height: 120mm;
+  height: 180mm;
+  min-height: 180mm;
+  /* height: 120mm;
+  min-height: 120mm; */
   width: 100%;
   overflow: hidden;
   flex-shrink: 0;
@@ -80,7 +79,7 @@
 }
 
 .nda-first-page .nda-page1-end {
-  margin-top: 12px;
+  margin-top: 10px;
   margin-bottom: 0;
   padding-bottom: 0;
 }
