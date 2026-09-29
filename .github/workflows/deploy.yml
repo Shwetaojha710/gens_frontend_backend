@@ -3,8 +3,8 @@ name: Deploy GENS
 on:
   push:
     branches:
-      - main      # Live
-      - staging   # Testing
+      - main      # Live  → gens.demoquaeretech.in
+      - staging   # Test  → gensdemo.demoquaeretech.in
   workflow_dispatch:
 
 jobs:
@@ -24,7 +24,7 @@ jobs:
             echo "ENV_NAME=live" >> $GITHUB_OUTPUT
           else
             echo "APP_ROOT=/var/www/html/gensdemo.demoquaeretech.in" >> $GITHUB_OUTPUT
-            echo "PM2_NAME=gensdemo" >> $GITHUB_OUTPUT
+            echo "PM2_NAME=gens-staging" >> $GITHUB_OUTPUT
             echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
           fi
 
