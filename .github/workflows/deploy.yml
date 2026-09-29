@@ -100,14 +100,18 @@ jobs:
       # =========================
       - name: Install Dependencies and Restart PM2
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+         set -e
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          export PATH="$PATH:/usr/local/bin:$HOME/.nvm/versions/node/$(ls $HOME/.nvm/versions/node 2>/dev/null | tail -1)/bin"
 
-            cd /var/www/html/gens.demoquaeretech.in/api
+          which npm || { echo "npm not found"; exit 127; }
+          which pm2 || npm install -g pm2
 
-            npm ci --omit=dev
+          cd /var/www/html/gens.demoquaeretech.in/api
+          npm ci --omit=dev
 
-            pm2 restart gens || pm2 start server.js --name gens
-
-            pm2 save
-
-          EOF
+          pm2 restart gens || pm2 start server.js --name gens
+          pm2 save
+         EOF
