@@ -10,29 +10,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
-      # =========================
-      # CHECKOUT CODE
-      # =========================
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-
-      # =========================
-      # NODE SETUP
-      # =========================
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
-
-      # =========================
-      # FRONTEND BUILD
-      # =========================
-      # =========================
-      # FRONTEND BUILD
-      # =========================
 
       - name: Install Frontend Dependencies
         working-directory: frontend
@@ -42,76 +26,57 @@ jobs:
         working-directory: frontend
         run: npm run build -- --configuration production
 
-
-      # =========================
-      # SSH SETUP
-      # =========================
       - name: Setup SSH
         run: |
-         mkdir -p ~/.ssh
-         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-         chmod 600 ~/.ssh/id_rsa
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
 
-         if [ -z "${{ secrets.SERVER_HOST }}" ]; then
-           echo "ERROR: SERVER_HOST secret is empty"
-          exit 1
-         fi
+          if [ -z "${{ secrets.SERVER_HOST }}" ]; then
+            echo "ERROR: SERVER_HOST secret is empty"
+            exit 1
+          fi
 
           ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
-      # =========================
-      # CREATE SERVER DIRECTORIES
-      # =========================
+
       - name: Prepare Server
         run: |
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
-
             mkdir -p /var/www/html/gens.demoquaeretech.in/frontend
-            mkdir -p /var/www/html/gens.demoquaeretech.in/backend
-
+            mkdir -p /var/www/html/gens.demoquaeretech.in/api
           EOF
 
-
-      # =========================
-      # DEPLOY FRONTEND
-      # =========================
       - name: Deploy Angular Frontend
         run: |
           rsync -avz --delete \
-          frontend/dist/gens-frontend/browser/ \
-          ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/var/www/html/gens.demoquaeretech.in/frontend/
+            frontend/dist/gens-frontend/browser/ \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/var/www/html/gens.demoquaeretech.in/frontend/
 
-
-      # =========================
-      # DEPLOY BACKEND
-      # =========================
+      # GitHub folder = backend/  →  Server folder = api/
       - name: Deploy Node.js API
         run: |
           rsync -avz \
-          --exclude=node_modules \
-          --exclude=.env \
-          --exclude=uploads \
-          --exclude=.git \
-          api/ \
-          ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/var/www/html/gens.demoquaeretech.in/api/
+            --exclude=node_modules \
+            --exclude=.env \
+            --exclude=uploads \
+            --exclude=.git \
+            backend/ \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/var/www/html/gens.demoquaeretech.in/api/
 
-
-      # =========================
-      # INSTALL & RESTART BACKEND
-      # =========================
       - name: Install Dependencies and Restart PM2
         run: |
-         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
-         set -e
-          export NVM_DIR="$HOME/.nvm"
-          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-          export PATH="$PATH:/usr/local/bin:$HOME/.nvm/versions/node/$(ls $HOME/.nvm/versions/node 2>/dev/null | tail -1)/bin"
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            set -e
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+            export PATH="$PATH:/usr/local/bin:$HOME/.nvm/versions/node/$(ls $HOME/.nvm/versions/node 2>/dev/null | tail -1)/bin"
 
-          which npm || { echo "npm not found"; exit 127; }
-          which pm2 || npm install -g pm2
+            which npm || { echo "npm not found"; exit 127; }
+            which pm2 || npm install -g pm2
 
-          cd /var/www/html/gens.demoquaeretech.in/api
-          npm ci --omit=dev
+            cd /var/www/html/gens.demoquaeretech.in/api
+            npm ci --omit=dev
 
-          pm2 restart gens || pm2 start server.js --name gens
-          pm2 save
-         EOF
+            pm2 restart gens || pm2 start server.js --name gens
+            pm2 save
+          EOF
