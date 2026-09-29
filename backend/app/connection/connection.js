@@ -16,7 +16,7 @@ const sequelize = new Sequelize({
     // Keep pool small: remote Postgres often has max_connections ~100 shared across all apps.
     // A high max + nodemon restarts leaves idle backends and triggers 53300.
     pool: {
-    max: 100,
+    max: 10,
     min: 0,
     acquire: 30000,
     idle: 5000,

@@ -36,10 +36,13 @@
               (click)="closeFile()" aria-label="Clear"></button>
             <div *ngIf="fileType?.startsWith('image')">
               <img [src]="sanitizedImage" alt="Preview" class="img-thumbnail"
-                style="max-width: 100px; max-height: 100px; object-fit: cover;" />
+                style="max-width: 100px; max-height: 100px; object-fit: cover; cursor: pointer;"
+                (click)="openSelectedPreview()" title="Open preview" />
             </div>
             <div *ngIf="fileType === 'application/pdf'">
-              <a [href]="sanitizedImage" target="_blank" class="btn btn-sm btn-success">Preview / Download PDF</a>
+              <button type="button" class="btn btn-sm btn-success" (click)="openSelectedPreview()">
+                <i class="fa fa-file-pdf me-1"></i> Preview / Download PDF
+              </button>
             </div>
           </div>
         </div>
@@ -87,30 +90,38 @@
               <th>SI.No</th>
               <th>Type</th>
               <th>File</th>
+              <th>Preview</th>
+              <th>Download</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngIf="!DocumentList?.length">
-              <td colspan="5" class="text-muted text-center py-4">No insurance documents uploaded yet.</td>
+              <td colspan="7" class="text-muted text-center py-4">No insurance documents uploaded yet.</td>
             </tr>
             <tr *ngFor="let item of DocumentList; let i = index">
               <th scope="row">{{ i + 1 }}</th>
               <td>{{ item.typeLabel || item.insuranceDocType }}</td>
               <td>
-                <ng-container *ngIf="item.doc_type?.startsWith('image/'); else pdfBlock">
-                  <a [href]="item.fileUrl" target="_blank" rel="noopener">
-                    <img [src]="item.fileUrl" alt="Insurance doc" width="90" height="auto"
-                      style="cursor: pointer; border-radius: 4px; border: 1px solid #e5e7eb;" />
-                  </a>
+                <ng-container *ngIf="item.doc_type?.startsWith('image/'); else fileNameBlock">
+                  <img [src]="item.fileUrl" alt="Insurance doc" width="90" height="auto"
+                    style="border-radius: 4px; border: 1px solid #e5e7eb;" />
                 </ng-container>
-                <ng-template #pdfBlock>
-                  <a [href]="item.fileUrl" target="_blank" download class="btn btn-sm btn-primary">
-                    View / Download
-                  </a>
-                  <div class="small text-muted mt-1" *ngIf="item.originalName">{{ item.originalName }}</div>
+                <ng-template #fileNameBlock>
+                  <span class="small text-muted" *ngIf="item.originalName; else pdfLabel">{{ item.originalName }}</span>
+                  <ng-template #pdfLabel><span class="small text-muted">PDF Document</span></ng-template>
                 </ng-template>
+              </td>
+              <td>
+                <button type="button" class="btn btn-sm btn-outline-primary" (click)="openListPreview(item)" title="Preview">
+                  <i class="fa fa-eye me-1"></i> Preview
+                </button>
+              </td>
+              <td>
+                <button type="button" class="btn btn-sm btn-outline-success" (click)="downloadListFile(item)" title="Download">
+                  <i class="fa fa-download me-1"></i> Download
+                </button>
               </td>
               <td>
                 <span class="badge" [class.bg-label-success]="item.status === 'active'"
