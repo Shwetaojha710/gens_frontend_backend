@@ -47,14 +47,13 @@ jobs:
       # SSH SETUP
       # =========================
       - name: Setup SSH
-  run: |
-    mkdir -p ~/.ssh
-
-    echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-    chmod 600 ~/.ssh/id_rsa
-
-    ssh-keyscan -H 123.456.78.90 >> ~/.ssh/known_hosts 
-
+        run: |
+            mkdir -p ~/.ssh
+            echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+            chmod 600 ~/.ssh/id_rsa
+            ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
       # =========================
       # CREATE SERVER DIRECTORIES
       # =========================
