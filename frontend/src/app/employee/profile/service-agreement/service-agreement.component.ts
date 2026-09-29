@@ -376,6 +376,7 @@ export class ServiceAgreementComponent {
     p { margin: 8px 0; text-align: justify; }
     .meta-line { margin: 0; padding: 0; line-height: 1.25; text-align: left; font-weight: bold; }
     .meta-line .edit-field { font-weight: bold; }
+    .print-field-value { font-weight: bold; font-family: 'Times New Roman', Times, serif; }
     .salary-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 10pt; }
     .salary-table th, .salary-table td { border: 1px solid #000; padding: 4px 6px; text-align: left; font-size: 10pt; }
     .signature {
@@ -455,10 +456,21 @@ export class ServiceAgreementComponent {
     const element = document.getElementById('service-agreement-doc');
     if (!element) return;
 
+    // Sync live input values into attributes so cloneNode keeps typed data (e.g. serial number)
+    element.querySelectorAll('input').forEach((input: HTMLInputElement) => {
+      input.setAttribute('value', input.value ?? '');
+    });
+
     const cloned = element.cloneNode(true) as HTMLElement;
-    cloned.querySelectorAll('input').forEach((input: any) => {
+    const originals = Array.from(element.querySelectorAll('input')) as HTMLInputElement[];
+    cloned.querySelectorAll('input').forEach((input: any, index: number) => {
       const span = document.createElement('span');
-      let value = input.value || '';
+      span.className = 'print-field-value';
+      let value = originals[index]?.value ?? input.value ?? '';
+      // Prefer bound form value for serial number
+      if (input.name === 'serialNumber' && this.form?.serialNumber != null && this.form.serialNumber !== '') {
+        value = String(this.form.serialNumber);
+      }
       if (input.type === 'date' && value) {
         const d = new Date(`${value}T00:00:00`);
         if (!Number.isNaN(d.getTime())) {
@@ -467,7 +479,7 @@ export class ServiceAgreementComponent {
           value = `${dd}/${mm}/${d.getFullYear()}`;
         }
       }
-      span.textContent = value;
+      span.textContent = value || '________';
       input.parentNode?.replaceChild(span, input);
     });
 

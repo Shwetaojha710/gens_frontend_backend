@@ -14,8 +14,14 @@
     <div class="content">
       <p class="meta-line">
         Serial Number:
-        <input class="edit-field" style="width: 90px" [(ngModel)]="form.serialNumber" name="serialNumber"
-          (change)="saveData()" />
+        <input
+          class="edit-field"
+          style="width: 120px"
+          [(ngModel)]="form.serialNumber"
+          name="serialNumber"
+          placeholder="e.g. 11 AB"
+          (ngModelChange)="saveData()"
+        />
       </p>
       <p class="meta-line">Employee ID: {{ personalDetails?.empCode || '________' }}</p>
       <p class="meta-line">Year: {{ year }}</p>
