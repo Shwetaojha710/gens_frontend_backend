@@ -140,6 +140,17 @@ export class MasterService {
     return this.http.post(`${this.baseUrl}getDocumentDD`, {});
   }
 
+  /** Employee insurance documents (E-Insurance Card / Policy) */
+  getInsuranceDocs(obj: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}getInsuranceDocs`, obj);
+  }
+  upsertInsuranceDoc(formData: FormData): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}upsertInsuranceDoc`, formData);
+  }
+  deleteInsuranceDoc(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}deleteInsuranceDoc`, data);
+  }
+
   addSalaryMaster(dept: any): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}attendance-setting`, dept);
   }
@@ -391,5 +402,15 @@ export class MasterService {
     const formData = new FormData();
     formData.append('handbook', file);
     return this.http.post(`${this.baseUrl}upload-handbook`, formData);
+  }
+
+  getInsurancePolicy(): Observable<any> {
+    return this.http.post(`${this.baseUrl}get-insurance-policy`, {});
+  }
+
+  uploadInsurancePolicy(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('insurancePolicy', file);
+    return this.http.post(`${this.baseUrl}upload-insurance-policy`, formData);
   }
 }

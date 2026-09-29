@@ -233,12 +233,12 @@ const empPersonal = sequelize.define(
   },
 );
 
-// empPersonal.sync({ alter: true })
-//   .then(() => {
-//     console.log("empPersonal model synced successfully");
-//   })
-//   .catch((error) => {
-//     console.error("Error syncing empPersonal model:", error);
-//   });
+empPersonal.sync({ alter: true })
+  .then(() => {
+    console.log("empPersonal model synced successfully");
+  })
+  .catch((error) => {
+    console.error("Error syncing empPersonal model:", error);
+  });
 
 module.exports = empPersonal;

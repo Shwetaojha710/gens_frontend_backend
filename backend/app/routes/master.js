@@ -1,7 +1,7 @@
 const express = require('express');
 const {Admin, AppAdmin} = require('../middleware/auth');
 const { createComponent, updateComponent, listComponents, deleteComponent } = require('../controller/tenant/component');
-const { getBrandColors, saveBrandColors, getLetterhead, uploadLetterhead, getHandbook, uploadHandbook, getCompanyProfile } = require('../controller/tenant/setting');
+const { getBrandColors, saveBrandColors, getLetterhead, uploadLetterhead, getHandbook, uploadHandbook, getInsurancePolicy, uploadInsurancePolicy, getCompanyProfile } = require('../controller/tenant/setting');
 const { getTenantUsers, saveUserPermission, getUserPermission, deleteUserPermission } = require('../controller/tenant/userPermission');
 const upload = require('../middleware/upload');
 const router = express.Router();
@@ -19,6 +19,9 @@ router.post('/upload-letterhead', Admin, upload.single('letterhead'), uploadLett
 
 router.post('/get-handbook', Admin, getHandbook)
 router.post('/upload-handbook', Admin, upload.single('handbook'), uploadHandbook)
+
+router.post('/get-insurance-policy', Admin, getInsurancePolicy)
+router.post('/upload-insurance-policy', Admin, upload.single('insurancePolicy'), uploadInsurancePolicy)
 
 // ── User Permission Management ────────────────────────────────────────────
 router.post('/get-tenant-users',    Admin, getTenantUsers)

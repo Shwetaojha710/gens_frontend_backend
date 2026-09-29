@@ -52,6 +52,7 @@ export class NewnavbarComponent {
         // { title: 'Employee List', icon: 'ri-file-list-2-line', link: '/layout/employee/list' },
         { title: 'Add Employee', icon: 'ri-user-add-line', link: '/layout/employee/joining' },
         { title: 'Apply Leave', icon: 'ri-file-list-2-line', link: '/layout/employee/apply-leave' },
+        { title: 'Insurance Documents', icon: 'ri-shield-check-line', link: '/layout/employee/insurance' },
       ]
     },
 
@@ -105,6 +106,7 @@ export class NewnavbarComponent {
         // { title: 'Currency', icon: 'ri-copper-coin-line', link: '/layout/master/currency' },
         { title: 'Pay Slip Setup', icon: 'ri-file-pdf-2-line', link: '/layout/master/pay-slip' },
         { title: 'Branch', icon: 'ri ri-layout-left-line', link: '/layout/master/branch' },
+        { title: 'Insurance Policy', icon: 'ri-shield-check-line', link: '/layout/master/insurance-policy' },
 
         // {title: 'Attendance Master', icon: 'ri-file-line', link: '/layout/master/salary-master'}
 

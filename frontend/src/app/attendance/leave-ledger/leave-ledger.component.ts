@@ -87,7 +87,9 @@ export class LeaveLedgerComponent {
     this.EmpList = [];
     this.master.getemployeeList().subscribe((data: any) => {
       if (data['status'] == true) {
-        this.EmpList = [{ value: 'All', label: 'All Employees' }, ...(data.data || [])];
+        this.EmpList=data.data || []
+        this.EmpList = this.EmpList.filter((item: any) => item.label != 'All')
+        // this.EmpList = [{ value: 'All', label: 'All Employees' }, ...(data.data || [])];
       } else if (data['status'] == 'expired') {
         this.router.navigate(['login']);
       } else {

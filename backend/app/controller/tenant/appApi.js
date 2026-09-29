@@ -5808,6 +5808,22 @@ exports.getAppHandbook = async (req, res) => {
   }
 };
 
+/** Company-wide insurance policy — visible to all employees (mobile / portal) */
+exports.getAppInsurancePolicy = async (req, res) => {
+  try {
+    const tenantId = req.users && req.users.tenantId;
+    if (!tenantId) return Helper.response(false, 'User Not Found', {}, res, 404);
+
+    const tenant = await Tenant.findOne({ where: { id: tenantId }, attributes: ['insurancePolicy'], raw: true });
+    const insurancePolicy = tenant?.insurancePolicy || null;
+    const url = insurancePolicy ? `${process.env.BASE_URL}/upload/${insurancePolicy}` : null;
+    return Helper.response(true, 'Insurance policy fetched', { url, filename: insurancePolicy }, res, 200);
+  } catch (error) {
+    console.error('getAppInsurancePolicy error:', error);
+    return Helper.response(false, error?.message, [], res, 500);
+  }
+};
+
 exports.saveEmpLetterSignature = async (req, res) => {
   try {
     const employeeId = req.users.id;

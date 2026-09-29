@@ -1,6 +1,6 @@
 export const environment = {
   production: false,
-  apiUrl:  'http://192.168.23.19:5012/api/',
+  apiUrl:  'http://192.168.1.21:3002/api/',
   // apiUrl:  'http://192.168.1.190:3002/api/',
   //  apiUrl: 'https://gens.demoquaeretech.in/api/api/',
   // apiUrl: 'https://gensdemo.demoquaeretech.in/api/api/', //self

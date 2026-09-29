@@ -30,8 +30,11 @@
 
 .nda-letterhead-spacer {
   display: block;
-  height: 120mm;
-  min-height: 120mm;
+
+  height: 180mm;
+  min-height: 180mm;
+  /* height: 120mm;
+  min-height: 120mm; */
   width: 100%;
   overflow: hidden;
   flex-shrink: 0;
@@ -63,6 +66,7 @@
 
 .nda-content > .nda-page-break + .nda-clause2-continue {
   padding-top: 24px;
+
 }
 
 .nda-first-page {
@@ -75,7 +79,7 @@
 }
 
 .nda-first-page .nda-page1-end {
-  margin-top: 12px;
+  margin-top: 10px;
   margin-bottom: 0;
   padding-bottom: 0;
 }
@@ -143,7 +147,7 @@
 }
 
 .nda-end-block {
-  margin-top: 48px;
+  margin-top: 18px;
   padding-top: 12px;
   page-break-inside: avoid;
   break-inside: avoid;
@@ -156,6 +160,9 @@
 /* PRINT only — push ending content to page bottom (no empty gap) */
 @media print {
   .nda-first-page {
+
+    /* min-height: 400mm; */
+
     display: flex;
     flex-direction: column;
     min-height: 257mm;

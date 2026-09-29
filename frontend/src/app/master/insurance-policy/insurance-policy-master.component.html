@@ -1,0 +1,81 @@
+<div class="container-fluid py-4">
+
+  <div class="ip-hero card mb-4">
+    <div class="card-body py-4 px-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+      <div>
+        <p class="ip-hero-kicker">Master</p>
+        <div class="ip-hero-title">Insurance Policy Document</div>
+        <div class="ip-hero-subtitle">
+          Upload the company insurance policy as a PDF. All employees can view/download it from the mobile app and portal — no employee selection needed.
+        </div>
+      </div>
+      <button type="button" class="btn btn-light px-4" (click)="openUploadModal()">
+        <i class="ri ri-upload-2-line me-2"></i>{{ currentUrl ? 'Replace Policy' : 'Upload Policy' }}
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status" style="width:2rem;height:2rem;">
+      <span class="visually-hidden">Loading…</span>
+    </div>
+  </div>
+
+  <div *ngIf="!loading" class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+      <h6 class="fw-bold mb-3" style="color:#1e3a5f;">Current Insurance Policy</h6>
+
+      <div *ngIf="currentUrl" class="d-flex align-items-center gap-3">
+        <i class="ri ri-file-pdf-2-line ip-pdf-icon"></i>
+        <div>
+          <div class="fw-semibold">Insurance Policy Document.pdf</div>
+          <a [href]="currentUrl" target="_blank" class="small">
+            <i class="ri ri-external-link-line me-1"></i>View current policy
+          </a>
+        </div>
+      </div>
+
+      <div *ngIf="!currentUrl" class="ip-empty">
+        <i class="ri ri-shield-check-line ip-empty-icon"></i>
+        <p class="text-muted mb-0">No insurance policy uploaded yet.</p>
+        <p class="text-muted small">Upload a PDF to make it available to all employees.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="uploadInsurancePolicyModal" tabindex="-1" aria-labelledby="uploadInsurancePolicyModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="uploadInsurancePolicyModalLabel">
+          {{ currentUrl ? 'Replace Insurance Policy' : 'Upload Insurance Policy' }}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="ip-drop-zone" (click)="fileInput.click()">
+          <i class="ri ri-file-pdf-2-line ip-drop-icon"></i>
+          <p class="mb-1 fw-semibold">Click to select PDF</p>
+          <p class="text-muted small mb-0">PDF files only</p>
+          <input #fileInput type="file" accept="application/pdf" class="d-none" (change)="onFileChange($event)" />
+        </div>
+
+        <div *ngIf="selectedFile" class="mt-3 d-flex align-items-center gap-2">
+          <i class="ri ri-file-pdf-line text-primary"></i>
+          <span class="small text-truncate" style="max-width:260px;">{{ selectedFile.name }}</span>
+          <button class="btn btn-sm btn-outline-danger ms-auto" (click)="clearFile()">
+            <i class="ri ri-close-line"></i>
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary px-4" [disabled]="saving || !selectedFile" (click)="save()">
+          <span *ngIf="!saving"><i class="ri ri-upload-2-line me-2"></i>Save</span>
+          <span *ngIf="saving"><i class="fas fa-circle-notch fa-spin me-2"></i>Saving…</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

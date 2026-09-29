@@ -1,0 +1,50 @@
+<div class="epec-page">
+
+  <div class="epec-header mb-4">
+    <h5 class="epec-title mb-1">E-Insurance Card</h5>
+    <p class="text-muted small mb-0">Your personal e-insurance card assigned by HR — view and download.</p>
+  </div>
+
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary"></div>
+    <p class="mt-2 text-muted small">Loading…</p>
+  </div>
+
+  <div *ngIf="!loading" class="row g-3">
+    <div class="col-12 col-md-6 col-lg-5">
+      <div class="epec-card">
+        <div class="epec-card__icon-wrap">
+          <i class="ri ri-bank-card-line"></i>
+        </div>
+        <div class="epec-card__body">
+          <div class="epec-card__label">E-Insurance Card</div>
+
+          <ng-container *ngIf="eCard; else notAvailable">
+            <div class="epec-badge epec-badge--ready mb-2">
+              <i class="ri ri-check-line me-1"></i>Available
+            </div>
+
+            <div *ngIf="isImage" class="mb-3">
+              <a [href]="eCard.fileUrl" target="_blank" rel="noopener">
+                <img [src]="eCard.fileUrl" alt="E-Insurance Card" class="epec-preview" />
+              </a>
+            </div>
+
+            <a [href]="eCard.fileUrl" target="_blank" rel="noopener" class="epec-action-btn epec-action-btn--download">
+              <i class="ri ri-download-line me-1"></i>View / Download
+            </a>
+            <div class="small text-muted mt-2" *ngIf="eCard.originalName">{{ eCard.originalName }}</div>
+          </ng-container>
+
+          <ng-template #notAvailable>
+            <div class="epec-badge epec-badge--pending">
+              <i class="ri ri-time-line me-1"></i>Not yet assigned by HR
+            </div>
+            <p class="text-muted small mb-0 mt-2">Ask HR to upload your E-Insurance Card from Employee Management.</p>
+          </ng-template>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

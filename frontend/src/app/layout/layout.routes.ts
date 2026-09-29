@@ -80,6 +80,15 @@ export const layoutRoutes: Routes = [
           ),
       },
       {
+        path: 'employee/insurance',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'emp-mgmt.insurance' },
+        loadComponent: () =>
+          import('../employee/insurance-overview/insurance-overview.component').then(
+            (m) => m.InsuranceOverviewComponent,
+          ),
+      },
+      {
         path: 'employee/joining',
         canActivate: [PermissionGuard],
         data: { permKey: 'emp-mgmt.add' },
@@ -455,6 +464,15 @@ export const layoutRoutes: Routes = [
         data: { permKey: 'master.branch' },
         loadComponent: () =>
           import('../master/branch/branch.component').then((m) => m.BranchComponent),
+      },
+      {
+        path: 'master/insurance-policy',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'master.insurancePolicy' },
+        loadComponent: () =>
+          import('../master/insurance-policy/insurance-policy-master.component').then(
+            (m) => m.InsurancePolicyMasterComponent,
+          ),
       },
 
       // ── Setting ───────────────────────────────────────────────────────────

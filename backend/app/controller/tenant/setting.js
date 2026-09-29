@@ -174,6 +174,46 @@ exports.uploadHandbook = async (req, res) => {
     return Helper.response(false, error.message, {}, res, 500);
   }
 };
+
+/** Company-wide insurance policy (Master) — one PDF for all employees */
+exports.getInsurancePolicy = async (req, res) => {
+  try {
+    const tenantId = req.users?.tenantId;
+    if (!tenantId) return Helper.response(false, 'User Not Found', {}, res, 404);
+
+    const tenant = await Tenant.findByPk(tenantId, { attributes: ['insurancePolicy', 'updatedAt'], raw: true });
+    const insurancePolicy = tenant?.insurancePolicy || null;
+    const url = insurancePolicy ? `${process.env.BASE_URL}/upload/${insurancePolicy}` : null;
+    return Helper.response(true, 'Insurance policy fetched', { url, filename: insurancePolicy, updatedAt: tenant?.updatedAt || null }, res, 200);
+  } catch (error) {
+    console.error('getInsurancePolicy error:', error);
+    return Helper.response(false, error.message, {}, res, 500);
+  }
+};
+
+exports.uploadInsurancePolicy = async (req, res) => {
+  try {
+    const tenantId = req.users?.tenantId;
+    if (!tenantId) return Helper.response(false, 'User Not Found', {}, res, 404);
+    if (!req.file) return Helper.response(false, 'No file uploaded', {}, res, 400);
+
+    const existing = await Tenant.findByPk(tenantId, { attributes: ['insurancePolicy'], raw: true });
+    if (existing?.insurancePolicy) {
+      const oldPath = path.join(__dirname, '../../../upload', existing.insurancePolicy);
+      try { fs.unlinkSync(oldPath); } catch (_) {}
+    }
+
+    const filename = req.file.filename;
+    await Tenant.update({ insurancePolicy: filename }, { where: { id: tenantId } });
+
+    const url = `${process.env.BASE_URL}/upload/${filename}`;
+    return Helper.response(true, 'Insurance policy uploaded successfully', { url, filename }, res, 200);
+  } catch (error) {
+    console.error('uploadInsurancePolicy error:', error);
+    return Helper.response(false, error.message, {}, res, 500);
+  }
+};
+
 exports.getCompanyProfile = async (req, res) => {
   try {
     const tenantId = req.users?.tenantId;

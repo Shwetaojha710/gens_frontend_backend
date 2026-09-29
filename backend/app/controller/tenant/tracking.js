@@ -1152,7 +1152,7 @@ exports.getActiveLocationEmp = async (req, res) => {
       return Helper.response(false, "Branch Id is required", {}, res, 200);
     }
     const locations = await empPersonal.findAll({
-      where: { isLocation: true, branchId },
+      where: { isLocation: true, branchId,status:'active' },
       // attributes: ['id', 'firstName', 'lastName', 'empCode'],
       raw: true,
     });

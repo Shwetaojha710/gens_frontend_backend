@@ -19,7 +19,7 @@ export class NdaComponent {
   tenant:any={}
    notyf: Notyf;
  constructor(private employeeService: EmployeeService, private masterService: MasterService) {
- 
+
     this.personalDetails = JSON.parse(localStorage.getItem('employeeId') || '{}');
     this.tenant = JSON.parse(localStorage.getItem('tenant') || '{}');
     this.notyf = new Notyf();
@@ -42,7 +42,7 @@ export class NdaComponent {
       error: () => {},
     });
   }
- 
+
   /** Employee designation for signature block. */
   get designation(): string {
     return (
@@ -53,25 +53,25 @@ export class NdaComponent {
       ''
     );
   }
- 
+
   private ensureDesignation(): void {
     if (String(this.personalDetails?.designation || '').trim()) return;
- 
+
     const fromProfile =
       this.personalDetails?.designation_name ||
       this.personalDetails?.Designation ||
       this.personalDetails?.designationName ||
       '';
- 
+
     if (fromProfile) {
       this.personalDetails.designation = String(fromProfile).trim();
       return;
     }
- 
+
     const designationId = this.personalDetails?.designationId;
     const departmentId = this.personalDetails?.departmentId;
     if (!designationId || !departmentId) return;
- 
+
     this.masterService
       .designationDD({ department: departmentId?.value || departmentId })
       .subscribe({
@@ -88,7 +88,7 @@ export class NdaComponent {
         error: () => {},
       });
   }
- 
+
   loadData(): void {
     this.employeeService.getLetterData(this.personalDetails.id, 'nda').subscribe({
       next: (res: any) => {
@@ -109,7 +109,7 @@ export class NdaComponent {
       }
     });
   }
- 
+
   saveData(): void {
     this.employeeService.saveLetterData(this.personalDetails.id, 'nda', {
       date: this.personalDetails.date,
@@ -118,7 +118,7 @@ export class NdaComponent {
     }).subscribe({ error: () => {} });
   }
   isEdit = false;
- 
+
   documentName = "NDA Agreement";
   getTitle(): string {
     return String(this.personalDetails?.gender || '').trim().toLowerCase() === 'male' ? 'Mr.' : 'Ms.';
@@ -142,11 +142,11 @@ export class NdaComponent {
     date: '04 Aug 2024',
     place: 'Lucknow'
   };
- 
+
   toggleEdit() {
     this.isEdit = !this.isEdit;
   }
- 
+
   private readonly ndaPrintStyles = `
     @page { size: A4; margin: 12mm 18mm; }
     * { box-sizing: border-box; }
@@ -162,8 +162,8 @@ export class NdaComponent {
     /* Letterhead blank + pin page-1 body to bottom */
     .nda-letterhead-spacer {
       display: block;
-      height: 100mm;
-      min-height: 100mm;
+      height: 180mm;
+      min-height: 180mm;
       width: 100%;
       overflow: hidden;
       flex-shrink: 0;
@@ -202,7 +202,7 @@ export class NdaComponent {
       page-break-before: auto;
     }
     .nda-end-block {
-      margin-top: auto;
+      margin-top: 18px;
       padding-top: 16px;
       page-break-inside: avoid;
     }
@@ -236,7 +236,7 @@ export class NdaComponent {
       line-height: 0;
     }
   `;
- 
+
   private getDaySuffix(day: number): string {
     if (day >= 11 && day <= 13) return 'th';
     switch (day % 10) {
@@ -246,21 +246,21 @@ export class NdaComponent {
       default: return 'th';
     }
   }
- 
+
   /** e.g. 21st Apr, 2026 */
   formatNdaDate(dateValue: string | Date | null | undefined): string {
     const parts = this.getNdaDateParts(dateValue);
     if (!parts) return '';
     return `${parts.day}${parts.suffix} ${parts.month}, ${parts.year}`;
   }
- 
+
   /** e.g. 21<sup>st</sup> Apr, 2026 */
   formatNdaDateHtml(dateValue: string | Date | null | undefined): string {
     const parts = this.getNdaDateParts(dateValue);
     if (!parts) return '';
     return `${parts.day}<sup class="ord-sup">${parts.suffix}</sup> ${parts.month}, ${parts.year}`;
   }
- 
+
   private getNdaDateParts(
     dateValue: string | Date | null | undefined
   ): { day: number; suffix: string; month: string; year: number } | null {
@@ -282,7 +282,7 @@ export class NdaComponent {
       year: date.getFullYear(),
     };
   }
- 
+
   private replaceInputsWithText(el: HTMLElement): void {
     el.querySelectorAll('.nda-date-preview').forEach((n) => n.remove());
     el.querySelectorAll('input').forEach((input: any) => {
@@ -296,14 +296,14 @@ export class NdaComponent {
       input.parentNode.replaceChild(span, input);
     });
   }
- 
+
   downloadPDF() {
     const element = document.getElementById('nda-doc');
     if (!element) return;
- 
+
     const cloned = element.cloneNode(true) as HTMLElement;
     this.replaceInputsWithText(cloned);
- 
+
     html2pdf().from(cloned).set({
       margin: 10,
       filename: this.documentName + '.pdf',
@@ -320,23 +320,23 @@ export class NdaComponent {
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     }).save();
   }
- 
+
   printDoc() {
     const element = document.getElementById('nda-doc');
     if (!element) return;
- 
+
     const cloned = element.cloneNode(true) as HTMLElement;
     this.replaceInputsWithText(cloned);
- 
+
     const content = `<!DOCTYPE html><html><head><title>NDA</title>
       <style>${this.ndaPrintStyles}</style>
     </head><body>${cloned.innerHTML}</body></html>`;
- 
+
     const iframe = document.createElement('iframe');
     iframe.style.cssText = 'position:fixed;left:-9999px;width:1px;height:1px;border:0;';
     iframe.setAttribute('srcdoc', content);
     document.body.appendChild(iframe);
- 
+
     iframe.onload = () => {
       iframe.contentWindow?.focus();
       iframe.contentWindow?.print();
@@ -345,13 +345,13 @@ export class NdaComponent {
   }
 downloadDoc() {
   const element = document.getElementById('nda-doc');
- 
+
   if (!element) return;
- 
+
   // Clone so we can modify before download
   const cloned = element.cloneNode(true) as HTMLElement;
   this.replaceInputsWithText(cloned);
- 
+
   // Create Word-compatible HTML
   const html = `
     <html xmlns:o='urn:schemas-microsoft-com:office:office'
@@ -413,7 +413,7 @@ downloadDoc() {
           page-break-before: auto;
         }
         .nda-end-block {
-          margin-top: auto;
+          margin-top: 18px;
           padding-top: 16px;
           page-break-inside: avoid;
         }
@@ -446,18 +446,18 @@ downloadDoc() {
     </body>
     </html>
   `;
- 
+
   const blob = new Blob(['\ufeff', html], {
     type: 'application/msword'
   });
- 
+
   const url = URL.createObjectURL(blob);
- 
+
   const a = document.createElement('a');
   a.href = url;
   a.download = 'NDA.doc';
   a.click();
- 
+
   URL.revokeObjectURL(url);
 }
 }

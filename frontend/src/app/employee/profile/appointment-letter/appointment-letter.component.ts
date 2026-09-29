@@ -7,6 +7,10 @@ import { EmployeeService } from '../../../services/employee.service';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import {
+  downloadAppointmentBlob,
+  generateAppointmentDocxBlob,
+} from './appointment-letter-docx.helper';
 @Component({
   selector: 'app-appointment-letter',
   imports: [CommonModule,FormsModule],
@@ -23,12 +27,12 @@ export class AppointmentLetterComponent {
      currency:any
      newObj:any
      obj:any={}
-  /** Editable part after Quaere/Appoint/{year}/ */
+  /** Editable part after Quaere/Appoint /{year}/ (space after Appoint, per reference) */
   refSuffix = '';
   readonly appointRefYear = new Date().getFullYear();
 
   get appointRefPrefix(): string {
-    return `Quaere/Appoint/${this.appointRefYear}/`;
+    return `Quaere/Appoint /${this.appointRefYear}/`;
   }
 
   get fullAppointRefNo(): string {
@@ -55,14 +59,17 @@ public payrollService: PayrollService, private router: Router, public statusServ
 
   private parseRefNo(refNo: string): void {
     const value = String(refNo || '').trim();
-    const match = value.match(/^Quaere\/Appoint\/(\d{4})\/?(.*)$/i);
+    // Accept both "Quaere/Appoint /2025/44" and legacy "Quaere/Appoint/2025/44"
+    const match = value.match(/^Quaere\/Appoint\s*\/(\d{4})\/?(.*)$/i);
     if (match) {
       this.refSuffix = (match[2] || '').trim();
       this.personalDetails.ref_no = this.fullAppointRefNo;
       return;
     }
     // Legacy / free-form value: keep as editable suffix only
-    this.refSuffix = value.replace(/^Quaere\/Appoint\/?/i, '').replace(/^\d{4}\//, '');
+    this.refSuffix = value
+      .replace(/^Quaere\/Appoint\s*\/?/i, '')
+      .replace(/^\d{4}\//, '');
     this.personalDetails.ref_no = this.fullAppointRefNo;
   }
 
@@ -348,6 +355,11 @@ masterSelected:any
     };
   }
 
+  /** Public for DOCX download — ordinal suffix as separate part for superscript */
+  getJoiningDateParts(): { day: number; suffix: string; month: string; year: number } | null {
+    return this.getDateParts(this.personalDetails?.joiningDate);
+  }
+
   /** e.g. 7th September, 2026 */
   formatDateDMY(dateValue: string | Date | null | undefined): string {
     const parts = this.getDateParts(dateValue);
@@ -362,6 +374,20 @@ masterSelected:any
     return `${parts.day}<sup class="ord-sup">${parts.suffix}</sup> ${parts.month}, ${parts.year}`;
   }
 
+  /** e.g. 7/09/2026 */
+  formatDateNumeric(dateValue: string | Date | null | undefined): string {
+    if (!dateValue) return '';
+    const date =
+      typeof dateValue === 'string'
+        ? new Date(dateValue.includes('T') ? dateValue : `${dateValue}T00:00:00`)
+        : dateValue;
+    if (Number.isNaN(date.getTime())) return '';
+    const d = date.getDate();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    return `${d}/${mm}/${yyyy}`;
+  }
+
   /** Escape + keep newlines; long single-line addresses still wrap via CSS */
   formatAddressHtml(address: string | null | undefined): string {
     return String(address || '')
@@ -372,80 +398,53 @@ masterSelected:any
   }
 
 isDownload:any=false
-downloadDoc() {
-  console.log('Downloading document...',this.data);
-this.isDownload=true
-  const element = document.getElementById('appointment-doc');
-  if (!element) return;
 
-  // const cloned = element.cloneNode(true) as HTMLElement;
-// Clone so we can modify before download
-  const cloned = element.cloneNode(true) as HTMLElement;
-
-  // 🔥 Replace input fields with values
-  const inputs = cloned.querySelectorAll('input');
-
-  inputs.forEach((input: any) => {
-    const span = document.createElement('span');
-    if (input.type == 'date' && input.value) {
-      span.innerHTML = this.formatDateHtml(input.value);
-    } else {
-      span.textContent = input.value || '';
-    }
-    input.parentNode.replaceChild(span, input);
-  });
-
-  cloned.querySelectorAll('br[style*="page-break-before"]').forEach((br: any) => {
-    const div = document.createElement('div');
-    div.className = 'page-break-spacer';
-    br.parentNode.replaceChild(div, br);
-  });
-
-  const html = `
-  <html xmlns:o='urn:schemas-microsoft-com:office:office'
-        xmlns:w='urn:schemas-microsoft-com:office:word'>
-  <head>
-    <meta charset='utf-8'>
-    <style>
-      body { font-family: 'Calibri'; line-height:1.6; }
-      table { border-collapse: collapse; width:100%; }
-      th, td { border:1px solid black; padding:5px; }
-      .highlight { background: yellow; font-weight: bold; }
-      .page-break { page-break-before: always; }
-      .page-break-spacer { page-break-before: always; height: 16px; margin-top: 16px; }
-      .force-page-break { page-break-before: always; mso-page-break-before: always; break-before: page; padding-top: 16px; }
-      h4.force-page-break { page-break-before: always; mso-page-break-before: always; break-before: page; }
-      .ord-sup { font-size: 0.65em; vertical-align: super; line-height: 0; }
-      .recipient-address, .address-lines {
-        max-width: 300px;
-        word-wrap: break-word;
-        overflow-wrap: break-word;
-        word-break: break-word;
-        white-space: pre-wrap;
+  /**
+   * DOWNLOAD DOCX only — real Word document via `docx` package.
+   * printDoc() is intentionally separate and unchanged.
+   */
+  async downloadDoc(): Promise<void> {
+    this.isDownload = true;
+    try {
+      if (!this.salaryTable?.earnings?.length && this.SalArr?.length) {
+        this.prepareSalaryTable();
       }
-    </style>
-  </head>
-  <body>
-    ${cloned.innerHTML}
-  </body>
-  </html>
-  `;
-
-  const blob = new Blob(['\ufeff', html], {
-    type: 'application/msword'
-  });
-
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `Appointment_${this.personalDetails.firstName}${this.personalDetails.lastName}.doc`;
-  a.click();
-
-  URL.revokeObjectURL(url);
-
-this.isDownload=false
-}
+      const ctcNum = Number(this.ctc) || 0;
+      const blob = await generateAppointmentDocxBlob({
+        firstName: this.personalDetails?.firstName || '',
+        lastName: this.personalDetails?.lastName || '',
+        fatherName: this.personalDetails?.fatherName || '',
+        gender: this.personalDetails?.gender || '',
+        permanentAddress: this.personalDetails?.permanentAddress || '',
+        designation: this.personalDetails?.designation || '',
+        joiningDate: this.personalDetails?.joiningDate || '',
+        joiningDateOrdinal: this.formatDateDMY(this.personalDetails?.joiningDate),
+        joiningDateParts: this.getJoiningDateParts(),
+        joiningDateNumeric: this.formatDateNumeric(this.personalDetails?.joiningDate),
+        refNo: this.fullAppointRefNo,
+        companyName: this.tenant?.companyName || 'Quaere Etechnologies Pvt Ltd',
+        location: 'Lucknow',
+        ctc: ctcNum,
+        monthlyCtc: ctcNum / 12,
+        salaryTable: this.salaryTable || {
+          earnings: [],
+          deductions: [],
+          totalEarning: 0,
+          totalDeduction: 0,
+          netSalary: 0,
+        },
+        ctcInWords: this.convertNumberToWords(ctcNum),
+      });
+      const safeFirst = String(this.personalDetails?.firstName || 'Employee').replace(/\s+/g, '');
+      const safeLast = String(this.personalDetails?.lastName || '').replace(/\s+/g, '');
+      downloadAppointmentBlob(blob, `Appointment_${safeFirst}${safeLast}.docx`);
+    } catch (err) {
+      console.error('Appointment DOCX download failed', err);
+      this.notyf.error('Failed to generate Word document.');
+    } finally {
+      this.isDownload = false;
+    }
+  }
 
 printDoc() {
   const element = document.getElementById('appointment-doc');
@@ -457,7 +456,9 @@ printDoc() {
   cloned.querySelectorAll('input').forEach((input: any) => {
     const span = document.createElement('span');
     if (input.type === 'date' && input.value) {
-      span.innerHTML = this.formatDateHtml(input.value);
+      span.innerHTML = input.classList.contains('date-numeric')
+        ? this.formatDateNumeric(input.value)
+        : this.formatDateHtml(input.value);
     } else {
       span.textContent = input.value || '';
     }
@@ -488,6 +489,8 @@ printDoc() {
       word-break: break-word;
       white-space: pre-wrap;
     }
+    .ref-no-line, .ref-no-line span { white-space: nowrap !important; }
+    .right { white-space: nowrap; }
     .salary-table th, .salary-table td { border: 1px solid black; padding: 4px; font-size: 12px; }
     .salary-table tr { page-break-inside: avoid; }
     ol { padding-left: 20px; margin-top: 10px; }

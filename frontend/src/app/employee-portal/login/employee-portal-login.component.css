@@ -1,5 +1,6 @@
-/* Layout matches /login via shared ../../login/login.component.css */
+/* Shared company-login styles come from ../../login/login.component.css */
 
-.w-px-400 {
-  max-width: 400px;
+:host {
+  display: block;
+  min-height: 100vh;
 }

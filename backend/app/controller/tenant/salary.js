@@ -5334,7 +5334,20 @@ exports.calculateAttendance = async (req, res) => {
           d.add(1, "days")
         ) {
           const dateKey = d.format("YYYY-MM-DD");
-          leaveDateMap1[dateKey] = leave.duration_type || "full"; // full, first_half, second_half
+          const newType = leave.duration_type || "full";
+          const prev = leaveDateMap1[dateKey];
+          // Same date: first_half + second_half → full day
+          if (
+            prev &&
+            ((prev === "first_half" && newType === "second_half") ||
+              (prev === "second_half" && newType === "first_half"))
+          ) {
+            leaveDateMap1[dateKey] = "full";
+          } else if (prev === "full" || newType === "full") {
+            leaveDateMap1[dateKey] = "full";
+          } else {
+            leaveDateMap1[dateKey] = newType;
+          }
         }
       }
 
@@ -5459,17 +5472,48 @@ exports.calculateAttendance = async (req, res) => {
           const dateKey = d.format("YYYY-MM-DD");
           const isWeekend = d.day() === 0 || d.day() === 6;
           const existing = leaveDateMap[dateKey];
+          const newType = leave.duration_type || "full";
+          let resolvedType = newType;
+          let resolvedStatus = leave.leavestatus;
+          // Same date: first_half + second_half → full day (both halves covered)
+          if (existing) {
+            const prev = existing.duration_type;
+            if (
+              (prev === "first_half" && newType === "second_half") ||
+              (prev === "second_half" && newType === "first_half")
+            ) {
+              resolvedType = "full";
+              resolvedStatus =
+                existing.leavestatus === "approved" &&
+                leave.leavestatus === "approved"
+                  ? "approved"
+                  : "unpaid";
+            } else if (prev === "full" || newType === "full") {
+              resolvedType = "full";
+              // Keep unpaid if either side is unpaid when overlapping a full day
+              resolvedStatus =
+                existing.leavestatus === "approved" &&
+                leave.leavestatus === "approved"
+                  ? "approved"
+                  : existing.leavestatus === "unpaid" ||
+                      leave.leavestatus === "unpaid"
+                    ? "unpaid"
+                    : leave.leavestatus;
+            }
+          }
           // Prefer explicit sandwich record flags when merging overlapping spans
           leaveDateMap[dateKey] = {
-            duration_type: leave.duration_type || "full",
-            leavestatus: leave.leavestatus,
-            isRestrictedHolidayLeave: !!leave.isRestrictedHolidayLeave,
+            duration_type: resolvedType,
+            leavestatus: resolvedStatus,
+            isRestrictedHolidayLeave:
+              !!leave.isRestrictedHolidayLeave ||
+              !!existing?.isRestrictedHolidayLeave,
             isSandwich:
               !!leave.isSandwich ||
               !!existing?.isSandwich ||
               isWeekend ||
               nonWorkingSetForLeaveSandwich.has(dateKey),
-            isCompOff: !!leave.isCompOff,
+            isCompOff: !!leave.isCompOff || !!existing?.isCompOff,
           };
         }
       }

@@ -51,6 +51,11 @@
   text-align: right;
 }
 
+.ref-no-line,
+.ref-no-line span {
+  white-space: nowrap !important;
+}
+
 /* HIGHLIGHT */
 .highlight {
   background-color: yellow;
