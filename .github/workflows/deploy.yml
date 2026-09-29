@@ -1,9 +1,11 @@
-name: Deploy GENS to Live Server
+name: Deploy GENS
 
 on:
   push:
     branches:
-      - main
+      - main      # Live
+      - staging   # Testing
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -12,6 +14,19 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Set deploy environment
+        id: env
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "APP_ROOT=/var/www/html/gens.demoquaeretech.in" >> $GITHUB_OUTPUT
+            echo "PM2_NAME=gens" >> $GITHUB_OUTPUT
+            echo "ENV_NAME=live" >> $GITHUB_OUTPUT
+          else
+            echo "APP_ROOT=/var/www/html/gensdemo.demoquaeretech.in" >> $GITHUB_OUTPUT
+            echo "PM2_NAME=gensdemo" >> $GITHUB_OUTPUT
+            echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -41,9 +56,9 @@ jobs:
 
       - name: Prepare Server
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
-            mkdir -p /var/www/html/gens.demoquaeretech.in/frontend
-            mkdir -p /var/www/html/gens.demoquaeretech.in/api
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << EOF
+            mkdir -p ${{ steps.env.outputs.APP_ROOT }}/frontend
+            mkdir -p ${{ steps.env.outputs.APP_ROOT }}/api
           EOF
 
       - name: Deploy Angular Frontend
@@ -54,7 +69,7 @@ jobs:
             --no-owner \
             --no-group \
             frontend/dist/gens-frontend/browser/ \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/var/www/html/gens.demoquaeretech.in/frontend/ \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ steps.env.outputs.APP_ROOT }}/frontend/ \
           || {
             code=$?
             if [ $code -eq 23 ]; then
@@ -78,7 +93,7 @@ jobs:
             --exclude=uploads \
             --exclude=.git \
             backend/ \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/var/www/html/gens.demoquaeretech.in/api/ \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ steps.env.outputs.APP_ROOT }}/api/ \
           || {
             code=$?
             if [ $code -eq 23 ]; then
@@ -90,18 +105,24 @@ jobs:
 
       - name: Install Dependencies and Restart PM2
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << EOF
             set -e
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-            export PATH="$PATH:/usr/local/bin:$HOME/.nvm/versions/node/$(ls $HOME/.nvm/versions/node 2>/dev/null | tail -1)/bin"
+            export NVM_DIR="\$HOME/.nvm"
+            [ -s "\$NVM_DIR/nvm.sh" ] && . "\$NVM_DIR/nvm.sh"
+            export PATH="\$PATH:/usr/local/bin:\$HOME/.nvm/versions/node/\$(ls \$HOME/.nvm/versions/node 2>/dev/null | tail -1)/bin"
 
             which npm || { echo "npm not found"; exit 127; }
             which pm2 || npm install -g pm2
 
-            cd /var/www/html/gens.demoquaeretech.in/api
+            cd ${{ steps.env.outputs.APP_ROOT }}/api
             npm ci --omit=dev
 
-            pm2 restart gens || pm2 start server.js --name gens
+            pm2 restart ${{ steps.env.outputs.PM2_NAME }} || pm2 start server.js --name ${{ steps.env.outputs.PM2_NAME }}
             pm2 save
           EOF
+
+      - name: Deploy summary
+        run: |
+          echo "Environment: ${{ steps.env.outputs.ENV_NAME }}"
+          echo "Path: ${{ steps.env.outputs.APP_ROOT }}"
+          echo "PM2: ${{ steps.env.outputs.PM2_NAME }}"
