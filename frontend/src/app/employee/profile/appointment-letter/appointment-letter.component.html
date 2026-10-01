@@ -80,22 +80,22 @@
         <!-- RIGHT SIDE -->
         <td class="right" style="vertical-align: top; text-align: right; border: none; width: 52%; font-size: 14px; white-space: nowrap;">
           <p
-            style="text-align: right; margin: 0 !important; padding: 0; font-weight: bold; line-height: 1.5; white-space: nowrap;">
-            Date:&nbsp;<span style="font-weight: bold; vertical-align: baseline;" *ngIf="isDownload==false">
+            style="text-align: right; margin: 0 !important; padding: 0; font-weight: bold; line-height: 1.5; white-space: nowrap;font-size:14px;">
+            Date:&nbsp;<span style="font-weight: bold; vertical-align: baseline; font-size: 14px;" *ngIf="isDownload==false">
               <input type="date" [(ngModel)]="personalDetails.joiningDate" (ngModelChange)="saveData()"
-                class="form-control w-80 h-30" style="display: inline-block; vertical-align: middle; height: 28px; padding: 2px 6px;" />
+                class="form-control w-50 h-30" style="display: inline-block; vertical-align: middle; height: 28px; padding: 2px 6px;" />
             </span><span style="font-weight: bold; vertical-align: baseline;" *ngIf="isDownload"
               [innerHTML]="formatDateHtml(personalDetails.joiningDate)"></span>
           </p>
 
           <p class="ref-no-line"
             style="text-align: right; margin: 0 !important; padding: 0; font-weight: bold; line-height: 1.5; white-space: nowrap;">
-            <span *ngIf="isDownload==false" style="white-space: nowrap;">
+            <span *ngIf="isDownload==false" style="white-space: nowrap; font-size:14px;">
               Ref. No:&nbsp;{{ appointRefPrefix }}<input type="text" [(ngModel)]="refSuffix" (ngModelChange)="onRefSuffixChange()"
                 class="form-control w-80 h-30" placeholder="e.g.44"
                 style="display: inline-block; width: 90px; vertical-align: middle; height: 28px; padding: 2px 6px; margin-left: 2px;" />
             </span>
-            <span *ngIf="isDownload" style="white-space: nowrap;">Ref. No:&nbsp;{{ fullAppointRefNo }}</span>
+            <span *ngIf="isDownload" style="white-space: nowrap; font-size:14px;">Ref. No:&nbsp;{{ fullAppointRefNo }}</span>
           </p>
         </td>
 
@@ -119,9 +119,9 @@
       <!-- <span >{{personalDetails.designation}}</span> -->
       in our company presently posted at
      <b> Lucknow,</b>
-      w.e.f <span style="font-size:15px;">
+      w.e.f <span style="font-size:14px;">
         <b *ngIf="isDownload==false">
-          <input type="date" [(ngModel)]="personalDetails.joiningDate" (ngModelChange)="saveData()" class="form-control w-80 h-30 d-inline-block" style="width:150px; display:inline-block;" />
+          <input type="date" class="form-control" [(ngModel)]="personalDetails.joiningDate" (ngModelChange)="saveData()" class="form-control w-80 h-30 d-inline-block" style="width:150px; display:inline-block;" />
         </b>
         <b *ngIf="isDownload" [innerHTML]="formatDateHtml(personalDetails.joiningDate)"></b>
       </span>.
