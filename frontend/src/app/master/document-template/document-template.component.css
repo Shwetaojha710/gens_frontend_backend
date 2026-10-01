@@ -153,6 +153,34 @@
   float: none !important;
 }
 
+/* Word empty paragraphs → huge white gaps + giant blue select highlight */
+.dt-rich-host p,
+.dt-rich-host .hr-imported-doc p {
+  margin-top: 0.15em;
+  margin-bottom: 0.15em;
+}
+
+.dt-rich-host p:empty,
+.dt-rich-host div:empty,
+.dt-rich-host .hr-blank-gap {
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 0.4 !important;
+  min-height: 0 !important;
+  height: 0.4em !important;
+  font-size: inherit !important;
+  display: block !important;
+}
+
+/* Soften br-only spacers without collapsing real content lines */
+.dt-rich-host p:has(> br:only-child) {
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 0.5 !important;
+  min-height: 0 !important;
+  display: block !important;
+}
+
 .dt-rich-host ol,
 .dt-rich-host .hr-doc-ol {
   list-style-type: decimal !important;
@@ -369,6 +397,47 @@
   height: 31px;
   padding: 2px 28px 2px 8px;
   font-size: 13px;
+}
+
+.dt-color-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 31px;
+  padding: 0;
+  margin: 0 2px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.dt-color-wrap input[type='color'] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+.dt-color-label {
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1;
+  pointer-events: none;
+  border-bottom: 3px solid #000;
+}
+
+.dt-color-label--bg {
+  border-bottom-color: #eab308;
+  background: linear-gradient(transparent 55%, #fef08a 55%);
 }
 
 .dt-rich-toolbar {
