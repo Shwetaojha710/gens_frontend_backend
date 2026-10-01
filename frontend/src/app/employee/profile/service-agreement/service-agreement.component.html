@@ -14,13 +14,19 @@
     <div class="content">
       <p class="meta-line">
         Serial Number:
-        <input class="edit-field" style="width: 90px" [(ngModel)]="form.serialNumber" name="serialNumber"
-          (change)="saveData()" />
+        <input
+          class="edit-field"
+          style="width: 120px"
+          [(ngModel)]="form.serialNumber"
+          name="serialNumber"
+          placeholder="e.g. 11 AB"
+          (ngModelChange)="saveData()"
+        />
       </p>
       <p class="meta-line">Employee ID: {{ personalDetails?.empCode || '________' }}</p>
       <p class="meta-line">Year: {{ year }}</p>
 
-      <h3 class="center" style="text-decoration: underline;">{{ tenant?.companyName || 'Quaere Etechnologies Pvt. Ltd.'
+      <h3 class="center" style="text-decoration: underline;font-size: 20px; ">{{ tenant?.companyName || 'Quaere Etechnologies Pvt. Ltd.'
         }}</h3>
       <h3 class="center" style="text-decoration: underline;">SERVICE AGREEMENT</h3>
 
@@ -328,7 +334,7 @@
         due under this Service Agreement. The Surety hereby agrees and accepts that any demand made on the Engineer
         under this Service Agreement shall be deemed to be sufficient notice of such demand to the Surety also. The
         Surety and Engineer hereby state that they have entered into this Service Agreement voluntarily and after being
-        fully aware of all legal consequences arising out of this Service Agreement. IN WITNESSES WHEREOF the parties
+        fully aware of all legal consequences arising out of this Service Agreement.<span style="text-decoration: underline;"> IN WITNESSES WHEREOF </span> &nbsp;the parties
         have signed this Service Agreement on the date, month and year first above written before the following
         witnesses:
       </p>

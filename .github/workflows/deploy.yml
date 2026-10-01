@@ -1,0 +1,128 @@
+name: Deploy GENS
+
+on:
+  push:
+    branches:
+      - main      # Live  → gens.demoquaeretech.in
+      - staging   # Test  → gensdemo.demoquaeretech.in
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set deploy environment
+        id: env
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "APP_ROOT=/var/www/html/gens.demoquaeretech.in" >> $GITHUB_OUTPUT
+            echo "PM2_NAME=gens" >> $GITHUB_OUTPUT
+            echo "ENV_NAME=live" >> $GITHUB_OUTPUT
+          else
+            echo "APP_ROOT=/var/www/html/gensdemo.demoquaeretech.in" >> $GITHUB_OUTPUT
+            echo "PM2_NAME=gens-staging" >> $GITHUB_OUTPUT
+            echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm ci --legacy-peer-deps
+
+      - name: Build Angular Frontend
+        working-directory: frontend
+        run: npm run build -- --configuration production
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          if [ -z "${{ secrets.SERVER_HOST }}" ]; then
+            echo "ERROR: SERVER_HOST secret is empty"
+            exit 1
+          fi
+
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Prepare Server
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << EOF
+            mkdir -p ${{ steps.env.outputs.APP_ROOT }}/frontend
+            mkdir -p ${{ steps.env.outputs.APP_ROOT }}/api
+          EOF
+
+      - name: Deploy Angular Frontend
+        run: |
+          rsync -avz --delete \
+            --omit-dir-times \
+            --no-perms \
+            --no-owner \
+            --no-group \
+            frontend/dist/gens-frontend/browser/ \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ steps.env.outputs.APP_ROOT }}/frontend/ \
+          || {
+            code=$?
+            if [ $code -eq 23 ]; then
+              echo "rsync partial (attrs) — treating as success"
+              exit 0
+            fi
+            exit $code
+          }
+
+      # GitHub: backend/  →  Server: api/
+      - name: Deploy Node.js API
+        run: |
+          rsync -avz \
+            --omit-dir-times \
+            --no-perms \
+            --no-owner \
+            --no-group \
+            --exclude=node_modules \
+            --exclude=.env \
+            --exclude=upload \
+            --exclude=uploads \
+            --exclude=.git \
+            backend/ \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ steps.env.outputs.APP_ROOT }}/api/ \
+          || {
+            code=$?
+            if [ $code -eq 23 ]; then
+              echo "rsync partial (attrs) — treating as success"
+              exit 0
+            fi
+            exit $code
+          }
+
+      - name: Install Dependencies and Restart PM2
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << EOF
+            set -e
+            export NVM_DIR="\$HOME/.nvm"
+            [ -s "\$NVM_DIR/nvm.sh" ] && . "\$NVM_DIR/nvm.sh"
+            export PATH="\$PATH:/usr/local/bin:\$HOME/.nvm/versions/node/\$(ls \$HOME/.nvm/versions/node 2>/dev/null | tail -1)/bin"
+
+            which npm || { echo "npm not found"; exit 127; }
+            which pm2 || npm install -g pm2
+
+            cd ${{ steps.env.outputs.APP_ROOT }}/api
+            npm ci --omit=dev
+
+            pm2 restart ${{ steps.env.outputs.PM2_NAME }} || pm2 start server.js --name ${{ steps.env.outputs.PM2_NAME }}
+            pm2 save
+          EOF
+
+      - name: Deploy summary
+        run: |
+          echo "Environment: ${{ steps.env.outputs.ENV_NAME }}"
+          echo "Path: ${{ steps.env.outputs.APP_ROOT }}"
+          echo "PM2: ${{ steps.env.outputs.PM2_NAME }}"
