@@ -269,6 +269,15 @@ export const layoutRoutes: Routes = [
           ),
       },
       {
+        path: 'payroll/appraisal-list',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'pay.appraisalList' },
+        loadComponent: () =>
+          import('../payroll/appraisal-list/appraisal-list.component').then(
+            (m) => m.AppraisalListComponent,
+          ),
+      },
+      {
         path: 'payroll/arrear-management',
         canActivate: [PermissionGuard],
         data: { permKey: 'pay.arrear' },
