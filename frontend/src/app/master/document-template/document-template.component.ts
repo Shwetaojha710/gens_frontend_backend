@@ -27,6 +27,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
   @ViewChild('editorHost') editorHost?: ElementRef<HTMLDivElement>;
   /** Contenteditable host used for Word imports (Quill cannot keep full DOCX HTML). */
   @ViewChild('richHost') richHost?: ElementRef<HTMLDivElement>;
+  @ViewChild('richImageInput') richImageInput?: ElementRef<HTMLInputElement>;
   previewOpen = false;
   previewUrl: SafeResourceUrl | null = null;
   private previewObjectUrl: string | null = null;
@@ -132,7 +133,8 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     this.form.letterheadBlank = this.letterheadMode === 'blank';
   }
 
-  private applyRichTextStyle(property: string, value: string): void {
+  /** Apply font-family / font-size / color / background to selected text (multi-line safe). */
+  applyRichTextStyle(property: string, value: string): void {
     if (!value) return;
 
     const el = this.getRichEl();
@@ -144,75 +146,393 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     }
 
     const selection = window.getSelection();
-
     if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+      this.notyf.error('Pehle text select karo');
       return;
     }
 
-    const range = selection.getRangeAt(0);
+    const range = selection.getRangeAt(0).cloneRange();
 
     try {
-      const span = document.createElement('span');
+      document.execCommand('styleWithCSS', false, 'true');
 
-      span.style.setProperty(property, value);
+      if (property === 'color') {
+        document.execCommand('foreColor', false, value);
+        this.saveRichSelection();
+        this.onRichInput();
+        return;
+      }
+      if (property === 'background-color') {
+        if (
+          !document.execCommand('hiliteColor', false, value) &&
+          !document.execCommand('backColor', false, value)
+        ) {
+          this.applyInlineStyleToRange(range, 'background-color', value);
+        }
+        this.saveRichSelection();
+        this.onRichInput();
+        return;
+      }
 
-      const fragment = range.extractContents();
-      span.appendChild(fragment);
-      range.insertNode(span);
+      // Multi-line / multi-paragraph: walk text nodes (span-wrap of whole range breaks on <p>/<div>)
+      this.applyInlineStyleToRange(range, property, value);
 
-      const newRange = document.createRange();
-      newRange.selectNodeContents(span);
+      // Font-size on <span> alone leaves parent Word font-size/line-height → huge gaps.
+      // Sync block typography so size ↓ also tightens line boxes, without merging lines.
+      if (property === 'font-size') {
+        this.syncBlocksAfterFontSize(value);
+      } else if (property === 'font-family') {
+        this.ensureSelectedBlocksStaySeparateLines();
+      }
 
-      selection.removeAllRanges();
-      selection.addRange(newRange);
-
-      this.richSavedRange = newRange.cloneRange();
-
+      this.saveRichSelection();
       this.onRichInput();
     } catch (error) {
       console.error('applyRichTextStyle failed:', error);
+      this.notyf.error('Formatting apply nahi hua');
     }
   }
 
-  private applyParagraphSpacing(value: string): void {
+  /**
+   * After font-size change: parent <p style="font-size:28pt"> keeps a tall CSS strut
+   * even when inner text is 10pt — that is the huge gap. Sync block font-size + line-height,
+   * but keep each block as display:block so lines never merge into one.
+   */
+  private syncBlocksAfterFontSize(fontSize: string): void {
+    const blocks = this.getSelectedBlocks();
+    for (const block of blocks) {
+      block.style.fontSize = fontSize;
+      // Unitless line-height scales with the new font size (no leftover 28pt line boxes)
+      block.style.lineHeight = '1.25';
+      block.style.minHeight = '0';
+      block.style.height = '';
+      block.style.marginTop = block.style.marginTop || '0';
+      block.style.marginBottom = '0.15em';
+      block.style.paddingTop = '0';
+      block.style.paddingBottom = '0';
+      const tag = block.tagName.toLowerCase();
+      if (tag === 'p' || tag === 'div' || tag === 'li' || /^h[1-6]$/.test(tag)) {
+        block.style.display = 'block';
+      }
+      // Nested Word spans often keep old font-size / absolute line-height
+      block.querySelectorAll('span, font').forEach((node) => {
+        const el = node as HTMLElement;
+        if (el.style.fontSize) el.style.fontSize = fontSize;
+        if (el.style.lineHeight && /(pt|px|mm|cm)$/i.test(el.style.lineHeight)) {
+          el.style.lineHeight = '1.25';
+        }
+        // Block-level spans from Word must stay on their own line
+        if ((el.style.display || '').toLowerCase() === 'block') {
+          el.style.display = 'block';
+          el.style.marginBottom = '0.1em';
+        }
+      });
+    }
+    this.ensureSelectedBlocksStaySeparateLines();
+  }
+
+  /** Prevent Serial/Employee/Year collapsing onto one visual line. */
+  private ensureSelectedBlocksStaySeparateLines(): void {
+    const blocks = this.getSelectedBlocks();
+    for (const block of blocks) {
+      const tag = block.tagName.toLowerCase();
+      if (tag === 'span' || tag === 'font') {
+        // These meta lines are often Word "block" spans — keep them stacked
+        block.style.display = 'block';
+      } else if (tag === 'p' || tag === 'div' || tag === 'li' || /^h[1-6]$/.test(tag)) {
+        block.style.display = 'block';
+      }
+    }
+  }
+
+  /** Walk every text node in the selection and apply style — works across paragraphs. */
+  private applyInlineStyleToRange(range: Range, property: string, value: string): void {
+    const textNodes = this.getTextNodesInRange(range);
+    if (!textNodes.length) return;
+
+    const startNode = range.startContainer;
+    const endNode = range.endContainer;
+    const startOff = range.startOffset;
+    const endOff = range.endOffset;
+
+    // Process from end → start so splitText offsets stay valid
+    for (let i = textNodes.length - 1; i >= 0; i--) {
+      let text = textNodes[i];
+      let from = 0;
+      let to = text.length;
+
+      if (text === startNode && text === endNode) {
+        from = startOff;
+        to = endOff;
+      } else if (text === startNode) {
+        from = startOff;
+      } else if (text === endNode) {
+        to = endOff;
+      }
+
+      if (from >= to || !text.length) continue;
+
+      // Split end first, then start
+      if (to < text.length) {
+        text.splitText(to);
+      }
+      if (from > 0) {
+        text = text.splitText(from);
+      }
+
+      const parent = text.parentElement;
+      if (
+        parent &&
+        parent.tagName === 'SPAN' &&
+        parent.childNodes.length === 1 &&
+        parent.textContent === text.textContent
+      ) {
+        parent.style.setProperty(property, value);
+        // Clear conflicting nested size/family from Word import on this span only
+        continue;
+      }
+
+      const span = document.createElement('span');
+      span.style.setProperty(property, value);
+      text.parentNode?.insertBefore(span, text);
+      span.appendChild(text);
+    }
+
+    // Re-select the original range so user can keep formatting
+    try {
+      const sel = window.getSelection();
+      if (sel && this.richSavedRange) {
+        sel.removeAllRanges();
+        sel.addRange(this.richSavedRange);
+      }
+    } catch (_) {}
+  }
+
+  private getTextNodesInRange(range: Range): Text[] {
+    const root =
+      range.commonAncestorContainer.nodeType === Node.TEXT_NODE
+        ? range.commonAncestorContainer.parentNode!
+        : range.commonAncestorContainer;
+
+    const nodes: Text[] = [];
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node: Node) => {
+        if (!node.nodeValue || !node.nodeValue.length) return NodeFilter.FILTER_REJECT;
+        try {
+          const nodeRange = document.createRange();
+          nodeRange.selectNodeContents(node);
+          const before =
+            range.compareBoundaryPoints(Range.END_TO_START, nodeRange) < 0;
+          const after =
+            range.compareBoundaryPoints(Range.START_TO_END, nodeRange) > 0;
+          return before && after ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+        } catch {
+          return NodeFilter.FILTER_REJECT;
+        }
+      },
+    });
+
+    let n: Node | null;
+    while ((n = walker.nextNode())) {
+      nodes.push(n as Text);
+    }
+    return nodes;
+  }
+
+  applyParagraphSpacing(value: string): void {
     if (!value) return;
 
     const el = this.getRichEl();
     if (!el) return;
 
     if (!this.restoreRichSelection()) {
-      this.notyf.error('Pehle paragraph select/click karo');
+      // Allow caret-only: still tighten the current paragraph
+      el.focus();
+    }
+
+    const blocks = this.getSelectedBlocks();
+    if (!blocks.length) {
+      this.notyf.error('Paragraph select/click karo');
       return;
     }
 
-    const block = this.getSelectionBlock();
+    const tight = value === '0' || value === '0px';
+    for (const block of blocks) {
+      const text = (block.textContent || '').replace(/\u00a0/g, ' ').trim();
+      const isBlank = !text;
 
-    if (!block) {
-      this.notyf.error('Paragraph select nahi hua');
-      return;
+      block.style.marginTop = value;
+      block.style.marginBottom = value;
+      block.style.display = 'block'; // never allow gap-tighten to merge lines
+
+      if (tight) {
+        block.style.paddingTop = '0';
+        block.style.paddingBottom = '0';
+        block.style.minHeight = '0';
+        block.style.height = '';
+
+        if (isBlank) {
+          block.classList.add('hr-blank-gap');
+          block.style.lineHeight = '0.4';
+          block.style.marginTop = '0';
+          block.style.marginBottom = '0';
+        } else {
+          // Content lines: tighten gap but KEEP separate lines (line-height >= 1.15)
+          block.classList.remove('hr-blank-gap');
+          block.style.lineHeight = '1.2';
+          block.style.marginTop = '0';
+          block.style.marginBottom = '0.1em';
+          // Absolute pt line-heights from Word cause giant gaps after font shrink
+          block.querySelectorAll('[style*="line-height"]').forEach((node) => {
+            const el = node as HTMLElement;
+            if (el.style.lineHeight && /(pt|px|mm|cm)$/i.test(el.style.lineHeight)) {
+              el.style.lineHeight = '1.2';
+            }
+          });
+        }
+      }
     }
-
-    block.style.marginBottom = value;
 
     this.form.bodyHtml = el.innerHTML;
     this.saveRichSelection();
   }
 
-
-  private applyParagraphStyle(property: string, value: string): void {
+  applyParagraphStyle(property: string, value: string): void {
     if (!value) return;
 
     const el = this.getRichEl();
     if (!el) return;
 
-    const block = this.getSelectionBlock();
+    if (!this.restoreRichSelection()) {
+      el.focus();
+    }
 
-    if (!block) {
+    const blocks = this.getSelectedBlocks();
+    if (!blocks.length) {
       this.notyf.error('Paragraph select/click karo');
       return;
     }
 
-    block.style.setProperty(property, value);
+    for (const block of blocks) {
+      block.style.setProperty(property, value);
+      block.style.display = 'block';
+      // Absolute line-heights fight unitless values — clear on children when setting line-height
+      if (property === 'line-height') {
+        block.querySelectorAll('[style*="line-height"]').forEach((node) => {
+          const el = node as HTMLElement;
+          if (el.style.lineHeight && /(pt|px|mm|cm)$/i.test(el.style.lineHeight)) {
+            el.style.lineHeight = value;
+          }
+        });
+      }
+    }
+
+    this.form.bodyHtml = el.innerHTML;
+    this.saveRichSelection();
+  }
+
+  /** Open file picker to insert image at caret. */
+  insertImage(): void {
+    const el = this.getRichEl();
+    if (!el) return;
+    this.restoreRichSelection();
+    this.richImageInput?.nativeElement?.click();
+  }
+
+  onRichImageSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      this.notyf.error('Sirf image files allowed hain');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      this.notyf.error('Image 5 MB se chhoti honi chahiye');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      this.insertHtmlAtCaret(
+        `<img src="${dataUrl}" alt="inserted" style="max-width:100%;height:auto;display:inline-block;" />`,
+      );
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /** Prompt for rows/cols and insert a bordered Word-like table. */
+  insertTable(): void {
+    const rowsRaw = window.prompt('Number of rows?', '3');
+    if (rowsRaw == null) return;
+    const colsRaw = window.prompt('Number of columns?', '3');
+    if (colsRaw == null) return;
+
+    const rows = Math.min(20, Math.max(1, parseInt(rowsRaw, 10) || 3));
+    const cols = Math.min(10, Math.max(1, parseInt(colsRaw, 10) || 3));
+
+    let html =
+      '<table class="hr-doc-table hr-doc-table-bordered" border="1" cellpadding="4" cellspacing="0" style="width:100%;border-collapse:collapse;margin:8px 0;">';
+    for (let r = 0; r < rows; r++) {
+      html += '<tr>';
+      for (let c = 0; c < cols; c++) {
+        const tag = r === 0 ? 'th' : 'td';
+        const style =
+          'border:1px solid #000;padding:6px 8px;min-width:60px;' +
+          (r === 0 ? 'font-weight:bold;background:#f3f4f6;' : '');
+        html += `<${tag} style="${style}"><br></${tag}>`;
+      }
+      html += '</tr>';
+    }
+    html += '</table><p><br></p>';
+    this.insertHtmlAtCaret(html);
+  }
+
+  insertHorizontalRule(): void {
+    this.insertHtmlAtCaret('<hr style="border:none;border-top:1px solid #000;margin:12px 0;" />');
+  }
+
+  private insertHtmlAtCaret(html: string): void {
+    const el = this.getRichEl();
+    if (!el) return;
+
+    this.restoreRichSelection();
+    el.focus();
+
+    try {
+      const ok = document.execCommand('insertHTML', false, html);
+      if (!ok) {
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount) {
+          const range = sel.getRangeAt(0);
+          range.deleteContents();
+          const temp = document.createElement('div');
+          temp.innerHTML = html;
+          const frag = document.createDocumentFragment();
+          let node: ChildNode | null;
+          let last: ChildNode | null = null;
+          while ((node = temp.firstChild)) {
+            last = frag.appendChild(node);
+          }
+          range.insertNode(frag);
+          if (last) {
+            const next = document.createRange();
+            next.setStartAfter(last);
+            next.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(next);
+            this.richSavedRange = next.cloneRange();
+          }
+        } else {
+          el.innerHTML = (el.innerHTML || '') + html;
+        }
+      }
+    } catch (e) {
+      console.warn('insertHtmlAtCaret failed', e);
+      el.innerHTML = (el.innerHTML || '') + html;
+    }
 
     this.form.bodyHtml = el.innerHTML;
     this.saveRichSelection();
@@ -654,12 +974,54 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
 
   /** Make Word HTML editable (Word often marks nodes as non-editable). */
   private makeHtmlEditable(html: string): string {
-    return String(html || '')
+    let out = String(html || '')
       .replace(/\scontenteditable\s*=\s*(["'])false\1/gi, ' contenteditable="true"')
       .replace(/\sunselectable\s*=\s*(["'])[^"']*\1/gi, '')
       .replace(/pointer-events\s*:\s*none\s*;?/gi, '')
       .replace(/user-select\s*:\s*none\s*;?/gi, '')
       .replace(/-webkit-user-modify\s*:\s*read-only\s*;?/gi, '');
+    return this.collapseBlankParagraphs(out);
+  }
+
+  /**
+   * Word often inserts many empty <p><br></p> / &nbsp; blocks between sections.
+   * Those create huge white gaps AND a giant blue highlight when selecting text.
+   */
+  private collapseBlankParagraphs(html: string): string {
+    let out = String(html || '');
+
+    const emptyBlock =
+      /<(p|div)\b([^>]*)>(?:\s|&nbsp;|\u00a0|<br\s*\/?>|<span\b[^>]*>\s*(?:&nbsp;|\u00a0|<br\s*\/?>|\s)*<\/span>)*<\/\1>/gi;
+
+    // Mark empties, then collapse consecutive markers into one thin spacer
+    out = out.replace(emptyBlock, '<!--HR_BLANK-->');
+    out = out.replace(/(?:<!--HR_BLANK-->\s*)+/g, '<p class="hr-blank-gap"><br></p>');
+
+    // Clamp oversized top/bottom margins that inflate select gaps
+    out = out.replace(/style\s*=\s*(["'])(.*?)\1/gi, (_m, q: string, style: string) => {
+      let s = String(style);
+      const clamp = (prop: string, maxPt: number) => {
+        s = s.replace(
+          new RegExp(`(${prop})\\s*:\\s*(-?[\\d.]+)(pt|px|mm|em|rem)`, 'gi'),
+          (_mm, p: string, num: string, unit: string) => {
+            let pt = parseFloat(num) || 0;
+            const u = unit.toLowerCase();
+            if (u === 'px') pt *= 0.75;
+            else if (u === 'mm') pt *= 2.83465;
+            else if (u === 'em' || u === 'rem') pt *= 12;
+            pt = Math.min(Math.max(pt, 0), maxPt);
+            return `${p}:${pt.toFixed(1)}pt`;
+          },
+        );
+      };
+      clamp('margin-top', 8);
+      clamp('margin-bottom', 8);
+      clamp('padding-top', 6);
+      clamp('padding-bottom', 6);
+      return `style=${q}${s}${q}`;
+    });
+
+    return out;
   }
 
   /** Render imported Word HTML into contenteditable (visible + editable). */
@@ -740,6 +1102,8 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     if (!el || !sel || sel.rangeCount === 0) return;
     const range = sel.getRangeAt(0);
     if (!el.contains(range.commonAncestorContainer)) return;
+    // Don't overwrite a good multi-line selection with a collapsed caret (e.g. when Font dropdown takes focus)
+    if (sel.isCollapsed && this.richSavedRange && !this.richSavedRange.collapsed) return;
     this.richSavedRange = range.cloneRange();
   }
 
@@ -903,21 +1267,74 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
   }
 
   private getSelectionBlock(): HTMLElement | null {
+    const blocks = this.getSelectedBlocks();
+    return blocks.length ? blocks[0] : null;
+  }
+
+  /** All block elements intersecting the current (or saved) selection. */
+  private getSelectedBlocks(): HTMLElement[] {
     const el = this.getRichEl();
     const sel = window.getSelection();
-    if (!el || !sel || !sel.rangeCount) return null;
-    let node: Node | null = sel.getRangeAt(0).commonAncestorContainer;
-    if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
-    while (node && node !== el) {
-      if (node instanceof HTMLElement) {
-        const tag = node.tagName.toLowerCase();
-        if (['p', 'div', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'td', 'th', 'blockquote'].includes(tag)) {
-          return node;
+    if (!el || !sel || !sel.rangeCount) return [];
+
+    const range = sel.getRangeAt(0);
+    const blockTags = new Set([
+      'p', 'div', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'td', 'th', 'blockquote',
+    ]);
+
+    const findBlock = (node: Node | null): HTMLElement | null => {
+      let n: Node | null = node;
+      if (n && n.nodeType === Node.TEXT_NODE) n = n.parentElement;
+      while (n && n !== el) {
+        if (n instanceof HTMLElement && blockTags.has(n.tagName.toLowerCase())) {
+          // Prefer innermost content block, but skip the editor host itself
+          return n;
         }
+        n = n.parentNode;
       }
-      node = node.parentNode;
+      return null;
+    };
+
+    // Collapsed caret → single block
+    if (sel.isCollapsed) {
+      const one = findBlock(range.startContainer);
+      return one ? [one] : [];
     }
-    return null;
+
+    const found = new Set<HTMLElement>();
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
+      acceptNode: (node: Node) => {
+        try {
+          const nr = document.createRange();
+          if (node.nodeType === Node.TEXT_NODE) {
+            if (!node.nodeValue) return NodeFilter.FILTER_REJECT;
+            nr.selectNodeContents(node);
+          } else {
+            nr.selectNode(node);
+          }
+          const intersects =
+            range.compareBoundaryPoints(Range.END_TO_START, nr) < 0 &&
+            range.compareBoundaryPoints(Range.START_TO_END, nr) > 0;
+          return intersects ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+        } catch {
+          return NodeFilter.FILTER_REJECT;
+        }
+      },
+    });
+
+    let n: Node | null;
+    while ((n = walker.nextNode())) {
+      const block = findBlock(n);
+      if (block && el.contains(block) && block !== el) found.add(block);
+    }
+
+    // Always include start/end blocks
+    const startB = findBlock(range.startContainer);
+    const endB = findBlock(range.endContainer);
+    if (startB) found.add(startB);
+    if (endB) found.add(endB);
+
+    return Array.from(found);
   }
 
   insertVariable(key: string): void {
@@ -1043,6 +1460,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
 
       html = this.normalizeImportedHtml(html, isDocx);
       html = this.sanitizeOverlappingLayoutHtml(html);
+      html = this.collapseBlankParagraphs(html);
 
       // Mammoth ignores Word headers â€” pull header images ONLY if body has no top logo yet
       // (otherwise logo + Ref line stack/overlap like the Offer Letter glitch)

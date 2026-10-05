@@ -1,0 +1,232 @@
+<div class="container-fluid mt-5">
+  <div class="row mb-6">
+    <div class="col-md">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <span>Appraisal List</span>
+          <div class="d-flex align-items-center gap-2">
+            <div class="btn-group btn-group-sm" role="group">
+              <button type="button"
+                class="btn"
+                [class.btn-primary]="viewMode === 'monthly'"
+                [class.btn-outline-primary]="viewMode !== 'monthly'"
+                (click)="setViewMode('monthly')">
+                Monthly
+              </button>
+              <button type="button"
+                class="btn"
+                [class.btn-primary]="viewMode === 'yearly'"
+                [class.btn-outline-primary]="viewMode !== 'yearly'"
+                (click)="setViewMode('yearly')">
+                Yearly
+              </button>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-primary"
+              (click)="loadList()" [disabled]="isLoading">
+              <i class="fas fa-sync-alt" [class.fa-spin]="isLoading"></i> Refresh
+            </button>
+          </div>
+        </h5>
+        <div class="card-body py-2">
+          <p class="text-muted mb-0 small">
+            Appraisals that have already been applied. The latest appraisal of an employee can be edited.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mb-6">
+    <div class="col-md">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <span>
+            Applied Appraisals
+            <span class="badge bg-primary ms-2">{{ filteredRecords.length }}</span>
+          </span>
+        </h5>
+
+        <div *ngIf="isLoading" class="text-center py-5 text-muted">Loading appraisals…</div>
+
+        <app-search-pagination
+          *ngIf="!isLoading"
+          [totalItems]="filteredRecords.length"
+          [pageSize]="pageSize"
+          [currentPage]="currentPage"
+          (search)="onSearch($event)"
+          (pageChange)="onPageChange($event)"
+          (pageSizeChange)="onPageSizeChange($event)">
+
+          <div class="table-responsive">
+            <table class="table table-striped text-nowrap dataTable bg-white mb-0">
+              <thead>
+                <tr>
+                  <th>SI.No</th>
+                  <th>Emp Code</th>
+                  <th>Employee Name</th>
+                  <th>Old CTC {{ viewMode === 'monthly' ? 'Monthly' : 'Yearly' }}</th>
+                  <th>Increment %</th>
+                  <th>New CTC {{ viewMode === 'monthly' ? 'Monthly' : 'Yearly' }}</th>
+                  <th>Effective Date</th>
+                  <th>Applied On</th>
+                  <th>Edit</th>
+                </tr>
+              </thead>
+              <tbody class="table-border-bottom-0">
+                <tr *ngFor="let item of pagedRecords; let i = index">
+                  <th scope="row">{{ (currentPage - 1) * pageSize + i + 1 }}</th>
+                  <td>{{ item.empCode || '—' }}</td>
+                  <td>{{ item.employeeName }}</td>
+                  <td>{{ formatAmt(displayAmt(item.oldCTC)) }}</td>
+                  <td>{{ item.percent }}%</td>
+                  <td>
+                    <strong class="text-success">{{ formatAmt(displayAmt(item.newCTC)) }}</strong>
+                  </td>
+                  <td>{{ item.effectiveDate || '—' }}</td>
+                  <td>{{ item.appliedOn ? (item.appliedOn | date:'dd-MMM-yyyy') : '—' }}</td>
+                  <td>
+                    <button
+                      type="button"
+                      class="btn btn-outline-primary btn-sm"
+                      [disabled]="!item.canEdit"
+                      (click)="openEdit(item)">
+                      <i class="fas fa-edit"></i> Edit
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="pagedRecords.length === 0">
+                  <td colspan="9" class="text-center text-muted py-4">No appraisals found</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </app-search-pagination>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="appraisalEditModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          Edit Appraisal — {{ selected?.employeeName }}
+          <small class="text-muted ms-2" *ngIf="selected?.empCode">({{ selected?.empCode }})</small>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="row g-3 mb-4">
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Increment %</label>
+            <input
+              type="number"
+              class="form-control"
+              min="0"
+              step="0.01"
+              placeholder="e.g. 10"
+              [(ngModel)]="percent"
+              (ngModelChange)="onPercentChange()"
+              name="percent" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Effective Date</label>
+            <input type="date" class="form-control" [(ngModel)]="effectiveDate" name="effectiveDate" />
+          </div>
+          <div class="col-md-6 d-flex align-items-end gap-2 flex-wrap">
+            <div class="summary-chip">
+              <span class="label">Current CTC</span>
+              <strong>{{ formatAmt(displayAmt(summary.currentCTC)) }}</strong>
+            </div>
+            <div class="summary-chip accent">
+              <span class="label">New CTC</span>
+              <strong>{{ formatAmt(displayAmt(summary.newCTC)) }}</strong>
+            </div>
+            <div class="summary-chip">
+              <span class="label">Increase</span>
+              <strong class="text-success">+{{ formatAmt(displayAmt(summary.totalIncrease)) }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="mb-0">Salary Heads</h6>
+          <div class="btn-group btn-group-sm">
+            <button type="button" class="btn btn-outline-secondary" (click)="openAllPayables()">Include all payables</button>
+            <button type="button" class="btn btn-outline-secondary" (click)="closeAllPayables()">Close all payables</button>
+            <button type="button" class="btn btn-outline-secondary" (click)="openAllDeductions()">Include all deductions</button>
+            <button type="button" class="btn btn-outline-secondary" (click)="closeAllDeductions()">Exclude all deductions</button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-bordered align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Head</th>
+                <th>Type</th>
+                <th class="text-end">Current</th>
+                <th class="text-end">Increase</th>
+                <th class="text-end">New Amount</th>
+                <th class="text-center">Include in %</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let head of heads" [class.row-closed]="head.closed">
+                <td>
+                  {{ head.name }}
+                  <span class="badge bg-label-secondary ms-1" *ngIf="head.componentType === 'deductible'">Deduction</span>
+                </td>
+                <td>
+                  <small class="text-muted">{{ head.type || '—' }}</small>
+                </td>
+                <td class="text-end">{{ formatAmt(displayAmt(head.currentAmount)) }}</td>
+                <td class="text-end">
+                  <span *ngIf="head.increase > 0" class="text-success">+{{ formatAmt(displayAmt(head.increase)) }}</span>
+                  <span *ngIf="!head.increase || head.increase === 0" class="text-muted">—</span>
+                </td>
+                <td class="text-end fw-semibold">{{ formatAmt(displayAmt(head.newAmount)) }}</td>
+                <td class="text-center">
+                  <div class="form-check form-switch d-inline-flex justify-content-center m-0">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      [checked]="!head.closed"
+                      (change)="toggleHead(head)"
+                      [id]="'edit-sw-' + head.key" />
+                  </div>
+                  <div *ngIf="head.closed">
+                    <small class="text-muted">
+                      {{ head.componentType === 'deductible' ? 'Excluded' : 'Closed' }}
+                    </small>
+                  </div>
+                </td>
+              </tr>
+              <tr *ngIf="heads.length === 0">
+                <td colspan="6" class="text-center text-muted py-3">No salary heads</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="small text-muted mt-3 mb-0">
+          Editing recalculates this appraisal from the salary that was in place before it, and replaces the current salary version.
+        </p>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          [disabled]="isSaving || percent === null || percent === undefined"
+          (click)="updateAppraisal()">
+          <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1"></span>
+          Update Appraisal
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -118,50 +118,86 @@
 
             <!-- Formatting toolbar for Word-import (contenteditable) mode -->
             <div class="dt-rich-toolbar" *ngIf="useRichEditor" (mousedown)="$event.preventDefault()">
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('undo')" title="Undo">↶</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('redo')" title="Redo">↷</button>
+              <span class="dt-rich-sep"></span>
               <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('bold')" title="Bold"><b>B</b></button>
               <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('italic')" title="Italic"><i>I</i></button>
               <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('underline')" title="Underline"><u>U</u></button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('strikeThrough')" title="Strikethrough"><s>S</s></button>
               <span class="dt-rich-sep"></span>
 
               <!-- Font Family -->
               <select
                 class="form-select form-select-sm dt-format-select"
-                (mousedown)="$event.stopPropagation()"
-                (change)="applyRichTextStyle('font-family', $any($event.target).value)"
+                title="Font family"
+                (mousedown)="saveRichSelection(); $event.stopPropagation()"
+                (focus)="saveRichSelection()"
+                (change)="applyRichTextStyle('font-family', $any($event.target).value); $any($event.target).value = ''"
               >
                 <option value="">Font</option>
-                <option value="Arial">Arial</option>
-                <option value="Calibri">Calibri</option>
-                <option value="Times New Roman">Times New Roman</option>
-                <option value="Georgia">Georgia</option>
-                <option value="Verdana">Verdana</option>
-                <option value="Tahoma">Tahoma</option>
+                <option value="Arial, Helvetica, sans-serif">Arial</option>
+                <option value="Calibri, Candara, sans-serif">Calibri</option>
+                <option value="'Times New Roman', Times, serif">Times New Roman</option>
+                <option value="Georgia, serif">Georgia</option>
+                <option value="Verdana, Geneva, sans-serif">Verdana</option>
+                <option value="Tahoma, Geneva, sans-serif">Tahoma</option>
+                <option value="'Courier New', Courier, monospace">Courier New</option>
+                <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+                <option value="'Comic Sans MS', cursive">Comic Sans MS</option>
+                <option value="Impact, Charcoal, sans-serif">Impact</option>
               </select>
 
               <!-- Font Size -->
               <select
                 class="form-select form-select-sm dt-format-select"
-                (mousedown)="$event.stopPropagation()"
-                (change)="applyRichTextStyle('font-size', $any($event.target).value)"
+                title="Font size"
+                (mousedown)="saveRichSelection(); $event.stopPropagation()"
+                (focus)="saveRichSelection()"
+                (change)="applyRichTextStyle('font-size', $any($event.target).value); $any($event.target).value = ''"
               >
                 <option value="">Size</option>
-                <option value="10px">10</option>
-                <option value="11px">11</option>
-                <option value="12px">12</option>
-                <option value="14px">14</option>
-                <option value="16px">16</option>
-                <option value="18px">18</option>
-                <option value="20px">20</option>
-                <option value="24px">24</option>
-                <option value="28px">28</option>
-                <option value="32px">32</option>
+                <option value="8pt">8</option>
+                <option value="9pt">9</option>
+                <option value="10pt">10</option>
+                <option value="11pt">11</option>
+                <option value="12pt">12</option>
+                <option value="14pt">14</option>
+                <option value="16pt">16</option>
+                <option value="18pt">18</option>
+                <option value="20pt">20</option>
+                <option value="22pt">22</option>
+                <option value="24pt">24</option>
+                <option value="28pt">28</option>
+                <option value="32pt">32</option>
+                <option value="36pt">36</option>
+                <option value="48pt">48</option>
+                <option value="72pt">72</option>
               </select>
+
+              <!-- Text Color -->
+              <label class="dt-color-wrap" title="Text color" (mousedown)="$event.preventDefault()">
+                <span class="dt-color-label">A</span>
+                <input type="color" value="#000000"
+                  (mousedown)="$event.stopPropagation()"
+                  (input)="applyRichTextStyle('color', $any($event.target).value)" />
+              </label>
+
+              <!-- Highlight -->
+              <label class="dt-color-wrap" title="Highlight" (mousedown)="$event.preventDefault()">
+                <span class="dt-color-label dt-color-label--bg">A</span>
+                <input type="color" value="#ffff00"
+                  (mousedown)="$event.stopPropagation()"
+                  (input)="applyRichTextStyle('background-color', $any($event.target).value)" />
+              </label>
 
               <!-- Line Height -->
               <select
                 class="form-select form-select-sm dt-format-select"
-                (mousedown)="$event.stopPropagation()"
-                (change)="applyParagraphStyle('line-height', $any($event.target).value)"
+                title="Line height"
+                (mousedown)="saveRichSelection(); $event.stopPropagation()"
+                (focus)="saveRichSelection()"
+                (change)="applyParagraphStyle('line-height', $any($event.target).value); $any($event.target).value = ''"
               >
                 <option value="">Line Height</option>
                 <option value="1">1.0</option>
@@ -175,14 +211,17 @@
               <!-- Paragraph Spacing -->
               <select
                 class="form-select form-select-sm dt-format-select"
-                (mousedown)="$event.stopPropagation()"
-                (change)="applyParagraphSpacing($any($event.target).value)"
+                title="Paragraph spacing (gaps between lines)"
+                (mousedown)="saveRichSelection(); $event.stopPropagation()"
+                (focus)="saveRichSelection()"
+                (change)="applyParagraphSpacing($any($event.target).value); $any($event.target).value = ''"
               >
                 <option value="">Paragraph Spacing</option>
-                <option value="0px">0</option>
-                <option value="5px">5</option>
-                <option value="10px">10</option>
-                <option value="15px">15</option>
+                <option value="0px">0 (tight)</option>
+                <option value="4px">4</option>
+                <option value="8px">8</option>
+                <option value="12px">12</option>
+                <option value="16px">16</option>
                 <option value="20px">20</option>
               </select>
 
@@ -203,12 +242,48 @@
                 type="button"
                 class="btn btn-sm btn-outline-secondary"
                 (mousedown)="$event.preventDefault()"
+                (click)="insertImage()"
+                title="Insert image"
+              >
+                🖼 Image
+              </button>
+              <input
+                #richImageInput
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                class="d-none"
+                (change)="onRichImageSelected($event)"
+              />
+
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary"
+                (mousedown)="$event.preventDefault()"
+                (click)="insertTable()"
+                title="Insert table"
+              >
+                ⊞ Table
+              </button>
+
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary"
+                (mousedown)="$event.preventDefault()"
+                (click)="insertHorizontalRule()"
+                title="Horizontal line"
+              >
+                ― Line
+              </button>
+
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary"
+                (mousedown)="$event.preventDefault()"
                 (click)="insertPageBreak()"
                 title="Start content from next page"
               >
                 ↵ Page Break
               </button>
-
 
               <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('removeFormat')" title="Clear formatting">Clear</button>
             </div>
@@ -241,7 +316,7 @@
               </div>
             </div>
             <small class="text-muted" *ngIf="useRichEditor">
-              Word layout mode — text select karo, upar wale <b>B / I / U</b> buttons use karo (Quill toolbar nahi).
+              Word layout mode — text select karke Font / Size / Color / Image / Table use karo.
             </small>
           </div>
 

@@ -79,6 +79,7 @@ export const APP_MENU_ITEMS: MenuItem[] = [
       { title: 'Deduction Summary',     icon: 'ri-subtract-line',           link: '/layout/payroll/deduction-summary', permKey: 'pay.deduction' },
       { title: 'Reimbursement',         icon: 'ri-refund-line',             link: '/layout/payroll/reimbursement',     permKey: 'pay.reimburse' },
       { title: 'Employee Appraisal',    icon: 'ri-percent-line',            link: '/layout/payroll/employee-appraisal', permKey: 'pay.appraisal' },
+      { title: 'Appraisal List',        icon: 'ri-file-list-3-line',        link: '/layout/payroll/appraisal-list',     permKey: 'pay.appraisalList' },
       { title: 'Arrear Management',     icon: 'ri-refund-2-line',           link: '/layout/payroll/arrear-management', permKey: 'pay.arrear' },
     ]
   },

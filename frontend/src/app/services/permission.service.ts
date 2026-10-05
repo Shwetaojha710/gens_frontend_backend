@@ -70,6 +70,7 @@ export const DEFAULT_PERMISSIONS: PermissionSection[] = [
       { key: 'pay.deduction',  label: 'Deduction Summary',     roles: ['admin', 'superadmin', 'hr'] },
       { key: 'pay.reimburse',  label: 'Reimbursement',         roles: ['admin', 'superadmin', 'hr'] },
       { key: 'pay.appraisal',  label: 'Employee Appraisal',    roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'pay.appraisalList', label: 'Appraisal List',     roles: ['admin', 'superadmin', 'hr'] },
       { key: 'pay.arrear',     label: 'Arrear Management',     roles: ['admin', 'superadmin', 'hr'] },
     ]
   },

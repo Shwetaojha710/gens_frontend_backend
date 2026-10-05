@@ -8,6 +8,7 @@ const deductionS = require("../../models/deductions");
 const Designation = require("../../models/designation");
 const Department = require("../../models/department");
 const EmployeeOldSalary = require("../../models/employeeOldSalary");
+const log = require("../../models/log");
 const { writeAudit, toPlain } = require("../../helper/auditLog");
 
 
@@ -178,20 +179,50 @@ function summarize(computedHeads) {
   };
 }
 
-async function loadActiveStructure(tenantId, branchId, employeeId) {
+async function loadActiveStructure(tenantId, branchId, employeeId, transaction) {
+  const opts = { raw: true };
+  if (transaction) opts.transaction = transaction;
   const basics = await Basic.findAll({
     where: { tenantId, branchId, employeeId, status: "active" },
-    raw: true,
+    ...opts,
   });
   const allowances = await allowance.findAll({
     where: { tenantId, branchId, employeeId, status: "active" },
-    raw: true,
+    ...opts,
   });
   const deductions = await deductionS.findAll({
     where: { tenantId, branchId, employeeId, status: "active" },
-    raw: true,
+    ...opts,
   });
   return { basics, allowances, deductions };
+}
+
+function parseJson(value) {
+  if (!value) return null;
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  return value;
+}
+
+function dateOnly(value) {
+  if (!value) return "";
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const month = String(value.getMonth() + 1).padStart(2, "0");
+    const day = String(value.getDate()).padStart(2, "0");
+    return `${value.getFullYear()}-${month}-${day}`;
+  }
+  return String(value).slice(0, 10);
+}
+
+function payableCtc(heads, field) {
+  return (heads || [])
+    .filter((h) => h.componentType === "payable")
+    .reduce((sum, h) => sum + roundAmt(h[field]), 0);
 }
 
 /** Employee list with current CTC for appraisal */
@@ -462,75 +493,69 @@ exports.previewAppraisal = async (req, res) => {
   }
 };
 
-/** Apply appraisal — version salary structure like updateSalarySetup */
-exports.applyAppraisal = async (req, res) => {
-  const transaction = await sequelize.transaction();
-  try {
-    const tenantId = req.users?.tenantId;
-    const branchId = req.users?.branchId;
-    const userId = req.users?.id;
-    const { employeeId, percent, closedHeadKeys, effectiveDate } = req.body || {};
+/**
+ * Version the active salary structure.
+ * Caller owns the transaction. Pass skipAudit when the caller updates an existing appraisal log.
+ */
+async function runApplyAppraisal({
+  req,
+  transaction,
+  tenantId,
+  branchId,
+  userId,
+  employeeId,
+  percent,
+  closedHeadKeys,
+  effectiveDate,
+  skipAudit = false,
+}) {
+  if (!tenantId || !branchId || !employeeId) {
+    return { ok: false, status: 400, message: "Required fields missing" };
+  }
+  if (percent === undefined || percent === null || Number(percent) < 0) {
+    return { ok: false, status: 400, message: "Valid increment percent is required" };
+  }
+  if (!effectiveDate) {
+    return { ok: false, status: 400, message: "effectiveDate is required" };
+  }
 
-    if (!tenantId || !branchId || !employeeId) {
-      await transaction.rollback();
-      return Helper.response(false, "Required fields missing", {}, res, 400);
-    }
-    if (percent === undefined || percent === null || Number(percent) < 0) {
-      await transaction.rollback();
-      return Helper.response(false, "Valid increment percent is required", {}, res, 400);
-    }
-    if (!effectiveDate) {
-      await transaction.rollback();
-      return Helper.response(false, "effectiveDate is required", {}, res, 400);
-    }
+  const emp = await empPersonal.findOne({
+    where: { id: employeeId, tenantId, branchId },
+    transaction,
+    raw: true,
+  });
+  if (!emp) {
+    return { ok: false, status: 404, message: "Employee not found" };
+  }
 
-    const emp = await empPersonal.findOne({
-      where: { id: employeeId, tenantId, branchId },
-      transaction,
-      raw: true,
-    });
-    if (!emp) {
-      await transaction.rollback();
-      return Helper.response(false, "Employee not found", {}, res, 404);
-    }
+  const { basics, allowances, deductions } = await loadActiveStructure(
+    tenantId,
+    branchId,
+    employeeId,
+    transaction,
+  );
 
-    const { basics, allowances, deductions } = await loadActiveStructure(
+  if (!basics.length && !allowances.length) {
+    return { ok: false, status: 404, message: "No active salary structure found" };
+  }
+
+  const sameDateRows = await Basic.findAll({
+    where: {
       tenantId,
       branchId,
       employeeId,
-    );
-
-    if (!basics.length && !allowances.length) {
-      await transaction.rollback();
-      return Helper.response(
-        false,
-        "No active salary structure found",
-        {},
-        res,
-        404,
-      );
-    }
-
-    const sameDate = await Basic.findOne({
-      where: {
-        tenantId,
-        branchId,
-        employeeId,
-        startDate: effectiveDate,
-        status: "active",
-      },
-      transaction,
-    });
-    if (sameDate) {
-      await transaction.rollback();
-      return Helper.response(
-        false,
-        "Salary already exists for this effective date",
-        {},
-        res,
-        400,
-      );
-    }
+      startDate: effectiveDate,
+      status: "active",
+    },
+    transaction,
+  });
+  if (sameDateRows.some((row) => !isExcludedSalaryHead(row))) {
+    return {
+      ok: false,
+      status: 400,
+      message: "Salary already exists for this effective date",
+    };
+  }
 
     const heads = buildHeads(basics, allowances, deductions);
     const keys = resolveClosedKeys(
@@ -703,46 +728,499 @@ exports.applyAppraisal = async (req, res) => {
         { transaction },
       );
     }
-    // after successful apply (before commit):
+  const auditOld = {
+    percent: null,
+    ctcBefore: oldCTC,
+    structure: { basics, allowances, deductions },
+  };
+  const auditNew = {
+    percent: Number(percent),
+    effectiveDate,
+    closedHeadKeys: keys,
+    ctcAfter: newCTC,
+    computed: toPlain(computed),
+  };
+
+  if (!skipAudit) {
     await writeAudit({
       req,
       actionType: "APPRAISAL_APPLY",
       referenceId: employeeId,
       employeeId,
-      oldValue: {
-        percent: null,
-        ctcBefore: summary?.oldCTC || null,
-        structure: { basics, allowances, deductions },
-      },
-      newValue: {
-        percent,
-        effectiveDate,
-        closedHeadKeys: keys,
-        ctcAfter: summary?.newCTC || null,
-        computed: toPlain(computed),
-      },
+      oldValue: auditOld,
+      newValue: auditNew,
       remarks: `Appraisal ${percent}% effective ${effectiveDate}`,
       transaction,
     });
+  }
+
+  return {
+    ok: true,
+    data: {
+      employeeId,
+      percent: Number(percent),
+      effectiveDate,
+      heads: computed,
+      summary,
+      oldCTC,
+      newCTC,
+      emp,
+      auditOld,
+      auditNew,
+    },
+  };
+}
+
+/** Apply appraisal — version salary structure like updateSalarySetup */
+exports.applyAppraisal = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const result = await runApplyAppraisal({
+      req,
+      transaction,
+      tenantId: req.users?.tenantId,
+      branchId: req.users?.branchId,
+      userId: req.users?.id,
+      employeeId: req.body?.employeeId,
+      percent: req.body?.percent,
+      closedHeadKeys: req.body?.closedHeadKeys,
+      effectiveDate: req.body?.effectiveDate,
+    });
+    if (!result.ok) {
+      await transaction.rollback();
+      return Helper.response(false, result.message, {}, res, result.status || 400);
+    }
     await transaction.commit();
+    const { auditOld, auditNew, emp, ...payload } = result.data;
+    return Helper.response(true, "Appraisal applied successfully", payload, res, 200);
+  } catch (error) {
+    console.error("applyAppraisal:", error);
+    await transaction.rollback();
+    return Helper.response(false, error?.message || "Server error", {}, res, 500);
+  }
+};
+
+function idsFromRows(rows) {
+  return (rows || []).filter((row) => !isExcludedSalaryHead(row)).map((row) => row.id);
+}
+
+function snapshotHeads(newValue, structure) {
+  const computed = Array.isArray(newValue?.computed) ? newValue.computed : [];
+  const fromComputed = {
+    basic: computed.filter((h) => h.source === "basic").map((h) => h.id),
+    allowance: computed.filter((h) => h.source === "allowance").map((h) => h.id),
+    deduction: computed.filter((h) => h.source === "deduction").map((h) => h.id),
+  };
+  if (fromComputed.basic.length || fromComputed.allowance.length) return fromComputed;
+  return {
+    basic: idsFromRows(structure?.basics),
+    allowance: idsFromRows(structure?.allowances),
+    deduction: idsFromRows(structure?.deductions),
+  };
+}
+
+async function removeVersionRows(model, whereBase, effectiveDate, transaction) {
+  const rows = await model.findAll({
+    where: { ...whereBase, status: "active", startDate: effectiveDate },
+    transaction,
+  });
+  const ids = rows.filter((row) => !isExcludedSalaryHead(row)).map((row) => row.id);
+  if (!ids.length) return;
+  await model.destroy({ where: { id: { [Op.in]: ids } }, transaction });
+}
+
+async function reactivateRows(model, ids, employeeId, tenantId, branchId, transaction) {
+  if (!ids.length) return 0;
+  const [count] = await model.update(
+    { status: "active", endDate: null },
+    {
+      where: {
+        id: { [Op.in]: ids },
+        employeeId,
+        tenantId,
+        branchId,
+        status: "inactive",
+      },
+      transaction,
+    },
+  );
+  return count;
+}
+
+function structureStillMatches(rows, effectiveDate, required) {
+  const structureRows = (rows || []).filter((row) => !isExcludedSalaryHead(row));
+  if (!structureRows.length) return !required;
+  return structureRows.every((row) => dateOnly(row.startDate) === dateOnly(effectiveDate));
+}
+
+async function loadAppliedAppraisalRow(tenantId, branchId, appraisalId) {
+  if (!appraisalId) return { error: "appraisalId is required", status: 400 };
+  const row = await log.findOne({
+    where: { id: appraisalId, tenantId, actionType: "APPRAISAL_APPLY" },
+  });
+  if (!row) return { error: "Appraisal not found", status: 404 };
+
+  const employee = await empPersonal.findOne({
+    where: { id: row.employeeId, tenantId, branchId },
+    raw: true,
+  });
+  if (!employee) return { error: "Appraisal not found", status: 404 };
+
+  const newValue = parseJson(row.newValue) || {};
+  const oldValue = parseJson(row.oldValue) || {};
+  const structure = oldValue.structure || {};
+  if (!newValue.effectiveDate) {
+    return { error: "Appraisal record is incomplete", status: 400 };
+  }
+  return { row, employee, newValue, oldValue, structure };
+}
+
+/** All appraisals applied in this branch */
+exports.listAppliedAppraisals = async (req, res) => {
+  try {
+    const tenantId = req.users?.tenantId;
+    const branchId =
+      req.body?.branchId && req.body.branchId !== "null" && req.body.branchId !== ""
+        ? req.body.branchId
+        : req.users?.branchId;
+
+    if (!tenantId) {
+      return Helper.response(false, "Tenant ID is required", [], res, 400);
+    }
+    if (!branchId || branchId === "null") {
+      return Helper.response(false, "branchId is required!", [], res, 200);
+    }
+
+    const rows = await log.findAll({
+      where: { tenantId, actionType: "APPRAISAL_APPLY" },
+      order: [["createdAt", "DESC"]],
+    });
+
+    if (!rows.length) {
+      return Helper.response(true, "Appraisal list", [], res, 200);
+    }
+
+    const empIds = [...new Set(rows.map((r) => r.employeeId).filter(Boolean))];
+    const employees = await empPersonal.findAll({
+      where: { tenantId, branchId, id: { [Op.in]: empIds } },
+      attributes: ["id", "empCode", "firstName", "lastName", "departmentId", "designationId"],
+      raw: true,
+    });
+    const empMap = Object.fromEntries(employees.map((e) => [e.id, e]));
+
+    const deptIds = [...new Set(employees.map((e) => e.departmentId).filter(Boolean))];
+    const desigIds = [...new Set(employees.map((e) => e.designationId).filter(Boolean))];
+    const [depts, desigs] = await Promise.all([
+      deptIds.length
+        ? Department.findAll({
+            where: { id: { [Op.in]: deptIds } },
+            attributes: ["id", "name"],
+            raw: true,
+          })
+        : [],
+      desigIds.length
+        ? Designation.findAll({
+            where: { id: { [Op.in]: desigIds } },
+            attributes: ["id", "name"],
+            raw: true,
+          })
+        : [],
+    ]);
+    const deptMap = Object.fromEntries(depts.map((d) => [d.id, d.name]));
+    const desigMap = Object.fromEntries(desigs.map((d) => [d.id, d.name]));
+
+    const latestByEmp = {};
+    for (const row of rows) {
+      if (!empMap[row.employeeId]) continue;
+      const prev = latestByEmp[row.employeeId];
+      if (!prev || new Date(row.createdAt) > new Date(prev.createdAt)) {
+        latestByEmp[row.employeeId] = row;
+      }
+    }
+
+    const list = [];
+    for (const row of rows) {
+      const emp = empMap[row.employeeId];
+      if (!emp) continue;
+      const nv = parseJson(row.newValue) || {};
+      const computed = Array.isArray(nv.computed) ? nv.computed : [];
+      const oldCTC = payableCtc(computed, "currentAmount") || roundAmt(parseJson(row.oldValue)?.ctcBefore);
+      const newCTC = roundAmt(nv.ctcAfter) || payableCtc(computed, "newAmount");
+      list.push({
+        id: row.id,
+        employeeId: emp.id,
+        empCode: emp.empCode,
+        employeeName: `${emp.firstName || ""} ${emp.lastName || ""}`.trim(),
+        department: deptMap[emp.departmentId] || null,
+        designation: desigMap[emp.designationId] || null,
+        percent: Number(nv.percent) || 0,
+        effectiveDate: nv.effectiveDate || null,
+        oldCTC,
+        newCTC,
+        appliedOn: row.createdAt,
+        canEdit: latestByEmp[emp.id]?.id === row.id,
+      });
+    }
+
+    return Helper.response(true, "Appraisal list", list, res, 200);
+  } catch (error) {
+    console.error("listAppliedAppraisals:", error);
+    return Helper.response(false, error?.message || "Server error", [], res, 500);
+  }
+};
+
+/** One applied appraisal, rebuilt from the salary snapshot taken before it was applied */
+exports.getAppliedAppraisal = async (req, res) => {
+  try {
+    const tenantId = req.users?.tenantId;
+    const branchId = req.users?.branchId;
+    const loaded = await loadAppliedAppraisalRow(tenantId, branchId, req.body?.appraisalId);
+    if (loaded.error) {
+      return Helper.response(false, loaded.error, {}, res, loaded.status);
+    }
+
+    const { row, employee, newValue, structure } = loaded;
+    const basics = structure.basics || [];
+    const allowances = structure.allowances || [];
+    const deductions = structure.deductions || [];
+    if (!basics.length && !allowances.length) {
+      return Helper.response(
+        false,
+        "This appraisal cannot be edited because the previous salary snapshot is missing",
+        {},
+        res,
+        400,
+      );
+    }
+
+    const heads = buildHeads(basics, allowances, deductions);
+    const keys = Array.isArray(newValue.closedHeadKeys) ? newValue.closedHeadKeys : null;
+    const resolved = resolveClosedKeys(heads, keys);
+    const computed = applyIncrement(heads, newValue.percent || 0, resolved);
+
+    const newer = await log.findOne({
+      where: {
+        tenantId,
+        employeeId: employee.id,
+        actionType: "APPRAISAL_APPLY",
+        createdAt: { [Op.gt]: row.createdAt },
+      },
+    });
 
     return Helper.response(
       true,
-      "Appraisal applied successfully",
+      "Appraisal record",
       {
-        employeeId,
-        percent: Number(percent),
-        effectiveDate,
+        id: row.id,
+        employee: {
+          id: employee.id,
+          empCode: employee.empCode,
+          employeeName: `${employee.firstName || ""} ${employee.lastName || ""}`.trim(),
+        },
+        percent: Number(newValue.percent) || 0,
+        effectiveDate: newValue.effectiveDate,
         heads: computed,
-        summary,
-        oldCTC,
-        newCTC,
+        summary: summarize(computed),
+        canEdit: !newer,
       },
       res,
       200,
     );
   } catch (error) {
-    console.error("applyAppraisal:", error);
+    console.error("getAppliedAppraisal:", error);
+    return Helper.response(false, error?.message || "Server error", {}, res, 500);
+  }
+};
+
+/** Preview an edit against the pre-appraisal salary, not the current salary */
+exports.previewAppliedAppraisal = async (req, res) => {
+  try {
+    const tenantId = req.users?.tenantId;
+    const branchId = req.users?.branchId;
+    const { appraisalId, percent, closedHeadKeys } = req.body || {};
+    if (percent === undefined || percent === null || Number(percent) < 0) {
+      return Helper.response(false, "Valid increment percent is required", {}, res, 400);
+    }
+
+    const loaded = await loadAppliedAppraisalRow(tenantId, branchId, appraisalId);
+    if (loaded.error) {
+      return Helper.response(false, loaded.error, {}, res, loaded.status);
+    }
+
+    const structure = loaded.structure || {};
+    const heads = buildHeads(
+      structure.basics || [],
+      structure.allowances || [],
+      structure.deductions || [],
+    );
+    const keys = resolveClosedKeys(
+      heads,
+      Array.isArray(closedHeadKeys) ? closedHeadKeys : null,
+    );
+    const computed = applyIncrement(heads, percent, keys);
+    return Helper.response(
+      true,
+      "Appraisal edit preview",
+      { heads: computed, summary: summarize(computed), percent: Number(percent) },
+      res,
+      200,
+    );
+  } catch (error) {
+    console.error("previewAppliedAppraisal:", error);
+    return Helper.response(false, error?.message || "Server error", {}, res, 500);
+  }
+};
+
+/** Edit the latest appraisal: restore the previous salary version, then re-apply */
+exports.updateAppliedAppraisal = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const tenantId = req.users?.tenantId;
+    const branchId = req.users?.branchId;
+    const userId = req.users?.id;
+    const { appraisalId, percent, closedHeadKeys, effectiveDate } = req.body || {};
+
+    const loaded = await loadAppliedAppraisalRow(tenantId, branchId, appraisalId);
+    if (loaded.error) {
+      await transaction.rollback();
+      return Helper.response(false, loaded.error, {}, res, loaded.status);
+    }
+
+    const { row, employee, newValue, structure } = loaded;
+    const previousDate = dateOnly(newValue.effectiveDate);
+    const versionIds = snapshotHeads(newValue, structure);
+    if (!versionIds.basic.length && !versionIds.allowance.length) {
+      await transaction.rollback();
+      return Helper.response(
+        false,
+        "This appraisal cannot be edited because the previous salary snapshot is missing",
+        {},
+        res,
+        400,
+      );
+    }
+
+    const newer = await log.findOne({
+      where: {
+        tenantId,
+        employeeId: employee.id,
+        actionType: "APPRAISAL_APPLY",
+        createdAt: { [Op.gt]: row.createdAt },
+      },
+      transaction,
+    });
+    if (newer) {
+      await transaction.rollback();
+      return Helper.response(
+        false,
+        "Only the latest appraisal for this employee can be edited",
+        {},
+        res,
+        400,
+      );
+    }
+
+    const current = await loadActiveStructure(tenantId, branchId, employee.id, transaction);
+    const stillCurrent =
+      structureStillMatches(current.basics, previousDate, versionIds.basic.length > 0) &&
+      structureStillMatches(current.allowances, previousDate, versionIds.allowance.length > 0) &&
+      structureStillMatches(current.deductions, previousDate, versionIds.deduction.length > 0);
+    if (!stillCurrent) {
+      await transaction.rollback();
+      return Helper.response(
+        false,
+        "Salary was changed after this appraisal, so it cannot be edited",
+        {},
+        res,
+        400,
+      );
+    }
+
+    const whereBase = { tenantId, branchId, employeeId: employee.id };
+    await removeVersionRows(Basic, whereBase, previousDate, transaction);
+    await removeVersionRows(allowance, whereBase, previousDate, transaction);
+    await removeVersionRows(deductionS, whereBase, previousDate, transaction);
+
+    const basicRestored = await reactivateRows(
+      Basic,
+      versionIds.basic,
+      employee.id,
+      tenantId,
+      branchId,
+      transaction,
+    );
+    const allowanceRestored = await reactivateRows(
+      allowance,
+      versionIds.allowance,
+      employee.id,
+      tenantId,
+      branchId,
+      transaction,
+    );
+    const deductionRestored = await reactivateRows(
+      deductionS,
+      versionIds.deduction,
+      employee.id,
+      tenantId,
+      branchId,
+      transaction,
+    );
+    const restoredOk =
+      basicRestored === versionIds.basic.length &&
+      allowanceRestored === versionIds.allowance.length &&
+      deductionRestored === versionIds.deduction.length;
+    if (!restoredOk) {
+      await transaction.rollback();
+      return Helper.response(
+        false,
+        "Previous salary version could not be restored",
+        {},
+        res,
+        400,
+      );
+    }
+
+    const result = await runApplyAppraisal({
+      req,
+      transaction,
+      tenantId,
+      branchId,
+      userId,
+      employeeId: employee.id,
+      percent,
+      closedHeadKeys,
+      effectiveDate,
+      skipAudit: true,
+    });
+    if (!result.ok) {
+      await transaction.rollback();
+      return Helper.response(false, result.message, {}, res, result.status || 400);
+    }
+
+    await row.update(
+      {
+        oldValue: result.data.auditOld,
+        newValue: result.data.auditNew,
+        remarks: `Appraisal ${percent}% effective ${effectiveDate}`,
+      },
+      { transaction },
+    );
+    await writeAudit({
+      req,
+      actionType: "APPRAISAL_UPDATE",
+      referenceId: row.id,
+      employeeId: employee.id,
+      oldValue: newValue,
+      newValue: result.data.auditNew,
+      remarks: `Appraisal updated to ${percent}% effective ${effectiveDate}`,
+      transaction,
+    });
+
+    await transaction.commit();
+    const { auditOld, auditNew, emp, ...payload } = result.data;
+    return Helper.response(true, "Appraisal updated successfully", payload, res, 200);
+  } catch (error) {
+    console.error("updateAppliedAppraisal:", error);
     await transaction.rollback();
     return Helper.response(false, error?.message || "Server error", {}, res, 500);
   }
