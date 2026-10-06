@@ -2591,71 +2591,6 @@ exports.EmployeeLeaveList = async (req, res) => {
     return Helper.response(false, error.message, [], res, 500);
   }
 };
-
-/** Logged-in user's leaves filtered by leave type and status (pending / cancel / recommend). */
-exports.statusWiseLeaveList = async (req, res) => {
-  const tenantId = req.users?.tenantId;
-  const employeeId = req.users?.id;
-  const branchId = req.users && req.users.branchId;
-
-  if (!branchId || branchId == "null") {
-    return Helper.response(false, "branchId is required!", {}, res, 200);
-  }
-  if (!tenantId || !employeeId) {
-    return Helper.response(false, "User Not Found", [], res, 404);
-  }
-
-  const leaveTypeId = req.body?.leaveTypeId || req.body?.leaveType;
-  const statusInput = String(req.body?.status || "").trim().toLowerCase();
-
-  if (!leaveTypeId) {
-    return Helper.response(false, "leaveType is required", [], res, 400);
-  }
-  if (!statusInput) {
-    return Helper.response(false, "status is required", [], res, 400);
-  }
-
-  const statusMap = {
-    pending: ["pending"],
-    recommend: ["recommended"],
-    recommended: ["recommended"],
-    cancel: ["rejected", "self_declined"],
-    cancelled: ["rejected", "self_declined"],
-    canceled: ["rejected", "self_declined"],
-  };
-  const statuses = statusMap[statusInput] || [statusInput];
-
-  try {
-    const leaves = await leave_application.findAll({
-      where: {
-        tenantId,
-        employeeId,
-        branchId,
-        leaveTypeId,
-        status: { [Op.in]: statuses },
-      },
-      order: [["appliedOn", "DESC"]],
-      raw: true,
-    });
-
-    const leaveType = await leaveMaster.findOne({
-      where: { id: leaveTypeId, tenantId },
-      attributes: ["id", "leaveName", "leaveCode"],
-      raw: true,
-    });
-
-    const data = leaves.map((item) => ({
-      ...item,
-      leaveName: leaveType?.leaveName ?? null,
-      leaveCode: leaveType?.leaveCode ?? null,
-    }));
-
-    return Helper.response(true, "Status wise leave list fetched", data, res, 200);
-  } catch (error) {
-    console.error("Error fetching status wise leave list:", error);
-    return Helper.response(false, error.message, [], res, 500);
-  }
-};
 //leaveList
 // exports.EmployeeLeaveList = async (req, res) => {
 //   const tenantId = req.users?.tenantId;
@@ -4154,7 +4089,7 @@ exports.getAppAppliedLeaves = async (req, res) => {
 
     // }
 
-    if (role == "teamLeader" || role == "project_manager") {
+    if (role == "teamLeader") {
       const reportees = await empPersonal.findAll({
         where: {
           reportingPersonId: userId,
@@ -4384,99 +4319,6 @@ exports.getMyLeaveHistory = async (req, res) => {
   } catch (error) {
     console.error("Error fetching leave history:", error);
     return Helper.response(false, error.message, [], res, 500);
-  }
-};
-
-/** Pending leaves for the logged-in user and their team. Same path for every role. */
-exports.getPendingLeaveList = async (req, res) => {
-  try {
-    const tenantId = req.users?.tenantId;
-    const userId = req.users?.id;
-    const branchId = req.users?.branchId;
-
-    if (!tenantId || !userId) {
-      return Helper.response(false, "User Not Found", {}, res, 404);
-    }
-    if (!branchId || branchId === "null") {
-      return Helper.response(false, "branchId is required!", {}, res, 200);
-    }
-
-    const teamIds = [
-      ...new Set(await Helper.getAllSubordinates(userId, branchId, tenantId)),
-    ].filter((id) => id && id !== userId);
-
-    const [myLeaves, teamLeaves] = await Promise.all([
-      leave_application.findAll({
-        where: {
-          tenantId,
-          branchId,
-          employeeId: userId,
-          status: "pending",
-        },
-        order: [["appliedOn", "DESC"]],
-        raw: true,
-      }),
-      teamIds.length
-        ? leave_application.findAll({
-            where: {
-              tenantId,
-              branchId,
-              employeeId: { [Op.in]: teamIds },
-              status: "pending",
-            },
-            order: [["appliedOn", "DESC"]],
-            raw: true,
-          })
-        : [],
-    ]);
-
-    const applications = [...myLeaves, ...teamLeaves];
-    const employeeIds = [...new Set(applications.map((l) => l.employeeId))];
-
-    const [employees, branches, leaveTypes] = await Promise.all([
-      employeeIds.length
-        ? empPersonal.findAll({
-            where: { id: { [Op.in]: employeeIds }, tenantId },
-            attributes: ["id", "firstName", "lastName", "empCode", "branchId"],
-            raw: true,
-          })
-        : [],
-      branch.findAll({ attributes: ["id", "name"], raw: true }),
-      leaveMaster.findAll({
-        where: { tenantId },
-        attributes: ["id", "leaveName", "leaveCode"],
-        raw: true,
-      }),
-    ]);
-
-    const mapLeave = (item) => {
-      const employee = employees.find((e) => e.id === item.employeeId);
-      const branchData = branches.find((b) => b.id === employee?.branchId);
-      const leaveType = leaveTypes.find((l) => l.id === item.leaveTypeId);
-      return {
-        ...item,
-        empCode: employee?.empCode ?? null,
-        employeeName:
-          `${employee?.firstName ?? ""} ${employee?.lastName ?? ""}`.trim(),
-        branchName: branchData?.name ?? null,
-        leaveName: leaveType?.leaveName ?? null,
-        leaveCode: leaveType?.leaveCode ?? null,
-      };
-    };
-
-    return Helper.response(
-      true,
-      "Pending leave list fetched successfully",
-      {
-        myLeaveList: myLeaves.map(mapLeave),
-        teamLeaveList: teamLeaves.map(mapLeave),
-      },
-      res,
-      200,
-    );
-  } catch (error) {
-    console.error("Error fetching pending leave list:", error);
-    return Helper.response(false, error.message, {}, res, 500);
   }
 };
 
