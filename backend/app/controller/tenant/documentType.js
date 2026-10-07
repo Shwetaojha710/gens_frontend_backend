@@ -1,5 +1,6 @@
 const documentType = require('../../models/documentType');
 const Helper = require('../../helper/helper');
+const { writeAudit, toPlain } = require('../../helper/auditLog');
 
 exports.addDocumentType = async (req, res) => {
     const { type,status } = req.body;
@@ -30,6 +31,15 @@ exports.addDocumentType = async (req, res) => {
         status: status || 'active', 
         });
     
+        await writeAudit({
+            req,
+            actionType: "DOCUMENT_TYPE_CREATE",
+            referenceId: newDocumentType.id,
+            oldValue: null,
+            newValue: newDocumentType,
+            remarks: `Document type created: ${type}`,
+        });
+
         return Helper.response(true, "Document Type added successfully", newDocumentType, res, 201);
     } catch (error) {
         console.error("Error adding document type:", error);
@@ -80,11 +90,22 @@ exports.updateDocumentType = async (req, res) => {
             return Helper.response(false, "Document Type not found", null, res, 404);
         }
 
+        const oldDocumentType = toPlain(documentTypeToUpdate);
+
         documentTypeToUpdate.type = type;
         documentTypeToUpdate.branchId = branchId;
         documentTypeToUpdate.updatedBy = req.users?.id;
         documentTypeToUpdate.status = status || documentTypeToUpdate.status; 
         await documentTypeToUpdate.save();
+
+        await writeAudit({
+            req,
+            actionType: "DOCUMENT_TYPE_UPDATE",
+            referenceId: documentTypeToUpdate.id,
+            oldValue: oldDocumentType,
+            newValue: documentTypeToUpdate,
+            remarks: `Document type updated: ${type}`,
+        });
 
         return Helper.response(true, "Document Type updated successfully", documentTypeToUpdate, res, 200);
     } catch (error) {
@@ -107,7 +128,18 @@ exports.deleteDocumentType = async (req, res) => {
             return Helper.response(false, "Document Type not found", null, res, 404);
         }
 
+        const oldDocumentType = toPlain(documentTypeToDelete);
+
         await documentTypeToDelete.destroy();
+
+        await writeAudit({
+            req,
+            actionType: "DOCUMENT_TYPE_DELETE",
+            referenceId: id,
+            oldValue: oldDocumentType,
+            newValue: null,
+            remarks: `Document type deleted: ${oldDocumentType?.type || id}`,
+        });
 
         return Helper.response(true, "Document Type deleted successfully", null, res, 200);
     } catch (error) {

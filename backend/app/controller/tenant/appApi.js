@@ -57,6 +57,7 @@ const fs = require("fs");
 const leave_balance = require("../../models/leaveBalance");
 
 const AttendanceRegularization = require("../../models/attendance_regularization");
+const { writeAudit, toPlain } = require("../../helper/auditLog");
 const { ReimbursementFile } = require("../../models/associations");
 const reimbursement = require("../../models/reimbursement");
 const branch = require("../../models/branch");
@@ -2605,12 +2606,8 @@ exports.statusWiseLeaveList = async (req, res) => {
     return Helper.response(false, "User Not Found", [], res, 404);
   }
 
-  const leaveTypeId = req.body?.leaveTypeId || req.body?.leaveType;
   const statusInput = String(req.body?.status || "").trim().toLowerCase();
 
-  if (!leaveTypeId) {
-    return Helper.response(false, "leaveType is required", [], res, 400);
-  }
   if (!statusInput) {
     return Helper.response(false, "status is required", [], res, 400);
   }
@@ -2631,24 +2628,27 @@ exports.statusWiseLeaveList = async (req, res) => {
         tenantId,
         employeeId,
         branchId,
-        leaveTypeId,
         status: { [Op.in]: statuses },
       },
       order: [["appliedOn", "DESC"]],
       raw: true,
     });
 
-    const leaveType = await leaveMaster.findOne({
-      where: { id: leaveTypeId, tenantId },
+    const leaveTypes = await leaveMaster.findAll({
+      where: { tenantId },
       attributes: ["id", "leaveName", "leaveCode"],
       raw: true,
     });
+    const leaveTypeMap = new Map(leaveTypes.map((lt) => [String(lt.id), lt]));
 
-    const data = leaves.map((item) => ({
-      ...item,
-      leaveName: leaveType?.leaveName ?? null,
-      leaveCode: leaveType?.leaveCode ?? null,
-    }));
+    const data = leaves.map((item) => {
+      const leaveType = leaveTypeMap.get(String(item.leaveTypeId));
+      return {
+        ...item,
+        leaveName: leaveType?.leaveName ?? null,
+        leaveCode: leaveType?.leaveCode ?? null,
+      };
+    });
 
     return Helper.response(true, "Status wise leave list fetched", data, res, 200);
   } catch (error) {
@@ -2999,6 +2999,16 @@ exports.AppapplyForLeave = async (req, res) => {
       createdBy,
     });
 
+    await writeAudit({
+      req,
+      actionType: "LEAVE_CREATE",
+      referenceId: leaveApplication.id,
+      employeeId,
+      oldValue: null,
+      newValue: leaveApplication,
+      remarks: "Leave applied",
+    });
+
     // =============================================
     // UPDATE COMP-OFF BALANCE after leave applied
     // =============================================
@@ -3126,6 +3136,7 @@ exports.AppupdatedApplyLeaveStatus = async (req, res) => {
       return Helper.response(false, "branchId is required!", {}, res, 200);
     }
     const existingLeave = await leave_application.findOne({ where: { id } });
+    const oldLeave = toPlain(existingLeave);
     let { employeeId, leaveTypeId, days, appliedOn } = existingLeave;
     const year = new Date(appliedOn).getFullYear();
     const leaveBalances = await LeaveBalance.findOne({
@@ -3163,6 +3174,16 @@ exports.AppupdatedApplyLeaveStatus = async (req, res) => {
 
     let remainingLeaves;
     if (await existingLeave.save()) {
+      await writeAudit({
+        req,
+        actionType: "LEAVE_UPDATE",
+        referenceId: existingLeave.id,
+        employeeId: existingLeave.employeeId,
+        oldValue: oldLeave,
+        newValue: existingLeave,
+        remarks: `Leave ${status}`,
+      });
+
       if (status == "approved") {
         const fromDate = new Date(existingLeave.fromDate);
         const fromMonth = fromDate.getMonth() + 1;
@@ -4873,6 +4894,7 @@ exports.applyRegularization = async (req, res) => {
     });
 
     let request;
+    const oldRequest = toPlain(existing);
 
     if (!existing) {
       request = await AttendanceRegularization.create(payload, {
@@ -4890,6 +4912,17 @@ exports.applyRegularization = async (req, res) => {
     }
 
     await t.commit();
+
+    await writeAudit({
+      req,
+      actionType: existing ? "REGULARIZATION_UPDATE" : "REGULARIZATION_CREATE",
+      referenceId: request.id,
+      employeeId,
+      oldValue: oldRequest,
+      newValue: request,
+      remarks: `Regularization ${existing ? "updated" : "created"} for ${attendanceDate}`,
+    });
+
     return Helper.response(
       true,
       "Regularization request submitted",
@@ -5084,8 +5117,12 @@ exports.updateRegularizationStatus = async (req, res) => {
       return Helper.response(false, "No matching requests found", {}, res, 404);
     }
 
+    const auditEntries = [];
+
     // Process each request
     for (const request of requests) {
+      const oldRequest = toPlain(request);
+
       request.status = status;
       request.approverId = approverId;
       request.approvedAt = new Date();
@@ -5175,9 +5212,24 @@ exports.updateRegularizationStatus = async (req, res) => {
       }
 
       await request.save({ transaction: t });
+
+      auditEntries.push({ oldRequest, request });
     }
 
     await t.commit();
+
+    for (const { oldRequest, request } of auditEntries) {
+      await writeAudit({
+        req,
+        actionType: "REGULARIZATION_STATUS_UPDATE",
+        referenceId: request.id,
+        employeeId: request.employeeId,
+        oldValue: oldRequest,
+        newValue: request,
+        remarks: `Regularization ${status} for ${request.attendanceDate}`,
+      });
+    }
+
     return Helper.response(true, "Updated successfully", {}, res, 200);
   } catch (err) {
     await t.rollback();
@@ -5449,6 +5501,16 @@ exports.addAppReimbursement = async (req, res) => {
 
     await t.commit();
 
+    await writeAudit({
+      req,
+      actionType: "REIMBURSEMENT_CREATE",
+      referenceId: reimbursementData.id,
+      employeeId: reimbursementData.employeeId,
+      oldValue: null,
+      newValue: { ...toPlain(reimbursementData), files: createdDocs.map((f) => f.image) },
+      remarks: `Reimbursement added: ${reimbursementData.amount}`,
+    });
+
     return res.status(200).json({
       status: true,
       message: "Reimbursement added successfully",
@@ -5634,7 +5696,19 @@ exports.updateAppReimbursementStatus = async (req, res) => {
       return Helper.response(false, 'Only pending reimbursements can be recommended', null, res, 400);
     }
 
+    const oldReimbursement = toPlain(record);
+
     await record.update({ status, updatedBy: approverId, updatedAt: new Date() });
+
+    await writeAudit({
+      req,
+      actionType: "REIMBURSEMENT_STATUS_UPDATE",
+      referenceId: record.id,
+      employeeId: record.employeeId,
+      oldValue: oldReimbursement,
+      newValue: record,
+      remarks: `Reimbursement ${status}`,
+    });
 
     return Helper.response(true, `Reimbursement ${status} successfully`, record, res, 200);
   } catch (error) {
