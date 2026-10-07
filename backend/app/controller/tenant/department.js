@@ -1,5 +1,6 @@
 const Department = require("../../models/department");
 const Helper = require("../../helper/helper");
+const { writeAudit, toPlain } = require("../../helper/auditLog");
 
 exports.createDepartment = async (req, res) => {
   const { name, status } = req.body;
@@ -34,6 +35,14 @@ exports.createDepartment = async (req, res) => {
       status: status || "active",
       createdBy: req.users && req.users.id,
       updatedBy: req.users && req.users.id,
+    });
+    await writeAudit({
+      req,
+      actionType: "DEPARTMENT_CREATE",
+      referenceId: newDepartment.id,
+      oldValue: null,
+      newValue: newDepartment,
+      remarks: `Department created: ${name}`,
     });
     return Helper.response(
       true,
@@ -138,12 +147,22 @@ exports.updateDepartment = async (req, res) => {
       }
     // }
 
+    const oldDepartment = toPlain(department);
+
     department.name = name || department.name;
     department.status = status || department.status;
     department.branchId = branchId || department.branchId;
     department.updatedBy = req.users && req.users.id; 
 
     await department.save();
+    await writeAudit({
+      req,
+      actionType: "DEPARTMENT_UPDATE",
+      referenceId: department.id,
+      oldValue: oldDepartment,
+      newValue: department,
+      remarks: `Department updated: ${department.name}`,
+    });
     return Helper.response(
       true,
       "Department updated successfully",
@@ -182,7 +201,16 @@ exports.deleteDepartment = async (req, res) => {
     if (!department) {
       return Helper.response(false, "Department not found", [], res, 404);
     }
+    const oldDepartment = toPlain(department);
     await department.destroy();
+    await writeAudit({
+      req,
+      actionType: "DEPARTMENT_DELETE",
+      referenceId: id,
+      oldValue: oldDepartment,
+      newValue: null,
+      remarks: `Department deleted: ${oldDepartment?.name || id}`,
+    });
     return Helper.response(
       true,
       "Department deleted successfully",

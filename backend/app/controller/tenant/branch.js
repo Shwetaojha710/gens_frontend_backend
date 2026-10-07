@@ -1,4 +1,5 @@
 const Helper = require("../../helper/helper");
+const { writeAudit, toPlain } = require("../../helper/auditLog");
 const branch = require("../../models/branch");
 const Department = require("../../models/department");
 const Designation = require("../../models/designation");
@@ -53,6 +54,14 @@ exports.createBranch = async (req, res) => {
       status: status || "active",
       createdBy: req.users && req.users.id,
       updatedBy: req.users && req.users.id,
+    });
+    await writeAudit({
+      req,
+      actionType: "BRANCH_CREATE",
+      referenceId: newbranch.id,
+      oldValue: null,
+      newValue: newbranch,
+      remarks: `Branch created: ${name}`,
     });
     return Helper.response(
       true,
@@ -144,6 +153,7 @@ exports.updateBranch = async (req, res) => {
     }
 
     const imageFile = req.files && req.files.find((f) => f.fieldname == "image");
+    const oldBranch = toPlain(branchs);
     branchs.name = name || branchs.name;
     branchs.latitude = latitude || branchs.latitude;
     branchs.longitude = longitude || branchs.longitude;
@@ -153,6 +163,14 @@ exports.updateBranch = async (req, res) => {
     branchs.updatedBy = req.users && req.users.id;
 
     await branchs.save();
+    await writeAudit({
+      req,
+      actionType: "BRANCH_UPDATE",
+      referenceId: branchs.id,
+      oldValue: oldBranch,
+      newValue: branchs,
+      remarks: `Branch updated: ${branchs.name}`,
+    });
     return Helper.response(
       true,
       "branch updated successfully",
@@ -183,7 +201,16 @@ exports.deleteBranch = async (req, res) => {
     if (!branchs) {
       return Helper.response(false, "branch not found", [], res, 404);
     }
+    const oldBranch = toPlain(branchs);
     await branchs.destroy();
+    await writeAudit({
+      req,
+      actionType: "BRANCH_DELETE",
+      referenceId: id,
+      oldValue: oldBranch,
+      newValue: null,
+      remarks: `Branch deleted: ${oldBranch?.name || id}`,
+    });
     return Helper.response(true, "branch deleted successfully", [], res, 200);
   } catch (error) {
     console.error("Error deleting branch:", error);

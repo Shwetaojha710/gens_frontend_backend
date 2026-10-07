@@ -1,5 +1,6 @@
 const Currency = require("../../models/currency");
 const Helper = require("../../helper/helper");
+const { writeAudit, toPlain } = require("../../helper/auditLog");
 
 exports.createCurrency = async (req, res) => {
   const { name, status } = req.body;
@@ -26,6 +27,14 @@ exports.createCurrency = async (req, res) => {
       status: status || "active",
       createdBy: req.users && req.users.id,
       updatedBy: req.users && req.users.id,branchId
+    });
+    await writeAudit({
+      req,
+      actionType: "CURRENCY_CREATE",
+      referenceId: newCurrency.id,
+      oldValue: null,
+      newValue: newCurrency,
+      remarks: `Currency created: ${name}`,
     });
     return Helper.response(
       true,
@@ -128,12 +137,21 @@ exports.updateCurrency = async (req, res) => {
     if (!Currency1) {
       return Helper.response(false, "Currency not found", [], res, 404);
     }
+    const oldCurrency = toPlain(Currency1);
     Currency1.name = name || Currency1.name;
     Currency1.status = status || Currency1.status;
-    Currency1.updatedBy = req.users && req.users.id; 
-    Currency1.branchId = branchId; 
+    Currency1.updatedBy = req.users && req.users.id;
+    Currency1.branchId = branchId;
 
     await Currency1.save();
+    await writeAudit({
+      req,
+      actionType: "CURRENCY_UPDATE",
+      referenceId: Currency1.id,
+      oldValue: oldCurrency,
+      newValue: Currency1,
+      remarks: `Currency updated: ${Currency1.name}`,
+    });
     return Helper.response(
       true,
       "Currency updated successfully",
@@ -168,7 +186,16 @@ exports.deleteCurrency = async (req, res) => {
     if (!deleteCurrency) {
       return Helper.response(false, "Currency not found", [], res, 404);
     }
+    const oldCurrency = toPlain(deleteCurrency);
     await deleteCurrency.destroy();
+    await writeAudit({
+      req,
+      actionType: "CURRENCY_DELETE",
+      referenceId: id,
+      oldValue: oldCurrency,
+      newValue: null,
+      remarks: `Currency deleted: ${oldCurrency?.name || id}`,
+    });
     return Helper.response(
       true,
       "Currency deleted successfully",

@@ -29,6 +29,15 @@ exports.createEmploymentType = async (req, res) => {
       updatedBy: req.users && req.users.id,
     });
 
+    await writeAudit({
+      req,
+      actionType: "EMPLOYMENT_TYPE_CREATE",
+      referenceId: employmentTypeData.id,
+      oldValue: null,
+      newValue: employmentTypeData,
+      remarks: `Employment type created: ${name}`,
+    });
+
     return Helper.response(
       true,
       "Employment Type created successfully",
@@ -155,12 +164,23 @@ exports.editEmploymentType = async (req, res) => {
       return Helper.response(false, "Duration Type Is Required", {}, res, 404);
     }
 
+    const oldEmploymentType = toPlain(employmentType);
+
     employmentType.name = name;
     employmentType.duration_type = duration_type;
     employmentType.status = status || employmentType.status;
     employmentType.updatedBy = req.users && req.users.id;
     employmentType.branchId = branchId || employmentType.branchId;
     await employmentType.save();
+
+    await writeAudit({
+      req,
+      actionType: "EMPLOYMENT_TYPE_UPDATE",
+      referenceId: employmentType.id,
+      oldValue: oldEmploymentType,
+      newValue: employmentType,
+      remarks: `Employment type updated: ${name}`,
+    });
 
     return Helper.response(
       true,
@@ -209,7 +229,18 @@ exports.deleteEmploymentType = async (req, res) => {
       return Helper.response(false, "Employment Type not found", {}, res, 404);
     }
 
+    const oldEmploymentType = toPlain(employmentType);
+
     await employmentType.destroy();
+
+    await writeAudit({
+      req,
+      actionType: "EMPLOYMENT_TYPE_DELETE",
+      referenceId: id,
+      oldValue: oldEmploymentType,
+      newValue: null,
+      remarks: `Employment type deleted: ${oldEmploymentType?.name || id}`,
+    });
 
     return Helper.response(
       true,
@@ -579,6 +610,15 @@ exports.createSalaryOrder = async (req, res) => {
       status,
       branchId,
       createdBy: req.users?.id,
+    });
+
+    await writeAudit({
+      req,
+      actionType: "SALARY_ORDER_CREATE",
+      referenceId: createSalOrder.id,
+      oldValue: null,
+      newValue: createSalOrder,
+      remarks: `Salary order created: ${order}`,
     });
 
     return Helper.response(
