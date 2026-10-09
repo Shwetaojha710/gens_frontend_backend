@@ -2892,14 +2892,54 @@ exports.AppapplyForLeave = async (req, res) => {
       attributes: ["leaveName", "leaveCode"],
       raw: true,
     });
-    const type = leaveType?.leaveName;
-    if(type == "RESTRICTED"){
-      const leaveBalance = await holiday.findOne({
-        where: { tenantId,  holiday_type: leaveTypeId, branchId ,date: fromDate},
+    // RESTRICTED / RH leave: holiday.holiday_type → HolidayType.id (NOT leaveMaster.id)
+    const isRestrictedLeave =
+      String(leaveType?.leaveCode || "").toLowerCase().startsWith("rh") ||
+      String(leaveType?.leaveName || "").toLowerCase().includes("restricted");
+
+    if (isRestrictedLeave) {
+      const rhTypes = await HolidayType.findAll({
+        where: {
+          tenantId,
+          branchId,
+          status: "active",
+          name: { [Op.iLike]: "%restricted%" },
+        },
+        attributes: ["id"],
         raw: true,
       });
-      if(!leaveBalance){
-        return Helper.response(false, "Leave balance not found", {}, res, 200);
+      const rhTypeIds = rhTypes.map((t) => t.id);
+
+      if (!rhTypeIds.length) {
+        return Helper.response(
+          false,
+          "No Restricted holiday type configured for this branch",
+          {},
+          res,
+          200,
+        );
+      }
+
+      // fromDate must be an active Restricted holiday in holiday table
+      const rhHoliday = await holiday.findOne({
+        where: {
+          tenantId,
+          branchId,
+          date: fromDate,
+          status: "active",
+          holiday_type: { [Op.in]: rhTypeIds },
+        },
+        raw: true,
+      });
+
+      if (!rhHoliday) {
+        return Helper.response(
+          false,
+          "Selected date is not a Restricted Holiday. Please choose a valid RH date.",
+          {},
+          res,
+          200,
+        );
       }
     }
     // if(type == "comp-off"){
