@@ -63,6 +63,14 @@ exports.createLeave = async (req, res) => {
     leave_master.maxCarryForward = maxCarryForward;
 
     if (await leave_master.save()) {
+      await writeAudit({
+        req,
+        actionType: "LEAVE_TYPE_CREATE",
+        referenceId: leave_master.id,
+        oldValue: null,
+        newValue: leave_master,
+        remarks: `Leave type created: ${leaveName}`,
+      });
       return Helper.response(
         true,
         "Leave created successfully.",
@@ -131,6 +139,7 @@ exports.updatedLeave = async (req, res) => {
     const existingLeave = await leaveMaster.findOne({
       where: { id, branchId },
     });
+    const oldLeave = toPlain(existingLeave);
 
     existingLeave.leaveName = leaveName;
     existingLeave.leaveCode = leaveCode;
@@ -148,6 +157,14 @@ exports.updatedLeave = async (req, res) => {
     existingLeave.updatedBy = req.users && req.users.id;
 
     if (await existingLeave.save()) {
+      await writeAudit({
+        req,
+        actionType: "LEAVE_TYPE_UPDATE",
+        referenceId: existingLeave.id,
+        oldValue: oldLeave,
+        newValue: existingLeave,
+        remarks: `Leave type updated: ${leaveName}`,
+      });
       return Helper.response(
         true,
         "Leave updated successfully.",
@@ -175,8 +192,17 @@ exports.destroy = async (req, res) => {
     if (!tenantId) {
       return Helper.response(false, "tenantId is required!", {}, res, 200);
     }
+    const oldLeave = await leaveMaster.findOne({ where: { id }, raw: true });
     const recordDestroy = await leaveMaster.destroy({ where: { id } });
     if (recordDestroy) {
+      await writeAudit({
+        req,
+        actionType: "LEAVE_TYPE_DELETE",
+        referenceId: id,
+        oldValue: oldLeave,
+        newValue: null,
+        remarks: `Leave type deleted: ${oldLeave?.leaveName || id}`,
+      });
       return Helper.response(
         true,
         "Leave deleted successfully.",
@@ -252,6 +278,15 @@ exports.assignLeave = async (req, res) => {
     assignLeave.branchId = branchId;
 
     if (await assignLeave.save()) {
+      await writeAudit({
+        req,
+        actionType: "LEAVE_ASSIGN_CREATE",
+        referenceId: assignLeave.id,
+        employeeId,
+        oldValue: null,
+        newValue: assignLeave,
+        remarks: `Leave balance assigned for ${month}/${year}`,
+      });
       return Helper.response(
         true,
         "Leave balance assigned",
@@ -313,6 +348,7 @@ exports.updateAssignedLeave = async (req, res) => {
       parseFloat(totalAssigned) + parseFloat(carryForwarded) - usedLeaves;
 
     if (existing) {
+      const oldAssigned = toPlain(existing);
       await existing.update({
         leaveTypeId,
         year,
@@ -320,6 +356,15 @@ exports.updateAssignedLeave = async (req, res) => {
         totalAssigned,
         carryForwarded,
         remainingLeaves,
+      });
+      await writeAudit({
+        req,
+        actionType: "LEAVE_ASSIGN_UPDATE",
+        referenceId: existing.id,
+        employeeId,
+        oldValue: oldAssigned,
+        newValue: existing,
+        remarks: `Leave balance updated for ${month}/${year}`,
       });
       return Helper.response(true, "Leave balance updated", existing, res, 200);
     }
@@ -703,15 +748,17 @@ exports.applyForLeave = async (req, res) => {
 
       savedLeaves.push(leaveApplication);
     }
-    await writeAudit({
-      req,
-      actionType: "LEAVE_CREATE",
-      referenceId: savedLeaves.id,
-      employeeId: savedLeaves.employeeId,
-      oldValue: null,
-      newValue: savedLeaves,
-      remarks: "Leave applied",
-    });
+    for (const savedLeave of savedLeaves) {
+      await writeAudit({
+        req,
+        actionType: "LEAVE_CREATE",
+        referenceId: savedLeave.id,
+        employeeId: savedLeave.employeeId,
+        oldValue: null,
+        newValue: savedLeave,
+        remarks: "Leave applied",
+      });
+    }
 
     if (savedLeaves.length > 0) {
       // Push notify reporting manager (FCM)
@@ -757,11 +804,23 @@ exports.deleteAssignedLeave = async (req, res) => {
       return Helper.response(false, "Id is Required!", {}, res, 200);
     }
 
+    const oldAssigned = await leaveBalance.findOne({ where: { id }, raw: true });
     const deleteLeave = await leaveBalance.destroy({
       where: {
         id,
       },
     });
+    if (deleteLeave) {
+      await writeAudit({
+        req,
+        actionType: "LEAVE_ASSIGN_DELETE",
+        referenceId: id,
+        employeeId: oldAssigned?.employeeId,
+        oldValue: oldAssigned,
+        newValue: null,
+        remarks: "Leave balance deleted",
+      });
+    }
     return Helper.response(true, "Leave Deleted Successfully", [], res, 200);
   } catch (error) {
     console.error("Error applying for leave:", error);
@@ -1153,6 +1212,7 @@ exports.updatedApplyLeaveStatus = async (req, res) => {
     const existingLeave = await leave_application.findOne({
       where: { id, branchId },
     });
+    const oldLeave = toPlain(existingLeave);
     let { employeeId, leaveTypeId, days, appliedOn } = existingLeave;
     const year = new Date(appliedOn).getFullYear();
     const leaveBalances = await leave_balance.findOne({
@@ -1197,9 +1257,9 @@ exports.updatedApplyLeaveStatus = async (req, res) => {
         actionType: "LEAVE_UPDATE",
         referenceId: existingLeave.id,
         employeeId: existingLeave.employeeId,
-        oldValue: existingLeave,
-        newValue: toPlain(existingLeave),
-        remarks: "Leave updated",
+        oldValue: oldLeave,
+        newValue: existingLeave,
+        remarks: `Leave ${status}`,
       });
       return Helper.response(
         true,
@@ -1304,6 +1364,7 @@ exports.generateCompOffLeave = async (req, res) => {
     const leaveTypeId = compoffLeave.id;
 
     let createdCount = 0;
+    const createdCompOffs = [];
 
     for (const item of weekendAttendance) {
       if (!item.employeeId || !item.date) continue;
@@ -1323,7 +1384,7 @@ exports.generateCompOffLeave = async (req, res) => {
 
       if (existingCompOff) continue;
 
-      await comp_off.create(
+      const createdCompOff = await comp_off.create(
         {
           employeeId: item.employeeId,
           attendanceId: item.id,
@@ -1394,10 +1455,23 @@ exports.generateCompOffLeave = async (req, res) => {
         }
       );
 
+      createdCompOffs.push(createdCompOff);
       createdCount++;
     }
 
     await t.commit();
+
+    for (const createdCompOff of createdCompOffs) {
+      await writeAudit({
+        req,
+        actionType: "COMP_OFF_CREATE",
+        referenceId: createdCompOff.id,
+        employeeId: createdCompOff.employeeId,
+        oldValue: null,
+        newValue: createdCompOff,
+        remarks: `Comp-off generated from weekend attendance for ${createdCompOff.earnedDate}`,
+      });
+    }
 
     return Helper.response(
       true,
@@ -1450,6 +1524,7 @@ exports.approveCompOffLeave = async (req, res) => {
     const leaveTypeId = compoffLeave.id;
 
     let createdCount = 0;
+    const auditEntries = [];
 
    for (const item of weekendAttendance) {
 
@@ -1472,10 +1547,14 @@ exports.approveCompOffLeave = async (req, res) => {
   // ✅ prevent double approval
   if (compOff.approval_status == "approved") continue;
 
+  const oldCompOff = toPlain(compOff);
+
   await compOff.update({
     approval_status: "approved",
     updatedBy: userId
   }, { transaction: t });
+
+  auditEntries.push({ oldCompOff, compOff });
 
   // ✅ UPDATE LEAVE BALANCE
   let balance = await leave_balance.findOne({
@@ -1517,6 +1596,18 @@ exports.approveCompOffLeave = async (req, res) => {
 }
 
     await t.commit();
+
+    for (const { oldCompOff, compOff } of auditEntries) {
+      await writeAudit({
+        req,
+        actionType: "COMP_OFF_APPROVE",
+        referenceId: compOff.id,
+        employeeId: compOff.employeeId,
+        oldValue: oldCompOff,
+        newValue: compOff,
+        remarks: `Comp-off approved for ${compOff.earnedDate}`,
+      });
+    }
 
     return Helper.response(
       true,

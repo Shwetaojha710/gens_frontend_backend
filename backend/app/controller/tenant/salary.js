@@ -2956,6 +2956,19 @@ if (joiningDate) {
     }
 
     await t.commit();
+
+    for (const billRow of billRecords) {
+      await writeAudit({
+        req,
+        actionType: "SALARY_GENERATE",
+        referenceId: billRow.id,
+        employeeId: billRow.employeeId,
+        oldValue: null,
+        newValue: billRow,
+        remarks: `Salary generated for ${billRow.month}/${billRow.year}`,
+      });
+    }
+
     if (skippedEmployees.length == employees.length) {
       return Helper.response(
         false,
@@ -3556,6 +3569,8 @@ exports.revertSalary = async (req, res) => {
       );
     }
 
+    const oldBill = await bill.findOne({ where: { id }, raw: true, transaction: t });
+
     // 1️⃣ Delete salary bill and its bill info
     await bill.destroy({ where: { id }, transaction: t });
     await bill_info.destroy({
@@ -3629,6 +3644,16 @@ exports.revertSalary = async (req, res) => {
     }
 
     await t.commit();
+
+    await writeAudit({
+      req,
+      actionType: "SALARY_REVERT",
+      referenceId: id,
+      employeeId,
+      oldValue: oldBill,
+      newValue: null,
+      remarks: `Salary reverted for ${month}/${year}`,
+    });
 
     return Helper.response(
       true,
@@ -4174,6 +4199,23 @@ exports.updateSalarySetup = async (req, res) => {
       await deductionS.bulkCreate(deductionRecords, { transaction });
 
     await transaction.commit();
+
+    await writeAudit({
+      req,
+      actionType: existingCTC ? "SALARY_SETUP_UPDATE" : "SALARY_SETUP_CREATE",
+      referenceId: employeeId,
+      employeeId,
+      oldValue: existingCTC,
+      newValue: {
+        CTC: data.CTC,
+        startDate: data.startDate,
+        basics: basicRecords,
+        allowances: allowanceRecords,
+        deductions: deductionRecords,
+        totalCTC: calculatedCTC,
+      },
+      remarks: `Salary setup ${existingCTC ? "revised" : "created"} from ${data.startDate}`,
+    });
 
     return Helper.response(
       true,
@@ -4731,6 +4773,8 @@ exports.saveSalaryDoc = async (req, res) => {
     // UPDATE IF EXISTS
     // ======================
 
+    const oldDoc = existing ? existing.toJSON() : null;
+
     if (existing) {
 
       await existing.update({
@@ -4760,6 +4804,15 @@ exports.saveSalaryDoc = async (req, res) => {
       });
 
     }
+
+    await writeAudit({
+      req,
+      actionType: existing ? "SALARY_DOC_UPDATE" : "SALARY_DOC_CREATE",
+      referenceId: result.id,
+      oldValue: oldDoc,
+      newValue: result,
+      remarks: `Salary document ${existing ? "updated" : "saved"} for ${month}/${year}`,
+    });
 
     // ======================
     // RESPONSE
