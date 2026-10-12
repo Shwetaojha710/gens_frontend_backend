@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const {AppAdmin, Admin} = require('../middleware/auth');
-const {getDailyAttendance,getAttendance, employeeByDepartment, TeamsAttendance,EmployeeDetails, EmployeeLeaveList,getAppAppliedLeaves, AppupdatedApplyLeaveStatus,AppapplyForLeave, getAppLeaveTypes, AppgetHolidayList, upcomingLeave, AppgetBillDetails, PrintBill, TeamLeaderLeaveList, DirectorLeaveList, notification, applyRegularization, getMyRegularizations, getPendingApproverRequests, updateRegularizationStatus, markattendance, addAppReimbursement, reimbursementList, getTeamReimbursements, updateAppReimbursementStatus, updateAppEmp, getEmpLetterDocs, saveEmpLetterSignature, getMyLeaveHistory, getPendingLeaveList, statusWiseLeaveList, uploadEmpImage, getEmployeeUploadedImage, getAppHandbook, getAppInsurancePolicy, markNotificationsRead}=require("../controller/tenant/appApi");
+const {getDailyAttendance,getAttendance, employeeByDepartment, TeamsAttendance,EmployeeDetails, EmployeeLeaveList,getAppAppliedLeaves, AppupdatedApplyLeaveStatus,AppapplyForLeave, getAppLeaveTypes, AppgetHolidayList, upcomingLeave, AppgetBillDetails, PrintBill, TeamLeaderLeaveList, DirectorLeaveList, notification, applyRegularization, getMyRegularizations, getPendingApproverRequests, updateRegularizationStatus, markattendance, addAppReimbursement, reimbursementList, getTeamReimbursements, updateAppReimbursementStatus, updateAppEmp, getEmpLetterDocs, saveEmpLetterSignature, getMyLeaveHistory, uploadEmpImage, getEmployeeUploadedImage, getAppHandbook, getAppInsurancePolicy, markNotificationsRead}=require("../controller/tenant/appApi");
 const { trackLocation, getLatestLocation, PinnedtrackLocation, listVistData, updateTrackRemark } = require('../controller/tenant/tracking');
 const { generateAllLettersPdf } = require('../controller/tenant/letter_data');
 const upload = require('../middleware/upload');
@@ -21,10 +21,8 @@ router.get('/team-attendances', AppAdmin, TeamsAttendance);
 router.post('/apply-leaves',AppAdmin,AppapplyForLeave)
 router.post('/update-apply-leaves-status',AppAdmin,AppupdatedApplyLeaveStatus)
 router.post('/get-emp-leave-list', AppAdmin, EmployeeLeaveList);
-router.post('/status-wise-leave-list', AppAdmin, statusWiseLeaveList);
 router.post('/get-applied-leave-list', AppAdmin, getAppAppliedLeaves);
 router.post('/get-my-leave-history', AppAdmin, getMyLeaveHistory);
-router.post('/pending-leave-list', AppAdmin, getPendingLeaveList);
 router.post('/get-app-leave-type-dd',AppAdmin,getAppLeaveTypes)
 router.post('/app-branch-dd',AppAdmin, branchDD); 
 router.post('/UpComming-leave',AppAdmin,upcomingLeave)
