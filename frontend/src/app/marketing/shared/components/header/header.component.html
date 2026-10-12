@@ -18,26 +18,91 @@
 
     <!-- Desktop Nav -->
     <nav class="hidden lg:flex flex-1 items-center justify-center gap-0.5 min-w-0" aria-label="Main navigation">
-      @for (link of navLinks; track link.path) {
-        <a
-          [routerLink]="link.path"
-          routerLinkActive="text-gens-600 dark:text-gens-400 bg-gens-50 dark:bg-gens-950"
-          [routerLinkActiveOptions]="{ exact: link.path === '/Home' }"
-          class="px-2.5 py-2 rounded-lg text-sm font-medium text-[var(--text-secondary)] hover:text-gens-600 dark:hover:text-gens-400 transition-colors whitespace-nowrap"
-        >
-          {{ link.label }}
-        </a>
+      @for (link of navLinks; track link.label) {
+        @if (link.children?.length) {
+          <div
+            class="relative"
+            (mouseenter)="openDesktopMenu(link.label)"
+            (mouseleave)="closeDesktopMenu()"
+          >
+            <button
+              type="button"
+              class="px-2.5 py-2 rounded-lg text-sm font-medium text-[var(--text-secondary)] hover:text-gens-600 dark:hover:text-gens-400 transition-colors whitespace-nowrap inline-flex items-center gap-1"
+              [attr.aria-expanded]="desktopOpen() === link.label"
+              (click)="toggleDesktopMenu(link.label)"
+            >
+              {{ link.label }}
+              <i class="ri ri-arrow-down-s-line text-base opacity-70"></i>
+            </button>
+            @if (desktopOpen() === link.label) {
+              <div
+                class="absolute left-0 top-full pt-2 min-w-[220px] z-50"
+                (mouseenter)="openDesktopMenu(link.label)"
+              >
+                <div class="rounded-xl border border-[var(--border-color)] bg-[var(--bg-primary)] shadow-lg py-2">
+                  @for (child of link.children; track child.path + child.label) {
+                    <a
+                      [routerLink]="child.path.split('#')[0]"
+                      [fragment]="child.path.includes('#') ? child.path.split('#')[1] : undefined"
+                      (click)="closeDesktopMenu()"
+                      class="block px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:text-gens-600 hover:bg-gens-50 dark:hover:bg-gens-950 transition-colors"
+                    >
+                      {{ child.label }}
+                    </a>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        } @else if (link.path) {
+          <a
+            [routerLink]="link.path"
+            routerLinkActive="text-gens-600 dark:text-gens-400 bg-gens-50 dark:bg-gens-950"
+            class="px-2.5 py-2 rounded-lg text-sm font-medium text-[var(--text-secondary)] hover:text-gens-600 dark:hover:text-gens-400 transition-colors whitespace-nowrap"
+          >
+            {{ link.label }}
+          </a>
+        }
       }
     </nav>
 
     <!-- Actions -->
     <div class="hidden lg:flex items-center gap-3 ml-auto shrink-0">
-      <a routerLink="/login" class="text-xs font-medium text-[var(--text-muted)] hover:text-gens-600 dark:hover:text-gens-400 transition-colors whitespace-nowrap">
-        Company Login
-      </a>
-      <a routerLink="/employee-portal/login" class="text-xs font-medium text-[var(--text-muted)] hover:text-gens-600 dark:hover:text-gens-400 transition-colors whitespace-nowrap">
-        Employee Login
-      </a>
+      <div
+        class="relative"
+        (mouseenter)="openDesktopMenu('login')"
+        (mouseleave)="closeDesktopMenu()"
+      >
+        <button
+          type="button"
+          class="text-xs font-medium text-[var(--text-muted)] hover:text-gens-600 dark:hover:text-gens-400 transition-colors whitespace-nowrap inline-flex items-center gap-1"
+          [attr.aria-expanded]="desktopOpen() === 'login'"
+          (click)="toggleDesktopMenu('login')"
+        >
+          Login As
+          <i class="ri ri-arrow-down-s-line text-sm opacity-70"></i>
+        </button>
+        @if (desktopOpen() === 'login') {
+          <div class="absolute right-0 top-full pt-2 min-w-[180px] z-50">
+            <div class="rounded-xl border border-[var(--border-color)] bg-[var(--bg-primary)] shadow-lg py-2">
+              <a
+                routerLink="/employee-portal/login"
+                (click)="closeDesktopMenu()"
+                class="block px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:text-gens-600 hover:bg-gens-50 dark:hover:bg-gens-950 transition-colors"
+              >
+                Employee
+              </a>
+              <a
+                routerLink="/login"
+                (click)="closeDesktopMenu()"
+                class="block px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:text-gens-600 hover:bg-gens-50 dark:hover:bg-gens-950 transition-colors"
+              >
+                Company
+              </a>
+            </div>
+          </div>
+        }
+      </div>
 
       <button
         type="button"
@@ -78,33 +143,58 @@
 
   <!-- Mobile menu -->
   @if (mobileOpen()) {
-    <nav class="lg:hidden glass mt-2 mx-4 rounded-2xl p-4 shadow-glass border border-[var(--border-color)]" aria-label="Mobile navigation">
-      @for (link of navLinks; track link.path) {
-        <a
-          [routerLink]="link.path"
-          routerLinkActive="text-gens-600 bg-gens-50 dark:bg-gens-950"
-          [routerLinkActiveOptions]="{ exact: link.path === '/Home' }"
-          (click)="closeMobileMenu()"
-          class="block px-4 py-3 rounded-lg text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors"
-        >
-          {{ link.label }}
-        </a>
+    <nav class="lg:hidden glass mt-2 mx-4 rounded-2xl p-4 shadow-glass border border-[var(--border-color)] max-h-[80vh] overflow-y-auto" aria-label="Mobile navigation">
+      @for (link of navLinks; track link.label) {
+        @if (link.children?.length) {
+          <div class="mb-1">
+            <button
+              type="button"
+              class="w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-[var(--text-primary)]"
+              (click)="toggleMobileSection(link.label)"
+            >
+              {{ link.label }}
+              <i class="ri text-base" [ngClass]="mobileSection() === link.label ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
+            </button>
+            @if (mobileSection() === link.label) {
+              @for (child of link.children; track child.path + child.label) {
+                <a
+                  [routerLink]="child.path.split('#')[0]"
+                  [fragment]="child.path.includes('#') ? child.path.split('#')[1] : undefined"
+                  (click)="closeMobileMenu()"
+                  class="block pl-8 pr-4 py-2.5 rounded-lg text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors"
+                >
+                  {{ child.label }}
+                </a>
+              }
+            }
+          </div>
+        } @else if (link.path) {
+          <a
+            [routerLink]="link.path"
+            routerLinkActive="text-gens-600 bg-gens-50 dark:bg-gens-950"
+            (click)="closeMobileMenu()"
+            class="block px-4 py-3 rounded-lg text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors"
+          >
+            {{ link.label }}
+          </a>
+        }
       }
 
       <div class="mt-2 pt-2 border-t border-[var(--border-color)]">
-        <a
-          routerLink="/login"
-          (click)="closeMobileMenu()"
-          class="block px-4 py-3 rounded-lg text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] transition-colors"
-        >
-          Tenant Login
-        </a>
+        <p class="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Login As</p>
         <a
           routerLink="/employee-portal/login"
           (click)="closeMobileMenu()"
           class="block px-4 py-3 rounded-lg text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] transition-colors"
         >
-          Employee Portal
+          Employee
+        </a>
+        <a
+          routerLink="/login"
+          (click)="closeMobileMenu()"
+          class="block px-4 py-3 rounded-lg text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] transition-colors"
+        >
+          Company
         </a>
       </div>
 

@@ -56,19 +56,19 @@
   width: 100%;
   max-width: 100%;
   border: 0;
-  border-radius: 0;
-  box-shadow: none;
+  border-radius: 1rem;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
   background: transparent;
-  mix-blend-mode: multiply;
-  -webkit-mask-image:
-    radial-gradient(ellipse 88% 84% at 50% 48%, #000 44%, rgba(0, 0, 0, 0.92) 62%, rgba(0, 0, 0, 0.4) 78%, transparent 92%);
-  mask-image:
-    radial-gradient(ellipse 88% 84% at 50% 48%, #000 44%, rgba(0, 0, 0, 0.92) 62%, rgba(0, 0, 0, 0.4) 78%, transparent 92%);
+  /* Sharp render — avoid soft mask / multiply that made the hero look blurred */
+  image-rendering: auto;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 :host-context(.dark) .hero-visual__img {
-  mix-blend-mode: lighten;
-  filter: brightness(1.05) contrast(1.05);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  filter: none;
 }
 
 :host-context(.dark) .hero-visual__glow {

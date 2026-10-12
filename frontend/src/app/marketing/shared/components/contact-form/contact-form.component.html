@@ -2,7 +2,7 @@
   @if (formEnabled()) {
     <form (ngSubmit)="submitContact()" [formGroup]="contactForm" class="space-y-5" novalidate>
       <div class="gens-field">
-        <label for="contact-full-name" class="gens-field__label">Full Name <em>*</em></label>
+        <label for="contact-full-name" class="gens-field__label">Name <em>*</em></label>
         <input
           id="contact-full-name"
           class="gens-field__input"
@@ -14,18 +14,39 @@
         @if (fullNameCtrl?.invalid && fullNameCtrl?.touched) {
           <p class="gens-field__error">
             @if (fullNameCtrl?.errors?.['required']) {
-              Full name is required.
+              Name is required.
             } @else if (fullNameCtrl?.errors?.['minlength']) {
-              Full name must be at least 2 characters.
+              Name must be at least 2 characters.
             } @else if (fullNameCtrl?.errors?.['maxlength']) {
-              Full name must be under 200 characters.
+              Name must be under 200 characters.
             }
           </p>
         }
       </div>
 
       <div class="gens-field">
-        <label for="contact-email" class="gens-field__label">Email Address <em>*</em></label>
+        <label for="contact-company" class="gens-field__label">Company <em>*</em></label>
+        <input
+          id="contact-company"
+          class="gens-field__input"
+          type="text"
+          formControlName="company"
+          autocomplete="organization"
+          placeholder="Company name"
+        />
+        @if (companyCtrl?.invalid && companyCtrl?.touched) {
+          <p class="gens-field__error">
+            @if (companyCtrl?.errors?.['required']) {
+              Company is required.
+            } @else if (companyCtrl?.errors?.['minlength']) {
+              Company must be at least 2 characters.
+            }
+          </p>
+        }
+      </div>
+
+      <div class="gens-field">
+        <label for="contact-email" class="gens-field__label">Work Email <em>*</em></label>
         <input
           id="contact-email"
           class="gens-field__input"
@@ -37,32 +58,63 @@
         @if (emailCtrl?.invalid && emailCtrl?.touched) {
           <p class="gens-field__error">
             @if (emailCtrl?.errors?.['required']) {
-              Email is required.
+              Work email is required.
             } @else if (emailCtrl?.errors?.['email']) {
-              Enter a valid email address.
+              Enter a valid work email address.
             }
           </p>
         }
       </div>
 
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div class="gens-field">
+          <label for="contact-phone" class="gens-field__label">Phone <em>*</em></label>
+          <input
+            id="contact-phone"
+            class="gens-field__input"
+            type="tel"
+            formControlName="phone"
+            autocomplete="tel"
+            placeholder="+91 …"
+          />
+          @if (phoneCtrl?.invalid && phoneCtrl?.touched) {
+            <p class="gens-field__error">
+              @if (phoneCtrl?.errors?.['required']) {
+                Phone is required.
+              } @else if (phoneCtrl?.errors?.['minlength']) {
+                Enter a valid phone number.
+              }
+            </p>
+          }
+        </div>
+
+        <div class="gens-field">
+          <label for="contact-employees" class="gens-field__label">Number of Employees <em>*</em></label>
+          <select id="contact-employees" class="gens-field__input" formControlName="employees">
+            <option value="">Select range</option>
+            <option value="1-50">1 – 50</option>
+            <option value="51-200">51 – 200</option>
+            <option value="201-500">201 – 500</option>
+            <option value="500+">500+</option>
+          </select>
+          @if (employeesCtrl?.invalid && employeesCtrl?.touched) {
+            <p class="gens-field__error">Please select number of employees.</p>
+          }
+        </div>
+      </div>
+
       <div class="gens-field">
-        <label for="contact-message" class="gens-field__label">Message <em>*</em></label>
+        <label for="contact-message" class="gens-field__label">Message <span class="text-[var(--text-muted)] font-normal">(optional)</span></label>
         <textarea
           id="contact-message"
           class="gens-field__input gens-field__textarea"
-          rows="5"
+          rows="3"
           formControlName="message"
-          placeholder="Tell us how we can help..."
+          placeholder="Anything else we should know? (optional)"
         ></textarea>
         @if (messageCtrl?.invalid && messageCtrl?.touched) {
           <p class="gens-field__error">
-            @if (messageCtrl?.errors?.['required']) {
-              Message is required.
-            } @else if (messageCtrl?.errors?.['minlength']) {
-              Message must be at least 10 characters.
-            } @else if (messageCtrl?.errors?.['maxlength']) {
-              Message must be under 8000 characters.
-            }
+            Message must be under 8000 characters.
           </p>
         }
       </div>
@@ -83,7 +135,7 @@
         @if (contactSubmitting()) {
           <span class="skeleton w-4 h-4 rounded-full inline-block"></span> Sending...
         } @else {
-          <i class="ri ri-send-plane-fill text-base"></i> Send Message
+          <i class="ri ri-send-plane-fill text-base"></i> Request a Demo
         }
       </button>
     </form>
