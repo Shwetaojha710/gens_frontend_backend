@@ -73,30 +73,41 @@
         (mouseenter)="openDesktopMenu('login')"
         (mouseleave)="closeDesktopMenu()"
       >
+      <button
+      type="button"
+      (click)="themeService.toggle()"
+      [attr.aria-label]="themeService.isDark() ? 'Switch to light mode' : 'Switch to dark mode'"
+      class="theme-toggle-side me-2 w-9 h-9 inline-flex items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-gens-50 dark:hover:bg-gens-950 transition-colors ml-1"
+    >
+      <i class="ri" [ngClass]="themeService.isDark() ? 'ri-sun-line' : 'ri-moon-line'"></i>
+    </button>
         <button
           type="button"
-          class="text-xs font-medium text-[var(--text-muted)] hover:text-gens-600 dark:hover:text-gens-400 transition-colors whitespace-nowrap inline-flex items-center gap-1"
+          class="login-as-btn btn-outline-gens !py-2.5 !px-5 !text-sm whitespace-nowrap inline-flex items-center gap-1.5"
           [attr.aria-expanded]="desktopOpen() === 'login'"
           (click)="toggleDesktopMenu('login')"
         >
+          <i class="ri ri-user-line text-base"></i>
           Login As
-          <i class="ri ri-arrow-down-s-line text-sm opacity-70"></i>
+          <i class="ri ri-arrow-down-s-line text-base opacity-80" [class.rotate-180]="desktopOpen() === 'login'"></i>
         </button>
         @if (desktopOpen() === 'login') {
-          <div class="absolute right-0 top-full pt-2 min-w-[180px] z-50">
-            <div class="rounded-xl border border-[var(--border-color)] bg-[var(--bg-primary)] shadow-lg py-2">
+          <div class="absolute right-0 top-full pt-2 min-w-[200px] z-50">
+            <div class="login-as-menu rounded-xl border border-[var(--border-color)] bg-[var(--bg-primary)] shadow-lg py-1.5 overflow-hidden">
               <a
                 routerLink="/employee-portal/login"
                 (click)="closeDesktopMenu()"
-                class="block px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:text-gens-600 hover:bg-gens-50 dark:hover:bg-gens-950 transition-colors"
+                class="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] hover:text-gens-600 hover:bg-gens-50 dark:hover:bg-gens-950 transition-colors"
               >
+                <i class="ri ri-user-smile-line text-base"></i>
                 Employee
               </a>
               <a
                 routerLink="/login"
                 (click)="closeDesktopMenu()"
-                class="block px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:text-gens-600 hover:bg-gens-50 dark:hover:bg-gens-950 transition-colors"
+                class="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] hover:text-gens-600 hover:bg-gens-50 dark:hover:bg-gens-950 transition-colors"
               >
+                <i class="ri ri-building-line text-base"></i>
                 Company
               </a>
             </div>
@@ -104,18 +115,11 @@
         }
       </div>
 
-      <button
-        type="button"
-        (click)="themeService.toggle()"
-        [attr.aria-label]="themeService.isDark() ? 'Switch to light mode' : 'Switch to dark mode'"
-        class="w-9 h-9 inline-flex items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-gens-50 dark:hover:bg-gens-950 transition-colors"
-      >
-        <i class="ri" [ngClass]="themeService.isDark() ? 'ri-sun-line' : 'ri-moon-line'"></i>
-      </button>
-
       <a routerLink="/contact" class="btn-primary btn-shine !py-2.5 !px-5 !text-sm whitespace-nowrap">
         Request a Demo
       </a>
+
+
     </div>
 
     <!-- Mobile-only actions: theme toggle + hamburger -->

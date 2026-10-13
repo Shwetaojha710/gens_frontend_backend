@@ -1,78 +1,122 @@
-<div class="authentication-wrapper authentication-cover">
-  <div
-    class="authentication-inner row m-0"
-    style="background-image: url('/assets/img/bg-login/Login1.png');background-size: cover;background-repeat: no-repeat;background-position: center;z-index: 0;"
-  >
-    <div class="d-none d-lg-flex col-lg-7 col-xl-8 align-items-center justify-content-center p-12 pb-2">
-      <img src="../../../assets/img/bg-login/Hero.png" class="auth-cover-illustration w-100" alt="auth-illustration" />
-      <img
-        alt="mask"
-        src="assets/img/illustrations/auth-basic-login-mask-light.png"
-        class="authentication-image d-none d-lg-block"
-      />
-    </div>
+<div class="gens-login">
+  <div class="gens-login__wave" aria-hidden="true"></div>
+  <div class="gens-login__shell">
+    <!-- LEFT -->
+    <aside class="gens-login__left">
+      <div class="gens-login__intro">
+        <p class="gens-login__welcome">Welcome to</p>
+        <h1>
+          <span class="gens-login__brand-dark">GENS</span>
+          <span class="gens-login__brand-teal"> SuperAdmin</span>
+        </h1>
+        <p class="gens-login__tagline">
+          Manage companies, plans, and subscriptions from one secure console.
+        </p>
+      </div>
 
-    <div
-      class="d-flex col-12 col-lg-5 col-xl-4 align-items-center justify-content-center position-relative py-sm-6 px-12 py-6"
-      style="background-image: url('/assets/img/bg-login/Rectangle3.png');background-size: cover;background-position: center;background-repeat: no-repeat;"
-    >
-      <div class="auth-shell">
-        <div class="auth-shell-inner">
-          <div class="w-px-400 mx-auto pt-12 pt-lg-0">
-            <div class="text-center mb-3">
-              <a href="" class="text-center mx-auto w-100">
-                <img src="../../../assets/img/marketing/gens-logo.png" alt="Company Logo" width="30%" />
-              </a>
-            </div>
-
-            <h4 class="mb-1">SuperAdmin Login</h4>
-            <p class="mb-5">Manage companies & subscriptions</p>
-
-            <form class="mb-5" [formGroup]="form" (ngSubmit)="login()">
-              <div class="form-floating form-floating-outline mb-4">
-                <input
-                  type="email"
-                  class="form-control"
-                  formControlName="email"
-                  [ngClass]="{ 'is-invalid': isInvalid('email') }"
-                  placeholder="Email"
-                  autofocus
-                />
-                <label>Email</label>
-                <div class="invalid-feedback">Enter a valid email address.</div>
-              </div>
-
-              <div class="form-floating form-floating-outline mb-4 position-relative">
-                <input
-                  [type]="passwordVisible ? 'text' : 'password'"
-                  class="form-control"
-                  formControlName="password"
-                  [ngClass]="{ 'is-invalid': isInvalid('password') }"
-                  placeholder="Password"
-                />
-                <label>Password</label>
-                <span
-                  class="ri"
-                  [ngClass]="passwordVisible ? 'ri-eye-off-line' : 'ri-eye-line'"
-                  (click)="passwordVisible = !passwordVisible"
-                  style="cursor: pointer; position: absolute; top: 50%; right: 12px; transform: translateY(-50%);"
-                ></span>
-                <div class="invalid-feedback">Password is required.</div>
-              </div>
-
-              <div class="d-flex justify-content-end mb-3">
-                <a routerLink="/superadmin/forgot-password" class="text-primary" style="font-size:14px;">Forgot Password?</a>
-              </div>
-
-              <button type="submit" class="btn btn-primary d-grid w-100" [disabled]="form.invalid">
-                Sign in
-              </button>
-            </form>
-
+      <ul class="gens-login__features">
+        <li>
+          <span class="gens-login__feat-icon"><i class="ri ri-building-4-line"></i></span>
+          <div>
+            <strong>Tenant Management</strong>
+            <small>Activate, pause, and oversee every company</small>
           </div>
+        </li>
+        <li>
+          <span class="gens-login__feat-icon"><i class="ri ri-vip-crown-line"></i></span>
+          <div>
+            <strong>Plans &amp; Billing</strong>
+            <small>Control subscriptions and seat limits</small>
+          </div>
+        </li>
+        <li>
+          <span class="gens-login__feat-icon"><i class="ri ri-bar-chart-box-line"></i></span>
+          <div>
+            <strong>Platform Analytics</strong>
+            <small>Track usage and growth across tenants</small>
+          </div>
+        </li>
+      </ul>
+
+      <div class="gens-login__secure">
+        <i class="ri ri-shield-check-fill"></i>
+        <div>
+          <strong>Secure · Admin-only access</strong>
+          <small>Restricted to authorized SuperAdmin users.</small>
         </div>
       </div>
+    </aside>
+
+    <!-- MIDDLE -->
+    <div class="gens-login__center">
+      <div class="gens-login__hero-wrap">
+        <img
+          class="gens-login__hero-img"
+          src="assets/img/bg-login/Hero.png"
+          alt="GENS platform"
+          decoding="async"
+        />
+      </div>
     </div>
+
+    <!-- RIGHT: login card -->
+    <main class="gens-login__right">
+      <div class="gens-login__card">
+        <div class="gens-login__card-logo">
+          <img src="assets/img/marketing/gens-logo.png" alt="GENS.Ai" />
+        </div>
+
+        <p class="sa-badge">SuperAdmin</p>
+        <h2>Sign in to console</h2>
+        <p class="gens-login__sub">Enter your credentials to continue</p>
+
+        <form [formGroup]="form" (ngSubmit)="login()" novalidate>
+          <label class="gens-field">
+            <span>Email</span>
+            <div class="gens-field__control" [class.is-invalid]="isInvalid('email')">
+              <i class="ri ri-mail-line"></i>
+              <input type="email" formControlName="email" placeholder="Enter your email" autocomplete="username" />
+            </div>
+            <small class="gens-field__error" *ngIf="isInvalid('email')">
+              Enter a valid email address.
+            </small>
+          </label>
+
+          <label class="gens-field">
+            <span>Password</span>
+            <div class="gens-field__control" [class.is-invalid]="isInvalid('password')">
+              <i class="ri ri-lock-line"></i>
+              <input
+                [type]="passwordVisible ? 'text' : 'password'"
+                formControlName="password"
+                placeholder="Enter your password"
+                autocomplete="current-password"
+              />
+              <button
+                type="button"
+                class="gens-field__eye"
+                (click)="passwordVisible = !passwordVisible"
+                tabindex="-1"
+                [attr.aria-label]="passwordVisible ? 'Hide password' : 'Show password'"
+              >
+                <i class="ri" [ngClass]="passwordVisible ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
+              </button>
+            </div>
+            <small class="gens-field__error" *ngIf="isInvalid('password')">
+              Password is required.
+            </small>
+          </label>
+
+          <div class="gens-login__row">
+            <span></span>
+            <a class="gens-link" routerLink="/superadmin/forgot-password">Forgot Password?</a>
+          </div>
+
+          <button type="submit" class="gens-btn gens-btn--primary" [disabled]="form.invalid || submitting">
+            {{ submitting ? 'Signing in…' : 'Sign In' }}
+          </button>
+        </form>
+      </div>
+    </main>
   </div>
 </div>
-

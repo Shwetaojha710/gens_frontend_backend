@@ -35,20 +35,6 @@
   }
 }
 
-.hero-visual__glow {
-  position: absolute;
-  inset: 4% 2% 6% 8%;
-  background: radial-gradient(
-    ellipse 72% 62% at 52% 45%,
-    rgba(63, 184, 170, 0.4) 0%,
-    rgba(37, 158, 144, 0.18) 40%,
-    transparent 70%
-  );
-  filter: blur(36px);
-  pointer-events: none;
-  z-index: 0;
-}
-
 .hero-visual__img {
   position: relative;
   z-index: 1;
@@ -56,10 +42,9 @@
   width: 100%;
   max-width: 100%;
   border: 0;
-  border-radius: 1rem;
-  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+  border-radius: 0;
+  box-shadow: none;
   background: transparent;
-  /* Sharp render — avoid soft mask / multiply that made the hero look blurred */
   image-rendering: auto;
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
@@ -67,15 +52,7 @@
 }
 
 :host-context(.dark) .hero-visual__img {
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  box-shadow: none;
   filter: none;
-}
-
-:host-context(.dark) .hero-visual__glow {
-  background: radial-gradient(
-    ellipse 72% 62% at 52% 45%,
-    rgba(63, 184, 170, 0.3) 0%,
-    rgba(26, 128, 117, 0.18) 40%,
-    transparent 70%
-  );
+  background: transparent;
 }
