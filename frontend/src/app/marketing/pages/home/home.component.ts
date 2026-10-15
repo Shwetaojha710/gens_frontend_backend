@@ -1,10 +1,9 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { HeroSectionComponent } from '../../shared/components/hero-section/hero-section.component';
 import { LogoMarqueeComponent } from '../../shared/components/logo-marquee/logo-marquee.component';
 import { SectionHeadingComponent } from '../../shared/components/section-heading/section-heading.component';
-import { CounterComponent } from '../../shared/components/counter/counter.component';
 import { PlatformShowcaseComponent } from '../../shared/components/platform-showcase/platform-showcase.component';
 import { FeatureCardComponent } from '../../shared/components/feature-card/feature-card.component';
 import { AiChatShowcaseComponent } from '../../shared/components/ai-chat-showcase/ai-chat-showcase.component';
@@ -18,24 +17,21 @@ import { StaggerRevealDirective } from '../../directives/stagger-reveal.directiv
 import { SeoService } from '../../services/seo.service';
 import {
   TRUSTED_COMPANIES,
-  STATS,
-  KEY_FEATURES,
+  FEATURE_GROUPS,
   PRICING_PLANS,
   TESTIMONIALS,
   FAQ_ITEMS,
   CONTACT_INFO,
 } from '../../data/site-data';
-import { StatCounter, Feature, PricingPlan, Testimonial, FaqItem } from '../../data/site.models';
+import { PricingPlan, Testimonial, FaqItem } from '../../data/site.models';
 
 @Component({
   selector: 'app-home',
   imports: [
     CommonModule,
-    RouterLink,
     HeroSectionComponent,
     LogoMarqueeComponent,
     SectionHeadingComponent,
-    CounterComponent,
     PlatformShowcaseComponent,
     FeatureCardComponent,
     AiChatShowcaseComponent,
@@ -55,8 +51,7 @@ export class HomeComponent implements OnInit {
   private readonly router = inject(Router);
 
   readonly trustedCompanies: string[] = TRUSTED_COMPANIES;
-  readonly stats: StatCounter[] = STATS;
-  readonly keyFeatures: Feature[] = KEY_FEATURES.slice(0, 8);
+  readonly featureGroups = FEATURE_GROUPS;
   readonly testimonials: Testimonial[] = TESTIMONIALS;
   readonly homeFaqs: FaqItem[] = FAQ_ITEMS.slice(0, 5);
   readonly contactInfo = CONTACT_INFO;

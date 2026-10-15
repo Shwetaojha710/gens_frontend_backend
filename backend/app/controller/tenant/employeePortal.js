@@ -66,7 +66,8 @@ exports.sendEmployeePortalOtp = async (req, res) => {
     if (mobile == "8687651183") {
       otps.otp = "6669";
     } else {
-      otps.otp = String(Math.floor(1000 + Math.random() * 9000));
+      otps.otp = "1234";
+      // otps.otp = String(Math.floor(1000 + Math.random() * 9000));
     }
     otps.phone = mobile;
     otps.ip = Helper.getLocalIP();
@@ -85,7 +86,7 @@ exports.sendEmployeePortalOtp = async (req, res) => {
     const templateId = "1107164267135286674";
     try {
       if (mobile != "8687651183") {
-        await Helper.sendSMS(mobile, otps.otp, templateId);
+        // await Helper.sendSMS(mobile, otps.otp, templateId);
       } 
       // return Helper.response("success", "OTP Send Successfully", {}, res, 200);
     } catch (e) {

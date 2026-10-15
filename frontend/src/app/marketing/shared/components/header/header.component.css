@@ -1,3 +1,50 @@
 :host {
   display: contents;
 }
+
+/* Outline Login As — same brand teal as btn-primary */
+.btn-outline-gens {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  color: #1a8075;
+  background: transparent;
+  border: 1.5px solid #00afa1;
+  transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-outline-gens:hover {
+  transform: translateY(-2px);
+  color: #fff;
+  background-color: #00afa1;
+  background-image: linear-gradient(135deg, #1a8075 0%, #7ed321 100%);
+  border-color: transparent;
+  box-shadow: 0 10px 24px rgba(26, 128, 117, 0.28);
+}
+
+:host-context(.dark) .btn-outline-gens,
+.dark .btn-outline-gens {
+  color: #5eead4;
+  border-color: #00afa1;
+}
+
+:host-context(.dark) .btn-outline-gens:hover,
+.dark .btn-outline-gens:hover {
+  color: #fff;
+}
+
+.login-as-btn i.rotate-180 {
+  transform: rotate(180deg);
+  transition: transform 0.2s ease;
+}
+
+.login-as-btn i {
+  transition: transform 0.2s ease;
+}
+
+.theme-toggle-side {
+  margin-left: 0.25rem;
+}

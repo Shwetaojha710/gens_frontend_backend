@@ -17,6 +17,12 @@ const empPersonal = sequelize.define(
       type: DataTypes.UUID,
       allowNull: true,
     },
+    /** Branches this employee (e.g. director) may access for team leave/attendance. */
+    branchIds: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+      defaultValue: null,
+    },
     firstName: {
       type: DataTypes.STRING,
       allowNull: false,
