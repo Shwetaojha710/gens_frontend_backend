@@ -2,6 +2,7 @@ const Designation = require('../../models/designation');
 const Tenant = require('../../models/tenant');
 const Department = require('../../models/department');
 const Helper = require('../../helper/helper');
+const { writeAudit, toPlain } = require('../../helper/auditLog');
 
 exports.createDesignation = async (req, res) => {
     const { department, name, status } = req.body;
@@ -40,6 +41,15 @@ exports.createDesignation = async (req, res) => {
             branchId,
             createdBy: req.users && req.users.id,
             updatedBy: req.users && req.users.id
+        });
+
+        await writeAudit({
+            req,
+            actionType: 'DESIGNATION_CREATE',
+            referenceId: newDesignation.id,
+            oldValue: null,
+            newValue: newDesignation,
+            remarks: `Designation created: ${name}`,
         });
 
         return Helper.response(true, 'Designation created successfully', newDesignation, res, 201);
@@ -149,6 +159,8 @@ exports.updateDesignation = async (req, res) => {
             return Helper.response(false, 'Designation with this name already exists in the department', [], res, 400);
         }
 
+        const oldDesignation = toPlain(designation);
+
         designation.name = name || designation.name;
         designation.department = department || designation.department;
         designation.status = status || designation.status;
@@ -156,6 +168,15 @@ exports.updateDesignation = async (req, res) => {
         designation.branchId = branchId || designation.branchId;
 
         await designation.save();
+
+        await writeAudit({
+            req,
+            actionType: 'DESIGNATION_UPDATE',
+            referenceId: designation.id,
+            oldValue: oldDesignation,
+            newValue: designation,
+            remarks: `Designation updated: ${designation.name}`,
+        });
 
         return Helper.response(true, 'Designation updated successfully', designation, res, 200);
     } catch (error) {
@@ -190,7 +211,18 @@ exports.deleteDesignation = async (req, res) => {
             return Helper.response(false, 'Designation not found', [], res, 404);
         }
 
+        const oldDesignation = toPlain(designation);
+
         await designation.destroy();
+
+        await writeAudit({
+            req,
+            actionType: 'DESIGNATION_DELETE',
+            referenceId: id,
+            oldValue: oldDesignation,
+            newValue: null,
+            remarks: `Designation deleted: ${oldDesignation?.name || id}`,
+        });
 
         return Helper.response(true, 'Designation deleted successfully', [], res, 200);
     } catch (error) {

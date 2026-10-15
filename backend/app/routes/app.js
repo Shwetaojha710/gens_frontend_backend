@@ -21,8 +21,10 @@ router.get('/team-attendances', AppAdmin, TeamsAttendance);
 router.post('/apply-leaves',AppAdmin,AppapplyForLeave)
 router.post('/update-apply-leaves-status',AppAdmin,AppupdatedApplyLeaveStatus)
 router.post('/get-emp-leave-list', AppAdmin, EmployeeLeaveList);
+router.post('/status-wise-leave-list', AppAdmin, statusWiseLeaveList);
 router.post('/get-applied-leave-list', AppAdmin, getAppAppliedLeaves);
 router.post('/get-my-leave-history', AppAdmin, getMyLeaveHistory);
+router.post('/pending-leave-list', AppAdmin, getPendingLeaveList);
 router.post('/get-app-leave-type-dd',AppAdmin,getAppLeaveTypes)
 router.post('/app-branch-dd',AppAdmin, branchDD); 
 router.post('/UpComming-leave',AppAdmin,upcomingLeave)

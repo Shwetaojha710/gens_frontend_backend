@@ -1,6 +1,7 @@
 const User = require("../../models/users");
 const UserPermission = require("../../models/userPermission");
 const Helper = require("../../helper/helper");
+const { writeAudit } = require("../../helper/auditLog");
 
 /**
  * GET all active users for the current tenant (admin use).
@@ -38,6 +39,7 @@ exports.saveUserPermission = async (req, res) => {
 
     try {
         const existing = await UserPermission.findOne({ where: { userId } });
+        const oldPermissions = existing?.permissions ? JSON.parse(existing.permissions) : null;
 
         if (existing) {
             await existing.update({ permissions: JSON.stringify(permissions) });
@@ -52,6 +54,15 @@ exports.saveUserPermission = async (req, res) => {
         // Invalidate the user's current session token so they must re-login
         // to pick up the new permissions from the DB
         await User.update({ token: null }, { where: { id: userId, tenantId } });
+
+        await writeAudit({
+            req,
+            actionType: existing ? "USER_PERMISSION_UPDATE" : "USER_PERMISSION_CREATE",
+            referenceId: userId,
+            oldValue: oldPermissions,
+            newValue: permissions,
+            remarks: "User permissions saved",
+        });
 
         return Helper.response(true, "User permissions saved successfully", {}, res, 200);
     } catch (err) {
@@ -95,10 +106,22 @@ exports.deleteUserPermission = async (req, res) => {
     }
 
     try {
+        const existing = await UserPermission.findOne({ where: { userId, tenantId }, raw: true });
         await UserPermission.destroy({ where: { userId, tenantId } });
 
         // Invalidate session so user re-logs in with role-default permissions
         await User.update({ token: null }, { where: { id: userId, tenantId } });
+
+        if (existing) {
+            await writeAudit({
+                req,
+                actionType: "USER_PERMISSION_DELETE",
+                referenceId: userId,
+                oldValue: existing,
+                newValue: null,
+                remarks: "User permissions reset to role defaults",
+            });
+        }
 
         return Helper.response(true, "User permissions reset to role defaults", {}, res, 200);
     } catch (err) {

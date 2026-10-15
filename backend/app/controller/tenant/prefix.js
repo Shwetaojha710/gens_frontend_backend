@@ -1,5 +1,6 @@
 const Prefix = require("../../models/prefix");
 const Helper = require("../../helper/helper");
+const { writeAudit, toPlain } = require("../../helper/auditLog");
 
 exports.createPrefix = async (req, res) => {
   const { name, status } = req.body;
@@ -27,6 +28,14 @@ exports.createPrefix = async (req, res) => {
       status: status || "active",
       createdBy: req.users && req.users.id,
       updatedBy: req.users && req.users.id,
+    });
+    await writeAudit({
+      req,
+      actionType: "PREFIX_CREATE",
+      referenceId: newPrefix.id,
+      oldValue: null,
+      newValue: newPrefix,
+      remarks: `Prefix created: ${name}`,
     });
     return Helper.response(
       true,
@@ -119,12 +128,21 @@ exports.updatePrefix = async (req, res) => {
     if (!Prefix1) {
       return Helper.response(false, "Prefix not found", [], res, 404);
     }
+    const oldPrefix = toPlain(Prefix1);
     Prefix1.name = name || Prefix.name;
     Prefix1.status = status || Prefix.status;
-    Prefix1.updatedBy = req.users && req.users.id; 
-    Prefix1.branchId = branchId; 
+    Prefix1.updatedBy = req.users && req.users.id;
+    Prefix1.branchId = branchId;
 
     await Prefix1.save();
+    await writeAudit({
+      req,
+      actionType: "PREFIX_UPDATE",
+      referenceId: Prefix1.id,
+      oldValue: oldPrefix,
+      newValue: Prefix1,
+      remarks: `Prefix updated: ${Prefix1.name}`,
+    });
     return Helper.response(
       true,
       "Prefix updated successfully",
@@ -162,7 +180,16 @@ exports.deletePrefix = async (req, res) => {
     if (!deletePrefix) {
       return Helper.response(false, "Prefix not found", [], res, 404);
     }
+    const oldPrefix = toPlain(deletePrefix);
     await deletePrefix.destroy();
+    await writeAudit({
+      req,
+      actionType: "PREFIX_DELETE",
+      referenceId: id,
+      oldValue: oldPrefix,
+      newValue: null,
+      remarks: `Prefix deleted: ${oldPrefix?.name || id}`,
+    });
     return Helper.response(
       true,
       "Prefix deleted successfully",
