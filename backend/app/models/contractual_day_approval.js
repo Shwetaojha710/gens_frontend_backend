@@ -57,8 +57,9 @@ const ContractualDayApproval = sequelize.define('contractual_day_approval', {
   },
 });
 
-ContractualDayApproval.sync({ alter: true })
-  .then(() => console.log('contractual_day_approval synced'))
-  .catch((e) => console.error('contractual_day_approval sync error:', e));
+// Disabled: sync({ alter: true }) exhausts Postgres locks (53200 out of shared memory)
+// ContractualDayApproval.sync({ alter: true })
+//   .then(() => console.log('contractual_day_approval synced'))
+//   .catch((e) => console.error('contractual_day_approval sync error:', e));
 
 module.exports = ContractualDayApproval;

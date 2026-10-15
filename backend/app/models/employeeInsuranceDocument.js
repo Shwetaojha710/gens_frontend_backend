@@ -72,12 +72,13 @@ const EmployeeInsuranceDocument = sequelize.define(
   }
 );
 
-EmployeeInsuranceDocument.sync({ alter: true })
-  .then(() => {
-    console.log("EmployeeInsuranceDocument model synced successfully");
-  })
-  .catch((error) => {
-    console.error("Error syncing EmployeeInsuranceDocument model:", error);
-  });
+// Disabled: sync({ alter: true }) exhausts Postgres locks (53200 out of shared memory)
+// EmployeeInsuranceDocument.sync({ alter: true })
+//   .then(() => {
+//     console.log("EmployeeInsuranceDocument model synced successfully");
+//   })
+//   .catch((error) => {
+//     console.error("Error syncing EmployeeInsuranceDocument model:", error);
+//   });
 
 module.exports = EmployeeInsuranceDocument;
