@@ -133,6 +133,18 @@ baseUrl=environment.apiUrl
   applyAppraisal(data: any): Observable<any> {
     return this.http.post(`${this.baseUrl}appraisal/apply`, data);
   }
+  getAppraisalList(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}appraisal/list`, data);
+  }
+  getAppraisalRecord(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}appraisal/record`, data);
+  }
+  previewAppraisalEdit(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}appraisal/preview-edit`, data);
+  }
+  updateAppraisal(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}appraisal/update`, data);
+  }
 
   getEmployeeSalaryHistory(data: any): Observable<any> {
     return this.http.post(`${this.baseUrl}get-employee-salary-history`, data);

@@ -5,7 +5,6 @@ const Tenant = require('../../models/tenant');
 const Designation = require('../../models/designation');
 const Department = require('../../models/department');
 const Helper = require('../../helper/helper');
-const { writeAudit, toPlain } = require('../../helper/auditLog');
 const { Op } = require('sequelize');
 const fs = require('fs');
 const path = require('path');
@@ -106,15 +105,6 @@ exports.createTemplate = async (req, res) => {
       updatedBy: req.users?.id,
     });
 
-    await writeAudit({
-      req,
-      actionType: 'DOCUMENT_TEMPLATE_CREATE',
-      referenceId: row.id,
-      oldValue: null,
-      newValue: row,
-      remarks: `Template created: ${row.name}`,
-    });
-
     return Helper.response(true, 'Template created', row, res, 201);
   } catch (error) {
     console.error('createTemplate', error);
@@ -132,8 +122,6 @@ exports.updateTemplate = async (req, res) => {
     const row = await DocumentTemplate.findOne({ where: { id, tenantId } });
     if (!row) return Helper.response(false, 'Template not found', {}, res, 404);
 
-    const oldTemplate = toPlain(row);
-
     if (name != null) row.name = String(name).trim();
     if (category != null) row.category = category;
     if (bodyHtml != null) row.bodyHtml = bodyHtml;
@@ -142,15 +130,6 @@ exports.updateTemplate = async (req, res) => {
     if (status != null) row.status = status === 'inactive' ? 'inactive' : 'active';
     row.updatedBy = req.users?.id;
     await row.save();
-
-    await writeAudit({
-      req,
-      actionType: 'DOCUMENT_TEMPLATE_UPDATE',
-      referenceId: row.id,
-      oldValue: oldTemplate,
-      newValue: row,
-      remarks: `Template updated: ${row.name}`,
-    });
 
     return Helper.response(true, 'Template updated', row, res, 200);
   } catch (error) {
@@ -199,18 +178,8 @@ exports.deleteTemplate = async (req, res) => {
     const { id } = req.body;
     if (!tenantId || !id) return Helper.response(false, 'id is required', {}, res, 400);
 
-    const oldTemplate = await DocumentTemplate.findOne({ where: { id, tenantId }, raw: true });
     const deleted = await DocumentTemplate.destroy({ where: { id, tenantId } });
     if (!deleted) return Helper.response(false, 'Template not found', {}, res, 404);
-
-    await writeAudit({
-      req,
-      actionType: 'DOCUMENT_TEMPLATE_DELETE',
-      referenceId: id,
-      oldValue: oldTemplate,
-      newValue: null,
-      remarks: `Template deleted: ${oldTemplate?.name || id}`,
-    });
     return Helper.response(true, 'Template deleted', {}, res, 200);
   } catch (error) {
     return Helper.response(false, error.message, {}, res, 500);
