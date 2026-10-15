@@ -36,10 +36,11 @@ const documentType = sequelize.define("documentType", {
     timestamps: true,
 })
 
-documentType.sync({ alter: true }).then(() => {
-    console.log('DocumentType model synced successfully');
-}).catch((error) => {
-    console.error('Error syncing DocumentType model:', error);
-});
+// Disabled: sync({ alter: true }) exhausts Postgres locks (53200 out of shared memory)
+// documentType.sync({ alter: true }).then(() => {
+//     console.log('DocumentType model synced successfully');
+// }).catch((error) => {
+//     console.error('Error syncing DocumentType model:', error);
+// });
 
 module.exports = documentType;

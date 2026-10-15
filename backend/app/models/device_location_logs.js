@@ -126,11 +126,12 @@ const DeviceLocationLog = sequelize.define(
   },
 );
 
-DeviceLocationLog.sync({ alter: true }).then(() => {
-    console.log('DeviceLocationLog model synced successfully');
-}).catch((error) => {
-    console.error('Error syncing DeviceLocationLog model:', error);
-});
+// Disabled: sync({ alter: true }) exhausts Postgres locks (53200 out of shared memory)
+// DeviceLocationLog.sync({ alter: true }).then(() => {
+//     console.log('DeviceLocationLog model synced successfully');
+// }).catch((error) => {
+//     console.error('Error syncing DeviceLocationLog model:', error);
+// });
 
 module.exports = DeviceLocationLog;
 //

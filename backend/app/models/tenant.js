@@ -68,11 +68,12 @@ Tenant.associate = models => {
     }
 };
 
-Tenant.sync({ alter: true }).then(() => {
-    console.log('Tenant model synced successfully');
-}).catch((error) => {
-    console.error('Error syncing Tenant model:', error);
-});
+// Disabled: sync({ alter: true }) exhausts Postgres locks (53200 out of shared memory)
+// Tenant.sync({ alter: true }).then(() => {
+//     console.log('Tenant model synced successfully');
+// }).catch((error) => {
+//     console.error('Error syncing Tenant model:', error);
+// });
 
 
 module.exports = Tenant;
