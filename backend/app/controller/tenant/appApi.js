@@ -6277,6 +6277,70 @@ exports.markNotificationsRead = async (req, res) => {
   }
 };
 
+/** Logged-in user's leaves filtered by leave type and status (pending / cancel / recommend). */
+exports.statusWiseLeaveList = async (req, res) => {
+  const tenantId = req.users?.tenantId;
+  const employeeId = req.users?.id;
+  const branchId = req.users && req.users.branchId;
+
+  if (!branchId || branchId == "null") {
+    return Helper.response(false, "branchId is required!", {}, res, 200);
+  }
+  if (!tenantId || !employeeId) {
+    return Helper.response(false, "User Not Found", [], res, 404);
+  }
+
+  const statusInput = String(req.body?.status || "").trim().toLowerCase();
+
+  if (!statusInput) {
+    return Helper.response(false, "status is required", [], res, 400);
+  }
+
+  const statusMap = {
+    pending: ["pending"],
+    recommend: ["recommended"],
+    recommended: ["recommended"],
+    cancel: ["rejected", "self_declined"],
+    cancelled: ["rejected", "self_declined"],
+    canceled: ["rejected", "self_declined"],
+  };
+  const statuses = statusMap[statusInput] || [statusInput];
+
+  try {
+    const leaves = await leave_application.findAll({
+      where: {
+        tenantId,
+        employeeId,
+        branchId,
+        status: { [Op.in]: statuses },
+      },
+      order: [["appliedOn", "DESC"]],
+      raw: true,
+    });
+
+    const leaveTypes = await leaveMaster.findAll({
+      where: { tenantId },
+      attributes: ["id", "leaveName", "leaveCode"],
+      raw: true,
+    });
+    const leaveTypeMap = new Map(leaveTypes.map((lt) => [String(lt.id), lt]));
+
+    const data = leaves.map((item) => {
+      const leaveType = leaveTypeMap.get(String(item.leaveTypeId));
+      return {
+        ...item,
+        leaveName: leaveType?.leaveName ?? null,
+        leaveCode: leaveType?.leaveCode ?? null,
+      };
+    });
+
+    return Helper.response(true, "Status wise leave list fetched", data, res, 200);
+  } catch (error) {
+    console.error("Error fetching status wise leave list:", error);
+    return Helper.response(false, error.message, [], res, 500);
+  }
+};
+
 // exports.getMyLeaveHistory = async (req, res) => {
 //   const tenantId = req.users?.tenantId;
 //   const employeeId = req.users?.id;
