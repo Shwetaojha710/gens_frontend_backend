@@ -6276,3 +6276,146 @@ exports.markNotificationsRead = async (req, res) => {
     return Helper.response(false, e.message, {}, res, 500);
   }
 };
+
+// exports.getMyLeaveHistory = async (req, res) => {
+//   const tenantId = req.users?.tenantId;
+//   const employeeId = req.users?.id;
+//   const branchId = req.users?.branchId;
+
+//   if (!tenantId || !branchId || branchId === "null") {
+//     return Helper.response(false, "Required fields missing", [], res, 400);
+//   }
+
+//   try {
+//     const { leaveTypeId, month, year } = req.body || {};
+
+//     const andClauses = [];
+//     if (year) andClauses.push(where(fn("EXTRACT", literal('YEAR FROM "fromDate"')), year));
+//     if (month) andClauses.push(where(fn("EXTRACT", literal('MONTH FROM "fromDate"')), month));
+
+//     const whereClause = {
+//       tenantId,
+//       employeeId,
+//       branchId,
+//       ...(leaveTypeId && { leaveTypeId }),
+//       ...(andClauses.length > 0 && { [Op.and]: andClauses }),
+//     };
+
+//     const leaves = await leave_application.findAll({
+//       where: whereClause,
+//       order: [["fromDate", "DESC"]],
+//       raw: true,
+//     });
+
+//     const leaveTypes = await leaveMaster.findAll({
+//       where: { tenantId },
+//       attributes: ["id", "leaveName", "leaveCode"],
+//       raw: true,
+//     });
+//     const ltMap = Object.fromEntries(leaveTypes.map((l) => [l.id, l]));
+
+//     const data = leaves.map((l) => ({
+//       ...l,
+//       leaveName: ltMap[l.leaveTypeId]?.leaveName ?? null,
+//       leaveCode: ltMap[l.leaveTypeId]?.leaveCode ?? null,
+//     }));
+
+//     return Helper.response(true, "Leave history fetched", data, res, 200);
+//   } catch (error) {
+//     console.error("Error fetching leave history:", error);
+//     return Helper.response(false, error.message, [], res, 500);
+//   }
+// };
+
+// /** Pending leaves for the logged-in user and their team. Same path for every role. */
+// exports.getPendingLeaveList = async (req, res) => {
+//   try {
+//     const tenantId = req.users?.tenantId;
+//     const userId = req.users?.id;
+//     const branchId = req.users?.branchId;
+
+//     if (!tenantId || !userId) {
+//       return Helper.response(false, "User Not Found", {}, res, 404);
+//     }
+//     if (!branchId || branchId === "null") {
+//       return Helper.response(false, "branchId is required!", {}, res, 200);
+//     }
+
+//     const teamIds = [
+//       ...new Set(await Helper.getAllSubordinates(userId, branchId, tenantId)),
+//     ].filter((id) => id && id !== userId);
+
+//     const [myLeaves, teamLeaves] = await Promise.all([
+//       leave_application.findAll({
+//         where: {
+//           tenantId,
+//           branchId,
+//           employeeId: userId,
+//           status: "pending",
+//         },
+//         order: [["appliedOn", "DESC"]],
+//         raw: true,
+//       }),
+//       teamIds.length
+//         ? leave_application.findAll({
+//             where: {
+//               tenantId,
+//               branchId,
+//               employeeId: { [Op.in]: teamIds },
+//               status: "pending",
+//             },
+//             order: [["appliedOn", "DESC"]],
+//             raw: true,
+//           })
+//         : [],
+//     ]);
+
+//     const applications = [...myLeaves, ...teamLeaves];
+//     const employeeIds = [...new Set(applications.map((l) => l.employeeId))];
+
+//     const [employees, branches, leaveTypes] = await Promise.all([
+//       employeeIds.length
+//         ? empPersonal.findAll({
+//             where: { id: { [Op.in]: employeeIds }, tenantId },
+//             attributes: ["id", "firstName", "lastName", "empCode", "branchId"],
+//             raw: true,
+//           })
+//         : [],
+//       branch.findAll({ attributes: ["id", "name"], raw: true }),
+//       leaveMaster.findAll({
+//         where: { tenantId },
+//         attributes: ["id", "leaveName", "leaveCode"],
+//         raw: true,
+//       }),
+//     ]);
+
+//     const mapLeave = (item) => {
+//       const employee = employees.find((e) => e.id === item.employeeId);
+//       const branchData = branches.find((b) => b.id === employee?.branchId);
+//       const leaveType = leaveTypes.find((l) => l.id === item.leaveTypeId);
+//       return {
+//         ...item,
+//         empCode: employee?.empCode ?? null,
+//         employeeName:
+//           `${employee?.firstName ?? ""} ${employee?.lastName ?? ""}`.trim(),
+//         branchName: branchData?.name ?? null,
+//         leaveName: leaveType?.leaveName ?? null,
+//         leaveCode: leaveType?.leaveCode ?? null,
+//       };
+//     };
+
+//     return Helper.response(
+//       true,
+//       "Pending leave list fetched successfully",
+//       {
+//         myLeaveList: myLeaves.map(mapLeave),
+//         teamLeaveList: teamLeaves.map(mapLeave),
+//       },
+//       res,
+//       200,
+//     );
+//   } catch (error) {
+//     console.error("Error fetching pending leave list:", error);
+//     return Helper.response(false, error.message, {}, res, 500);
+//   }
+// };
