@@ -465,16 +465,25 @@ stats:any
     return true;
   }
 
-  async onBranchChange(branchId: any) {
-    console.log('Selected Branch ID:', branchId);
-    this.personalDetails['branchId'] = branchId
-    this.personalDetails['departmentId'] = null
-    this.personalDetails['designationId'] = null
-    this.personalDetails['reportingPersonId'] = null
-    this.personalDetails['empType'] = null
-    await this.DepartmentDD()
-    // await this.designationDD()
-    await this.getEmploymentTypes()
+  /** Multi-select branches → keep primary branchId as first selected (API/cascade). */
+  syncPrimaryBranch(branchIds: any): string | null {
+    const ids = Array.isArray(branchIds)
+      ? branchIds.filter(Boolean)
+      : (branchIds ? [branchIds] : []);
+    this.personalDetails['branchIds'] = ids;
+    const primary = ids.length ? ids[0] : null;
+    this.personalDetails['branchId'] = primary;
+    return primary;
+  }
+
+  async onBranchChange(branchIds: any) {
+    this.syncPrimaryBranch(branchIds);
+    this.personalDetails['departmentId'] = null;
+    this.personalDetails['designationId'] = null;
+    this.personalDetails['reportingPersonId'] = null;
+    this.personalDetails['empType'] = null;
+    await this.DepartmentDD();
+    await this.getEmploymentTypes();
   }
   async update(data: any) {
 
@@ -485,14 +494,35 @@ stats:any
     this.personalDetails.state = Number(this.personalDetails.state);
     this.personalDetails.city = Number(this.personalDetails.city);
     this.personalDetails.country = Number(this.personalDetails.country);
+    let loadedBranchIds: any[] = [];
+    const rawBranchIds = data?.branchIds ?? this.personalDetails.branchIds;
+    if (Array.isArray(rawBranchIds) && rawBranchIds.length) {
+      loadedBranchIds = rawBranchIds.filter(Boolean);
+    } else if (typeof rawBranchIds === 'string' && rawBranchIds.trim()) {
+      try {
+        const parsed = JSON.parse(rawBranchIds);
+        loadedBranchIds = Array.isArray(parsed) ? parsed.filter(Boolean) : [rawBranchIds];
+      } catch {
+        loadedBranchIds = [rawBranchIds];
+      }
+    } else if (this.personalDetails.branchId) {
+      loadedBranchIds = [this.personalDetails.branchId];
+    }
+    this.syncPrimaryBranch(loadedBranchIds);
     await this.getstates(this.personalDetails.country);
     await this.getcity(this.personalDetails.state);
+    await this.DepartmentDD();
+    await this.getEmploymentTypes();
     await this.getDesignation(this.personalDetails.departmentId);
     this.employeeList = this.employeeList.filter((item: any) => item.value != this.personalDetails.id);
     this.createFlag = true;
     this.updateFlag = true;
   }
   updateform() {
+    if (!this.syncPrimaryBranch(this.personalDetails['branchIds'] || this.personalDetails['branchId'])) {
+      this.notyf.error('Please select at least one Branch');
+      return;
+    }
     this.createFlag = false;
     this.listflag = true;
     this.updateFlag = false;
@@ -503,6 +533,8 @@ stats:any
     obj.dateOfBirth = formattedDob;
     obj.emp_status='approved'
     obj.type = 'pending_employee'
+    obj.branchId = this.personalDetails['branchId'];
+    obj.branchIds = this.personalDetails['branchIds'] || [];
 
     this.employeeService.updateEmp(obj).subscribe(
       (response) => {

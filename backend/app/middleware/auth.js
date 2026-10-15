@@ -200,6 +200,7 @@ const AppAdmin = async (req, res, next) => {
       shift_id: user?.shift_id,
       tenantId: user?.tenantId ?? 0,
       branchId: user?.branchId ?? 0,
+      branchIds: user?.branchIds ?? null,
       role: user?.role,
       loginSource: tokenMatchesWeb ? "web" : "mobile",
     };
