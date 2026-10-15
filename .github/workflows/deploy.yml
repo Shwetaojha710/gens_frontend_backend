@@ -84,27 +84,57 @@ jobs:
 
       - name: Deploy Angular Frontend
         run: |
-          set +e
-          rsync -avz --delete \
-            --omit-dir-times \
-            --no-perms \
-            --no-owner \
-            --no-group \
-            frontend/dist/gens-frontend/browser/ \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ steps.env.outputs.APP_ROOT }}/gens-frontend/
-          code=$?
           set -e
-          if [ $code -eq 0 ]; then
-            exit 0
-          fi
-          if [ $code -eq 23 ]; then
-            echo "WARN: rsync exit 23 (partial attrs) — verifying index.html on server"
-            ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-              "test -f ${{ steps.env.outputs.APP_ROOT }}/gens-frontend/index.html"
-            exit 0
-          fi
-          echo "ERROR: frontend rsync failed with code $code"
-          exit $code
+          # Stamp build so we can verify the live host actually received this deploy
+          echo "${{ github.sha }}" > frontend/dist/gens-frontend/browser/deploy-version.txt
+          date -u +"deployed_at=%Y-%m-%dT%H:%M:%SZ" >> frontend/dist/gens-frontend/browser/deploy-version.txt
+
+          # IMPORTANT:
+          # Nginx for gens.demoquaeretech.in serves APP_ROOT/ (not APP_ROOT/gens-frontend/).
+          # Old workflow only synced gens-frontend/, so the public site stayed on Oct-13 files
+          # even when Actions reported success.
+          rsync_frontend() {
+            local dest="$1"
+            set +e
+            rsync -avz --delete \
+              --omit-dir-times \
+              --no-perms \
+              --no-owner \
+              --no-group \
+              --exclude api \
+              --exclude gens-frontend \
+              --exclude '.env' \
+              --exclude 'node_modules' \
+              frontend/dist/gens-frontend/browser/ \
+              "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${dest}"
+            local code=$?
+            set -e
+            if [ $code -eq 0 ] || [ $code -eq 23 ]; then
+              return 0
+            fi
+            echo "ERROR: rsync to ${dest} failed with code $code"
+            return $code
+          }
+
+          # 1) Document root (what the website actually serves)
+          rsync_frontend "${{ steps.env.outputs.APP_ROOT }}/"
+
+          # 2) Keep legacy gens-frontend folder in sync too
+          rsync_frontend "${{ steps.env.outputs.APP_ROOT }}/gens-frontend/"
+
+          # Prove files landed on the server disk
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} bash -s << EOF
+            set -e
+            APP_ROOT="${{ steps.env.outputs.APP_ROOT }}"
+            SHA="${{ github.sha }}"
+            echo "=== server index.html ==="
+            ls -la "\$APP_ROOT/index.html" "\$APP_ROOT/gens-frontend/index.html" || true
+            echo "=== deploy-version.txt ==="
+            cat "\$APP_ROOT/deploy-version.txt"
+            grep -q "\$SHA" "\$APP_ROOT/deploy-version.txt"
+            grep -q "\$SHA" "\$APP_ROOT/gens-frontend/deploy-version.txt"
+            echo "Frontend files verified on server for \$SHA"
+          EOF
 
       # GitHub: backend/  →  Server: api/
       - name: Deploy Node.js API
@@ -170,12 +200,25 @@ jobs:
       - name: Post-deploy health check
         run: |
           set -e
-          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "${{ steps.env.outputs.HEALTH_URL }}" || echo "000")
-          echo "Health HTTP $code for ${{ steps.env.outputs.HEALTH_URL }}"
+          BASE="${{ steps.env.outputs.HEALTH_URL }}"
+          BASE="${BASE%/}"
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "${BASE}/" || echo "000")
+          echo "Health HTTP $code for ${BASE}/"
           if [ "$code" = "000" ]; then
             echo "ERROR: live host unreachable after deploy"
             exit 1
           fi
+
+          # Public site must serve the stamp from THIS commit (proves nginx root was updated)
+          remote_ver=$(curl -s --max-time 20 "${BASE}/deploy-version.txt" || true)
+          echo "Live deploy-version.txt:"
+          echo "$remote_ver"
+          if ! echo "$remote_ver" | grep -q "${{ github.sha }}"; then
+            echo "ERROR: https site is NOT serving the new frontend build."
+            echo "Nginx root is probably not ${{ steps.env.outputs.APP_ROOT }}/ — check server vhost root."
+            exit 1
+          fi
+          echo "Live frontend matches commit ${{ github.sha }}"
 
       - name: Deploy summary
         run: |
@@ -183,3 +226,4 @@ jobs:
           echo "Path: ${{ steps.env.outputs.APP_ROOT }}"
           echo "PM2: ${{ steps.env.outputs.PM2_NAME }}"
           echo "Commit: ${{ github.sha }}"
+          echo "Check: ${{ steps.env.outputs.HEALTH_URL }}deploy-version.txt"
