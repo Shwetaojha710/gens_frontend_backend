@@ -1,5 +1,6 @@
 const { Op, JSONB, col } = require("sequelize");
 const Helper = require("../../helper/helper");
+const { writeAudit, toPlain } = require("../../helper/auditLog");
 const MasterComponents = require("../../models/master_components");
 
 exports.createComponent = async (req, res) => {
@@ -62,6 +63,15 @@ exports.createComponent = async (req, res) => {
       amount,
       value_type,
       branchId,
+    });
+
+    await writeAudit({
+      req,
+      actionType: "SALARY_COMPONENT_CREATE",
+      referenceId: newComponent.id,
+      oldValue: null,
+      newValue: newComponent,
+      remarks: `Salary component created: ${component_name}`,
     });
 
     return Helper.response(
@@ -138,6 +148,8 @@ exports.updateComponent = async (req, res) => {
   if(!status){
 status=component?.status
   }
+    const oldComponent = toPlain(component);
+
     // Update record
     await component.update({
       component_name,
@@ -149,6 +161,15 @@ status=component?.status
       value_type,
       status,branchId,
       updatedBy: userId,
+    });
+
+    await writeAudit({
+      req,
+      actionType: "SALARY_COMPONENT_UPDATE",
+      referenceId: component.id,
+      oldValue: oldComponent,
+      newValue: component,
+      remarks: `Salary component updated: ${component_name}`,
     });
 
     return Helper.response(
@@ -225,7 +246,18 @@ exports.deleteComponent = async (req, res) => {
       return Helper.response(false, "Component not found", [], res, 404);
     }
 
+    const oldComponent = toPlain(component);
+
     await component.destroy();
+
+    await writeAudit({
+      req,
+      actionType: "SALARY_COMPONENT_DELETE",
+      referenceId: id,
+      oldValue: oldComponent,
+      newValue: null,
+      remarks: `Salary component deleted: ${oldComponent?.component_name || id}`,
+    });
 
     return Helper.response(
       true,

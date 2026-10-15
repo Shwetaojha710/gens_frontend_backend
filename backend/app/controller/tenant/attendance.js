@@ -61,7 +61,15 @@ exports.attendanceMaster = async (req, res) => {
     attendanceSettings.graceMinutes = graceMinutes;
     attendanceSettings.halfDayThreshold = lateToHalfdayMin;
     attendanceSettings.halfdayToAbsentMin = halfdayToAbsentMin;
-    if (attendanceSettings.save()) {
+    if (await attendanceSettings.save()) {
+      await writeAudit({
+        req,
+        actionType: "ATTENDANCE_SETTING_CREATE",
+        referenceId: attendanceSettings.id,
+        oldValue: null,
+        newValue: attendanceSettings,
+        remarks: "Attendance settings created",
+      });
       return Helper.response(
         true,
         "Attendance settings created successfully.",
@@ -151,6 +159,8 @@ exports.updateAttendanceSettings = async (req, res) => {
       );
     }
 
+    const oldSettings = toPlain(settings);
+
     settings.lateAllowanceMin = lateAllowanceMin;
     settings.graceMinutes = graceMinutes;
     settings.halfDayThreshold = halfDayThreshold;
@@ -158,6 +168,14 @@ exports.updateAttendanceSettings = async (req, res) => {
     settings.branchId = branchId;
 
     if (await settings.save()) {
+      await writeAudit({
+        req,
+        actionType: "ATTENDANCE_SETTING_UPDATE",
+        referenceId: settings.id,
+        oldValue: oldSettings,
+        newValue: settings,
+        remarks: "Attendance settings updated",
+      });
       return Helper.response(
         true,
         "Attendance settings updated successfully.",
@@ -1091,7 +1109,7 @@ exports.updateAttendance = async (req, res) => {
       where: { employeeId: employeeId, tenantId, branchId, date },
     });
     if (!employeeExists) {
-      await attendance.create({
+      const createdAttendance = await attendance.create({
         employeeId,
         tenantId,
         branchId,
@@ -1107,6 +1125,16 @@ exports.updateAttendance = async (req, res) => {
         createdBy: req.users?.id,
       });
 
+      await writeAudit({
+        req,
+        actionType: "ATTENDANCE_CREATE",
+        referenceId: createdAttendance.id,
+        employeeId,
+        oldValue: null,
+        newValue: createdAttendance,
+        remarks: `Attendance added for ${date}`,
+      });
+
       return Helper.response(
         true,
         "Atttendance updated successfully",
@@ -1116,6 +1144,8 @@ exports.updateAttendance = async (req, res) => {
       );
       // return Helper.response(false, "Atendance not found", null, res, 404);
     }
+
+    const oldAttendance = toPlain(employeeExists);
 
     employeeExists.updatedBy = req.users?.id;
     employeeExists.branchId = branchId;
@@ -1127,6 +1157,16 @@ exports.updateAttendance = async (req, res) => {
     employeeExists.year = new Date(date).getFullYear();
     employeeExists.status = status || "active";
     await employeeExists.save();
+
+    await writeAudit({
+      req,
+      actionType: "ATTENDANCE_UPDATE",
+      referenceId: employeeExists.id,
+      employeeId,
+      oldValue: oldAttendance,
+      newValue: employeeExists,
+      remarks: `Attendance updated for ${date}`,
+    });
 
     return Helper.response(
       true,
@@ -1159,6 +1199,8 @@ exports.BulkupdateAttendance = async (req, res) => {
       return Helper.response(false, "Invalid data format", {}, res, 200);
     }
 
+    const auditEntries = [];
+
     for (const item of attendanceList) {
       const { date, checkIn, checkOut, status, employeeId } = item;
 
@@ -1181,7 +1223,7 @@ exports.BulkupdateAttendance = async (req, res) => {
       });
 
       if (!employeeExists) {
-        await attendance.create(
+        const createdAttendance = await attendance.create(
           {
             employeeId,
             tenantId,
@@ -1198,7 +1240,15 @@ exports.BulkupdateAttendance = async (req, res) => {
           },
           { transaction: t },
         );
+
+        auditEntries.push({
+          actionType: "ATTENDANCE_CREATE",
+          oldValue: null,
+          record: createdAttendance,
+        });
       } else {
+        const oldAttendance = toPlain(employeeExists);
+
         employeeExists.updatedBy = req.users?.id;
         employeeExists.check_in_time = checkInTime;
         employeeExists.check_out_time = checkOutTime;
@@ -1206,11 +1256,36 @@ exports.BulkupdateAttendance = async (req, res) => {
         employeeExists.month = parseInt(month);
         employeeExists.year = parseInt(year);
 
+        // Screen sends every row, so log only the ones whose attendance actually changed
+        const isChanged = ["check_in_time", "check_out_time", "status"].some(
+          (field) => employeeExists.changed(field),
+        );
+
         await employeeExists.save({ transaction: t });
+
+        if (isChanged) {
+          auditEntries.push({
+            actionType: "ATTENDANCE_UPDATE",
+            oldValue: oldAttendance,
+            record: employeeExists,
+          });
+        }
       }
     }
 
     await t.commit();
+
+    for (const { actionType, oldValue, record } of auditEntries) {
+      await writeAudit({
+        req,
+        actionType,
+        referenceId: record.id,
+        employeeId: record.employeeId,
+        oldValue,
+        newValue: record,
+        remarks: `Attendance bulk ${oldValue ? "updated" : "added"} for ${record.date}`,
+      });
+    }
 
     return Helper.response(
       true,
@@ -1257,7 +1332,19 @@ exports.deleteAttendance = async (req, res) => {
       return Helper.response(false, "Data not found", null, res, 404);
     }
 
+    const oldAttendance = toPlain(delteAttendance);
+
     await delteAttendance.destroy();
+
+    await writeAudit({
+      req,
+      actionType: "ATTENDANCE_DELETE",
+      referenceId: id,
+      employeeId: oldAttendance?.employeeId,
+      oldValue: oldAttendance,
+      newValue: null,
+      remarks: `Attendance deleted for ${oldAttendance?.date}`,
+    });
 
     return Helper.response(
       true,
@@ -1301,9 +1388,21 @@ exports.updateempattendance = async (req, res) => {
       // return Helper.response(false, "Atendance not found", null, res, 404);
     }
 
+    const oldAttendance = toPlain(employeeExists);
+
     employeeExists.check_in_time = `${date} ${allowedTill}`;
 
     await employeeExists.save();
+
+    await writeAudit({
+      req,
+      actionType: "ATTENDANCE_UPDATE",
+      referenceId: employeeExists.id,
+      employeeId: employeeExists.employeeId,
+      oldValue: oldAttendance,
+      newValue: employeeExists,
+      remarks: `Weekend attendance check-in updated for ${date}`,
+    });
 
     return Helper.response(
       true,
@@ -3124,6 +3223,16 @@ exports.addReimbursement = async (req, res) => {
 
     await t.commit();
 
+    await writeAudit({
+      req,
+      actionType: "REIMBURSEMENT_CREATE",
+      referenceId: reimbursementData.id,
+      employeeId: reimbursementData.employeeId,
+      oldValue: null,
+      newValue: { ...toPlain(reimbursementData), files: createdDocs.map((f) => f.image) },
+      remarks: `Reimbursement added: ${reimbursementData.amount}`,
+    });
+
     return res.status(200).json({
       status: true,
       message: "Reimbursement added successfully",
@@ -3338,6 +3447,8 @@ exports.updateReimbursementStatus = async (req, res) => {
       return Helper.response(false, "Reimbursement not found", null, res, 404);
     }
 
+    const oldReimbursement = toPlain(existingDoc);
+
     await existingDoc.update({
       status,
       branchId,
@@ -3349,6 +3460,16 @@ exports.updateReimbursementStatus = async (req, res) => {
       { status, branchId, updatedBy: req.users?.id, updatedAt: new Date() },
       { where: { reimbursementId: id, tenantId } },
     );
+
+    await writeAudit({
+      req,
+      actionType: "REIMBURSEMENT_STATUS_UPDATE",
+      referenceId: existingDoc.id,
+      employeeId: existingDoc.employeeId,
+      oldValue: oldReimbursement,
+      newValue: existingDoc,
+      remarks: `Reimbursement ${status}`,
+    });
 
     return Helper.response(
       true,
@@ -3402,6 +3523,8 @@ exports.updateReimbursement = async (req, res) => {
       return Helper.response(false, "Reimbursement not found", null, res, 404);
     }
 
+    const oldReimbursement = toPlain(existingDoc);
+
     if (!req.files || req.files.length === 0) {
       existingDoc.amount = amount;
       existingDoc.toDate = toDate;
@@ -3413,6 +3536,16 @@ exports.updateReimbursement = async (req, res) => {
       existingDoc.updatedAt = new Date();
 
       await existingDoc.save();
+
+      await writeAudit({
+        req,
+        actionType: "REIMBURSEMENT_UPDATE",
+        referenceId: existingDoc.id,
+        employeeId: existingDoc.employeeId,
+        oldValue: oldReimbursement,
+        newValue: existingDoc,
+        remarks: "Reimbursement updated",
+      });
 
       return Helper.response(
         true,
@@ -3457,6 +3590,16 @@ exports.updateReimbursement = async (req, res) => {
       await existingDoc.save();
       console.log("New file uploaded:", file.filename);
     }
+
+    await writeAudit({
+      req,
+      actionType: "REIMBURSEMENT_UPDATE",
+      referenceId: existingDoc.id,
+      employeeId: existingDoc.employeeId,
+      oldValue: oldReimbursement,
+      newValue: existingDoc,
+      remarks: "Reimbursement updated with new file",
+    });
 
     return Helper.response(
       true,
@@ -3512,7 +3655,19 @@ exports.deleteReimbursement = async (req, res) => {
       }
     }
 
+    const oldReimbursement = toPlain(delteholiday);
+
     await delteholiday.destroy();
+
+    await writeAudit({
+      req,
+      actionType: "REIMBURSEMENT_DELETE",
+      referenceId: id,
+      employeeId: oldReimbursement?.employeeId,
+      oldValue: oldReimbursement,
+      newValue: null,
+      remarks: `Reimbursement deleted: ${oldReimbursement?.amount}`,
+    });
 
     return Helper.response(
       true,
@@ -3785,6 +3940,18 @@ exports.CreateManuallyCompoff = async (req, res) => {
     }
 
     await transaction.commit();
+
+    for (const entry of createdEntries) {
+      await writeAudit({
+        req,
+        actionType: "COMP_OFF_CREATE",
+        referenceId: entry.id,
+        employeeId: entry.employeeId,
+        oldValue: null,
+        newValue: entry,
+        remarks: `Comp-off added manually for ${earnedDate}`,
+      });
+    }
 
     return Helper.response(
       true,

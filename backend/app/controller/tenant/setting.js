@@ -1,5 +1,6 @@
 const Tenant = require('../../models/tenant');
 const Helper = require('../../helper/helper');
+const { writeAudit } = require('../../helper/auditLog');
 const path = require('path');
 const fs = require('fs');
 
@@ -79,7 +80,16 @@ exports.saveBrandColors = async (req, res) => {
       brandColors.applyTo = applyTo;
     }
 
+    const existing = await Tenant.findByPk(tenantId, { attributes: ['brandColors'], raw: true });
     await Tenant.update({ brandColors }, { where: { id: tenantId } });
+    await writeAudit({
+      req,
+      actionType: 'BRAND_COLORS_UPDATE',
+      referenceId: tenantId,
+      oldValue: existing?.brandColors || null,
+      newValue: brandColors,
+      remarks: 'Brand colors updated',
+    });
     return Helper.response(true, 'Brand colors saved', brandColors, res, 200);
   } catch (error) {
     console.error('saveBrandColors error:', error);
@@ -127,6 +137,14 @@ exports.uploadLetterhead = async (req, res) => {
 
     const filename = req.file.filename;
     await Tenant.update({ letterhead: filename }, { where: { id: tenantId } });
+    await writeAudit({
+      req,
+      actionType: 'LETTERHEAD_UPLOAD',
+      referenceId: tenantId,
+      oldValue: { letterhead: existing?.letterhead || null },
+      newValue: { letterhead: filename },
+      remarks: 'Letterhead uploaded',
+    });
 
     const url = `${process.env.BASE_URL}/upload/${filename}`;
     return Helper.response(true, 'Letterhead uploaded successfully', { url, filename }, res, 200);
@@ -166,6 +184,14 @@ exports.uploadHandbook = async (req, res) => {
 
     const filename = req.file.filename;
     await Tenant.update({ handbook: filename }, { where: { id: tenantId } });
+    await writeAudit({
+      req,
+      actionType: 'HANDBOOK_UPLOAD',
+      referenceId: tenantId,
+      oldValue: { handbook: existing?.handbook || null },
+      newValue: { handbook: filename },
+      remarks: 'Handbook uploaded',
+    });
 
     const url = `${process.env.BASE_URL}/upload/${filename}`;
     return Helper.response(true, 'Handbook uploaded successfully', { url, filename }, res, 200);
@@ -205,6 +231,14 @@ exports.uploadInsurancePolicy = async (req, res) => {
 
     const filename = req.file.filename;
     await Tenant.update({ insurancePolicy: filename }, { where: { id: tenantId } });
+    await writeAudit({
+      req,
+      actionType: 'INSURANCE_POLICY_UPLOAD',
+      referenceId: tenantId,
+      oldValue: { insurancePolicy: existing?.insurancePolicy || null },
+      newValue: { insurancePolicy: filename },
+      remarks: 'Insurance policy uploaded',
+    });
 
     const url = `${process.env.BASE_URL}/upload/${filename}`;
     return Helper.response(true, 'Insurance policy uploaded successfully', { url, filename }, res, 200);
