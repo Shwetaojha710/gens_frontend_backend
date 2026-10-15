@@ -239,12 +239,26 @@ const empPersonal = sequelize.define(
   },
 );
 
-empPersonal.sync({ alter: true })
-  .then(() => {
-    console.log("empPersonal model synced successfully");
-  })
-  .catch((error) => {
-    console.error("Error syncing empPersonal model:", error);
-  });
+// Do NOT use sync({ alter: true }) — views (e.g. employee_leave_features) block ALTER on tenantId.
+// Only add missing branchIds column when needed.
+(async () => {
+  try {
+    const qi = sequelize.getQueryInterface();
+    const desc = await qi.describeTable("empPersonals");
+    if (!desc.branchIds) {
+      await qi.addColumn("empPersonals", "branchIds", {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        defaultValue: null,
+      });
+      console.log("empPersonal.branchIds column added");
+    }
+  } catch (error) {
+    console.error(
+      "Error ensuring empPersonal.branchIds:",
+      error?.parent?.message || error?.message || error,
+    );
+  }
+})();
 
 module.exports = empPersonal;

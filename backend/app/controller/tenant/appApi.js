@@ -2903,7 +2903,6 @@ exports.AppapplyForLeave = async (req, res) => {
       }
 
       // fromDate must be an active Restricted holiday in holiday table
-      // const rhHoliday = await holiday.findOne({
       const rhHoliday = await holiday.findOne({
         where: {
           tenantId,

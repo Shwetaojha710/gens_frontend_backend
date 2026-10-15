@@ -22,10 +22,12 @@ jobs:
             echo "APP_ROOT=/var/www/html/gens.demoquaeretech.in" >> $GITHUB_OUTPUT
             echo "PM2_NAME=gens" >> $GITHUB_OUTPUT
             echo "ENV_NAME=live" >> $GITHUB_OUTPUT
+            echo "HEALTH_URL=https://gens.demoquaeretech.in/" >> $GITHUB_OUTPUT
           else
             echo "APP_ROOT=/var/www/html/gensdemo.demoquaeretech.in" >> $GITHUB_OUTPUT
             echo "PM2_NAME=gens-staging" >> $GITHUB_OUTPUT
             echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
+            echo "HEALTH_URL=https://gensdemo.demoquaeretech.in/" >> $GITHUB_OUTPUT
           fi
 
       - name: Setup Node.js
@@ -40,6 +42,25 @@ jobs:
       - name: Build Angular Frontend
         working-directory: frontend
         run: npm run build -- --configuration production
+
+      - name: Verify frontend build output
+        run: |
+          if [ ! -f frontend/dist/gens-frontend/browser/index.html ]; then
+            echo "ERROR: frontend build missing index.html"
+            ls -la frontend/dist/gens-frontend/ || true
+            ls -la frontend/dist/gens-frontend/browser/ || true
+            exit 1
+          fi
+          echo "Frontend build OK"
+
+      - name: Syntax-check backend before deploy
+        working-directory: backend
+        run: |
+          node --check server.js
+          node --check app/controller/tenant/appApi.js
+          node --check app/helper/helper.js
+          node --check app/models/empPersonal.js
+          echo "Backend syntax OK"
 
       - name: Setup SSH
         run: |
@@ -63,25 +84,32 @@ jobs:
 
       - name: Deploy Angular Frontend
         run: |
+          set +e
           rsync -avz --delete \
             --omit-dir-times \
             --no-perms \
             --no-owner \
             --no-group \
             frontend/dist/gens-frontend/browser/ \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ steps.env.outputs.APP_ROOT }}/gens-frontend/ \
-          || {
-            code=$?
-            if [ $code -eq 23 ]; then
-              echo "rsync partial (attrs) — treating as success"
-              exit 0
-            fi
-            exit $code
-          }
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ steps.env.outputs.APP_ROOT }}/gens-frontend/
+          code=$?
+          set -e
+          if [ $code -eq 0 ]; then
+            exit 0
+          fi
+          if [ $code -eq 23 ]; then
+            echo "WARN: rsync exit 23 (partial attrs) — verifying index.html on server"
+            ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+              "test -f ${{ steps.env.outputs.APP_ROOT }}/gens-frontend/index.html"
+            exit 0
+          fi
+          echo "ERROR: frontend rsync failed with code $code"
+          exit $code
 
       # GitHub: backend/  →  Server: api/
       - name: Deploy Node.js API
         run: |
+          set +e
           rsync -avz \
             --omit-dir-times \
             --no-perms \
@@ -93,19 +121,24 @@ jobs:
             --exclude=uploads \
             --exclude=.git \
             backend/ \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ steps.env.outputs.APP_ROOT }}/api/ \
-          || {
-            code=$?
-            if [ $code -eq 23 ]; then
-              echo "rsync partial (attrs) — treating as success"
-              exit 0
-            fi
-            exit $code
-          }
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ steps.env.outputs.APP_ROOT }}/api/
+          code=$?
+          set -e
+          if [ $code -eq 0 ]; then
+            exit 0
+          fi
+          if [ $code -eq 23 ]; then
+            echo "WARN: rsync exit 23 (partial attrs) — verifying server.js on server"
+            ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+              "test -f ${{ steps.env.outputs.APP_ROOT }}/api/server.js"
+            exit 0
+          fi
+          echo "ERROR: api rsync failed with code $code"
+          exit $code
 
       - name: Install Dependencies and Restart PM2
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << EOF
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} bash -s << EOF
             set -e
             export NVM_DIR="\$HOME/.nvm"
             [ -s "\$NVM_DIR/nvm.sh" ] && . "\$NVM_DIR/nvm.sh"
@@ -114,15 +147,39 @@ jobs:
             which npm || { echo "npm not found"; exit 127; }
             which pm2 || npm install -g pm2
 
-            cd ${{ steps.env.outputs.APP_ROOT }}/api
+            APP_ROOT="${{ steps.env.outputs.APP_ROOT }}"
+            PM2_NAME="${{ steps.env.outputs.PM2_NAME }}"
+            cd "\$APP_ROOT/api"
+
+            # Fail fast if deployed code is broken
+            node --check server.js
+            node --check app/controller/tenant/appApi.js
+
             npm ci --omit=dev
 
-            pm2 restart ${{ steps.env.outputs.PM2_NAME }} || pm2 start server.js --name ${{ steps.env.outputs.PM2_NAME }}
+            # Hard restart from this folder so PM2 never keeps an old cwd/script
+            pm2 delete "\$PM2_NAME" || true
+            pm2 start server.js --name "\$PM2_NAME" --cwd "\$APP_ROOT/api"
             pm2 save
+
+            sleep 3
+            pm2 describe "\$PM2_NAME" || true
+            pm2 jlist | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); const p=d.find(x=>x.name===process.argv[1]); if(!p||p.pm2_env.status!=='online'){console.error('PM2 not online', p&&p.pm2_env&&p.pm2_env.status); process.exit(1)}; console.log('PM2 online:', p.name)" "\$PM2_NAME"
           EOF
+
+      - name: Post-deploy health check
+        run: |
+          set -e
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "${{ steps.env.outputs.HEALTH_URL }}" || echo "000")
+          echo "Health HTTP $code for ${{ steps.env.outputs.HEALTH_URL }}"
+          if [ "$code" = "000" ]; then
+            echo "ERROR: live host unreachable after deploy"
+            exit 1
+          fi
 
       - name: Deploy summary
         run: |
           echo "Environment: ${{ steps.env.outputs.ENV_NAME }}"
           echo "Path: ${{ steps.env.outputs.APP_ROOT }}"
           echo "PM2: ${{ steps.env.outputs.PM2_NAME }}"
+          echo "Commit: ${{ github.sha }}"
