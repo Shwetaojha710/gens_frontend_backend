@@ -2389,8 +2389,8 @@ exports.EmployeeDetails = async (req, res) => {
       ...employee,
       bank_account,
       department: department?.name || null,
-      designation: employee?.role == 'teamLeader' ? 'team lead' : designation?.name || null,
-      designation_name: designation?.name || null,
+      designation: employee?.role == 'teamLeader' ? 'team lead' : designationName || designation?.name || null,
+      designation_name: designation?.name || designationName || null,
       state: isStateInt ? (state?.name || null) : (employee?.state || null),
       country: isCountryInt ? (country?.name || null) : (employee?.country || null),
       city: isCityInt ? (city?.name || null) : (employee?.city || null),
@@ -2903,6 +2903,7 @@ exports.AppapplyForLeave = async (req, res) => {
       }
 
       // fromDate must be an active Restricted holiday in holiday table
+      // const rhHoliday = await holiday.findOne({
       const rhHoliday = await holiday.findOne({
         where: {
           tenantId,
@@ -4575,7 +4576,6 @@ exports.getPendingLeaveList = async (req, res) => {
     return Helper.response(false, error.message, {}, res, 500);
   }
 };
-
 // exports.getAppAppliedLeaves = async (req, res) => {
 //   const tenantId = req.users?.tenantId;
 //   const userId = req.users?.id;
