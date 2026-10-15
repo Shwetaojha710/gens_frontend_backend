@@ -4,7 +4,10 @@
 
 export interface NavLink {
   label: string;
-  path: string;
+  /** Direct link when there are no children. */
+  path?: string;
+  /** Dropdown children (Product / Resources). */
+  children?: { label: string; path: string }[];
 }
 
 export interface Feature {

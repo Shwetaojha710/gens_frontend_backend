@@ -473,9 +473,14 @@ exports.upcomingLeave = async (req, res) => {
   const userId = req.users?.id;
   const role = req.users?.role;
   const branchId = req.users && req.users.branchId;
+  const accessibleBranchIds = Helper.getAccessibleBranchIds(req.users);
+  const branchAccessRole = Helper.isBranchAccessRole(req.users);
 
-  if (!branchId || branchId == "null") {
+  if (!branchAccessRole && (!branchId || branchId == "null")) {
     return Helper.response(false, "branchId is required!", {}, res, 200);
+  }
+  if (branchAccessRole && !accessibleBranchIds.length) {
+    return Helper.response(false, "No branch access assigned", {}, res, 200);
   }
 
   if (!tenantId) {
@@ -488,6 +493,7 @@ exports.upcomingLeave = async (req, res) => {
 
   try {
     let employeeIds = [];
+    let leaveBranchFilter = branchId;
 
     // 👇 Role-based logic
     if (role == "teamLeader") {
@@ -505,8 +511,25 @@ exports.upcomingLeave = async (req, res) => {
 
       employeeIds = reportees.map((r) => r.id);
       employeeIds.push(userId); // include self
-    } else if (role === "manager" || role === "director") {
-      // Manager/Director: own + all subordinates under them
+    } else if (branchAccessRole) {
+      // Director / manager with assigned branches: all employees in those branches
+      const scoped = Helper.resolveBranchScope(
+        req.body?.branchId || "All",
+        accessibleBranchIds,
+      );
+      leaveBranchFilter = { [Op.in]: scoped };
+      const branchEmps = await empPersonal.findAll({
+        where: {
+          tenantId,
+          branchId: leaveBranchFilter,
+          status: "active",
+        },
+        attributes: ["id"],
+        raw: true,
+      });
+      employeeIds = [...new Set([...branchEmps.map((e) => e.id), userId])];
+    } else if (role === "manager") {
+      // Manager without branchIds: own + subordinates
       const subordinates = await Helper.getAllSubordinates(
         userId,
         branchId,
@@ -521,7 +544,7 @@ exports.upcomingLeave = async (req, res) => {
     //  Fetch upcoming leaves
     const leaveData = await leave_application.findAll({
       where: {
-        branchId,
+        branchId: leaveBranchFilter,
         fromDate: { [Op.gt]: date },
         employeeId: { [Op.in]: employeeIds },
         tenantId,
@@ -544,12 +567,12 @@ exports.upcomingLeave = async (req, res) => {
             raw: true,
           }),
           empPersonal.findOne({
-            where: { branchId, id: item.approverId },
+            where: { id: item.approverId },
             attributes: ["firstName", "lastName"],
             raw: true,
           }),
           leaveMaster.findOne({
-            where: { branchId, id: item.leaveTypeId },
+            where: { id: item.leaveTypeId, tenantId },
             attributes: ["leaveName"],
             raw: true,
           }),
@@ -1669,14 +1692,24 @@ exports.TeamsAttendance = async (req, res) => {
 
     let branchIds = [];
     const userBranchId = req.users?.branchId;
+    const accessibleBranchIds = Helper.getAccessibleBranchIds(req.users);
+    const branchAccessRole = Helper.isBranchAccessRole(req.users);
 
-    // Director may not have a specific branchId assigned — allow them through
-    if (!userBranchId && role !== "director") {
+    // Branch-access roles (director / manager with branchIds) may omit single branchId
+    if (!userBranchId && !branchAccessRole) {
       return Helper.response(false, "branchId is required!", {}, res, 200);
     }
+    if (branchAccessRole && !accessibleBranchIds.length) {
+      return Helper.response(false, "No branch access assigned", {}, res, 200);
+    }
 
-    // ✅ Handle branch filter
-    if (req.query.branchId) {
+    // ✅ Handle branch filter (director/manager with branchIds: only assigned branches)
+    if (branchAccessRole) {
+      branchIds = Helper.resolveBranchScope(req.query.branchId, accessibleBranchIds);
+      if (!branchIds.length) {
+        return Helper.response(false, "Branch not in access list", {}, res, 200);
+      }
+    } else if (req.query.branchId) {
       if (req.query.branchId == "All") {
         const branches = await branch.findAll({
           where: { tenantId, status: "active" },
@@ -1690,13 +1723,7 @@ exports.TeamsAttendance = async (req, res) => {
     } else if (userBranchId) {
       branchIds = [userBranchId];
     } else {
-      // Director with no branchId and no query param → fetch all branches
-      const branches = await branch.findAll({
-        where: { tenantId, status: "active" },
-        attributes: ["id"],
-        raw: true,
-      });
-      branchIds = branches.map((b) => b.id);
+      return Helper.response(false, "branchId is required!", {}, res, 200);
     }
 
     // ✅ Fetch Employees
@@ -1706,8 +1733,8 @@ exports.TeamsAttendance = async (req, res) => {
       status: "active",
     };
 
-    if (role == "director") {
-      // Director sees all employees across fetched branches — no hierarchy filter
+    if (branchAccessRole) {
+      // All employees in assigned branches — no reporting hierarchy filter
     } else if (role == "manager") {
       const branchFilter = req.query.branchId === "All" ? "All" : (req.query.branchId || userBranchId);
       const subordinateIds = await Helper.getAllSubordinates(reportingPersonId, branchFilter, tenantId);
@@ -2169,10 +2196,6 @@ exports.EmployeeDetails = async (req, res) => {
 
   const branchId = req.users && req.users.branchId;
 
-  if (!branchId || branchId == "null") {
-    return Helper.response(false, "branchId is required!", {}, res, 200);
-  }
-
   if (!tenantId) {
     return Helper.response(false, "User Not Found", [], res, 404);
   }
@@ -2182,16 +2205,17 @@ exports.EmployeeDetails = async (req, res) => {
   }
 
   try {
+    // Find by id+tenant (multi-branch managers may not match JWT branchId alone)
     const employee = await empPersonal.findOne({
       where: {
         tenantId,
-        branchId,
         id: employeeId,
         status: "active",
       },
       attributes: [
         "id",
         "tenantId",
+        "branchId",
         "firstName",
         "lastName",
         "email",
@@ -2235,6 +2259,9 @@ exports.EmployeeDetails = async (req, res) => {
       return Helper.response(false, "Employee Not Found", [], res, 404);
     }
 
+    // Prefer employee's own home branch for masters / attendance
+    const empBranchId = employee.branchId || branchId;
+
     const isStateInt = Number.isInteger(Number(employee?.state)) && employee?.state !== null && employee?.state !== "";
     const isCountryInt = Number.isInteger(Number(employee?.country)) && employee?.country !== null && employee?.country !== "";
     const isCityInt = Number.isInteger(Number(employee?.city)) && employee?.city !== null && employee?.city !== "";
@@ -2253,7 +2280,7 @@ exports.EmployeeDetails = async (req, res) => {
         where: {
           employeeId: employee.id,
           tenantId,
-          branchId,
+          ...(empBranchId ? { branchId: empBranchId } : {}),
           status: "active",
         },
         raw: true,
@@ -2270,26 +2297,21 @@ exports.EmployeeDetails = async (req, res) => {
         ],
         order: [["createdAt", "desc"]],
       }),
-      Designation.findOne({
-        where: {
-          id: employee?.designationId,
-          tenantId,
-          branchId,
-          status: "active",
-        },
-        attributes: ["name"],
-        raw: true,
-      }),
-      Department.findOne({
-        where: {
-          id: employee?.departmentId,
-          tenantId,
-          branchId,
-          status: "active",
-        },
-        attributes: ["name"],
-        raw: true,
-      }),
+      // Same as portal login: resolve by id only (tenant/branch/status mismatches were hiding names)
+      employee?.designationId
+        ? Designation.findOne({
+            where: { id: employee.designationId },
+            attributes: ["name"],
+            raw: true,
+          })
+        : Promise.resolve(null),
+      employee?.departmentId
+        ? Department.findOne({
+            where: { id: employee.departmentId },
+            attributes: ["name"],
+            raw: true,
+          })
+        : Promise.resolve(null),
       isStateInt
         ? State.findOne({
             where: { id: employee?.state },
@@ -2311,50 +2333,75 @@ exports.EmployeeDetails = async (req, res) => {
             raw: true,
           })
         : employee?.city,
-      EmploymentType.findOne({
-        where: {
-          id: employee?.empType,
-          tenantId,
-          branchId,
-          status: "active",
-        },
-        attributes: ["name"],
-        raw: true,
-      }),
-      empPersonal.findOne({
-        where: {
-          id: employee?.reportingPersonId,
-          // branchId,
-        },
-      }),
+      employee?.empType
+        ? EmploymentType.findOne({
+            where: {
+              id: employee.empType,
+              tenantId,
+              status: "active",
+            },
+            attributes: ["name"],
+            raw: true,
+          })
+        : Promise.resolve(null),
+      employee?.reportingPersonId
+        ? empPersonal.findOne({
+            where: {
+              id: employee.reportingPersonId,
+              tenantId,
+            },
+            attributes: ["id", "firstName", "lastName"],
+            raw: true,
+          })
+        : Promise.resolve(null),
     ]);
 
     const empAttendance = await attendance.findOne({
       where: {
         employeeId: employee.id,
         tenantId,
-        branchId,
+        ...(empBranchId ? { branchId: empBranchId } : {}),
         date: moment().format("YYYY-MM-DD"),
       },
       order: [["createdAt", "desc"]],
       raw: true,
     });
+
+    const roleKey = String(employee?.role || "").toLowerCase().trim();
+    const roleLabelMap = {
+      manager: "Manager",
+      director: "Director",
+      teamleader: "Team Lead",
+      team_leader: "Team Lead",
+      project_manager: "Project Manager",
+      employee: "Employee",
+      hr: "HR",
+    };
+    const designationName =
+      designation?.name ||
+      roleLabelMap[roleKey] ||
+      (roleKey ? roleKey.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : null);
+    const reportingPersonName = reportingPerson
+      ? `${reportingPerson.firstName || ""} ${reportingPerson.lastName || ""}`.trim()
+      : null;
+
     // Merge response
     const data = {
       ...employee,
       bank_account,
       department: department?.name || null,
-       designation: employee?.role == 'teamLeader' ? 'team lead' : designation?.name || null,
+      designation: employee?.role == 'teamLeader' ? 'team lead' : designationName || designation?.name || null,
+      designation_name: designation?.name || designationName || null,
       state: isStateInt ? (state?.name || null) : (employee?.state || null),
       country: isCountryInt ? (country?.name || null) : (employee?.country || null),
       city: isCityInt ? (city?.name || null) : (employee?.city || null),
-      empType: employmentType?.name,
+      empType: employmentType?.name || null,
       //  check_in_flag:  false ,
       // check_out_flag: true ,
       check_in_time: empAttendance?.check_in_time ?? "",
       check_out_time: empAttendance?.check_out_time ?? "",
       profileImage: (employee?.profileImage && String(employee.profileImage).trim()) || (empAttendance?.profileImage && String(empAttendance.profileImage).trim()) || "",
-      reportingPersonName: `${reportingPerson?.firstName} ${reportingPerson?.lastName} `,
+      reportingPersonName: reportingPersonName || null,
     };
 
     return Helper.response(
@@ -3169,13 +3216,29 @@ exports.getAppliedLeaves = async (req, res) => {
 exports.AppupdatedApplyLeaveStatus = async (req, res) => {
   let { id, status, reason } = req.body;
   const tenantId = req.users && req.users.tenantId;
+  const role = req.users && req.users.role;
   try {
     const branchId = req.users && req.users.branchId;
+    const accessibleBranchIds = Helper.getAccessibleBranchIds(req.users);
+    const branchAccessRole = Helper.isBranchAccessRole(req.users);
 
-    if (!branchId || branchId == "null") {
+    if (!branchAccessRole && (!branchId || branchId == "null")) {
       return Helper.response(false, "branchId is required!", {}, res, 200);
     }
     const existingLeave = await leave_application.findOne({ where: { id } });
+    if (!existingLeave) {
+      return Helper.response(false, "Leave application not found", {}, res, 404);
+    }
+    // Use leave's own branch for balance; validate assigned-branch access
+    const leaveBranchId = existingLeave.branchId || branchId;
+    if (branchAccessRole) {
+      if (!accessibleBranchIds.length) {
+        return Helper.response(false, "No branch access assigned", {}, res, 200);
+      }
+      if (leaveBranchId && !accessibleBranchIds.map(String).includes(String(leaveBranchId))) {
+        return Helper.response(false, "No access to this branch leave", {}, res, 403);
+      }
+    }
     const oldLeave = toPlain(existingLeave);
     let { employeeId, leaveTypeId, days, appliedOn } = existingLeave;
     const year = new Date(appliedOn).getFullYear();
@@ -3185,7 +3248,7 @@ exports.AppupdatedApplyLeaveStatus = async (req, res) => {
         leaveTypeId: leaveTypeId,
         employeeId: employeeId,
         year,
-        branchId,
+        branchId: leaveBranchId,
       },
     });
     // if (!leaveBalances) {
@@ -3231,7 +3294,7 @@ exports.AppupdatedApplyLeaveStatus = async (req, res) => {
         const leaveDays = Number(existingLeave.days || 0);
 
         const balanceRecord = await LeaveBalance.findOne({
-          where: { tenantId, branchId, leaveTypeId: existingLeave.leaveTypeId, employeeId: existingLeave.employeeId, year: fromYear, month: fromMonth },
+          where: { tenantId, branchId: leaveBranchId, leaveTypeId: existingLeave.leaveTypeId, employeeId: existingLeave.employeeId, year: fromYear, month: fromMonth },
         });
         // if (balanceRecord) {
         //   const newUsed = Number(balanceRecord.usedLeaves || 0) + leaveDays;
@@ -4018,12 +4081,18 @@ exports.notification = async (req, res) => {
     }
 
     const branchId = req.users && req.users.branchId;
+    const accessibleBranchIds = Helper.getAccessibleBranchIds(req.users);
 
-    if (!branchId || branchId == "null") {
+    const branchAccessRole = Helper.isBranchAccessRole(req.users);
+    if (!branchAccessRole && (!branchId || branchId == "null")) {
       return Helper.response(false, "branchId is required!", {}, res, 200);
+    }
+    if (branchAccessRole && !accessibleBranchIds.length) {
+      return Helper.response(false, "No branch access assigned", {}, res, 200);
     }
 
     let employeeIds = [];
+    let notifBranchWhere = branchId;
     const today = new Date().toISOString().split("T")[0];
     // Role-based logic
     if (role == "teamLeader") {
@@ -4041,9 +4110,22 @@ exports.notification = async (req, res) => {
 
       employeeIds = reportees.map((r) => r.id);
       employeeIds.push(userId); // include self
-    } else if (role == "manager" || role == "director") {
-      // Manager/Director: their own + all subordinates under them
-      const subordinates = await Helper.getAllSubordinates(userId, tenantId);
+    } else if (branchAccessRole) {
+      // Director / manager with assigned branches: all employees in those branches
+      notifBranchWhere = { [Op.in]: accessibleBranchIds };
+      const branchEmps = await empPersonal.findAll({
+        where: {
+          tenantId,
+          branchId: notifBranchWhere,
+          status: "active",
+        },
+        attributes: ["id"],
+        raw: true,
+      });
+      employeeIds = [...new Set([...branchEmps.map((e) => e.id), userId])];
+    } else if (role == "manager") {
+      // Manager without branchIds: own + subordinates
+      const subordinates = await Helper.getAllSubordinates(userId, branchId, tenantId);
       employeeIds = [...subordinates, userId]; // include self
     } else {
       employeeIds = [userId];
@@ -4053,7 +4135,7 @@ exports.notification = async (req, res) => {
     const data = await leave_application.findAll({
       where: {
         tenantId,
-        branchId,
+        branchId: notifBranchWhere,
         employeeId: { [Op.in]: employeeIds },
       },
       raw: true,
@@ -4062,7 +4144,7 @@ exports.notification = async (req, res) => {
     const Attendacedata = await attendance.findAll({
       where: {
         tenantId,
-        branchId,
+        branchId: notifBranchWhere,
         employeeId: { [Op.in]: employeeIds },
         date: today,
       },
@@ -4194,13 +4276,19 @@ exports.getAppAppliedLeaves = async (req, res) => {
     const userId = req.users?.id;
     const role = req.users?.role;
     let branchId = req.users?.branchId;
+    const accessibleBranchIds = Helper.getAccessibleBranchIds(req.users);
+    const branchAccessRole = Helper.isBranchAccessRole(req.users);
+    let directorScopedBranchIds = null;
 
     if (!tenantId) {
       return Helper.response(false, "User Not Found", [], res, 404);
     }
 
-    if (!branchId || branchId == "null") {
+    if (!branchAccessRole && (!branchId || branchId == "null")) {
       return Helper.response(false, "BranchId is required!", [], res, 400);
+    }
+    if (branchAccessRole && !accessibleBranchIds.length) {
+      return Helper.response(false, "No branch access assigned", [], res, 400);
     }
 
     const { month, year } = req.body || {};
@@ -4229,34 +4317,27 @@ exports.getAppAppliedLeaves = async (req, res) => {
 
       employeeIds = reportees.map((e) => e.id);
       employeeIds.push(userId);
-    } else if (role == "director") {
-      if (!req.body.branchId) {
-        return Helper.response(false, "Branch Id Is Required", {}, res, 200);
+    } else if (branchAccessRole) {
+      // Director / manager with assigned branches: all employees in those branches
+      directorScopedBranchIds = Helper.resolveBranchScope(
+        req.body?.branchId || "All",
+        accessibleBranchIds,
+      );
+      if (!directorScopedBranchIds.length) {
+        return Helper.response(false, "Branch not in access list", {}, res, 200);
       }
 
-      if (req.body.branchId) {
-        branchId = req.body.branchId;
-      }
-
-      const directReportees = await empPersonal.findAll({
+      const branchEmps = await empPersonal.findAll({
         where: {
           tenantId,
-          branchId: branchId == "All" ? { [Op.ne]: null } : branchId,
+          branchId: { [Op.in]: directorScopedBranchIds },
           status: "active",
         },
         attributes: ["id"],
         raw: true,
       });
 
-      const directIds = directReportees.map((e) => e.id);
-
-      const subordinateIds = await Helper.getAllSubordinates(
-        userId,
-        branchId,
-        tenantId,
-      );
-
-      employeeIds = [...new Set([...directIds, ...subordinateIds])];
+      employeeIds = [...new Set(branchEmps.map((e) => e.id))];
     } else if (role == "manager") {
       let directReportees;
       branchId = req.body.branchId ? req.body.branchId : branchId;
@@ -4325,10 +4406,19 @@ exports.getAppAppliedLeaves = async (req, res) => {
     if (month) andClauses.push(where(fn("EXTRACT", literal('MONTH FROM "fromDate"')), month));
     if (year) andClauses.push(where(fn("EXTRACT", literal('YEAR FROM "fromDate"')), year));
 
+    let leaveBranchWhere;
+    if (branchAccessRole && directorScopedBranchIds) {
+      leaveBranchWhere = { [Op.in]: directorScopedBranchIds };
+    } else if (branchId == "All") {
+      leaveBranchWhere = { [Op.ne]: null };
+    } else {
+      leaveBranchWhere = branchId;
+    }
+
     const leaveApplications = await leave_application.findAll({
       where: {
         tenantId,
-        branchId: branchId == "All" ? { [Op.ne]: null } : branchId,
+        branchId: leaveBranchWhere,
         employeeId: { [Op.in]: employeeIds },
         ...(andClauses.length > 0 && { [Op.and]: andClauses }),
       },
@@ -4453,24 +4543,54 @@ exports.getPendingLeaveList = async (req, res) => {
   try {
     const tenantId = req.users?.tenantId;
     const userId = req.users?.id;
+    const role = req.users?.role;
     const branchId = req.users?.branchId;
+    const accessibleBranchIds = Helper.getAccessibleBranchIds(req.users);
+    const branchAccessRole = Helper.isBranchAccessRole(req.users);
 
     if (!tenantId || !userId) {
       return Helper.response(false, "User Not Found", {}, res, 404);
     }
-    if (!branchId || branchId === "null") {
+    if (!branchAccessRole && (!branchId || branchId === "null")) {
       return Helper.response(false, "branchId is required!", {}, res, 200);
     }
+    if (branchAccessRole && !accessibleBranchIds.length) {
+      return Helper.response(false, "No branch access assigned", {}, res, 200);
+    }
 
-    const teamIds = [
-      ...new Set(await Helper.getAllSubordinates(userId, branchId, tenantId)),
-    ].filter((id) => id && id !== userId);
+    let teamIds = [];
+    let teamBranchWhere = branchId;
+    let myBranchWhere = branchId;
+
+    if (branchAccessRole) {
+      const scoped = Helper.resolveBranchScope(
+        req.body?.branchId || "All",
+        accessibleBranchIds,
+      );
+      teamBranchWhere = { [Op.in]: scoped };
+      myBranchWhere = { [Op.in]: scoped };
+      const branchEmps = await empPersonal.findAll({
+        where: {
+          tenantId,
+          branchId: teamBranchWhere,
+          status: "active",
+          id: { [Op.ne]: userId },
+        },
+        attributes: ["id"],
+        raw: true,
+      });
+      teamIds = branchEmps.map((e) => e.id);
+    } else {
+      teamIds = [
+        ...new Set(await Helper.getAllSubordinates(userId, branchId, tenantId)),
+      ].filter((id) => id && id !== userId);
+    }
 
     const [myLeaves, teamLeaves] = await Promise.all([
       leave_application.findAll({
         where: {
           tenantId,
-          branchId,
+          branchId: myBranchWhere,
           employeeId: userId,
           status: "pending",
         },
@@ -4481,7 +4601,7 @@ exports.getPendingLeaveList = async (req, res) => {
         ? leave_application.findAll({
             where: {
               tenantId,
-              branchId,
+              branchId: teamBranchWhere,
               employeeId: { [Op.in]: teamIds },
               status: "pending",
             },
@@ -4540,7 +4660,6 @@ exports.getPendingLeaveList = async (req, res) => {
     return Helper.response(false, error.message, {}, res, 500);
   }
 };
-
 // exports.getAppAppliedLeaves = async (req, res) => {
 //   const tenantId = req.users?.tenantId;
 //   const userId = req.users?.id;
@@ -6295,3 +6414,210 @@ exports.markNotificationsRead = async (req, res) => {
     return Helper.response(false, e.message, {}, res, 500);
   }
 };
+
+/** Logged-in user's leaves filtered by leave type and status (pending / cancel / recommend). */
+exports.statusWiseLeaveList = async (req, res) => {
+  const tenantId = req.users?.tenantId;
+  const employeeId = req.users?.id;
+  const branchId = req.users && req.users.branchId;
+
+  if (!branchId || branchId == "null") {
+    return Helper.response(false, "branchId is required!", {}, res, 200);
+  }
+  if (!tenantId || !employeeId) {
+    return Helper.response(false, "User Not Found", [], res, 404);
+  }
+
+  const statusInput = String(req.body?.status || "").trim().toLowerCase();
+
+  if (!statusInput) {
+    return Helper.response(false, "status is required", [], res, 400);
+  }
+
+  const statusMap = {
+    pending: ["pending"],
+    recommend: ["recommended"],
+    recommended: ["recommended"],
+    cancel: ["rejected", "self_declined"],
+    cancelled: ["rejected", "self_declined"],
+    canceled: ["rejected", "self_declined"],
+  };
+  const statuses = statusMap[statusInput] || [statusInput];
+
+  try {
+    const leaves = await leave_application.findAll({
+      where: {
+        tenantId,
+        employeeId,
+        branchId,
+        status: { [Op.in]: statuses },
+      },
+      order: [["appliedOn", "DESC"]],
+      raw: true,
+    });
+
+    const leaveTypes = await leaveMaster.findAll({
+      where: { tenantId },
+      attributes: ["id", "leaveName", "leaveCode"],
+      raw: true,
+    });
+    const leaveTypeMap = new Map(leaveTypes.map((lt) => [String(lt.id), lt]));
+
+    const data = leaves.map((item) => {
+      const leaveType = leaveTypeMap.get(String(item.leaveTypeId));
+      return {
+        ...item,
+        leaveName: leaveType?.leaveName ?? null,
+        leaveCode: leaveType?.leaveCode ?? null,
+      };
+    });
+
+    return Helper.response(true, "Status wise leave list fetched", data, res, 200);
+  } catch (error) {
+    console.error("Error fetching status wise leave list:", error);
+    return Helper.response(false, error.message, [], res, 500);
+  }
+};
+
+// exports.getMyLeaveHistory = async (req, res) => {
+//   const tenantId = req.users?.tenantId;
+//   const employeeId = req.users?.id;
+//   const branchId = req.users?.branchId;
+
+//   if (!tenantId || !branchId || branchId === "null") {
+//     return Helper.response(false, "Required fields missing", [], res, 400);
+//   }
+
+//   try {
+//     const { leaveTypeId, month, year } = req.body || {};
+
+//     const andClauses = [];
+//     if (year) andClauses.push(where(fn("EXTRACT", literal('YEAR FROM "fromDate"')), year));
+//     if (month) andClauses.push(where(fn("EXTRACT", literal('MONTH FROM "fromDate"')), month));
+
+//     const whereClause = {
+//       tenantId,
+//       employeeId,
+//       branchId,
+//       ...(leaveTypeId && { leaveTypeId }),
+//       ...(andClauses.length > 0 && { [Op.and]: andClauses }),
+//     };
+
+//     const leaves = await leave_application.findAll({
+//       where: whereClause,
+//       order: [["fromDate", "DESC"]],
+//       raw: true,
+//     });
+
+//     const leaveTypes = await leaveMaster.findAll({
+//       where: { tenantId },
+//       attributes: ["id", "leaveName", "leaveCode"],
+//       raw: true,
+//     });
+//     const ltMap = Object.fromEntries(leaveTypes.map((l) => [l.id, l]));
+
+//     const data = leaves.map((l) => ({
+//       ...l,
+//       leaveName: ltMap[l.leaveTypeId]?.leaveName ?? null,
+//       leaveCode: ltMap[l.leaveTypeId]?.leaveCode ?? null,
+//     }));
+
+//     return Helper.response(true, "Leave history fetched", data, res, 200);
+//   } catch (error) {
+//     console.error("Error fetching leave history:", error);
+//     return Helper.response(false, error.message, [], res, 500);
+//   }
+// };
+
+// /** Pending leaves for the logged-in user and their team. Same path for every role. */
+// exports.getPendingLeaveList = async (req, res) => {
+//   try {
+//     const tenantId = req.users?.tenantId;
+//     const userId = req.users?.id;
+//     const branchId = req.users?.branchId;
+
+//     if (!tenantId || !userId) {
+//       return Helper.response(false, "User Not Found", {}, res, 404);
+//     }
+//     if (!branchId || branchId === "null") {
+//       return Helper.response(false, "branchId is required!", {}, res, 200);
+//     }
+
+//     const teamIds = [
+//       ...new Set(await Helper.getAllSubordinates(userId, branchId, tenantId)),
+//     ].filter((id) => id && id !== userId);
+
+//     const [myLeaves, teamLeaves] = await Promise.all([
+//       leave_application.findAll({
+//         where: {
+//           tenantId,
+//           branchId,
+//           employeeId: userId,
+//           status: "pending",
+//         },
+//         order: [["appliedOn", "DESC"]],
+//         raw: true,
+//       }),
+//       teamIds.length
+//         ? leave_application.findAll({
+//             where: {
+//               tenantId,
+//               branchId,
+//               employeeId: { [Op.in]: teamIds },
+//               status: "pending",
+//             },
+//             order: [["appliedOn", "DESC"]],
+//             raw: true,
+//           })
+//         : [],
+//     ]);
+
+//     const applications = [...myLeaves, ...teamLeaves];
+//     const employeeIds = [...new Set(applications.map((l) => l.employeeId))];
+
+//     const [employees, branches, leaveTypes] = await Promise.all([
+//       employeeIds.length
+//         ? empPersonal.findAll({
+//             where: { id: { [Op.in]: employeeIds }, tenantId },
+//             attributes: ["id", "firstName", "lastName", "empCode", "branchId"],
+//             raw: true,
+//           })
+//         : [],
+//       branch.findAll({ attributes: ["id", "name"], raw: true }),
+//       leaveMaster.findAll({
+//         where: { tenantId },
+//         attributes: ["id", "leaveName", "leaveCode"],
+//         raw: true,
+//       }),
+//     ]);
+
+//     const mapLeave = (item) => {
+//       const employee = employees.find((e) => e.id === item.employeeId);
+//       const branchData = branches.find((b) => b.id === employee?.branchId);
+//       const leaveType = leaveTypes.find((l) => l.id === item.leaveTypeId);
+//       return {
+//         ...item,
+//         empCode: employee?.empCode ?? null,
+//         employeeName:
+//           `${employee?.firstName ?? ""} ${employee?.lastName ?? ""}`.trim(),
+//         branchName: branchData?.name ?? null,
+//         leaveName: leaveType?.leaveName ?? null,
+//         leaveCode: leaveType?.leaveCode ?? null,
+//       };
+//     };
+
+//     return Helper.response(
+//       true,
+//       "Pending leave list fetched successfully",
+//       {
+//         myLeaveList: myLeaves.map(mapLeave),
+//         teamLeaveList: teamLeaves.map(mapLeave),
+//       },
+//       res,
+//       200,
+//     );
+//   } catch (error) {
+//     console.error("Error fetching pending leave list:", error);
+//     return Helper.response(false, error.message, {}, res, 500);
+//   }
+// };

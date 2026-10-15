@@ -19,14 +19,22 @@ jobs:
         id: env
         run: |
           if [ "${{ github.ref_name }}" = "main" ]; then
-            echo "APP_ROOT=/var/www/html/gens.demoquaeretech.in" >> $GITHUB_OUTPUT
+            APP_ROOT=/var/www/html/gens.demoquaeretech.in
+            echo "APP_ROOT=$APP_ROOT" >> $GITHUB_OUTPUT
+            echo "SITE_HOST=gens.demoquaeretech.in" >> $GITHUB_OUTPUT
             echo "PM2_NAME=gens" >> $GITHUB_OUTPUT
             echo "ENV_NAME=live" >> $GITHUB_OUTPUT
+            echo "HEALTH_URL=https://gens.demoquaeretech.in" >> $GITHUB_OUTPUT
           else
-            echo "APP_ROOT=/var/www/html/gensdemo.demoquaeretech.in" >> $GITHUB_OUTPUT
+            APP_ROOT=/var/www/html/gensdemo.demoquaeretech.in
+            echo "APP_ROOT=$APP_ROOT" >> $GITHUB_OUTPUT
+            echo "SITE_HOST=gensdemo.demoquaeretech.in" >> $GITHUB_OUTPUT
             echo "PM2_NAME=gens-staging" >> $GITHUB_OUTPUT
             echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
+            echo "HEALTH_URL=https://gensdemo.demoquaeretech.in" >> $GITHUB_OUTPUT
           fi
+          # Canonical Angular path. Never deploy SPA into APP_ROOT itself (holds /api).
+          echo "WEB_ROOT=${APP_ROOT}/gens-frontend" >> $GITHUB_OUTPUT
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -41,6 +49,28 @@ jobs:
         working-directory: frontend
         run: npm run build -- --configuration production
 
+      - name: Verify frontend build output
+        id: buildmeta
+        run: |
+          if [ ! -f frontend/dist/gens-frontend/browser/index.html ]; then
+            echo "ERROR: frontend build missing index.html"
+            ls -la frontend/dist/gens-frontend/ || true
+            exit 1
+          fi
+          NEW_MAIN=$(ls frontend/dist/gens-frontend/browser/main-*.js | head -1 | xargs -n1 basename)
+          echo "NEW_MAIN=$NEW_MAIN"
+          echo "NEW_MAIN=$NEW_MAIN" >> $GITHUB_OUTPUT
+          echo "Frontend build OK ($NEW_MAIN)"
+
+      - name: Syntax-check backend before deploy
+        working-directory: backend
+        run: |
+          node --check server.js
+          node --check app/controller/tenant/appApi.js
+          node --check app/helper/helper.js
+          node --check app/models/empPersonal.js
+          echo "Backend syntax OK"
+
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -54,34 +84,173 @@ jobs:
 
           ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
 
+      # Discover extra nginx roots (if readable) but ALWAYS keep WEB_ROOT = APP_ROOT/gens-frontend
+      - name: Detect extra nginx roots
+        id: webroot
+        run: |
+          set -e
+          APP_ROOT="${{ steps.env.outputs.APP_ROOT }}"
+          SITE_HOST="${{ steps.env.outputs.SITE_HOST }}"
+          CANON="${{ steps.env.outputs.WEB_ROOT }}"
+          HEALTH_URL="${{ steps.env.outputs.HEALTH_URL }}"
+
+          SERVED_MAIN=$(curl -sL --max-time 20 "${HEALTH_URL}/" \
+            | grep -oE 'main-[A-Za-z0-9]+\.js' | head -1 || true)
+          echo "Currently served bundle: ${SERVED_MAIN:-unknown}"
+
+          EXTRA=$(ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            APP_ROOT="$APP_ROOT" SITE_HOST="$SITE_HOST" CANON="$CANON" SERVED_MAIN="$SERVED_MAIN" bash -s << 'EOS'
+            set -e
+            EXTRA=""
+
+            add() {
+              d="$1"
+              allow_app_root="${2:-0}"
+              [ -n "$d" ] || return 0
+              # Skip bare APP_ROOT unless nginx -T explicitly named it (API parent is not SPA root)
+              if [ "$d" = "$APP_ROOT" ] && [ "$allow_app_root" != "1" ]; then
+                return 0
+              fi
+              [ "$d" = "$CANON" ] && return 0
+              mkdir -p "$d" 2>/dev/null || true
+              [ -d "$d" ] || return 0
+              case " $EXTRA " in
+                *" $d "*) ;;
+                *) EXTRA="$EXTRA $d" ;;
+              esac
+            }
+
+            # A) nginx -T root for this host (may need sudo on some boxes)
+            for NGX in "nginx -T" "sudo nginx -T"; do
+              CONF=$($NGX 2>/dev/null || true)
+              [ -n "$CONF" ] || continue
+              NR=$(printf '%s\n' "$CONF" | awk -v host="$SITE_HOST" '
+                $1=="server_name" {
+                  for (i=2;i<=NF;i++) {
+                    gsub(/;/, "", $i)
+                    if ($i==host || $i==("www." host)) in_server=1
+                  }
+                }
+                in_server && $1=="root" {
+                  gsub(/;/, "", $2)
+                  print $2
+                  exit
+                }
+                in_server && $1=="}" { in_server=0 }
+              ')
+              if [ -n "$NR" ]; then
+                echo "nginx root for $SITE_HOST: $NR" >&2
+                add "$NR" 1
+                break
+              fi
+            done
+
+            # B) Folders that currently contain the publicly served main-*.js
+            if [ -n "$SERVED_MAIN" ]; then
+              while IFS= read -r f; do
+                [ -n "$f" ] || continue
+                add "$(dirname "$f")" 0
+              done < <(find /var/www /home /usr/share/nginx -type f -name "$SERVED_MAIN" 2>/dev/null | head -20)
+            fi
+
+            echo "$EXTRA" | xargs
+          EOS
+          )
+
+          # Canonical first, then any extras
+          ROOTS="$CANON"
+          for d in $EXTRA; do
+            case " $ROOTS " in
+              *" $d "*) ;;
+              *) ROOTS="$ROOTS $d" ;;
+            esac
+          done
+          ROOTS=$(echo "$ROOTS" | xargs)
+
+          echo "WEB_ROOTS=$ROOTS"
+          echo "WEB_ROOTS=$ROOTS" >> $GITHUB_OUTPUT
+          echo "WEB_ROOT=$CANON" >> $GITHUB_OUTPUT
+
       - name: Prepare Server
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << EOF
-            mkdir -p ${{ steps.env.outputs.APP_ROOT }}/gens-frontend
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} bash -s << EOF
+            set -e
             mkdir -p ${{ steps.env.outputs.APP_ROOT }}/api
+            mkdir -p ${{ steps.env.outputs.WEB_ROOT }}
+            for d in ${{ steps.webroot.outputs.WEB_ROOTS }}; do
+              mkdir -p "\$d"
+            done
           EOF
 
       - name: Deploy Angular Frontend
         run: |
-          rsync -avz --delete \
-            --omit-dir-times \
-            --no-perms \
-            --no-owner \
-            --no-group \
-            frontend/dist/gens-frontend/browser/ \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ steps.env.outputs.APP_ROOT }}/gens-frontend/ \
-          || {
-            code=$?
-            if [ $code -eq 23 ]; then
-              echo "rsync partial (attrs) — treating as success"
-              exit 0
+          set -e
+          SHA="${{ github.sha }}"
+          NEW_MAIN="${{ steps.buildmeta.outputs.NEW_MAIN }}"
+          WEB_ROOTS="${{ steps.webroot.outputs.WEB_ROOTS }}"
+          CANON="${{ steps.env.outputs.WEB_ROOT }}"
+
+          mkdir -p frontend/dist/gens-frontend/browser/assets
+          echo "$SHA" > frontend/dist/gens-frontend/browser/assets/deploy-version.txt
+          date -u +"deployed_at=%Y-%m-%dT%H:%M:%SZ" >> frontend/dist/gens-frontend/browser/assets/deploy-version.txt
+          echo "main=$NEW_MAIN" >> frontend/dist/gens-frontend/browser/assets/deploy-version.txt
+
+          rsync_frontend() {
+            local dest="$1"
+            echo "→ rsync frontend → $dest"
+            set +e
+            rsync -avz --delete \
+              --omit-dir-times \
+              --no-perms \
+              --no-owner \
+              --no-group \
+              --exclude api \
+              --exclude gens-frontend \
+              --exclude '.env' \
+              --exclude 'node_modules' \
+              frontend/dist/gens-frontend/browser/ \
+              "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${dest}"
+            local code=$?
+            set -e
+            if [ $code -eq 0 ] || [ $code -eq 23 ]; then
+              return 0
             fi
-            exit $code
+            echo "ERROR: rsync to ${dest} failed with code $code"
+            return $code
           }
 
-      # GitHub: backend/  →  Server: api/
+          for dest in $WEB_ROOTS; do
+            rsync_frontend "${dest%/}/"
+          done
+
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            CANON="$CANON" WEB_ROOTS="$WEB_ROOTS" SHA="$SHA" NEW_MAIN="$NEW_MAIN" bash -s << 'EOF'
+            set -e
+            echo "=== canonical web root: $CANON ==="
+            ls -la "$CANON/index.html" "$CANON/$NEW_MAIN" "$CANON/assets/deploy-version.txt"
+            grep -q "$SHA" "$CANON/assets/deploy-version.txt"
+            test -f "$CANON/$NEW_MAIN"
+            echo "OK on disk: $CANON"
+
+            for dest in $WEB_ROOTS; do
+              [ "$dest" = "$CANON" ] && continue
+              echo "=== extra root: $dest ==="
+              ls -la "$dest/index.html" "$dest/$NEW_MAIN" "$dest/assets/deploy-version.txt" || true
+            done
+
+            # Best-effort nginx reload so new files are visible immediately
+            if command -v nginx >/dev/null 2>&1; then
+              if sudo nginx -t 2>/dev/null; then
+                sudo systemctl reload nginx 2>/dev/null || true
+              elif nginx -t 2>/dev/null; then
+                systemctl reload nginx 2>/dev/null || true
+              fi
+            fi
+          EOF
+
       - name: Deploy Node.js API
         run: |
+          set +e
           rsync -avz \
             --omit-dir-times \
             --no-perms \
@@ -93,19 +262,22 @@ jobs:
             --exclude=uploads \
             --exclude=.git \
             backend/ \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ steps.env.outputs.APP_ROOT }}/api/ \
-          || {
-            code=$?
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ steps.env.outputs.APP_ROOT }}/api/
+          code=$?
+          set -e
+          if [ $code -eq 0 ] || [ $code -eq 23 ]; then
             if [ $code -eq 23 ]; then
-              echo "rsync partial (attrs) — treating as success"
-              exit 0
+              ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+                "test -f ${{ steps.env.outputs.APP_ROOT }}/api/server.js"
             fi
-            exit $code
-          }
+            exit 0
+          fi
+          echo "ERROR: api rsync failed with code $code"
+          exit $code
 
       - name: Install Dependencies and Restart PM2
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << EOF
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} bash -s << EOF
             set -e
             export NVM_DIR="\$HOME/.nvm"
             [ -s "\$NVM_DIR/nvm.sh" ] && . "\$NVM_DIR/nvm.sh"
@@ -114,15 +286,93 @@ jobs:
             which npm || { echo "npm not found"; exit 127; }
             which pm2 || npm install -g pm2
 
-            cd ${{ steps.env.outputs.APP_ROOT }}/api
+            APP_ROOT="${{ steps.env.outputs.APP_ROOT }}"
+            PM2_NAME="${{ steps.env.outputs.PM2_NAME }}"
+            cd "\$APP_ROOT/api"
+
+            node --check server.js
+            node --check app/controller/tenant/appApi.js
             npm ci --omit=dev
 
-            pm2 restart ${{ steps.env.outputs.PM2_NAME }} || pm2 start server.js --name ${{ steps.env.outputs.PM2_NAME }}
+            pm2 delete "\$PM2_NAME" || true
+            pm2 start server.js --name "\$PM2_NAME" --cwd "\$APP_ROOT/api"
             pm2 save
+            sleep 3
+            pm2 jlist | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); const p=d.find(x=>x.name===process.argv[1]); if(!p||p.pm2_env.status!=='online'){console.error('PM2 not online', p&&p.pm2_env&&p.pm2_env.status); process.exit(1)}; console.log('PM2 online:', p.name)" "\$PM2_NAME"
           EOF
+
+      - name: Post-deploy health check
+        run: |
+          set -e
+          BASE="${{ steps.env.outputs.HEALTH_URL }}"
+          NEW_MAIN="${{ steps.buildmeta.outputs.NEW_MAIN }}"
+          SHA="${{ github.sha }}"
+          SITE_HOST="${{ steps.env.outputs.SITE_HOST }}"
+          WEB_ROOT="${{ steps.env.outputs.WEB_ROOT }}"
+
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "${BASE}/" || echo "000")
+          echo "Home HTTP $code"
+          if [ "$code" = "000" ]; then
+            echo "ERROR: live host unreachable after deploy"
+            exit 1
+          fi
+
+          # Proof of deploy: hashed main bundle must be HTTP 200 and NOT SPA index.html.
+          # Do NOT hard-fail on /assets/deploy-version.txt — try_files often rewrites it.
+          ok=0
+          for i in 1 2 3 4 5 6 7 8; do
+            tmp=$(mktemp)
+            hcode=$(curl -sL -o "$tmp" -w "%{http_code}" --max-time 20 "${BASE}/${NEW_MAIN}" || echo "000")
+            ctype=$(curl -sI --max-time 20 "${BASE}/${NEW_MAIN}" | tr -d '\r' | awk -F': ' 'tolower($1)=="content-type"{print tolower($2); exit}')
+            body_start=$(head -c 120 "$tmp" 2>/dev/null || true)
+            echo "Attempt $i: ${BASE}/${NEW_MAIN} → HTTP $hcode Content-Type: ${ctype:-?}"
+            if [ "$hcode" = "200" ] && ! echo "$body_start" | grep -qiE '<!DOCTYPE|<html'; then
+              # Reject empty / tiny responses
+              sz=$(wc -c < "$tmp" | tr -d ' ')
+              if [ "${sz:-0}" -gt 1000 ]; then
+                ok=1
+                rm -f "$tmp"
+                break
+              fi
+            fi
+            rm -f "$tmp"
+            sleep 3
+          done
+
+          if [ "$ok" != "1" ]; then
+            echo "ERROR: public site is not serving new bundle ${NEW_MAIN}"
+            echo "Home page still references:"
+            curl -sL --max-time 20 "${BASE}/" | grep -oE 'main-[A-Za-z0-9]+\.js' | head -3 || true
+            echo ""
+            echo "Deployed on disk to: $WEB_ROOT"
+            echo "Likely causes:"
+            echo "  1) nginx root for $SITE_HOST is NOT $WEB_ROOT"
+            echo "  2) SERVER_HOST secret points at a different machine than DNS for $SITE_HOST"
+            echo "On the web server run:"
+            echo "  sudo nginx -T | grep -A25 '$SITE_HOST'"
+            echo "  ls -la $WEB_ROOT/$NEW_MAIN"
+            echo "  # if nginx root differs, either fix nginx root → $WEB_ROOT"
+            echo "  # or symlink: sudo ln -sfn $WEB_ROOT <nginx-root>"
+            exit 1
+          fi
+
+          ver=$(curl -s --max-time 20 "${BASE}/assets/deploy-version.txt" || true)
+          if echo "$ver" | grep -q "$SHA"; then
+            echo "deploy-version.txt OK"
+          else
+            echo "WARN: /assets/deploy-version.txt not publicly readable (SPA rewrite or cache)."
+            echo "Bundle check passed — treating deploy as successful."
+          fi
+
+          echo "SUCCESS: live is serving ${NEW_MAIN} (commit $SHA)"
 
       - name: Deploy summary
         run: |
           echo "Environment: ${{ steps.env.outputs.ENV_NAME }}"
-          echo "Path: ${{ steps.env.outputs.APP_ROOT }}"
+          echo "App root: ${{ steps.env.outputs.APP_ROOT }}"
+          echo "Web root: ${{ steps.env.outputs.WEB_ROOT }}"
+          echo "Deploy targets: ${{ steps.webroot.outputs.WEB_ROOTS }}"
+          echo "New bundle: ${{ steps.buildmeta.outputs.NEW_MAIN }}"
           echo "PM2: ${{ steps.env.outputs.PM2_NAME }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Check: ${{ steps.env.outputs.HEALTH_URL }}/${{ steps.buildmeta.outputs.NEW_MAIN }}"

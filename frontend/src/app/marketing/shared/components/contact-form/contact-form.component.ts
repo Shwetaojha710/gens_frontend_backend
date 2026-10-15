@@ -6,10 +6,9 @@ import { finalize } from 'rxjs';
 import { CONTACT_INFO } from '../../../data/site-data';
 import { PublicLandingService } from '../../../../services/public-landing.service';
 
-/** Self-contained contact form wired to the real public contact endpoint.
- *  Mirrors the form/validation/error-handling in `landing-page.component.ts`
- *  so behaviour (incl. the SuperAdmin "disable public form" switch) stays
- *  consistent across the site. */
+/** Self-contained contact / Request-a-Demo form.
+ *  Extra fields (company, phone, employees) are composed into `message`
+ *  so the existing public contact API + DB schema stay unchanged. */
 @Component({
   selector: 'app-contact-form',
   imports: [CommonModule, ReactiveFormsModule],
@@ -29,8 +28,11 @@ export class ContactFormComponent implements OnInit {
 
   readonly contactForm: FormGroup = this.fb.group({
     fullName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(200)]],
+    company: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(200)]],
     email: ['', [Validators.required, Validators.email]],
-    message: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(8000)]],
+    phone: ['', [Validators.required, Validators.minLength(7), Validators.maxLength(30)]],
+    employees: ['', [Validators.required]],
+    message: ['', [Validators.maxLength(8000)]],
   });
 
   ngOnInit(): void {
@@ -46,13 +48,12 @@ export class ContactFormComponent implements OnInit {
             const enabled = data.data.content?.contact?.formEnabled;
             this.formEnabled.set(enabled !== false);
           }
-          // If the payload shape is unexpected, keep the default (true).
         } catch {
-          // Parse failure — keep the default (true), never hide the form on a fetch error.
+          /* keep default */
         }
       },
       error: () => {
-        // Fetch failure — keep the default (true), never hide the form on a fetch error.
+        /* keep default */
       },
     });
   }
@@ -66,12 +67,21 @@ export class ContactFormComponent implements OnInit {
     }
 
     const v = this.contactForm.getRawValue();
+    const optionalNote = String(v.message || '').trim();
+    // Compose structured message for existing API (requires message ≥ 10 chars).
+    const composed = [
+      `Company: ${String(v.company || '').trim()}`,
+      `Phone: ${String(v.phone || '').trim()}`,
+      `Number of Employees: ${String(v.employees || '').trim()}`,
+      optionalNote ? `Notes: ${optionalNote}` : 'Notes: (none)',
+    ].join('\n');
+
     this.contactSubmitting.set(true);
     this.publicLanding
       .submitContact({
         fullName: String(v.fullName || '').trim(),
         email: String(v.email || '').trim(),
-        message: String(v.message || '').trim(),
+        message: composed,
       })
       .pipe(finalize(() => this.contactSubmitting.set(false)))
       .subscribe({
@@ -106,13 +116,24 @@ export class ContactFormComponent implements OnInit {
       });
   }
 
-  /** Convenience getters for template validity checks. */
   get fullNameCtrl() {
     return this.contactForm.get('fullName');
   }
 
+  get companyCtrl() {
+    return this.contactForm.get('company');
+  }
+
   get emailCtrl() {
     return this.contactForm.get('email');
+  }
+
+  get phoneCtrl() {
+    return this.contactForm.get('phone');
+  }
+
+  get employeesCtrl() {
+    return this.contactForm.get('employees');
   }
 
   get messageCtrl() {

@@ -220,15 +220,25 @@
             </div>
             <div class="col-md-3">
               <label class="col-form-label fw-bold"> Select Branch
-                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+                <span *ngIf="!updateFlag" style="color: red"> *</span>
               </label>
-              <ng-select [items]="branchList" bindLabel="name" bindValue="id" placeholder="Select Branch"
-                class=" me-sm-2 " name="branch" [(ngModel)]="personalDetails['branchId']"
-                (ngModelChange)="onBranchChange($event)" #branchRef="ngModel">
+              <ng-select
+                [items]="branchList"
+                bindLabel="name"
+                bindValue="id"
+                placeholder="Select Branch (multi)"
+                class="me-sm-2"
+                name="branch"
+                [multiple]="true"
+                [closeOnSelect]="false"
+                [(ngModel)]="personalDetails['branchIds']"
+                (ngModelChange)="onBranchChange($event)"
+                #branchRef="ngModel"
+              >
               </ng-select>
 
               <small class="text-danger" *ngIf="branchRef.invalid && branchRef.touched">
-                Select Branch
+                Select at least one Branch
               </small>
             </div>
             <div class="col-md-3">

@@ -227,6 +227,13 @@ exports.createEmp = async (req, res) => {
   const tenantId = req.users && req.users.tenantId;
 
   let branchId = req.body?.branchId;
+  const branchIds = Helper.normalizeBranchIds(
+    req.body?.branchIds,
+    branchId || (req.users && req.users.branchId),
+  );
+  if ((!branchId || branchId == "null") && branchIds.length) {
+    branchId = branchIds[0];
+  }
   if (!branchId || branchId == "null") {
     branchId = req.users && req.users.branchId;
   }
@@ -430,6 +437,7 @@ exports.createEmp = async (req, res) => {
       empType: empType,
       shift_id,
       branchId,
+      branchIds: branchIds.length ? branchIds : [branchId],
       guarantorName,
       guarantorAge,
       guarantorRelation,
@@ -480,9 +488,13 @@ exports.createEmp = async (req, res) => {
 exports.getEmp = async (req, res) => {
   const tenantId = req.users && req.users.tenantId;
   // Prefer branchId from request body (dropdown-selected), fallback to JWT branchId
-  const branchId = (req.body && req.body.branchId && req.body.branchId !== 'null' && req.body.branchId !== '')
+  let branchId = (req.body && req.body.branchId && req.body.branchId !== 'null' && req.body.branchId !== '')
     ? req.body.branchId
     : (req.users && req.users.branchId);
+  const bodyBranchIds = Helper.normalizeBranchIds(req.body?.branchIds, branchId);
+  if ((!branchId || branchId == "null") && bodyBranchIds.length) {
+    branchId = bodyBranchIds[0];
+  }
   const { email } = req.body || {};
 
   try {
@@ -811,6 +823,13 @@ exports.updateEmp = async (req, res) => {
 
   const tenantId = req.users && req.users.tenantId;
   let branchId = req.body?.branchId;
+  const branchIds = Helper.normalizeBranchIds(
+    req.body?.branchIds,
+    branchId || (req.users && req.users.branchId),
+  );
+  if ((!branchId || branchId == "null") && branchIds.length) {
+    branchId = branchIds[0];
+  }
   if (!branchId || branchId == "null") {
     branchId = req.users && req.users.branchId;
   }
@@ -969,6 +988,9 @@ exports.updateEmp = async (req, res) => {
     if (guarantorRelation != undefined) updateData.guarantorRelation = guarantorRelation;
     if (guarantorAddress != undefined) updateData.guarantorAddress = guarantorAddress;
     if (branchId !== undefined) updateData.branchId = branchId;
+    if (req.body?.branchIds !== undefined || branchIds.length) {
+      updateData.branchIds = branchIds.length ? branchIds : [branchId];
+    }
 
     // Pending employee approval: auto empCode if frontend / existing record has none
     if (type == "pending_employee") {

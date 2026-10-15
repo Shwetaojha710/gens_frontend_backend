@@ -157,26 +157,26 @@ export class RobotBuddyComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
 
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const isDesktop = window.matchMedia('(min-width: 768px)').matches;
-    this.enabled.set(!reducedMotion && isDesktop);
-    if (!this.enabled()) return;
-
-    const { minX, maxX, minY } = this.bounds();
-    this.robotX.set(Math.max(minX, maxX - 24));
-    this.robotY.set(minY + 4);
-    this.pickRandomVelocity();
-
     this.currentRoute.set(this.router.url);
     this.routerSub = this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe((event) => {
         this.currentRoute.set(event.urlAfterRedirects);
         this.closePanel();
-        this.spawnBubble(this.getRouteWelcome(event.urlAfterRedirects));
-        // Home sections mount after navigation — rebind IntersectionObserver.
-        queueMicrotask(() => this.setupSectionObserver());
+        this.refreshEnabled();
+        if (this.enabled()) {
+          this.spawnBubble(this.getRouteWelcome(event.urlAfterRedirects));
+          queueMicrotask(() => this.setupSectionObserver());
+        }
       });
+
+    this.refreshEnabled();
+    if (!this.enabled()) return;
+
+    const { minX, maxX, minY } = this.bounds();
+    this.robotX.set(Math.max(minX, maxX - 24));
+    this.robotY.set(minY + 4);
+    this.pickRandomVelocity();
 
     this.setupSectionObserver();
     this.lastTime = performance.now();
@@ -191,6 +191,31 @@ export class RobotBuddyComponent implements OnInit, OnDestroy {
     this.timers.push(timer);
   }
 
+  /** Robot is limited to the Home hero/slider — hidden on other marketing pages. */
+  private isHomeRoute(url = this.currentRoute()): boolean {
+    const path = (url || '').split('?')[0].split('#')[0].toLowerCase();
+    return path === '/' || path === '/home' || path.endsWith('/home');
+  }
+
+  private refreshEnabled(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const isDesktop = window.matchMedia('(min-width: 768px)').matches;
+    const onHome = this.isHomeRoute();
+    const inHero = onHome && this.isHeroInView();
+    const should = !reducedMotion && isDesktop && inHero;
+    const was = this.enabled();
+    this.enabled.set(should);
+    if (should && !was) {
+      this.lastTime = performance.now();
+      this.rafId = requestAnimationFrame(this.tick);
+      this.clampPosition();
+    }
+    if (!should) {
+      this.closePanel();
+    }
+  }
+
   ngOnDestroy(): void {
     if (this.rafId) cancelAnimationFrame(this.rafId);
     this.timers.forEach((t) => clearTimeout(t));
@@ -200,21 +225,11 @@ export class RobotBuddyComponent implements OnInit, OnDestroy {
   }
 
   @HostListener('window:resize')
-  onResize(): void {
+  @HostListener('window:scroll')
+  onResizeOrScroll(): void {
     if (!isPlatformBrowser(this.platformId)) return;
-    const isDesktop = window.matchMedia('(min-width: 768px)').matches;
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const shouldEnable = !reducedMotion && isDesktop;
-    if (!shouldEnable) {
-      this.enabled.set(false);
-      this.closePanel();
-      return;
-    }
-    if (!this.enabled()) {
-      this.enabled.set(true);
-      this.lastTime = performance.now();
-      this.rafId = requestAnimationFrame(this.tick);
-    }
+    this.refreshEnabled();
+    if (!this.enabled()) return;
     this.clampPosition();
   }
 
@@ -375,14 +390,31 @@ export class RobotBuddyComponent implements OnInit, OnDestroy {
     this.velY = Math.sin(angle) * speed;
   }
 
+  /** True while the Home hero is still visible enough for the robot. */
+  private isHeroInView(): boolean {
+    const hero = this.doc.querySelector('app-hero-section') as HTMLElement | null;
+    if (!hero) return false;
+    return hero.getBoundingClientRect().bottom > HEADER_SAFE + 40;
+  }
+
   private bounds() {
     const w = window.innerWidth;
     const h = window.innerHeight;
+    let maxY = Math.max(HEADER_SAFE, h - ROBOT_SIZE - EDGE_PAD);
+
+    // Constrain roaming to the hero/slider section only
+    const hero = this.doc.querySelector('app-hero-section') as HTMLElement | null;
+    if (hero) {
+      const rect = hero.getBoundingClientRect();
+      const heroBottom = Math.min(h - EDGE_PAD, Math.max(HEADER_SAFE + ROBOT_SIZE, rect.bottom - EDGE_PAD));
+      maxY = Math.max(HEADER_SAFE, heroBottom - ROBOT_SIZE);
+    }
+
     return {
       minX: EDGE_PAD,
       maxX: Math.max(EDGE_PAD, w - ROBOT_SIZE - EDGE_PAD),
       minY: HEADER_SAFE,
-      maxY: Math.max(HEADER_SAFE, h - ROBOT_SIZE - EDGE_PAD),
+      maxY,
     };
   }
 

@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import gsap from 'gsap';
 import { FloatingParticlesComponent } from '../effects/floating-particles/floating-particles.component';
 import { MagneticHoverDirective } from '../../../directives/magnetic-hover.directive';
+import { PROOF_STATS } from '../../../data/site-data';
 
 /** Lattice-inspired animated hero with GSAP entrance for the Home page. */
 @Component({
@@ -19,11 +20,8 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
   @ViewChild('heroContent') private heroContent?: ElementRef<HTMLElement>;
   @ViewChild('heroVisual') private heroVisual?: ElementRef<HTMLElement>;
 
-  readonly quickStats = [
-    { value: '100+', label: 'Organizations' },
-    { value: '99.9%', label: 'Uptime' },
-    { value: '80%', label: 'Less HR Work' },
-  ];
+  /** Single proof bar — values from shared STATS / PROOF_STATS (no duplicates). */
+  readonly quickStats = PROOF_STATS;
 
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;

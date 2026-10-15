@@ -482,8 +482,19 @@ exports.branchDD = async (req, res) => {
         200,
       );
     } else {
+      const where = { tenantId };
+      const accessible = Helper.getAccessibleBranchIds(req.users);
+      // Director / manager with assigned branchIds: only those branches
+      if (Helper.isBranchAccessRole(req.users)) {
+        if (!accessible.length) {
+          return Helper.response(true, "branchs fetched successfully", [], res, 200);
+        }
+        const { Op } = require("sequelize");
+        where.id = { [Op.in]: accessible };
+      }
+
       const branchs = await branch.findAll({
-        where: { tenantId },
+        where,
         order: [["name", "ASC"]],
       });
 

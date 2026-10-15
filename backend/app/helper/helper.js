@@ -1436,6 +1436,75 @@ Helper.convertNumberToWords = (amount) => {
   return numToWords(Math.floor(amount));
 };
 
+const { Op } = require("sequelize");
+
+/** Normalize branchIds JSON / array + optional primary branchId. */
+Helper.normalizeBranchIds = (raw, primaryBranchId) => {
+  let ids = [];
+  if (Array.isArray(raw)) {
+    ids = raw;
+  } else if (typeof raw === "string" && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) ids = parsed;
+      else ids = [raw];
+    } catch {
+      ids = [raw];
+    }
+  }
+  ids = [...new Set(ids.filter(Boolean).map(String))];
+  const primary =
+    primaryBranchId && primaryBranchId !== "null" && primaryBranchId !== 0
+      ? String(primaryBranchId)
+      : null;
+  if (!ids.length && primary) ids = [primary];
+  return ids;
+};
+
+/** Branches the logged-in portal user may access (director multi-branch). */
+Helper.getAccessibleBranchIds = (user) => {
+  return Helper.normalizeBranchIds(user?.branchIds, user?.branchId);
+};
+
+/** True when emp.branchIds was explicitly assigned (not only home branchId). */
+Helper.hasExplicitBranchIds = (user) => {
+  const raw = user?.branchIds;
+  if (Array.isArray(raw) && raw.length > 0) return true;
+  if (typeof raw === "string" && raw.trim() && raw !== "null") {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) && parsed.length > 0;
+    } catch {
+      return true;
+    }
+  }
+  return false;
+};
+
+/**
+ * Director, or manager with assigned branchIds → see all employees in those branches.
+ */
+Helper.isBranchAccessRole = (user) => {
+  const role = String(user?.role || "").toLowerCase();
+  if (role === "director") return true;
+  if (role === "manager" && Helper.hasExplicitBranchIds(user)) return true;
+  return false;
+};
+
+/**
+ * Restrict requested branch filter to accessible set.
+ * requested: undefined | null | "All" | uuid
+ */
+Helper.resolveBranchScope = (requested, accessibleIds) => {
+  const accessible = (accessibleIds || []).map(String).filter(Boolean);
+  if (!accessible.length) return [];
+  if (!requested || requested === "All" || requested === "null") {
+    return accessible;
+  }
+  const req = String(requested);
+  return accessible.includes(req) ? [req] : [];
+};
+
 Helper.getAllSubordinates = async (directorId, branchId, tenantId) => {
 
   let result = [];
@@ -1448,7 +1517,9 @@ Helper.getAllSubordinates = async (directorId, branchId, tenantId) => {
   };
 
   // Apply branch filter ONLY if not "All"
-  if (branchId && branchId != "All") {
+  if (Array.isArray(branchId) && branchId.length) {
+    whereCondition.branchId = { [Op.in]: branchId };
+  } else if (branchId && branchId != "All") {
     whereCondition.branchId = branchId;
   }
 

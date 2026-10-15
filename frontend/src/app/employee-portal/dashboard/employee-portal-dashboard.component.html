@@ -203,9 +203,9 @@
                 <div class="min-w-0 flex-grow-1">
                   <p class="ep-dash-profile__greet mb-1">{{ greeting }}, {{ displayName }}</p>
                   <p class="ep-dash-profile__role mb-0">
-                    <span *ngIf="profileLine('designation') !== '—'">{{ profileLine('designation') }}</span>
+                    <span *ngIf="displayDesignation !== '—'">{{ displayDesignation }}</span>
                     <span *ngIf="profileLine('department') !== '—'" class="ep-dash__muted">
-                      <span *ngIf="profileLine('designation') !== '—'"> · </span>{{ profileLine('department') }}
+                      <span *ngIf="displayDesignation !== '—'"> · </span>{{ profileLine('department') }}
                     </span>
                   </p>
                 </div>
@@ -214,6 +214,13 @@
             <!-- Col 2: code & contact -->
             <div class="col-12 col-md-6 col-lg-4 ep-dash-profile__col ep-dash-profile__col--mid">
               <div class="ep-dash-profile__stack">
+                <div class="ep-dash-profile__item" *ngIf="displayDesignation !== '—'">
+                  <span class="ep-dash-profile__item-icon" aria-hidden="true"><i class="icon-base ri ri-briefcase-line"></i></span>
+                  <div class="min-w-0">
+                    <span class="ep-dash-profile__item-label">Designation</span>
+                    <span class="ep-dash-profile__item-value">{{ displayDesignation }}</span>
+                  </div>
+                </div>
                 <div class="ep-dash-profile__item" *ngIf="profileLine('empCode') !== '—'">
                   <span class="ep-dash-profile__item-icon" aria-hidden="true"><i class="icon-base ri ri-id-card-line"></i></span>
                   <div class="min-w-0">
