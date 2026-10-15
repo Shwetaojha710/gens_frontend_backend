@@ -57,7 +57,7 @@ jobs:
       - name: Prepare Server
         run: |
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << EOF
-            mkdir -p ${{ steps.env.outputs.APP_ROOT }}/frontend
+            mkdir -p ${{ steps.env.outputs.APP_ROOT }}/gens-frontend
             mkdir -p ${{ steps.env.outputs.APP_ROOT }}/api
           EOF
 
@@ -69,7 +69,7 @@ jobs:
             --no-owner \
             --no-group \
             frontend/dist/gens-frontend/browser/ \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ steps.env.outputs.APP_ROOT }}/frontend/ \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ steps.env.outputs.APP_ROOT }}/gens-frontend/ \
           || {
             code=$?
             if [ $code -eq 23 ]; then

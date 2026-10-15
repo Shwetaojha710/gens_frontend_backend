@@ -19,7 +19,7 @@ export class LeaveLedgerComponent {
   obj: any = {};
   notyf: Notyf;
   EmpList: any[] = [];
-  leaveTypeList: any[] = [];
+  // leaveTypeList: any[] = [];
   yearList: any[] = [];
   ledgerList: any[] = [];
   originalList: any[] = [];
@@ -79,7 +79,7 @@ export class LeaveLedgerComponent {
   async ngOnInit() {
     await this.empList();
     await this.getYear();
-    await this.getLeaveTypeList();
+    // await this.getLeaveTypeList();
     await this.getLeaveLedger();
   }
 
@@ -113,12 +113,20 @@ export class LeaveLedgerComponent {
       }
     });
   }
+  leaveTypeList:any[]=[
+    {
+        "value": "87797451-e52b-47a3-a492-e2cfc6251aa4",
+        "label": "CL",
+        "allowedPerYear": 24
+    },
 
+];
   async getLeaveTypeList() {
     this.leaveTypeList = [];
     this.master.getLeaveTypeList().subscribe((data: any) => {
       if (data['status'] == true) {
-        this.leaveTypeList = [{ value: 'All', label: 'All Leave Types' }, ...(data.data || [])];
+        // this.leaveTypeList = [{ value: 'All', label: 'All Leave Types' }, ...(data.data || [])];
+        // this.leaveTypeList = data.data || [];
       } else if (data['status'] == 'expired') {
         this.router.navigate(['login']);
       } else {
