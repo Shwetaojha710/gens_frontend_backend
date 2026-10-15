@@ -20,14 +20,16 @@ jobs:
         run: |
           if [ "${{ github.ref_name }}" = "main" ]; then
             echo "APP_ROOT=/var/www/html/gens.demoquaeretech.in" >> $GITHUB_OUTPUT
+            echo "SITE_HOST=gens.demoquaeretech.in" >> $GITHUB_OUTPUT
             echo "PM2_NAME=gens" >> $GITHUB_OUTPUT
             echo "ENV_NAME=live" >> $GITHUB_OUTPUT
-            echo "HEALTH_URL=https://gens.demoquaeretech.in/" >> $GITHUB_OUTPUT
+            echo "HEALTH_URL=https://gens.demoquaeretech.in" >> $GITHUB_OUTPUT
           else
             echo "APP_ROOT=/var/www/html/gensdemo.demoquaeretech.in" >> $GITHUB_OUTPUT
+            echo "SITE_HOST=gensdemo.demoquaeretech.in" >> $GITHUB_OUTPUT
             echo "PM2_NAME=gens-staging" >> $GITHUB_OUTPUT
             echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
-            echo "HEALTH_URL=https://gensdemo.demoquaeretech.in/" >> $GITHUB_OUTPUT
+            echo "HEALTH_URL=https://gensdemo.demoquaeretech.in" >> $GITHUB_OUTPUT
           fi
 
       - name: Setup Node.js
@@ -75,24 +77,112 @@ jobs:
 
           ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
 
+      - name: Detect nginx web root
+        id: webroot
+        run: |
+          set -e
+          APP_ROOT="${{ steps.env.outputs.APP_ROOT }}"
+          SITE_HOST="${{ steps.env.outputs.SITE_HOST }}"
+
+          WEB_ROOT=$(ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            APP_ROOT="$APP_ROOT" SITE_HOST="$SITE_HOST" bash -s << 'EOS'
+            set -e
+            ROOT=""
+
+            # 1) Parse nginx config for this server_name
+            if command -v nginx >/dev/null 2>&1; then
+              CONF=$(nginx -T 2>/dev/null || true)
+              if [ -n "$CONF" ]; then
+                ROOT=$(printf '%s\n' "$CONF" | awk -v host="$SITE_HOST" '
+                  $1=="server_name" {
+                    for (i=2;i<=NF;i++) {
+                      gsub(/;/, "", $i)
+                      if ($i==host || $i==("www." host)) in_server=1
+                    }
+                  }
+                  in_server && $1=="root" {
+                    gsub(/;/, "", $2)
+                    print $2
+                    exit
+                  }
+                  in_server && $1=="}" { in_server=0 }
+                ')
+              fi
+            fi
+
+            # 2) Grep common nginx dirs
+            if [ -z "$ROOT" ]; then
+              for d in /etc/nginx /usr/local/nginx/conf /etc/nginx/sites-enabled /etc/nginx/conf.d; do
+                [ -d "$d" ] || continue
+                HIT=$(grep -RIl --include='*.conf' -e "$SITE_HOST" "$d" 2>/dev/null | head -1 || true)
+                if [ -n "$HIT" ]; then
+                  ROOT=$(awk '
+                    $1=="root" { gsub(/;/, "", $2); print $2; exit }
+                  ' "$HIT")
+                  [ -n "$ROOT" ] && break
+                fi
+              done
+            fi
+
+            # 3) Fallbacks that often exist on this stack
+            if [ -z "$ROOT" ]; then
+              for cand in \
+                "$APP_ROOT" \
+                "$APP_ROOT/gens-frontend" \
+                "$APP_ROOT/public" \
+                "$APP_ROOT/html" \
+                "/var/www/html/$SITE_HOST" \
+                "/var/www/$SITE_HOST" \
+                "/home/*/public_html/$SITE_HOST"
+              do
+                # shellcheck disable=SC2086
+                for path in $cand; do
+                  if [ -f "$path/index.html" ]; then
+                    ROOT="$path"
+                    break 2
+                  fi
+                done
+              done
+            fi
+
+            if [ -z "$ROOT" ] || [ ! -d "$ROOT" ]; then
+              echo "ERROR: could not detect nginx root for $SITE_HOST" >&2
+              echo "Tried APP_ROOT=$APP_ROOT" >&2
+              ls -la "$APP_ROOT" 2>/dev/null || true
+              exit 1
+            fi
+
+            echo "Detected WEB_ROOT=$ROOT" >&2
+            echo "$ROOT"
+          EOS
+          )
+
+          echo "WEB_ROOT=$WEB_ROOT"
+          echo "WEB_ROOT=$WEB_ROOT" >> $GITHUB_OUTPUT
+
       - name: Prepare Server
         run: |
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << EOF
-            mkdir -p ${{ steps.env.outputs.APP_ROOT }}/gens-frontend
-            mkdir -p ${{ steps.env.outputs.APP_ROOT }}/api
+            mkdir -p "${{ steps.webroot.outputs.WEB_ROOT }}"
+            mkdir -p "${{ steps.env.outputs.APP_ROOT }}/api"
+            mkdir -p "${{ steps.env.outputs.APP_ROOT }}/gens-frontend"
           EOF
 
       - name: Deploy Angular Frontend
         run: |
           set -e
-          # Stamp build so we can verify the live host actually received this deploy
-          echo "${{ github.sha }}" > frontend/dist/gens-frontend/browser/deploy-version.txt
-          date -u +"deployed_at=%Y-%m-%dT%H:%M:%SZ" >> frontend/dist/gens-frontend/browser/deploy-version.txt
+          WEB_ROOT="${{ steps.webroot.outputs.WEB_ROOT }}"
+          APP_ROOT="${{ steps.env.outputs.APP_ROOT }}"
+          SHA="${{ github.sha }}"
 
-          # IMPORTANT:
-          # Nginx for gens.demoquaeretech.in serves APP_ROOT/ (not APP_ROOT/gens-frontend/).
-          # Old workflow only synced gens-frontend/, so the public site stayed on Oct-13 files
-          # even when Actions reported success.
+          # Put stamp under assets/ so SPA try_files does not rewrite it to index.html
+          mkdir -p frontend/dist/gens-frontend/browser/assets
+          echo "$SHA" > frontend/dist/gens-frontend/browser/assets/deploy-version.txt
+          date -u +"deployed_at=%Y-%m-%dT%H:%M:%SZ" >> frontend/dist/gens-frontend/browser/assets/deploy-version.txt
+          # Also at root for SSH checks
+          cp frontend/dist/gens-frontend/browser/assets/deploy-version.txt \
+             frontend/dist/gens-frontend/browser/deploy-version.txt
+
           rsync_frontend() {
             local dest="$1"
             set +e
@@ -116,24 +206,26 @@ jobs:
             return $code
           }
 
-          # 1) Document root (what the website actually serves)
-          rsync_frontend "${{ steps.env.outputs.APP_ROOT }}/"
+          echo "Deploying frontend to nginx root: $WEB_ROOT"
+          rsync_frontend "${WEB_ROOT%/}/"
 
-          # 2) Keep legacy gens-frontend folder in sync too
-          rsync_frontend "${{ steps.env.outputs.APP_ROOT }}/gens-frontend/"
+          # Keep legacy folders updated too (harmless if same path)
+          if [ "${WEB_ROOT%/}" != "${APP_ROOT%/}" ]; then
+            rsync_frontend "${APP_ROOT%/}/"
+          fi
+          if [ "${WEB_ROOT%/}" != "${APP_ROOT%/}/gens-frontend" ]; then
+            rsync_frontend "${APP_ROOT%/}/gens-frontend/"
+          fi
 
-          # Prove files landed on the server disk
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} bash -s << EOF
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            WEB_ROOT="$WEB_ROOT" SHA="$SHA" bash -s << 'EOF'
             set -e
-            APP_ROOT="${{ steps.env.outputs.APP_ROOT }}"
-            SHA="${{ github.sha }}"
-            echo "=== server index.html ==="
-            ls -la "\$APP_ROOT/index.html" "\$APP_ROOT/gens-frontend/index.html" || true
+            echo "=== nginx web root files ==="
+            ls -la "$WEB_ROOT/index.html" "$WEB_ROOT/assets/deploy-version.txt"
             echo "=== deploy-version.txt ==="
-            cat "\$APP_ROOT/deploy-version.txt"
-            grep -q "\$SHA" "\$APP_ROOT/deploy-version.txt"
-            grep -q "\$SHA" "\$APP_ROOT/gens-frontend/deploy-version.txt"
-            echo "Frontend files verified on server for \$SHA"
+            cat "$WEB_ROOT/assets/deploy-version.txt"
+            grep -q "$SHA" "$WEB_ROOT/assets/deploy-version.txt"
+            echo "Frontend verified on disk at $WEB_ROOT for $SHA"
           EOF
 
       # GitHub: backend/  →  Server: api/
@@ -181,13 +273,11 @@ jobs:
             PM2_NAME="${{ steps.env.outputs.PM2_NAME }}"
             cd "\$APP_ROOT/api"
 
-            # Fail fast if deployed code is broken
             node --check server.js
             node --check app/controller/tenant/appApi.js
 
             npm ci --omit=dev
 
-            # Hard restart from this folder so PM2 never keeps an old cwd/script
             pm2 delete "\$PM2_NAME" || true
             pm2 start server.js --name "\$PM2_NAME" --cwd "\$APP_ROOT/api"
             pm2 save
@@ -201,7 +291,9 @@ jobs:
         run: |
           set -e
           BASE="${{ steps.env.outputs.HEALTH_URL }}"
-          BASE="${BASE%/}"
+          SHA="${{ github.sha }}"
+          WEB_ROOT="${{ steps.webroot.outputs.WEB_ROOT }}"
+
           code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "${BASE}/" || echo "000")
           echo "Health HTTP $code for ${BASE}/"
           if [ "$code" = "000" ]; then
@@ -209,21 +301,32 @@ jobs:
             exit 1
           fi
 
-          # Public site must serve the stamp from THIS commit (proves nginx root was updated)
-          remote_ver=$(curl -s --max-time 20 "${BASE}/deploy-version.txt" || true)
-          echo "Live deploy-version.txt:"
-          echo "$remote_ver"
-          if ! echo "$remote_ver" | grep -q "${{ github.sha }}"; then
-            echo "ERROR: https site is NOT serving the new frontend build."
-            echo "Nginx root is probably not ${{ steps.env.outputs.APP_ROOT }}/ — check server vhost root."
+          # Prefer assets/ path (not rewritten by Angular SPA try_files)
+          remote_ver=$(curl -s --max-time 20 "${BASE}/assets/deploy-version.txt" || true)
+          echo "Live /assets/deploy-version.txt:"
+          echo "$remote_ver" | head -c 400
+          echo
+
+          if echo "$remote_ver" | grep -q "<!DOCTYPE html"; then
+            echo "ERROR: nginx returned index.html for deploy-version.txt"
+            echo "Detected WEB_ROOT was: $WEB_ROOT"
+            echo "That path is NOT the vhost root nginx uses for ${{ steps.env.outputs.SITE_HOST }}"
+            echo "On server run: sudo nginx -T | grep -A20 '${{ steps.env.outputs.SITE_HOST }}'"
             exit 1
           fi
-          echo "Live frontend matches commit ${{ github.sha }}"
+
+          if ! echo "$remote_ver" | grep -q "$SHA"; then
+            echo "ERROR: public site is not serving this commit ($SHA)"
+            exit 1
+          fi
+
+          echo "Live frontend matches commit $SHA (web root: $WEB_ROOT)"
 
       - name: Deploy summary
         run: |
           echo "Environment: ${{ steps.env.outputs.ENV_NAME }}"
-          echo "Path: ${{ steps.env.outputs.APP_ROOT }}"
+          echo "App root: ${{ steps.env.outputs.APP_ROOT }}"
+          echo "Nginx web root: ${{ steps.webroot.outputs.WEB_ROOT }}"
           echo "PM2: ${{ steps.env.outputs.PM2_NAME }}"
           echo "Commit: ${{ github.sha }}"
-          echo "Check: ${{ steps.env.outputs.HEALTH_URL }}deploy-version.txt"
+          echo "Check: ${{ steps.env.outputs.HEALTH_URL }}/assets/deploy-version.txt"
