@@ -57,10 +57,25 @@ const fs = require("fs");
 const leave_balance = require("../../models/leaveBalance");
 
 const AttendanceRegularization = require("../../models/attendance_regularization");
-const { writeAudit, toPlain } = require("../../helper/auditLog");
+const auditLogHelper = require("../../helper/auditLog");
+const writeAudit = auditLogHelper.writeAudit;
+const toPlain =
+  typeof auditLogHelper.toPlain === "function"
+    ? auditLogHelper.toPlain
+    : function toPlainFallback(data) {
+        if (!data) return null;
+        if (typeof data.toJSON === "function") return data.toJSON();
+        if (typeof data.get === "function") return data.get({ plain: true });
+        try {
+          return JSON.parse(JSON.stringify(data));
+        } catch {
+          return data;
+        }
+      };
 const { ReimbursementFile } = require("../../models/associations");
 const reimbursement = require("../../models/reimbursement");
 const branch = require("../../models/branch");
+const comp_off = require("../../models/comp_off");
 // const branch = require("../../models/branch");
 
 // exports.getDailyAttendance = async (req, res) => {
@@ -5875,8 +5890,6 @@ exports.updateAppReimbursementStatus = async (req, res) => {
     return Helper.response(false, error.message, null, res, 500);
   }
 };
-
-const comp_off=require('../../models/comp_off')
 
 exports.CompoffData=async(req,res)=>{
   try {

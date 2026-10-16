@@ -50,3 +50,6 @@ gens.zip
 /src_ol_3_1_2026
 /src/app/tracking_old
 /src_21_1_2026
+/src/environments/environment.prodtesting.ts
+/src/environments/environment.prod.ts
+/src/environments/environment.ts
