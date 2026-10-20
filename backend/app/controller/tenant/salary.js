@@ -4239,9 +4239,11 @@ exports.updateSalarySetup = async (req, res) => {
 exports.getActiveSalaryComponents = async (req, res) => {
   try {
     const tenantId = req.users && req.users.tenantId;
-    const { employeeId, status } = req.body;
+    const { employeeId } = req.body;
+    const status = req.body?.status || "active";
     const branchId = req.users && req.users.branchId;
-    if (!branchId) {
+
+    if (!branchId || branchId == "null") {
       return Helper.response(false, "branchId is required!", {}, res, 200);
     }
 
@@ -4255,24 +4257,27 @@ exports.getActiveSalaryComponents = async (req, res) => {
       );
     }
 
+    // Include legacy rows saved with null branchId for this employee
+    const branchFilter = { [Op.or]: [{ branchId }, { branchId: null }] };
+
     const basics = await Basic.findAll({
-      where: { tenantId, employeeId, branchId, status },
+      where: { tenantId, employeeId, status, ...branchFilter },
       raw: true,
     });
 
     const allowances = await allowance.findAll({
-      where: { tenantId, employeeId, branchId, status },
+      where: { tenantId, employeeId, status, ...branchFilter },
     });
 
     const deductions = await deductionS.findAll({
       where: {
         tenantId,
         employeeId,
-        branchId,
+        status,
         type: {
           [Op.ne]: "deduction",
         },
-        status,
+        ...branchFilter,
       },
     });
 
@@ -4299,7 +4304,13 @@ exports.getActiveSalaryComponents = async (req, res) => {
     );
   } catch (error) {
     console.error("Error fetching salary components:", error);
-    return Helper.response(false, "Internal Server Error", [], res, 500);
+    return Helper.response(
+      false,
+      error?.message || "Internal Server Error",
+      [],
+      res,
+      500,
+    );
   }
 };
 exports.getBillDetails = async (req, res) => {

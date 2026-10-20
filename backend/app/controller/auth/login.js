@@ -393,8 +393,8 @@ exports.Applogin = async (req, res) => {
     if(data.mobile == '8687651183'){
       otps.otp = '6669'
     }else{
-      // otps.otp =1234
-      otps.otp = Math.floor(1000 + Math.random() * 9000);
+      otps.otp =1234
+      // otps.otp = Math.floor(1000 + Math.random() * 9000);
     }
     const templateId = "1107164267135286674";
     // otps.otp = 1234;
@@ -408,17 +408,16 @@ exports.Applogin = async (req, res) => {
     const createOTP = await otps.save();
 
     if (createOTP) {
-      if(data.mobile != '8687651183'){
+      if (data.mobile != "8687651183") {
         await Helper.sendSMS(data.mobile, otps.otp, templateId);
       }
-      await Helper.sendSMS(data.mobile, otps.otp, templateId);
-      return Helper.response("success", "OTP Send Successfully", {}, res, 200);
+      return Helper.response(true, "OTP Send Successfully", {}, res, 200);
     } else {
-      return Helper.response("failed", "Unable to sent OTP!", {}, res, 200);
+      return Helper.response(false, "Unable to sent OTP!", {}, res, 200);
     }
   } catch (error) {
     console.log(error);
-    return Helper.response("failed", error?.message, {}, res, 200);
+    return Helper.response(false, error?.message, {}, res, 200);
   }
 };
 // exports.Applogin = async (req, res) => {
