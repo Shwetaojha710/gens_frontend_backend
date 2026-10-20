@@ -408,18 +408,67 @@ exports.Applogin = async (req, res) => {
     const createOTP = await otps.save();
 
     if (createOTP) {
-      if (data.mobile != "8687651183") {
+      if(data.mobile != '8687651183'){
         await Helper.sendSMS(data.mobile, otps.otp, templateId);
       }
-      return Helper.response(true, "OTP Send Successfully", {}, res, 200);
+      await Helper.sendSMS(data.mobile, otps.otp, templateId);
+      return Helper.response("success", "OTP Send Successfully", {}, res, 200);
     } else {
-      return Helper.response(false, "Unable to sent OTP!", {}, res, 200);
+      return Helper.response("failed", "Unable to sent OTP!", {}, res, 200);
     }
   } catch (error) {
     console.log(error);
-    return Helper.response(false, error?.message, {}, res, 200);
+    return Helper.response("failed", error?.message, {}, res, 200);
   }
 };
+
+// exports.Applogin = async (req, res) => {
+//   try {
+//     const data = req.body;
+//     const { mobile } = req.body;
+//     const user = await empPersonal.findOne({
+//       where: {
+//         mobile,
+//         status: "active",
+//         emp_status:'approved'
+//       },
+//     });
+//     if (!user) {
+//       return Helper.response(false, "No User Found", {}, res, 500);
+//     }
+
+//     const otps = new otp();
+
+//     if(data.mobile == '8687651183'){
+//       otps.otp = '6669'
+//     }else{
+//       // otps.otp =1234
+//       otps.otp = Math.floor(1000 + Math.random() * 9000);
+//     }
+//     const templateId = "1107164267135286674";
+//     // otps.otp = 1234;
+//     otps.phone = data.mobile;
+
+//     otps.ip = Helper.getLocalIP();
+//     otps.type = "App";
+//     otps.expiry_time = `'${moment().add(5, "minutes").toDate()}'`;
+//     otps.created_by = null;
+
+//     const createOTP = await otps.save();
+
+//     if (createOTP) {
+//       if (data.mobile != "8687651183") {
+//         await Helper.sendSMS(data.mobile, otps.otp, templateId);
+//       }
+//       return Helper.response(true, "OTP Send Successfully", {}, res, 200);
+//     } else {
+//       return Helper.response(false, "Unable to sent OTP!", {}, res, 200);
+//     }
+//   } catch (error) {
+//     console.log(error);
+//     return Helper.response(false, error?.message, {}, res, 200);
+//   }
+// };
 // exports.Applogin = async (req, res) => {
 //   try {
 //     const { mobile } = req.body;
