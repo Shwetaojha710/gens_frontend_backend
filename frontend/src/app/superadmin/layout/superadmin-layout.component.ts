@@ -43,7 +43,7 @@ export class SuperadminLayoutComponent {
         const url = this.router.url || '';
         if (url.includes('/superadmin/plans')) this.pageTitle = 'Plan Management';
         else if (url.includes('/superadmin/landing')) this.pageTitle = 'Home page CMS';
-        else if (url.includes('/superadmin/contact-inquiries')) this.pageTitle = 'Contact inquiries';
+        else if (url.includes('/superadmin/contact-inquiries')) this.pageTitle = 'Demo Requests';
         else if (url.includes('/superadmin/users')) this.pageTitle = 'Users Management';
         else if (url.includes('/superadmin/companies/') && url.includes('/dashboard'))
           this.pageTitle = 'Company dashboard';
