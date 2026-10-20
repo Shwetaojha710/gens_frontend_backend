@@ -5,6 +5,8 @@ const leave_application = require("../../models/leave_application");
 const moment = require("moment");
 const empPersonal = require("../../models/empPersonal");
 const leave_balance = require("../../models/leaveBalance");
+const holiday = require("../../models/holiday");
+const HolidayType = require("../../models/HolidayType");
 const { Op } = require("sequelize");
 const sequelize = require("../../connection/connection");
 const { writeAudit, toPlain } = require("../../helper/auditLog");
@@ -645,6 +647,157 @@ exports.getLeaveLedger = async (req, res) => {
   }
 };
 
+// exports.applyForLeave = async (req, res) => {
+//   const {
+//     employeeId,
+//     leaveTypeId,
+//     fromDate,
+//     toDate,
+//     reason,
+//     duration_type = "full",
+//   } = req.body;
+
+//   const tenantId = req.users?.tenantId;
+//   const createdBy = req.users?.id;
+//   const branchId = req.users && req.users.branchId;
+
+//   if (!employeeId || !leaveTypeId || !tenantId) {
+//     return Helper.response(false, "Required fields missing", [], res, 200);
+//   }
+
+//   if (!branchId || branchId == "null") {
+//     return Helper.response(false, "branchId is required!", {}, res, 200);
+//   }
+
+//   try {
+//     const leavePeriods = [];
+
+//     // Case 1: Both dates are missing → save null values
+//     // if (!fromDate && !toDate) {
+//     //   leavePeriods.push({ fromDate: null, toDate: null });
+//     // }
+//     // Case 2: Only one date is provided → save that date, other null
+//     if (fromDate && !toDate) {
+//       leavePeriods.push({ fromDate, toDate: null });
+//     } else if (!fromDate && toDate) {
+//       leavePeriods.push({ fromDate: null, toDate });
+//     }
+//     // Case 3: Both dates provided → split if month/year changes
+//     else {
+//       const start = moment(fromDate, "YYYY-MM-DD");
+//       const end = moment(toDate, "YYYY-MM-DD");
+
+//       if (start.month() !== end.month() || start.year() !== end.year()) {
+//         // First month
+//         const firstMonthEnd = moment(start).endOf("month");
+//         leavePeriods.push({
+//           fromDate: start.format("YYYY-MM-DD"),
+//           toDate: firstMonthEnd.format("YYYY-MM-DD"),
+//         });
+
+//         // Second month
+//         const secondMonthStart = moment(end).startOf("month");
+//         leavePeriods.push({
+//           fromDate: secondMonthStart.format("YYYY-MM-DD"),
+//           toDate: end.format("YYYY-MM-DD"),
+//         });
+//       } else {
+//         leavePeriods.push({
+//           fromDate: start.format("YYYY-MM-DD"),
+//           toDate: end.format("YYYY-MM-DD"),
+//         });
+//       }
+//     }
+
+//     const savedLeaves = [];
+
+//     for (const period of leavePeriods) {
+//       let days = 0;
+
+//       if (period.fromDate || period.toDate) {
+//         days = moment(period.toDate).diff(moment(period.fromDate), "days") + 1;
+//         if (duration_type == "first_half" || duration_type == "second_half") {
+//           days = 0.5;
+//         }
+//       }
+
+//       // Check duplicate leave only if dates exist
+//       const existsLeave = await leave_application.findOne({
+//         where: {
+//           employeeId,
+//           tenantId,
+//           leaveTypeId,
+//           fromDate: period.fromDate,
+//           toDate: period.toDate,
+//           branchId,
+//         },
+//       });
+
+//       if (existsLeave) continue;
+
+//       const leaveApplication = await leave_application.create({
+//         employeeId,
+//         leaveTypeId,
+//         fromDate: period.fromDate,
+//         toDate: period.toDate,
+//         duration_type,
+//         days,
+//         reason,
+//         tenantId,
+//         createdBy,
+//         branchId,
+//       });
+
+//       savedLeaves.push(leaveApplication);
+//     }
+//     for (const savedLeave of savedLeaves) {
+//       await writeAudit({
+//         req,
+//         actionType: "LEAVE_CREATE",
+//         referenceId: savedLeave.id,
+//         employeeId: savedLeave.employeeId,
+//         oldValue: null,
+//         newValue: savedLeave,
+//         remarks: "Leave applied",
+//       });
+//     }
+
+//     if (savedLeaves.length > 0) {
+//       // Push notify reporting manager (FCM)
+//       try {
+//         const { notifyManagerOnLeaveApply } = require("./headerNotifications");
+//         const leaveTypeRow = await leaveMaster.findByPk(leaveTypeId, {
+//           attributes: ["leaveName", "leaveCode"],
+//           raw: true,
+//         });
+//         const first = savedLeaves[0];
+//         await notifyManagerOnLeaveApply({
+//           employeeId,
+//           tenantId,
+//           branchId,
+//           leaveLabel: leaveTypeRow?.leaveName || leaveTypeRow?.leaveCode || "leave",
+//           days: first?.days,
+//         });
+//       } catch (pushErr) {
+//         console.error("Leave apply push notify failed:", pushErr?.message || pushErr);
+//       }
+
+//       return Helper.response(
+//         true,
+//         "Leave application submitted successfully.",
+//         savedLeaves,
+//         res,
+//         200,
+//       );
+//     }
+
+//     return Helper.response(false, "Leave already exists.", [], res, 200);
+//   } catch (error) {
+//     console.error("Error applying for leave:", error);
+//     return Helper.response(false, error.message, [], res, 500);
+//   }
+// };
+
 exports.applyForLeave = async (req, res) => {
   const {
     employeeId,
@@ -668,12 +821,127 @@ exports.applyForLeave = async (req, res) => {
   }
 
   try {
+    // Same leave-type master as get-leaves (tenant + branch scoped)
+    const leaveType = await leaveMaster.findOne({
+      where: { id: leaveTypeId, tenantId, branchId },
+      raw: true,
+    });
+    if (!leaveType) {
+      return Helper.response(
+        false,
+        "Invalid leave type for this branch. Please select a valid leave (CL / Comp off / RESTRICTED / etc).",
+        [],
+        res,
+        200,
+      );
+    }
+
+    const employee = await empPersonal.findOne({
+      where: { id: employeeId, tenantId, branchId },
+      attributes: ["id", "gender", "firstName", "lastName"],
+      raw: true,
+    });
+    if (!employee) {
+      return Helper.response(false, "Employee not found for this branch", [], res, 200);
+    }
+
+    // genderRestriction: male | female | all
+    const genderRule = String(leaveType.genderRestriction || "all").toLowerCase();
+    if (genderRule !== "all") {
+      const empGender = String(employee.gender || "").toLowerCase();
+      if (!empGender || empGender !== genderRule) {
+        return Helper.response(
+          false,
+          `Leave type "${leaveType.leaveName}" is restricted to ${genderRule} employees only.`,
+          [],
+          res,
+          200,
+        );
+      }
+    }
+
+    // applyBeforeDays: leave start must be at least N days from today
+    const applyBeforeDays = Number(leaveType.applyBeforeDays || 0);
+    const leaveStart = fromDate || toDate;
+    if (leaveStart && applyBeforeDays > 0) {
+      const minApplyDate = moment().startOf("day").add(applyBeforeDays, "days");
+      const startMom = moment(leaveStart, "YYYY-MM-DD").startOf("day");
+      if (!startMom.isValid()) {
+        return Helper.response(false, "Invalid leave date", [], res, 200);
+      }
+      if (startMom.isBefore(minApplyDate)) {
+        return Helper.response(
+          false,
+          `Leave type "${leaveType.leaveName}" must be applied at least ${applyBeforeDays} day(s) in advance.`,
+          [],
+          res,
+          200,
+        );
+      }
+    }
+
+    const isRestrictedLeave =
+      String(leaveType.leaveCode || "")
+        .toLowerCase()
+        .startsWith("rh") ||
+      String(leaveType.leaveName || "")
+        .toLowerCase()
+        .includes("restricted");
+
+    // RESTRICTED / RH: fromDate must be an active restricted holiday
+    if (isRestrictedLeave) {
+      if (!fromDate) {
+        return Helper.response(
+          false,
+          "Restricted leave requires a valid holiday date.",
+          [],
+          res,
+          200,
+        );
+      }
+      const rhTypes = await HolidayType.findAll({
+        where: {
+          tenantId,
+          branchId,
+          status: "active",
+          name: { [Op.iLike]: "%restricted%" },
+        },
+        attributes: ["id"],
+        raw: true,
+      });
+      const rhTypeIds = rhTypes.map((t) => t.id);
+      if (!rhTypeIds.length) {
+        return Helper.response(
+          false,
+          "No Restricted holiday type configured for this branch",
+          [],
+          res,
+          200,
+        );
+      }
+      const rhHoliday = await holiday.findOne({
+        where: {
+          tenantId,
+          branchId,
+          date: fromDate,
+          status: "active",
+          holiday_type: { [Op.in]: rhTypeIds },
+        },
+        raw: true,
+      });
+      if (!rhHoliday) {
+        return Helper.response(
+          false,
+          "Selected date is not a Restricted Holiday. Please choose a valid RH date.",
+          [],
+          res,
+          200,
+        );
+      }
+    }
+
     const leavePeriods = [];
 
-    // Case 1: Both dates are missing → save null values
-    // if (!fromDate && !toDate) {
-    //   leavePeriods.push({ fromDate: null, toDate: null });
-    // }
     // Case 2: Only one date is provided → save that date, other null
     if (fromDate && !toDate) {
       leavePeriods.push({ fromDate, toDate: null });
@@ -686,14 +954,12 @@ exports.applyForLeave = async (req, res) => {
       const end = moment(toDate, "YYYY-MM-DD");
 
       if (start.month() !== end.month() || start.year() !== end.year()) {
-        // First month
         const firstMonthEnd = moment(start).endOf("month");
         leavePeriods.push({
           fromDate: start.format("YYYY-MM-DD"),
           toDate: firstMonthEnd.format("YYYY-MM-DD"),
         });
 
-        // Second month
         const secondMonthStart = moment(end).startOf("month");
         leavePeriods.push({
           fromDate: secondMonthStart.format("YYYY-MM-DD"),
@@ -707,6 +973,9 @@ exports.applyForLeave = async (req, res) => {
       }
     }
 
+    // Initial status from leave-type requiresApproval (same master as get-leaves)
+    const initialStatus = leaveType.requiresApproval === false ? "approved" : "pending";
+
     const savedLeaves = [];
 
     for (const period of leavePeriods) {
@@ -719,7 +988,6 @@ exports.applyForLeave = async (req, res) => {
         }
       }
 
-      // Check duplicate leave only if dates exist
       const existsLeave = await leave_application.findOne({
         where: {
           employeeId,
@@ -728,6 +996,7 @@ exports.applyForLeave = async (req, res) => {
           fromDate: period.fromDate,
           toDate: period.toDate,
           branchId,
+          status: { [Op.ne]: "self_declined" },
         },
       });
 
@@ -744,6 +1013,7 @@ exports.applyForLeave = async (req, res) => {
         tenantId,
         createdBy,
         branchId,
+        status: initialStatus,
       });
 
       savedLeaves.push(leaveApplication);
@@ -756,24 +1026,19 @@ exports.applyForLeave = async (req, res) => {
         employeeId: savedLeave.employeeId,
         oldValue: null,
         newValue: savedLeave,
-        remarks: "Leave applied",
+        remarks: `Leave applied (${leaveType.leaveName}/${leaveType.leaveCode})`,
       });
     }
 
     if (savedLeaves.length > 0) {
-      // Push notify reporting manager (FCM)
       try {
         const { notifyManagerOnLeaveApply } = require("./headerNotifications");
-        const leaveTypeRow = await leaveMaster.findByPk(leaveTypeId, {
-          attributes: ["leaveName", "leaveCode"],
-          raw: true,
-        });
         const first = savedLeaves[0];
         await notifyManagerOnLeaveApply({
           employeeId,
           tenantId,
           branchId,
-          leaveLabel: leaveTypeRow?.leaveName || leaveTypeRow?.leaveCode || "leave",
+          leaveLabel: leaveType.leaveName || leaveType.leaveCode || "leave",
           days: first?.days,
         });
       } catch (pushErr) {
