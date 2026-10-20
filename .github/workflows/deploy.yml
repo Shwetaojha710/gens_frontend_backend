@@ -84,8 +84,9 @@ jobs:
 
           ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
 
-      # Discover extra nginx roots (if readable) but ALWAYS keep WEB_ROOT = APP_ROOT/gens-frontend
-      - name: Detect extra nginx roots
+      # Only deploy SPA to canonical WEB_ROOT (APP_ROOT/gens-frontend).
+      # Stale paths like APP_ROOT/dist/gens-frontend/browser must never be deploy targets.
+      - name: Resolve web root
         id: webroot
         run: |
           set -e
@@ -98,29 +99,11 @@ jobs:
             | grep -oE 'main-[A-Za-z0-9]+\.js' | head -1 || true)
           echo "Currently served bundle: ${SERVED_MAIN:-unknown}"
 
-          EXTRA=$(ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            APP_ROOT="$APP_ROOT" SITE_HOST="$SITE_HOST" CANON="$CANON" SERVED_MAIN="$SERVED_MAIN" bash -s << 'EOS'
-            set -e
-            EXTRA=""
-
-            add() {
-              d="$1"
-              allow_app_root="${2:-0}"
-              [ -n "$d" ] || return 0
-              # Skip bare APP_ROOT unless nginx -T explicitly named it (API parent is not SPA root)
-              if [ "$d" = "$APP_ROOT" ] && [ "$allow_app_root" != "1" ]; then
-                return 0
-              fi
-              [ "$d" = "$CANON" ] && return 0
-              mkdir -p "$d" 2>/dev/null || true
-              [ -d "$d" ] || return 0
-              case " $EXTRA " in
-                *" $d "*) ;;
-                *) EXTRA="$EXTRA $d" ;;
-              esac
-            }
-
-            # A) nginx -T root for this host (may need sudo on some boxes)
+          # Read nginx root for diagnostics + optional stale-path symlink (never as rsync dest)
+          NGX_ROOT=$(ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            APP_ROOT="$APP_ROOT" SITE_HOST="$SITE_HOST" bash -s << 'EOS'
+            set +e
+            NR=""
             for NGX in "nginx -T" "sudo nginx -T"; do
               CONF=$($NGX 2>/dev/null || true)
               [ -n "$CONF" ] || continue
@@ -138,48 +121,71 @@ jobs:
                 }
                 in_server && $1=="}" { in_server=0 }
               ')
-              if [ -n "$NR" ]; then
-                echo "nginx root for $SITE_HOST: $NR" >&2
-                add "$NR" 1
-                break
-              fi
+              [ -n "$NR" ] && break
             done
-
-            # B) Folders that currently contain the publicly served main-*.js
-            if [ -n "$SERVED_MAIN" ]; then
-              while IFS= read -r f; do
-                [ -n "$f" ] || continue
-                add "$(dirname "$f")" 0
-              done < <(find /var/www /home /usr/share/nginx -type f -name "$SERVED_MAIN" 2>/dev/null | head -20)
-            fi
-
-            echo "$EXTRA" | xargs
+            printf '%s' "$NR"
           EOS
           )
 
-          # Canonical first, then any extras
-          ROOTS="$CANON"
-          for d in $EXTRA; do
-            case " $ROOTS " in
-              *" $d "*) ;;
-              *) ROOTS="$ROOTS $d" ;;
-            esac
-          done
-          ROOTS=$(echo "$ROOTS" | xargs)
+          echo "nginx root for ${SITE_HOST}: ${NGX_ROOT:-unknown}"
 
-          echo "WEB_ROOTS=$ROOTS"
-          echo "WEB_ROOTS=$ROOTS" >> $GITHUB_OUTPUT
+          # Reject stale Angular output paths as deploy destinations
+          is_stale_spa_path() {
+            case "$1" in
+              */dist/*|*/dist|*/browser|*/browser/) return 0 ;;
+              *) return 1 ;;
+            esac
+          }
+
+          if [ -n "$NGX_ROOT" ] && [ "$NGX_ROOT" != "$CANON" ]; then
+            if is_stale_spa_path "$NGX_ROOT"; then
+              echo "WARN: nginx root is a stale build path ($NGX_ROOT)."
+              echo "Deploy will sync only to $CANON and symlink the stale path → canonical."
+              echo "STALE_NGX_ROOT=$NGX_ROOT" >> $GITHUB_OUTPUT
+            else
+              echo "WARN: nginx root ($NGX_ROOT) differs from canonical ($CANON)."
+              echo "Only canonical is updated; fix nginx root or symlink manually if needed."
+            fi
+          fi
+
+          # Single deploy target — never multi-root / find-based extras
+          echo "WEB_ROOTS=$CANON"
+          echo "WEB_ROOTS=$CANON" >> $GITHUB_OUTPUT
           echo "WEB_ROOT=$CANON" >> $GITHUB_OUTPUT
 
       - name: Prepare Server
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} bash -s << EOF
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            APP_ROOT="${{ steps.env.outputs.APP_ROOT }}" \
+            WEB_ROOT="${{ steps.env.outputs.WEB_ROOT }}" \
+            STALE_NGX_ROOT="${{ steps.webroot.outputs.STALE_NGX_ROOT }}" \
+            bash -s << 'EOF'
             set -e
-            mkdir -p ${{ steps.env.outputs.APP_ROOT }}/api
-            mkdir -p ${{ steps.env.outputs.WEB_ROOT }}
-            for d in ${{ steps.webroot.outputs.WEB_ROOTS }}; do
-              mkdir -p "\$d"
-            done
+            mkdir -p "$APP_ROOT/api"
+            mkdir -p "$WEB_ROOT"
+
+            # If nginx still points at old dist/.../browser, make it a symlink to canonical
+            if [ -n "$STALE_NGX_ROOT" ] && [ "$STALE_NGX_ROOT" != "$WEB_ROOT" ]; then
+              echo "Linking stale nginx root → canonical"
+              echo "  $STALE_NGX_ROOT → $WEB_ROOT"
+              # Replace directory with symlink only when it looks like Angular browser output
+              case "$STALE_NGX_ROOT" in
+                */dist/*|*/browser|*/browser/)
+                  if [ -L "$STALE_NGX_ROOT" ]; then
+                    ln -sfn "$WEB_ROOT" "$STALE_NGX_ROOT"
+                  elif [ -d "$STALE_NGX_ROOT" ]; then
+                    # Keep a one-time backup, then point nginx path at canonical
+                    TS=$(date -u +%Y%m%dT%H%M%SZ)
+                    mv "$STALE_NGX_ROOT" "${STALE_NGX_ROOT}.bak-${TS}" || true
+                    mkdir -p "$(dirname "$STALE_NGX_ROOT")"
+                    ln -sfn "$WEB_ROOT" "$STALE_NGX_ROOT"
+                  else
+                    mkdir -p "$(dirname "$STALE_NGX_ROOT")"
+                    ln -sfn "$WEB_ROOT" "$STALE_NGX_ROOT"
+                  fi
+                  ;;
+              esac
+            fi
           EOF
 
       - name: Deploy Angular Frontend
@@ -187,56 +193,51 @@ jobs:
           set -e
           SHA="${{ github.sha }}"
           NEW_MAIN="${{ steps.buildmeta.outputs.NEW_MAIN }}"
-          WEB_ROOTS="${{ steps.webroot.outputs.WEB_ROOTS }}"
           CANON="${{ steps.env.outputs.WEB_ROOT }}"
+
+          # Safety: never rsync into a path that looks like a local/build folder name alone
+          case "$CANON" in
+            ""|*/dist/*|*/browser|*/browser/)
+              echo "ERROR: refusing non-canonical WEB_ROOT: '$CANON'"
+              exit 1
+              ;;
+          esac
 
           mkdir -p frontend/dist/gens-frontend/browser/assets
           echo "$SHA" > frontend/dist/gens-frontend/browser/assets/deploy-version.txt
           date -u +"deployed_at=%Y-%m-%dT%H:%M:%SZ" >> frontend/dist/gens-frontend/browser/assets/deploy-version.txt
           echo "main=$NEW_MAIN" >> frontend/dist/gens-frontend/browser/assets/deploy-version.txt
 
-          rsync_frontend() {
-            local dest="$1"
-            echo "→ rsync frontend → $dest"
-            set +e
-            rsync -avz --delete \
-              --omit-dir-times \
-              --no-perms \
-              --no-owner \
-              --no-group \
-              --exclude api \
-              --exclude gens-frontend \
-              --exclude '.env' \
-              --exclude 'node_modules' \
-              frontend/dist/gens-frontend/browser/ \
-              "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${dest}"
-            local code=$?
-            set -e
-            if [ $code -eq 0 ] || [ $code -eq 23 ]; then
-              return 0
-            fi
-            echo "ERROR: rsync to ${dest} failed with code $code"
-            return $code
-          }
-
-          for dest in $WEB_ROOTS; do
-            rsync_frontend "${dest%/}/"
-          done
+          DEST="${CANON%/}/"
+          echo "→ rsync frontend → $DEST"
+          set +e
+          rsync -avz --delete \
+            --omit-dir-times \
+            --no-perms \
+            --no-owner \
+            --no-group \
+            --exclude api \
+            --exclude gens-frontend \
+            --exclude '.env' \
+            --exclude 'node_modules' \
+            frontend/dist/gens-frontend/browser/ \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${DEST}"
+          code=$?
+          set -e
+          if [ $code -ne 0 ] && [ $code -ne 23 ]; then
+            echo "ERROR: rsync to ${DEST} failed with code $code"
+            exit $code
+          fi
 
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            CANON="$CANON" WEB_ROOTS="$WEB_ROOTS" SHA="$SHA" NEW_MAIN="$NEW_MAIN" bash -s << 'EOF'
+            CANON="$CANON" SHA="$SHA" NEW_MAIN="$NEW_MAIN" bash -s << 'EOF'
             set -e
             echo "=== canonical web root: $CANON ==="
+            test -d "$CANON"
             ls -la "$CANON/index.html" "$CANON/$NEW_MAIN" "$CANON/assets/deploy-version.txt"
             grep -q "$SHA" "$CANON/assets/deploy-version.txt"
             test -f "$CANON/$NEW_MAIN"
             echo "OK on disk: $CANON"
-
-            for dest in $WEB_ROOTS; do
-              [ "$dest" = "$CANON" ] && continue
-              echo "=== extra root: $dest ==="
-              ls -la "$dest/index.html" "$dest/$NEW_MAIN" "$dest/assets/deploy-version.txt" || true
-            done
 
             # Best-effort nginx reload so new files are visible immediately
             if command -v nginx >/dev/null 2>&1; then
@@ -370,8 +371,8 @@ jobs:
         run: |
           echo "Environment: ${{ steps.env.outputs.ENV_NAME }}"
           echo "App root: ${{ steps.env.outputs.APP_ROOT }}"
-          echo "Web root: ${{ steps.env.outputs.WEB_ROOT }}"
-          echo "Deploy targets: ${{ steps.webroot.outputs.WEB_ROOTS }}"
+          echo "Web root (canonical only): ${{ steps.env.outputs.WEB_ROOT }}"
+          echo "Stale nginx root (if any): ${{ steps.webroot.outputs.STALE_NGX_ROOT }}"
           echo "New bundle: ${{ steps.buildmeta.outputs.NEW_MAIN }}"
           echo "PM2: ${{ steps.env.outputs.PM2_NAME }}"
           echo "Commit: ${{ github.sha }}"
