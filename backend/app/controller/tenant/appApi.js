@@ -3284,14 +3284,69 @@ exports.AppapplyForLeave = async (req, res) => {
   }
   
   try {
-    const leaveType = await leaveMaster.findByPk(leaveTypeId, {
-      attributes: ["leaveName", "leaveCode"],
+    // Same leave-type master as get-leaves (tenant + branch scoped)
+    const leaveType = await leaveMaster.findOne({
+      where: { id: leaveTypeId, tenantId, branchId },
       raw: true,
     });
+    if (!leaveType) {
+      return Helper.response(
+        false,
+        "Invalid leave type for this branch. Please select a valid leave (CL / Comp off / RESTRICTED / etc).",
+        {},
+        res,
+        200,
+      );
+    }
+
+    const employee = await empPersonal.findOne({
+      where: { id: employeeId, tenantId, branchId },
+      attributes: ["id", "gender"],
+      raw: true,
+    });
+    if (!employee) {
+      return Helper.response(false, "Employee not found for this branch", {}, res, 200);
+    }
+
+    // genderRestriction: male | female | all
+    const genderRule = String(leaveType.genderRestriction || "all").toLowerCase();
+    if (genderRule !== "all") {
+      const empGender = String(employee.gender || "").toLowerCase();
+      if (!empGender || empGender !== genderRule) {
+        return Helper.response(
+          false,
+          `Leave type "${leaveType.leaveName}" is restricted to ${genderRule} employees only.`,
+          {},
+          res,
+          200,
+        );
+      }
+    }
+
+    // applyBeforeDays: leave start must be at least N days from today (CL has 10 → same-day blocked)
+    const applyBeforeDays = Number(leaveType.applyBeforeDays || 0);
+    const leaveStart = fromDate || toDate;
+    if (leaveStart && applyBeforeDays > 0) {
+      const minApplyDate = moment().startOf("day").add(applyBeforeDays, "days");
+      const startMom = moment(leaveStart, "YYYY-MM-DD").startOf("day");
+      if (!startMom.isValid()) {
+        return Helper.response(false, "Invalid leave date", {}, res, 200);
+      }
+      if (startMom.isBefore(minApplyDate)) {
+        return Helper.response(
+          false,
+          `Leave type "${leaveType.leaveName}" must be applied at least ${applyBeforeDays} day(s) in advance.`,
+          {},
+          res,
+          200,
+        );
+      }
+    }
+
     // RESTRICTED / RH leave: holiday.holiday_type → HolidayType.id (NOT leaveMaster.id)
     const isRestrictedLeave =
-      String(leaveType?.leaveCode || "").toLowerCase().startsWith("rh") ||
-      String(leaveType?.leaveName || "").toLowerCase().includes("restricted");
+      String(leaveType.leaveCode || "").toLowerCase().startsWith("rh") ||
+      String(leaveType.leaveName || "").toLowerCase().includes("restricted");
 
     if (isRestrictedLeave) {
       const rhTypes = await HolidayType.findAll({
@@ -3338,14 +3393,6 @@ exports.AppapplyForLeave = async (req, res) => {
         );
       }
     }
-    // if(type == "comp-off"){
-    //   const compOffRecord = await comp_off.findOne({
-    //     where: { id: compOffId, employeeId, tenantId, branchId },
-    //   });
-    //   if(!compOffRecord){
-    //     return Helper.response(false, "Comp-off record not found", {}, res, 200);
-    //   }
-    // }
    
     let days = moment(toDate).diff(moment(fromDate), "days") + 1;
 
@@ -3420,6 +3467,8 @@ exports.AppapplyForLeave = async (req, res) => {
       return Helper.response(false, "Data Already Exists", {}, res, 200);
     }
 
+    const initialStatus = leaveType.requiresApproval === false ? "approved" : "pending";
+
     const leaveApplication = await leave_application.create({
       employeeId,
       leaveTypeId,
@@ -3433,6 +3482,7 @@ exports.AppapplyForLeave = async (req, res) => {
       compOffId: compOffId ?? null,
       branchId,
       createdBy,
+      status: initialStatus,
     });
 
     await writeAudit({
@@ -3442,7 +3492,7 @@ exports.AppapplyForLeave = async (req, res) => {
       employeeId,
       oldValue: null,
       newValue: leaveApplication,
-      remarks: "Leave applied",
+      remarks: `Leave applied (${leaveType.leaveName}/${leaveType.leaveCode})`,
     });
 
     // =============================================
