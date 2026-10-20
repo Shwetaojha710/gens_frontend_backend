@@ -743,6 +743,7 @@ exports.getAttendance = async (req, res) => {
         if (HolidayData) {
           status = "Holiday";
         } else {
+          // Rejected / self_declined leave = not on leave → Absent (if working day)
           const leaveData = await leave_application.findOne({
             where: {
               employeeId: emp_id,
@@ -751,18 +752,10 @@ exports.getAttendance = async (req, res) => {
               fromDate: { [Op.lte]: currentDate },
               toDate: { [Op.gte]: currentDate },
               status: {
-                [Op.ne]: "self_declined",
+                [Op.notIn]: ["rejected", "self_declined"],
               },
             },
           });
-          //           const leaveData = await leave_application.findOne({
-          //   where: {
-          //     [Op.or]: [
-          //       { fromDate: new Date(currentDate) },
-          //       { toDate: new Date(currentDate) }
-          //     ]
-          //   }
-          // })
           if (leaveData) {
             if (leaveData?.duration_type == "first_half") {
               status = "First Half";
@@ -819,30 +812,12 @@ exports.getAttendance = async (req, res) => {
             // status = `Late by ${minutesLate} Min`;
             const minutesLate = checkInTime.diff(allowedTime, "minutes");
             if (minutesLate > 0) {
-              // const leavelateData = await leave_application.findOne({
-              //   where: {
-              //     employeeId: emp_id,
-              //     tenantId,
-              //     branchId,
-              //     status: {
-              //       [Op.ne]: "self_declined",
-              //     },
-              //     [Op.or]: [
-              //       { fromDate: currentDate },
-              //       { toDate: currentDate },
-              //       {
-              //         fromDate: { [Op.lte]: currentDate },
-              //         toDate: { [Op.gte]: currentDate },
-              //       },
-              //     ],
-              //   },
-              // });
               const leavelateData = await leave_application.findOne({
                 where: {
                   employeeId: emp_id,
                   tenantId,
                   branchId,
-                  status: { [Op.ne]: "self_declined" },
+                  status: { [Op.notIn]: ["rejected", "self_declined"] },
                   fromDate: { [Op.lte]: currentDate },
                   toDate: { [Op.gte]: currentDate },
                 },
