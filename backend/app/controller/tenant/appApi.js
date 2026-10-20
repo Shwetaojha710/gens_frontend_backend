@@ -689,17 +689,19 @@ exports.getAttendance = async (req, res) => {
       where: { tenantId, branchId },
       raw: true,
     });
-    // const HolidayData = await holiday.findAll({
-    //   where: {
-    //     tenantId,
-    //     [Op.and]: [
-    //       where(fn("MONTH", col("date")), month),
-    //       where(fn("YEAR", col("date")), year),
-    //     ],
-    //   },
-    //   order: [["date", "ASC"]], // optional, sort by date
-    //   raw: true,
-    // });
+
+    // Restricted holidays are leave days (apply RH), not calendar holidays
+    const rhTypes = await HolidayType.findAll({
+      where: {
+        tenantId,
+        branchId,
+        status: "active",
+        name: { [Op.iLike]: "%restricted%" },
+      },
+      attributes: ["id"],
+      raw: true,
+    });
+    const rhTypeIds = rhTypes.map((t) => String(t.id));
 
     // Group attendance by day
     const groupedRecords = {};
@@ -724,12 +726,17 @@ exports.getAttendance = async (req, res) => {
       let status;
 
       if (!entry) {
+        const holidayWhere = {
+          tenantId,
+          branchId,
+          date: currentDate.format("YYYY-MM-DD"),
+          status: "active",
+        };
+        if (rhTypeIds.length) {
+          holidayWhere.holiday_type = { [Op.notIn]: rhTypeIds };
+        }
         HolidayData = await holiday.findOne({
-          where: {
-            tenantId,
-
-            date: currentDate,
-          },
+          where: holidayWhere,
           order: [["date", "ASC"]],
           raw: true,
         });
@@ -902,15 +909,20 @@ exports.getAttendance = async (req, res) => {
       data,
     });
 
+    const holidayWhereMonth = {
+      tenantId,
+      branchId,
+      status: "active",
+      [Op.and]: [
+        where(fn("EXTRACT", literal('MONTH FROM "date"')), month),
+        where(fn("EXTRACT", literal('YEAR FROM "date"')), year),
+      ],
+    };
+    if (rhTypeIds.length) {
+      holidayWhereMonth.holiday_type = { [Op.notIn]: rhTypeIds };
+    }
     const holidayData = await holiday.findAll({
-      where: {
-        tenantId,
-        branchId,
-        [Op.and]: [
-          where(fn("EXTRACT", literal('MONTH FROM "date"')), month),
-          where(fn("EXTRACT", literal('YEAR FROM "date"')), year),
-        ],
-      },
+      where: holidayWhereMonth,
       order: [["date", "ASC"]],
       raw: true,
     });
@@ -954,6 +966,350 @@ exports.getAttendance = async (req, res) => {
     return Helper.response(false, error?.message, [], res, 500);
   }
 };
+
+// commented by 20/10/2026
+// exports.getAttendance = async (req, res) => {
+//   const { month, year } = req.body;
+//   const tenantId = req.users?.tenantId;
+//   const emp_id = req.users?.id;
+//   const shift_id = req.users?.shift_id;
+//   const branchId = req.users && req.users.branchId;
+
+//   if (!branchId || branchId == "null") {
+//     return Helper.response(false, "branchId is required!", {}, res, 200);
+//   }
+//   if (!month || !year) {
+//     return Helper.response(false, "Month and year are required.", [], res, 400);
+//   }
+
+//   try {
+//     const startDate = moment(
+//       `${year}-${String(month).padStart(2, "0")}-01`,
+//       "YYYY-MM-DD",
+//     );
+//     const endDate = startDate.clone().endOf("month");
+//     // const totalDays = endDate.date();/
+//     // Get today's date for comparison
+//     const today = moment();
+
+//     // Determine the last day to loop up to
+//     let loopEndDate = endDate;
+
+//     // If selected month and year are current, stop at today’s date
+//     if (startDate.isSame(today, "month") && startDate.isSame(today, "year")) {
+//       loopEndDate = today.clone();
+//     }
+
+//     const totalDays = loopEndDate.date();
+//     let shiftMap = await Shift.findAll({
+//       where: { tenantId, shift: shift_id, branchId },
+//       attributes: ["day_of_week", "is_week_off", "startTime", "endTime"],
+//       raw: true,
+//     });
+
+//     // Map day_of_week to number
+//     shiftMap.forEach((s) => {
+//       s.day_num =
+//         typeof s.day_of_week == "string"
+//           ? dayMap[s.day_of_week]
+//           : s.day_of_week;
+//     });
+
+//     const weekOffDays = shiftMap
+//       .filter((s) => s.is_week_off)
+//       .map((s) => s.day_num);
+
+//     const emp = await empPersonal.findOne({
+//       where: { id: emp_id, branchId },
+//       attributes: ["id", "firstName", "lastName"],
+//       raw: true,
+//     });
+//     if (!emp) return Helper.response(false, "Employee not found", [], res, 404);
+
+//     const records = await attendance.findAll({
+//       where: {
+//         employeeId: emp_id,
+//         check_in_time: {
+//           [Op.between]: [
+//             startDate.format("YYYY-MM-DD 00:00:00"),
+//             endDate.format("YYYY-MM-DD 23:59:59"),
+//           ],
+//         },
+//         branchId,
+//       },
+//       raw: true,
+//     });
+
+//     const AttendanceSettings = await attendanceSetting.findOne({
+//       where: { tenantId, branchId },
+//       raw: true,
+//     });
+//     // const HolidayData = await holiday.findAll({
+//     //   where: {
+//     //     tenantId,
+//     //     [Op.and]: [
+//     //       where(fn("MONTH", col("date")), month),
+//     //       where(fn("YEAR", col("date")), year),
+//     //     ],
+//     //   },
+//     //   order: [["date", "ASC"]], // optional, sort by date
+//     //   raw: true,
+//     // });
+
+//     // Group attendance by day
+//     const groupedRecords = {};
+//     records.forEach((r) => {
+//       const day = moment(r.check_in_time).date();
+//       if (!groupedRecords[r.employeeId]) groupedRecords[r.employeeId] = {};
+//       groupedRecords[r.employeeId][day] = {
+//         checkIn: r.check_in_time || null,
+//         checkOut: r.check_out_time || null,
+//       };
+//     });
+
+//     const finalResult = [];
+//     const recordMap = groupedRecords[emp.id] || {};
+//     let data = [];
+
+//     for (let i = 1; i <= totalDays; i++) {
+//       let HolidayData;
+//       const currentDate = moment(`${year}-${month}-${i}`, "YYYY-MM-DD");
+//       const dayNum = currentDate.day();
+//       const entry = recordMap[i];
+//       let status;
+
+//       if (!entry) {
+//         HolidayData = await holiday.findOne({
+//           where: {
+//             tenantId,
+
+//             date: currentDate,
+//           },
+//           order: [["date", "ASC"]],
+//           raw: true,
+//         });
+//         if (HolidayData) {
+//           status = "Holiday";
+//         } else {
+//           const leaveData = await leave_application.findOne({
+//             where: {
+//               employeeId: emp_id,
+//               tenantId,
+//               branchId,
+//               fromDate: { [Op.lte]: currentDate },
+//               toDate: { [Op.gte]: currentDate },
+//               status: {
+//                 [Op.ne]: "self_declined",
+//               },
+//             },
+//           });
+//           //           const leaveData = await leave_application.findOne({
+//           //   where: {
+//           //     [Op.or]: [
+//           //       { fromDate: new Date(currentDate) },
+//           //       { toDate: new Date(currentDate) }
+//           //     ]
+//           //   }
+//           // })
+//           if (leaveData) {
+//             if (leaveData?.duration_type == "first_half") {
+//               status = "First Half";
+//             } else if (leaveData?.duration_type == "second_half") {
+//               status = "Second Half";
+//             } else {
+//               status = "On Leave";
+//             }
+//           } else if (weekOffDays.includes(dayNum)) {
+//             status = "Week Off";
+//           } else {
+//             status = "Absent";
+//           }
+//         }
+//       }
+//       // Absent
+//       // else if (!entry?.checkIn || !entry?.checkOut) {
+//       //   status = "Present";
+//       // }
+//       // Check shift
+//       else if (shiftMap.length > 0) {
+//         const shiftForDay = shiftMap.find((s) => s.day_num == dayNum);
+//         if (shiftForDay) {
+//           let shiftStart = moment(
+//             `${currentDate.format("YYYY-MM-DD")} ${shiftForDay.startTime}`,
+//             "YYYY-MM-DD HH:mm:ss",
+//           );
+//           let shiftEnd = moment(
+//             `${currentDate.format("YYYY-MM-DD")} ${shiftForDay.endTime}`,
+//             "YYYY-MM-DD HH:mm:ss",
+//           );
+
+//           // Handle overnight shift
+//           if (shiftEnd.isBefore(shiftStart)) shiftEnd.add(1, "day");
+
+//           // const checkInTime = moment(entry.checkIn);
+//           // const checkOutTime = moment(entry.checkOut);
+//           // const allowedTime = shiftStart
+//           //   .clone()
+//           //   .add(AttendanceSettings.graceMinutes, "minutes");
+
+//           const checkInTime = moment(entry.checkIn).seconds(0).milliseconds(0);
+//           const checkOutTime = moment(entry.checkOut)
+//             .seconds(0)
+//             .milliseconds(0);
+//           const allowedTime = shiftStart
+//             .clone()
+//             .add(AttendanceSettings?.graceMinutes, "minutes")
+//             .seconds(0)
+//             .milliseconds(0);
+
+//           if (checkInTime.isAfter(allowedTime)) {
+//             // const minutesLate = checkInTime.diff(allowedTime, "minutes");
+//             // status = `Late by ${minutesLate} Min`;
+//             const minutesLate = checkInTime.diff(allowedTime, "minutes");
+//             if (minutesLate > 0) {
+//               // const leavelateData = await leave_application.findOne({
+//               //   where: {
+//               //     employeeId: emp_id,
+//               //     tenantId,
+//               //     branchId,
+//               //     status: {
+//               //       [Op.ne]: "self_declined",
+//               //     },
+//               //     [Op.or]: [
+//               //       { fromDate: currentDate },
+//               //       { toDate: currentDate },
+//               //       {
+//               //         fromDate: { [Op.lte]: currentDate },
+//               //         toDate: { [Op.gte]: currentDate },
+//               //       },
+//               //     ],
+//               //   },
+//               // });
+//               const leavelateData = await leave_application.findOne({
+//                 where: {
+//                   employeeId: emp_id,
+//                   tenantId,
+//                   branchId,
+//                   status: { [Op.ne]: "self_declined" },
+//                   fromDate: { [Op.lte]: currentDate },
+//                   toDate: { [Op.gte]: currentDate },
+//                 },
+//               });
+
+//               if (leavelateData) {
+//                 if (leavelateData?.duration_type == "first_half") {
+//                   status = "First Half";
+//                 } else if (leavelateData?.duration_type == "second_half") {
+//                   status = "Second Half";
+//                 } else {
+//                   status = "On Leave";
+//                 }
+//               } else {
+//                 if (!AttendanceSettings) {
+//                   status = "On Time";
+//                 } else {
+//                   if (minutesLate >= 60) {
+//                     const hours = Math.floor(minutesLate / 60);
+//                     const mins = minutesLate % 60;
+
+//                     if (mins === 0) {
+//                       status = `Late by ${hours} hr${hours > 1 ? "s" : ""}`;
+//                     } else {
+//                       status = `Late by ${hours} hr${
+//                         hours > 1 ? "s" : ""
+//                       } ${mins} min`;
+//                     }
+//                   } else {
+//                     status = `Late by ${minutesLate} min`;
+//                   }
+//                 }
+//               }
+//             } else {
+//               status = "Absent";
+//             }
+//           } else if (checkOutTime.isBefore(shiftEnd)) {
+//             status = "Half Day";
+//           } else {
+//             status = "On Time";
+//           }
+//         } else {
+//           status = "Absent";
+//         }
+//       }
+
+//       data.push({
+//         date: currentDate.format("YYYY-MM-DD"),
+//         checkIn: entry?.checkIn ? moment(entry.checkIn).format("HH:mm") : null,
+//         checkOut: entry?.checkOut
+//           ? moment(entry.checkOut).format("HH:mm")
+//           : null,
+//         status,
+//         day: currentDate.format("dddd"),
+//         image: HolidayData?.image ?? null,
+//         holidayName: HolidayData?.holiday_name ?? null,
+//       });
+//     }
+//     data = data.sort((a, b) => new Date(b.date) - new Date(a.date));
+//     finalResult.push({
+//       employee_name: Helper.capitalizeFirstLetter(
+//         `${emp.firstName} ${emp.lastName}`,
+//       ),
+//       data,
+//     });
+
+//     const holidayData = await holiday.findAll({
+//       where: {
+//         tenantId,
+//         branchId,
+//         [Op.and]: [
+//           where(fn("EXTRACT", literal('MONTH FROM "date"')), month),
+//           where(fn("EXTRACT", literal('YEAR FROM "date"')), year),
+//         ],
+//       },
+//       order: [["date", "ASC"]],
+//       raw: true,
+//     });
+
+//     let workingDays = Helper.getWorkingholidays(
+//       year,
+//       month,
+//       weekOffDays,
+//       holidayData,
+//     );
+
+//     const summary = Helper.calculateAttendanceSummary(
+//       finalResult,
+//       shiftMap,
+//       AttendanceSettings,
+//       workingDays,
+//     );
+
+//     const dataAsc = [...data].sort(
+//       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+//     );
+//     const latePayrollPreview = Helper.computeLatePayrollPreview(
+//       shiftMap,
+//       dataAsc,
+//       AttendanceSettings,
+//     );
+
+//     return Helper.response(
+//       true,
+//       "Record Found Successfully!",
+//       {
+//         AttendanceList: finalResult,
+//         summary,
+//         latePayrollPreview,
+//       },
+//       res,
+//       200,
+//     );
+//   } catch (error) {
+//     console.error("Error fetching attendance:", error);
+//     return Helper.response(false, error?.message, [], res, 500);
+//   }
+// };
+
 // exports.getAttendance = async (req, res) => {
 //   const { month, year } = req.body;
 //   const tenantId = req.users?.tenantId;
@@ -2580,9 +2936,10 @@ exports.EmployeeLeaveList = async (req, res) => {
             },
           });
         }
-        const fromDate = moment().startOf("month").format("YYYY-MM-DD");
-        // 3) Used from leave applications
-        // 3) Used = sirf approved
+        // Used = approved RH/restricted applications in the current calendar year
+        // (not current month — RH balance is yearly and unused days expire at year-end)
+        const yearStart = moment().startOf("year").format("YYYY-MM-DD");
+        const yearEnd = moment().endOf("year").format("YYYY-MM-DD");
         const usedRows = await leave_application.findAll({
           attributes: [[fn("SUM", col("days")), "totalDays"]],
           where: {
@@ -2591,14 +2948,16 @@ exports.EmployeeLeaveList = async (req, res) => {
             branchId,
             leaveTypeId: item.id,
             status: "approved",
-            fromDate: { [Op.gte]: fromDate }, // current month se
+            fromDate: { [Op.between]: [yearStart, yearEnd] },
           },
           raw: true,
         });
         const used_leave = Number(usedRows?.[0]?.totalDays || 0);
-        // const available_leave = Math.max(total_leave - used_leave, 0);
-        const available_leave = total_leave >0 ? Math.max(item?.allowedPerYear - used_leave, 0) : 0;
-        const allowed_days =  item?.allowedPerYear-used_leave;
+        const allowedPerYear = Number(item?.allowedPerYear || 0);
+        const available_leave =
+          total_leave > 0
+            ? Math.max(allowedPerYear - used_leave, 0)
+            : 0;
         return {
           name: item?.leaveName,
           code: item?.leaveCode,
@@ -2606,7 +2965,7 @@ exports.EmployeeLeaveList = async (req, res) => {
           used_leave,
           total_leave,
           type: "restricted",
-          allowed_days: item?.allowedPerYear,
+          allowed_days: allowedPerYear,
         };
       }
         const leavebal = await leave_balance.findOne({
