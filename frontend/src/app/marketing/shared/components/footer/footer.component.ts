@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { FOOTER_LINKS, SOCIAL_LINKS, CONTACT_INFO } from '../../../data/site-data';
+import { MarketingThemeService } from '../../../services/marketing-theme.service';
 
 @Component({
   selector: 'app-marketing-footer',
@@ -17,6 +18,8 @@ export class FooterComponent {
 
   email = '';
   subscribed = false;
+
+  constructor(readonly themeService: MarketingThemeService) {}
 
   subscribe(): void {
     if (this.email) {
