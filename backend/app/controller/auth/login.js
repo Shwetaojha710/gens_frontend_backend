@@ -409,7 +409,7 @@ exports.Applogin = async (req, res) => {
 
     if (createOTP) {
       if(data.mobile != '8687651183'){
-        await Helper.sendSMS(data.mobile, otps.otp, templateId);
+        // await Helper.sendSMS(data.mobile, otps.otp, templateId);
       }
       await Helper.sendSMS(data.mobile, otps.otp, templateId);
       return Helper.response('success', "OTP Send Successfully", {}, res, 200);
