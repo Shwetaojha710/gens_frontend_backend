@@ -164,16 +164,9 @@ jobs:
             return 0
           }
 
-          is_stale_spa_path() {
-            case "$1" in
-              */dist/*|*/dist|*/browser|*/browser/) return 0 ;;
-              *) return 1 ;;
-            esac
-          }
-
+          # Deploy to every safe path nginx/live might use (including dist/.../browser).
+          # Do NOT symlink via ssh VAR=/path bash — that can execute the path (exit 126).
           ROOTS="$CANON"
-          SYMLINK_FROM=""
-
           for cand in "$NGX_ROOT" "$LIVE_ROOT"; do
             [ -n "$cand" ] || continue
             cand="${cand%/}"
@@ -182,42 +175,35 @@ jobs:
               echo "Skip unsafe path: $cand"
               continue
             fi
-            if is_stale_spa_path "$cand"; then
-              # Point stale Angular output dir at canonical after sync
-              SYMLINK_FROM="$SYMLINK_FROM $cand"
-              echo "Will symlink stale path → canonical: $cand"
-            else
-              case " $ROOTS " in
-                *" $cand "*) ;;
-                *) ROOTS="$ROOTS $cand" ;;
-              esac
-              echo "Also deploy to live/nginx path: $cand"
-            fi
+            case " $ROOTS " in
+              *" $cand "*) ;;
+              *) ROOTS="$ROOTS $cand" ;;
+            esac
+            echo "Also deploy to live/nginx path: $cand"
           done
 
           ROOTS=$(echo "$ROOTS" | xargs)
-          SYMLINK_FROM=$(echo "$SYMLINK_FROM" | xargs)
 
           echo "WEB_ROOTS=$ROOTS"
           echo "WEB_ROOTS=$ROOTS" >> $GITHUB_OUTPUT
           echo "WEB_ROOT=$CANON" >> $GITHUB_OUTPUT
-          echo "SYMLINK_FROM=$SYMLINK_FROM" >> $GITHUB_OUTPUT
           echo "NGX_ROOT=$NGX_ROOT" >> $GITHUB_OUTPUT
           echo "LIVE_ROOT=$LIVE_ROOT" >> $GITHUB_OUTPUT
 
       - name: Prepare Server
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            APP_ROOT="${{ steps.env.outputs.APP_ROOT }}" \
-            WEB_ROOT="${{ steps.env.outputs.WEB_ROOT }}" \
-            WEB_ROOTS="${{ steps.webroot.outputs.WEB_ROOTS }}" \
-            bash -s << 'EOF'
-            set -e
-            mkdir -p "$APP_ROOT/api"
-            mkdir -p "$WEB_ROOT"
-            for d in $WEB_ROOTS; do
-              mkdir -p "$d"
-            done
+          set -e
+          # Embed paths in remote script body — NEVER as: ssh host /some/dir bash
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} bash -s << 'EOF'
+          set -e
+          APP_ROOT='${{ steps.env.outputs.APP_ROOT }}'
+          WEB_ROOT='${{ steps.env.outputs.WEB_ROOT }}'
+          WEB_ROOTS='${{ steps.webroot.outputs.WEB_ROOTS }}'
+          mkdir -p "$APP_ROOT/api"
+          mkdir -p "$WEB_ROOT"
+          for d in $WEB_ROOTS; do
+            mkdir -p "$d"
+          done
           EOF
 
       - name: Deploy Angular Frontend
@@ -227,7 +213,6 @@ jobs:
           NEW_MAIN="${{ steps.buildmeta.outputs.NEW_MAIN }}"
           CANON="${{ steps.env.outputs.WEB_ROOT }}"
           WEB_ROOTS="${{ steps.webroot.outputs.WEB_ROOTS }}"
-          SYMLINK_FROM="${{ steps.webroot.outputs.SYMLINK_FROM }}"
           APP_ROOT="${{ steps.env.outputs.APP_ROOT }}"
 
           case "$CANON" in
@@ -266,7 +251,6 @@ jobs:
             return $code
           }
 
-          # Always sync canonical first, then any other live/nginx roots under APP_ROOT
           for dest in $WEB_ROOTS; do
             case "$dest" in
               "$APP_ROOT"|"$APP_ROOT"/) echo "Skip APP_ROOT as SPA dest"; continue ;;
@@ -274,49 +258,32 @@ jobs:
             rsync_frontend "${dest%/}/"
           done
 
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            CANON="$CANON" WEB_ROOTS="$WEB_ROOTS" SYMLINK_FROM="$SYMLINK_FROM" \
-            SHA="$SHA" NEW_MAIN="$NEW_MAIN" bash -s << 'EOF'
-            set -e
-            echo "=== verify deploy targets ==="
-            for dest in $WEB_ROOTS; do
-              echo "-- $dest"
-              test -d "$dest"
-              test -f "$dest/index.html"
-              test -f "$dest/$NEW_MAIN"
-              test -f "$dest/assets/deploy-version.txt"
-              grep -q "$SHA" "$dest/assets/deploy-version.txt"
-              echo "OK: $dest"
-            done
+          # Verify + reload: paths only inside the script (quoted heredoc + Actions substitution)
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} bash -s << 'EOF'
+          set -e
+          CANON='${{ steps.env.outputs.WEB_ROOT }}'
+          WEB_ROOTS='${{ steps.webroot.outputs.WEB_ROOTS }}'
+          SHA='${{ github.sha }}'
+          NEW_MAIN='${{ steps.buildmeta.outputs.NEW_MAIN }}'
 
-            # Stale dist/browser nginx paths → symlink to canonical (after CANON has files)
-            for stale in $SYMLINK_FROM; do
-              [ -n "$stale" ] || continue
-              [ "$stale" = "$CANON" ] && continue
-              echo "Symlink stale serve path → canonical:"
-              echo "  $stale → $CANON"
-              if [ -L "$stale" ]; then
-                ln -sfn "$CANON" "$stale"
-              elif [ -d "$stale" ]; then
-                TS=$(date -u +%Y%m%dT%H%M%SZ)
-                mv "$stale" "${stale}.bak-${TS}"
-                mkdir -p "$(dirname "$stale")"
-                ln -sfn "$CANON" "$stale"
-              else
-                mkdir -p "$(dirname "$stale")"
-                ln -sfn "$CANON" "$stale"
-              fi
-              # Ensure symlink resolves to new bundle
-              test -f "$stale/$NEW_MAIN" || test -f "$CANON/$NEW_MAIN"
-            done
+          echo "=== verify deploy targets ==="
+          for dest in $WEB_ROOTS; do
+            echo "-- $dest"
+            test -d "$dest"
+            test -f "$dest/index.html"
+            test -f "$dest/$NEW_MAIN"
+            test -f "$dest/assets/deploy-version.txt"
+            grep -q "$SHA" "$dest/assets/deploy-version.txt"
+            echo "OK: $dest"
+          done
 
-            if command -v nginx >/dev/null 2>&1; then
-              if sudo nginx -t 2>/dev/null; then
-                sudo systemctl reload nginx 2>/dev/null || true
-              elif nginx -t 2>/dev/null; then
-                systemctl reload nginx 2>/dev/null || true
-              fi
+          if command -v nginx >/dev/null 2>&1; then
+            if sudo nginx -t 2>/dev/null; then
+              sudo systemctl reload nginx 2>/dev/null || true
+            elif nginx -t 2>/dev/null; then
+              systemctl reload nginx 2>/dev/null || true
             fi
+          fi
           EOF
 
       - name: Deploy Node.js API
@@ -448,7 +415,6 @@ jobs:
           echo "Deploy targets: ${{ steps.webroot.outputs.WEB_ROOTS }}"
           echo "nginx root: ${{ steps.webroot.outputs.NGX_ROOT }}"
           echo "live serve dir: ${{ steps.webroot.outputs.LIVE_ROOT }}"
-          echo "Symlink from: ${{ steps.webroot.outputs.SYMLINK_FROM }}"
           echo "New bundle: ${{ steps.buildmeta.outputs.NEW_MAIN }}"
           echo "PM2: ${{ steps.env.outputs.PM2_NAME }}"
           echo "Commit: ${{ github.sha }}"
