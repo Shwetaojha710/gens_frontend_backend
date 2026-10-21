@@ -412,7 +412,7 @@ exports.Applogin = async (req, res) => {
         await Helper.sendSMS(data.mobile, otps.otp, templateId);
       }
       await Helper.sendSMS(data.mobile, otps.otp, templateId);
-      return Helper.response("success", "OTP Send Successfully", {}, res, 200);
+      return Helper.response(true, "OTP Send Successfully", {}, res, 200);
     } else {
       return Helper.response("failed", "Unable to sent OTP!", {}, res, 200);
     }
