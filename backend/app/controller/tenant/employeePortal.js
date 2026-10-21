@@ -86,7 +86,7 @@ exports.sendEmployeePortalOtp = async (req, res) => {
     const templateId = "1107164267135286674";
     try {
       if (mobile != "8687651183") {
-        await Helper.sendSMS(mobile, otps.otp, templateId);
+        // await Helper.sendSMS(mobile, otps.otp, templateId);
       }
     } catch (e) {
       console.warn("Employee portal SMS:", e?.message || e);
