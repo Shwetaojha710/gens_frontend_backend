@@ -887,53 +887,65 @@ exports.getDateWiseAttendance = async (req, res) => {
 
   try {
     let data = [];
-    const shiftMap = await Shift.findAll({
-      where: {
-        status: "active",
+    const start = moment(startDate, "YYYY-MM-DD");
+    const end = moment(endDate, "YYYY-MM-DD");
+    if (!start.isValid() || !end.isValid()) {
+      return Helper.response(false, "Invalid startDate / endDate", [], res, 200);
+    }
+    const fromStr = start.format("YYYY-MM-DD");
+    const toStr = end.format("YYYY-MM-DD");
+    const monthEnd = new Date(endDate);
 
-        tenantId,
-        branchId,
-      },
-      attributes: ["day_of_week", "is_week_off"],
-      raw: true,
-    });
+    const formatTime = (raw) => {
+      if (!raw) return "--";
+      const s = String(raw);
+      if (!s.includes(" ")) return "--";
+      try {
+        return new Date(raw).toLocaleTimeString("en-IN", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        });
+      } catch {
+        return s.split(" ")[1]?.slice(0, 5) || "--";
+      }
+    };
 
-    const weekOffDays = shiftMap
-      .filter((shift) => shift.is_week_off == true)
-      .map((shift) => shift.day_of_week);
-
-    const start = moment(startDate); // convert string to moment
-    const end = moment(endDate);
-    // const totalDays = end.date() - start.date() + 1;
-    const totalDays = end.diff(start, "days") + 1;
+    const holidayLabel = (typeName) => {
+      const n = String(typeName || "").toLowerCase();
+      if (n.includes("restricted")) return "Restricted Holiday";
+      // Gazetted / National / Public / any other non-RH holiday type
+      return "Gazetted Holiday";
+    };
 
     let employees = [];
     let records = [];
-    const monthEnd = new Date(endDate);
     if (emp_id == "All" || emp_id == "all") {
       employees = await empPersonal.findAll({
         where: {
           tenantId,
           branchId,
           status: "active",
-          joiningDate: {
-            [Op.lte]: monthEnd, // joined on or before month end
-          },
+          joiningDate: { [Op.lte]: monthEnd },
         },
-        attributes: ["id", "firstName", "lastName"],
+        attributes: ["id", "firstName", "lastName", "shift_id"],
         raw: true,
       });
       records = await attendance.findAll({
         where: {
-          check_in_time: {
-            [Op.between]: [
-              start.format("YYYY-MM-DD 00:00:00"),
-              end.format("YYYY-MM-DD 23:59:59"),
-            ],
-          },
-
-          tenantId: tenantId,
-          branchId: branchId,
+          tenantId,
+          branchId,
+          [Op.or]: [
+            { date: { [Op.between]: [fromStr, toStr] } },
+            {
+              check_in_time: {
+                [Op.between]: [
+                  start.format("YYYY-MM-DD 00:00:00"),
+                  end.format("YYYY-MM-DD 23:59:59"),
+                ],
+              },
+            },
+          ],
         },
         raw: true,
       });
@@ -943,39 +955,146 @@ exports.getDateWiseAttendance = async (req, res) => {
           id: emp_id,
           tenantId,
           branchId,
-          joiningDate: {
-            [Op.lte]: monthEnd, // joined on or before month end
-          },
+          joiningDate: { [Op.lte]: monthEnd },
         },
-        attributes: ["id", "firstName", "lastName"],
+        attributes: ["id", "firstName", "lastName", "shift_id"],
         raw: true,
       });
-      // console.log(emp, "ddd");
-      if (!emp)
+      if (!emp) {
         return Helper.response(false, "Employee not found", [], res, 404);
+      }
 
       employees = [emp];
       records = await attendance.findAll({
         where: {
           employeeId: emp_id,
-          tenantId: tenantId,
-          branchId: branchId,
-          check_in_time: {
-            [Op.between]: [
-              start.format("YYYY-MM-DD 00:00:00"),
-              end.format("YYYY-MM-DD 23:59:59"),
-            ],
-          },
+          tenantId,
+          branchId,
+          [Op.or]: [
+            { date: { [Op.between]: [fromStr, toStr] } },
+            {
+              check_in_time: {
+                [Op.between]: [
+                  start.format("YYYY-MM-DD 00:00:00"),
+                  end.format("YYYY-MM-DD 23:59:59"),
+                ],
+              },
+            },
+          ],
         },
         raw: true,
       });
     }
 
+    const shiftIds = [
+      ...new Set(employees.map((e) => e.shift_id).filter(Boolean)),
+    ];
+    const employeeIds = employees.map((e) => e.id);
+    const [shiftMap, holidaysInRange, holidayTypes, leavesInRange] =
+      await Promise.all([
+        Shift.findAll({
+          where: {
+            tenantId,
+            branchId,
+            status: "active",
+            ...(shiftIds.length ? { shift: { [Op.in]: shiftIds } } : {}),
+          },
+          attributes: ["shift", "day_of_week", "is_week_off"],
+          raw: true,
+        }),
+        holiday.findAll({
+          where: {
+            tenantId,
+            branchId,
+            status: "active",
+            date: { [Op.between]: [fromStr, toStr] },
+          },
+          raw: true,
+        }),
+        HolidayType.findAll({
+          where: { tenantId, branchId, status: "active" },
+          attributes: ["id", "name"],
+          raw: true,
+        }),
+        employeeIds.length
+          ? leave_application.findAll({
+              where: {
+                employeeId: { [Op.in]: employeeIds },
+                tenantId,
+                branchId,
+                fromDate: { [Op.lte]: toStr },
+                toDate: { [Op.gte]: fromStr },
+                status: { [Op.notIn]: ["rejected", "self_declined"] },
+              },
+              raw: true,
+            })
+          : Promise.resolve([]),
+      ]);
+
+    const resolveLeaveStatus = (leaveData, dateStr) => {
+      if (!leaveData) return null;
+      const from = moment(leaveData.fromDate).format("YYYY-MM-DD");
+      const to = moment(leaveData.toDate).format("YYYY-MM-DD");
+      if (from == dateStr && to == dateStr) {
+        if (leaveData.duration_type == "first_half") return "First Half";
+        if (leaveData.duration_type == "second_half") return "Second Half";
+        return "Full Day Leave";
+      }
+      if (from == dateStr) {
+        return leaveData.duration_type == "second_half"
+          ? "Second Half"
+          : leaveData.duration_type == "first_half"
+            ? "First Half"
+            : "Full Day Leave";
+      }
+      if (to == dateStr) {
+        return leaveData.to_duration_type == "first_half"
+          ? "First Half"
+          : leaveData.to_duration_type == "second_half"
+            ? "Second Half"
+            : "Full Day Leave";
+      }
+      return "Full Day Leave";
+    };
+
+    const leavesByEmp = new Map();
+    for (const l of leavesInRange || []) {
+      if (!leavesByEmp.has(l.employeeId)) leavesByEmp.set(l.employeeId, []);
+      leavesByEmp.get(l.employeeId).push(l);
+    }
+
+    const typeMap = new Map(
+      (holidayTypes || []).map((t) => [String(t.id), t.name]),
+    );
+    const holidayMap = new Map();
+    for (const h of holidaysInRange || []) {
+      const d = moment(h.date).format("YYYY-MM-DD");
+      const typeName = typeMap.get(String(h.holiday_type)) || "";
+      holidayMap.set(d, {
+        ...h,
+        holiday_type_name: typeName,
+        statusLabel: holidayLabel(typeName),
+      });
+    }
+
+    const weekOffByShift = new Map();
+    for (const s of shiftMap || []) {
+      if (!s.is_week_off) continue;
+      if (!weekOffByShift.has(s.shift)) weekOffByShift.set(s.shift, new Set());
+      weekOffByShift.get(s.shift).add(s.day_of_week);
+    }
+    // Fallback: any week-off day across branch shifts
+    const allWeekOffDays = new Set(
+      (shiftMap || []).filter((s) => s.is_week_off).map((s) => s.day_of_week),
+    );
+
     const groupedRecords = {};
     records.forEach((r) => {
-      const day = moment(r.check_in_time).date();
+      const dateKey = r.date
+        ? moment(r.date).format("YYYY-MM-DD")
+        : moment(r.check_in_time).format("YYYY-MM-DD");
       if (!groupedRecords[r.employeeId]) groupedRecords[r.employeeId] = {};
-      groupedRecords[r.employeeId][day] = {
+      groupedRecords[r.employeeId][dateKey] = {
         id: r.id,
         checkIn: r.check_in_time || null,
         checkOut: r.check_out_time || null,
@@ -985,57 +1104,51 @@ exports.getDateWiseAttendance = async (req, res) => {
 
     for (const emp of employees) {
       const recordMap = groupedRecords[emp.id] || {};
+      const empWeekOff =
+        (emp.shift_id && weekOffByShift.get(emp.shift_id)) || allWeekOffDays;
+      const empLeaves = leavesByEmp.get(emp.id) || [];
 
-      const startDate1 = moment(startDate, "YYYY-MM-DD");
-      const endDate1 = moment(endDate, "YYYY-MM-DD");
-      let currentDate = startDate1.clone();
-      while (currentDate.isSameOrBefore(endDate1)) {
+      let currentDate = start.clone();
+      while (currentDate.isSameOrBefore(end)) {
+        const dateStr = currentDate.format("YYYY-MM-DD");
         const dayName = currentDate.format("dddd");
+        const entry = recordMap[dateStr];
+        const hol = holidayMap.get(dateStr);
+        const leaveData = empLeaves.find(
+          (l) =>
+            moment(l.fromDate).format("YYYY-MM-DD") <= dateStr &&
+            moment(l.toDate).format("YYYY-MM-DD") >= dateStr,
+        );
+        const leaveStatus = resolveLeaveStatus(leaveData, dateStr);
 
-        if (weekOffDays.includes(dayName)) {
-          data.push({
-            date: currentDate.format("YYYY-MM-DD"),
-            checkIn: "--",
-            checkOut: "--",
-            status: "Week Off",
-            employee_name: Helper.capitalizeFirstLetter(
-              `${emp.firstName} ${emp.lastName}`,
-            ),
-            employeeId: emp?.id,
-          });
+        let status = "Absent";
+        // Leave first (First Half / Second Half / Full Day Leave)
+        if (leaveStatus) {
+          status = leaveStatus;
+        } else if (entry?.checkIn) {
+          status = "Present";
+        } else if (hol) {
+          status = hol.statusLabel; // Restricted Holiday | Gazetted Holiday
+        } else if (empWeekOff.has(dayName)) {
+          status = "Week Off";
         } else {
-          // Here you can map data by date instead of day index
-          // const entry = recordMap[currentDate.format("YYYY-MM-DD")];
-          const dayKey = String(currentDate.date());
-          const entry = recordMap[dayKey];
-          data.push({
-            date: currentDate.format("YYYY-MM-DD"),
-            //  checkIn: entry?.checkIn?.split(" ")[1] || "--",
-            // checkOut: entry?.checkOut?.split(" ")[1] || "--",
-            checkIn: entry?.checkIn?.split(" ")[1]
-              ? new Date(entry.checkIn).toLocaleTimeString("en-IN", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: false,
-                  // second: '2-digit'
-                })
-              : "--",
-            checkOut: entry?.checkOut?.split(" ")[1]
-              ? new Date(entry.checkOut).toLocaleTimeString("en-IN", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: false,
-                  // second: '2-digit'
-                })
-              : "--",
-            status: entry?.status || "Absent",
-            id: entry?.id,
-            employee_name: Helper.capitalizeFirstLetter(
-              `${emp.firstName} ${emp.lastName}`,
-            ),
-            employeeId: emp?.id,
-          });
+          status = "Absent";
         }
+
+        data.push({
+          date: dateStr,
+          checkIn: entry?.checkIn ? formatTime(entry.checkIn) : "--",
+          checkOut: entry?.checkOut ? formatTime(entry.checkOut) : "--",
+          status,
+          holidayName: hol?.holiday_name ?? null,
+          holidayType: hol?.holiday_type_name ?? null,
+          leaveType: leaveData?.duration_type ?? null,
+          id: entry?.id,
+          employee_name: Helper.capitalizeFirstLetter(
+            `${emp.firstName} ${emp.lastName}`,
+          ),
+          employeeId: emp?.id,
+        });
 
         currentDate.add(1, "day");
       }
