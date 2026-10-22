@@ -393,8 +393,8 @@ exports.Applogin = async (req, res) => {
     if(data.mobile == '8687651183'){
       otps.otp = '6669'
     }else{
-      otps.otp =1234
-      // otps.otp = Math.floor(1000 + Math.random() * 9000);
+      // otps.otp =1234
+      otps.otp = Math.floor(1000 + Math.random() * 9000);
     }
     const templateId = "1107164267135286674";
     otps.otp = 1234;
