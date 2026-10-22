@@ -69,20 +69,34 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <div class="gens-field">
           <label for="contact-phone" class="gens-field__label">Phone <em>*</em></label>
-          <input
-            id="contact-phone"
-            class="gens-field__input"
-            type="tel"
-            formControlName="phone"
-            autocomplete="tel"
-            placeholder="+91 …"
-          />
+          <div class="gens-phone-row">
+            <select
+              id="contact-country-code"
+              class="gens-field__input gens-phone-row__code"
+              formControlName="countryCode"
+              aria-label="Country code"
+            >
+              @for (c of countryCodes; track c.code) {
+                <option [value]="c.code">{{ c.label }}</option>
+              }
+            </select>
+            <input
+              id="contact-phone"
+              class="gens-field__input gens-phone-row__number"
+              type="tel"
+              formControlName="phone"
+              autocomplete="tel-national"
+              inputmode="numeric"
+              maxlength="10"
+              placeholder="10-digit mobile number"
+            />
+          </div>
           @if (phoneCtrl?.invalid && phoneCtrl?.touched) {
             <p class="gens-field__error">
               @if (phoneCtrl?.errors?.['required']) {
                 Phone is required.
-              } @else if (phoneCtrl?.errors?.['minlength']) {
-                Enter a valid phone number.
+              } @else if (phoneCtrl?.errors?.['pattern']) {
+                Enter a valid 10-digit mobile number.
               }
             </p>
           }

@@ -26,11 +26,34 @@ export class ContactFormComponent implements OnInit {
   readonly contactSubmitting = signal(false);
   readonly contactFeedback = signal<{ ok: boolean; text: string } | null>(null);
 
+  readonly countryCodes = [
+    { code: '+91', label: 'India (+91)' },
+    { code: '+971', label: 'UAE (+971)' },
+    { code: '+966', label: 'Saudi Arabia (+966)' },
+    { code: '+974', label: 'Qatar (+974)' },
+    { code: '+965', label: 'Kuwait (+965)' },
+    { code: '+968', label: 'Oman (+968)' },
+    { code: '+973', label: 'Bahrain (+973)' },
+    { code: '+1', label: 'USA / Canada (+1)' },
+    { code: '+44', label: 'UK (+44)' },
+    { code: '+61', label: 'Australia (+61)' },
+    { code: '+65', label: 'Singapore (+65)' },
+    { code: '+60', label: 'Malaysia (+60)' },
+    { code: '+49', label: 'Germany (+49)' },
+    { code: '+33', label: 'France (+33)' },
+    { code: '+81', label: 'Japan (+81)' },
+    { code: '+86', label: 'China (+86)' },
+    { code: '+977', label: 'Nepal (+977)' },
+    { code: '+880', label: 'Bangladesh (+880)' },
+    { code: '+94', label: 'Sri Lanka (+94)' },
+  ] as const;
+
   readonly contactForm: FormGroup = this.fb.group({
     fullName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(200)]],
     company: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(200)]],
     email: ['', [Validators.required, Validators.email]],
-    phone: ['', [Validators.required, Validators.minLength(7), Validators.maxLength(30)]],
+    countryCode: ['+91', [Validators.required]],
+    phone: ['', [Validators.required, Validators.pattern(/^[0-9]{10}$/)]],
     employees: ['', [Validators.required]],
     message: ['', [Validators.maxLength(8000)]],
   });
@@ -69,9 +92,10 @@ export class ContactFormComponent implements OnInit {
     const v = this.contactForm.getRawValue();
     const optionalNote = String(v.message || '').trim();
     // Compose structured message for existing API (requires message ≥ 10 chars).
+    const fullPhone = `${String(v.countryCode || '').trim()} ${String(v.phone || '').trim()}`.trim();
     const composed = [
       `Company: ${String(v.company || '').trim()}`,
-      `Phone: ${String(v.phone || '').trim()}`,
+      `Phone: ${fullPhone}`,
       `Number of Employees: ${String(v.employees || '').trim()}`,
       optionalNote ? `Notes: ${optionalNote}` : 'Notes: (none)',
     ].join('\n');
@@ -90,7 +114,7 @@ export class ContactFormComponent implements OnInit {
             const data = JSON.parse(raw) as { status?: boolean; message?: string };
             if (data?.status) {
               this.contactFeedback.set({ ok: true, text: data.message || 'Thank you.' });
-              this.contactForm.reset();
+              this.contactForm.reset({ countryCode: '+91' });
             } else {
               this.contactFeedback.set({ ok: false, text: data?.message || 'Could not send your message.' });
             }
@@ -126,6 +150,10 @@ export class ContactFormComponent implements OnInit {
 
   get emailCtrl() {
     return this.contactForm.get('email');
+  }
+
+  get countryCodeCtrl() {
+    return this.contactForm.get('countryCode');
   }
 
   get phoneCtrl() {
