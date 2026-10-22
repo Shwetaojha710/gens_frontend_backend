@@ -34,6 +34,42 @@ GeneratedDocument.sync({ alter: false }).catch(err =>
   console.error('GeneratedDocument sync error:', err)
 );
 
+// Performance, expense, project/timesheet and asset tables — create if missing
+[
+  require('./app/models/pm_cycle'),
+  require('./app/models/pm_goal'),
+  require('./app/models/pm_key_result'),
+  require('./app/models/pm_review'),
+  require('./app/models/pm_review_approval'),
+  require('./app/models/pm_feedback'),
+  // Expense management
+  require('./app/models/expense_category'),
+  require('./app/models/expense_approval_rule'),
+  require('./app/models/expense_setting'),
+  require('./app/models/expense_receipt'),
+  require('./app/models/expense_item'),
+  require('./app/models/expense_claim'),
+  require('./app/models/expense_approval'),
+  // Projects & timesheets
+  require('./app/models/pt_client'),
+  require('./app/models/pt_project'),
+  require('./app/models/pt_allocation'),
+  require('./app/models/pt_task'),
+  require('./app/models/pt_timesheet'),
+  require('./app/models/pt_time_entry'),
+  require('./app/models/pt_setting'),
+  // Asset management
+  require('./app/models/as_category'),
+  require('./app/models/as_asset'),
+  require('./app/models/as_allocation'),
+  require('./app/models/as_maintenance'),
+  require('./app/models/as_event'),
+].forEach((model) =>
+  model.sync({ alter: false }).catch(err =>
+    console.error(`${model.getTableName()} sync error:`, err)
+  )
+);
+
 // const skills = require('./app/models/skills');
 // const job_requirement = require('./app/models/job_requirement');
 

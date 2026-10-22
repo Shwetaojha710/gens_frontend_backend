@@ -75,6 +75,45 @@ export const DEFAULT_PERMISSIONS: PermissionSection[] = [
     ]
   },
   {
+    key: 'assets', label: 'Assets', icon: 'ri-macbook-line',
+    roles: ['admin', 'superadmin', 'hr'],
+    children: [
+      { key: 'asset.dashboard',  label: 'Asset Dashboard',  roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'asset.inventory',  label: 'Inventory',        roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'asset.categories', label: 'Asset Categories', roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'asset.clearance',  label: 'Exit Clearance',   roles: ['admin', 'superadmin', 'hr'] },
+    ]
+  },
+  {
+    key: 'projects', label: 'Projects & Timesheets', icon: 'ri-briefcase-4-line',
+    roles: ['admin', 'superadmin', 'hr'],
+    children: [
+      { key: 'proj.projects',   label: 'Projects',        roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'proj.clients',    label: 'Clients',         roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'proj.timesheets', label: 'Timesheets',      roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'proj.reports',    label: 'Project Reports', roles: ['admin', 'superadmin', 'hr'] },
+    ]
+  },
+  {
+    key: 'expenses', label: 'Expenses', icon: 'ri-wallet-3-line',
+    roles: ['admin', 'superadmin', 'hr'],
+    children: [
+      { key: 'exp.dashboard', label: 'Expense Dashboard', roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'exp.claims',    label: 'Expense Claims',    roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'exp.policies',  label: 'Expense Policies',  roles: ['admin', 'superadmin'] },
+    ]
+  },
+  {
+    key: 'performance', label: 'Performance', icon: 'ri-line-chart-line',
+    roles: ['admin', 'superadmin', 'hr'],
+    children: [
+      { key: 'perf.dashboard', label: 'Dashboard & Analytics', roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'perf.cycles',    label: 'Appraisal Cycles',      roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'perf.reviews',   label: 'Reviews & Goals',       roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'perf.history',   label: 'Employee History',      roles: ['admin', 'superadmin', 'hr'] },
+    ]
+  },
+  {
     key: 'reports', label: 'Reports', icon: 'ri-bar-chart-line',
     roles: ['admin', 'superadmin', 'hr', 'manager', 'director'],
     children: [

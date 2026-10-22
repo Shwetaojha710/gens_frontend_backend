@@ -25,6 +25,7 @@ const reimbursement = require("../../models/reimbursement");
 const comp_off = require("../../models/comp_off");
 const leave_application = require("../../models/leave_application");
 const { writeAudit, toPlain } = require("../../helper/auditLog");
+const { isWorkflowClaim } = require("../../helper/expense");
 
 exports.attendanceMaster = async (req, res) => {
   const {
@@ -3439,6 +3440,10 @@ exports.updateReimbursementStatus = async (req, res) => {
       );
     }
 
+    if (await isWorkflowClaim(id)) {
+      return Helper.response(false, "This is an expense claim; manage it from Expense Claims", null, res, 200);
+    }
+
     const existingDoc = await Reimbursement.findOne({
       where: { id, tenantId, branchId },
     });
@@ -3512,6 +3517,11 @@ exports.updateReimbursement = async (req, res) => {
         res,
         400,
       );
+    }
+
+    if (await isWorkflowClaim(id)) {
+      Helper.deleteUploadedFiles(req.files);
+      return Helper.response(false, "This is an expense claim; manage it from Expense Claims", null, res, 200);
     }
 
     const existingDoc = await Reimbursement.findOne({
@@ -3632,6 +3642,10 @@ exports.deleteReimbursement = async (req, res) => {
         res,
         400,
       );
+    }
+
+    if (await isWorkflowClaim(id)) {
+      return Helper.response(false, "This is an expense claim; manage it from Expense Claims", null, res, 200);
     }
 
     const delteholiday = await Reimbursement.findOne({

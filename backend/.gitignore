@@ -137,3 +137,6 @@ dist
 
 /uploads
 /upload
+
+# Tesseract OCR model cache
+/.ocr-cache

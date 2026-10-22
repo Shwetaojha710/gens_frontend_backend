@@ -84,6 +84,49 @@ export const APP_MENU_ITEMS: MenuItem[] = [
     ]
   },
   {
+    title: 'Assets',
+    icon: 'ri-macbook-line',
+    permKey: 'assets',
+    children: [
+      { title: 'Asset Dashboard',  icon: 'ri-pie-chart-2-line',  link: '/layout/assets/dashboard',  permKey: 'asset.dashboard' },
+      { title: 'Inventory',        icon: 'ri-archive-line',      link: '/layout/assets/inventory',  permKey: 'asset.inventory' },
+      { title: 'Asset Categories', icon: 'ri-price-tag-3-line',  link: '/layout/assets/categories', permKey: 'asset.categories' },
+      { title: 'Exit Clearance',   icon: 'ri-logout-box-r-line', link: '/layout/assets/clearance',  permKey: 'asset.clearance' },
+    ]
+  },
+  {
+    title: 'Projects & Timesheets',
+    icon: 'ri-briefcase-4-line',
+    permKey: 'projects',
+    children: [
+      { title: 'Projects',          icon: 'ri-folder-chart-line', link: '/layout/project/projects',   permKey: 'proj.projects' },
+      { title: 'Clients',           icon: 'ri-building-line',     link: '/layout/project/clients',    permKey: 'proj.clients' },
+      { title: 'Timesheets',        icon: 'ri-time-line',         link: '/layout/project/timesheets', permKey: 'proj.timesheets' },
+      { title: 'Project Reports',   icon: 'ri-bar-chart-2-line',  link: '/layout/project/reports',    permKey: 'proj.reports' },
+    ]
+  },
+  {
+    title: 'Expenses',
+    icon: 'ri-wallet-3-line',
+    permKey: 'expenses',
+    children: [
+      { title: 'Expense Dashboard', icon: 'ri-pie-chart-line',     link: '/layout/expense/dashboard', permKey: 'exp.dashboard' },
+      { title: 'Expense Claims',    icon: 'ri-receipt-line',       link: '/layout/expense/claims',    permKey: 'exp.claims' },
+      { title: 'Expense Policies',  icon: 'ri-shield-check-line',  link: '/layout/expense/policies',  permKey: 'exp.policies' },
+    ]
+  },
+  {
+    title: 'Performance',
+    icon: 'ri-line-chart-line',
+    permKey: 'performance',
+    children: [
+      { title: 'Dashboard & Analytics', icon: 'ri-dashboard-3-line',  link: '/layout/performance/dashboard', permKey: 'perf.dashboard' },
+      { title: 'Appraisal Cycles',      icon: 'ri-repeat-line',       link: '/layout/performance/cycles',    permKey: 'perf.cycles' },
+      { title: 'Reviews & Goals',       icon: 'ri-flag-line',         link: '/layout/performance/reviews',   permKey: 'perf.reviews' },
+      { title: 'Employee History',      icon: 'ri-history-line',      link: '/layout/performance/history',   permKey: 'perf.history' },
+    ]
+  },
+  {
     title: 'Reports',
     icon: 'ri-bar-chart-line',
     permKey: 'reports',

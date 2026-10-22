@@ -74,6 +74,7 @@ const toPlain =
       };
 const { ReimbursementFile } = require("../../models/associations");
 const reimbursement = require("../../models/reimbursement");
+const { isWorkflowClaim } = require("../../helper/expense");
 const branch = require("../../models/branch");
 const comp_off = require("../../models/comp_off");
 // const branch = require("../../models/branch");
@@ -6329,6 +6330,10 @@ exports.updateAppReimbursementStatus = async (req, res) => {
     }
     if (isManagerOrDirector && status === 'recommended') {
       return Helper.response(false, 'Manager/Director cannot set status to recommended', null, res, 403);
+    }
+
+    if (await isWorkflowClaim(id)) {
+      return Helper.response(false, "This is an expense claim; manage it from Expense Claims", null, res, 200);
     }
 
     const record = await reimbursement.findOne({ where: { id, tenantId, branchId } });

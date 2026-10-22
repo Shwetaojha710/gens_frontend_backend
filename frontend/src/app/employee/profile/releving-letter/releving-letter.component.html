@@ -1,10 +1,28 @@
- <!-- Action Buttons -->
+ <!-- Asset clearance -->
+<div class="row mb-3 no-print" *ngIf="assetClearance">
+  <div class="col-12">
+    <div class="alert mb-0 py-2 small" [ngClass]="assetClearance.cleared ? 'alert-success' : 'alert-warning'">
+      <ng-container *ngIf="assetClearance.cleared">
+        <i class="ri ri-checkbox-circle-line me-1"></i> Asset clearance done — no company assets pending.
+      </ng-container>
+      <ng-container *ngIf="!assetClearance.cleared">
+        <i class="ri ri-error-warning-line me-1"></i>
+        <strong>{{ assetClearance.pending.length }} company asset(s) not returned:</strong>
+        <span *ngFor="let p of assetClearance.pending; let last = last"> {{ p.assetTag }} {{ p.name }}<span *ngIf="!last">,</span></span>.
+        Receive them under <a routerLink="/layout/assets/clearance">Assets → Exit clearance</a> before issuing this letter.
+      </ng-container>
+      <span *ngIf="assetClearance.recoveryTotal > 0"> Recovery recorded: ₹{{ assetClearance.recoveryTotal }} (include in full &amp; final).</span>
+    </div>
+  </div>
+</div>
+
+<!-- Action Buttons -->
 <div class="row mb-3 no-print">
   <div class="col-12 d-flex gap-2 justify-content-end">
-    <button type="button" class="btn btn-outline-secondary" (click)="saveData(); printDoc()">
+    <button type="button" class="btn btn-outline-secondary" (click)="issue('print')">
       <i class="ri ri-printer-line me-1"></i> Print / Save PDF
     </button>
-    <button type="button" class="btn btn-primary" (click)="saveData(); downloadDoc()">
+    <button type="button" class="btn btn-primary" (click)="issue('download')">
       <i class="ri ri-download-line me-1"></i> Download DOC
     </button>
     <!-- <button type="button" class="btn btn-danger" (click)="saveData(); generateServerPdf()" [disabled]="isGeneratingPdf">

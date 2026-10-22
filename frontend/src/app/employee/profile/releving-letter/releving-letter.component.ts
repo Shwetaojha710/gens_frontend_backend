@@ -1,13 +1,15 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Notyf } from 'notyf';
 import { EmployeeService } from '../../../services/employee.service';
 import { MasterService } from '../../../services/master.service';
+import { AssetService } from '../../../services/asset.service';
+import Swal from 'sweetalert2';
 @Component({
   selector: 'app-releving-letter',
-  imports: [CommonModule, FormsModule, DatePipe],
+  imports: [CommonModule, FormsModule, DatePipe, RouterLink],
   templateUrl: './releving-letter.component.html',
   styleUrl: './releving-letter.component.css'
 })
@@ -26,7 +28,10 @@ export class RelevingLetterComponent implements OnInit {
   addressState: string = '';
   addressPinCode: string = '';
 
-  constructor(private router: Router, private employeeService: EmployeeService, private masterService: MasterService) {
+  /** Company assets the employee still holds (relieving letter waits for these). */
+  assetClearance: any = null;
+
+  constructor(private router: Router, private employeeService: EmployeeService, private masterService: MasterService, private assetService: AssetService) {
     this.notyf = new Notyf();
     this.personalDetails = JSON.parse(localStorage.getItem('employeeId') || '{}');
     this.tenant = JSON.parse(localStorage.getItem('tenant') || '{}');
@@ -48,6 +53,12 @@ export class RelevingLetterComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    if (this.personalDetails.id) {
+      this.assetService.employeeAssets(this.personalDetails.id).subscribe({
+        next: (res: any) => (this.assetClearance = res?.status === true ? res.data.clearance : null),
+        error: () => {},
+      });
+    }
     this.masterService.getLetterhead().subscribe({
       next: (res: any) => {
         if (res?.data?.base64) this.tenantLetterheadUrl = res.data.base64;
@@ -369,18 +380,50 @@ ${content}
     });
   }
 
+  /**
+   * Saves, then prints / downloads — after HR confirms an override when
+   * company assets are still with the employee (the override is audit-logged).
+   */
+  async issue(kind: 'print' | 'download'): Promise<void> {
+    this.saveData();
+    if (!(await this.confirmAssetOverride(kind))) return;
+    kind === 'print' ? this.printDoc() : this.downloadDoc();
+  }
+
+  private async confirmAssetOverride(document: string): Promise<boolean> {
+    const pending = this.assetClearance?.pending || [];
+    if (!pending.length) return true;
+    const list = pending.map((p: any) => `${p.assetTag} — ${p.name}`).join('<br>');
+    const ok = await Swal.fire({
+      title: 'Assets not returned',
+      html: `${pending.length} company asset(s) are still with this employee:<br><br><small>${list}</small><br><br>Issue the relieving letter anyway?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Issue anyway',
+      cancelButtonText: 'Wait for clearance',
+    });
+    if (!ok.isConfirmed) return false;
+    this.assetService.logClearanceOverride(this.personalDetails.id, document).subscribe({ error: () => {} });
+    return true;
+  }
+
   isGeneratingPdf = false;
 
-  generateServerPdf(): void {
+  generateServerPdf(overrideAssetClearance = false): void {
     this.isGeneratingPdf = true;
-    this.employeeService.generateLetterPdf(this.personalDetails.id, 'relieving').subscribe({
-      next: (res: any) => {
+    this.employeeService.generateLetterPdf(this.personalDetails.id, 'relieving', { overrideAssetClearance }).subscribe({
+      next: async (res: any) => {
+        this.isGeneratingPdf = false;
         if (res.status && res.data?.downloadUrl) {
           window.open(res.data.downloadUrl, '_blank');
+        } else if (res.data?.assetClearance && !overrideAssetClearance) {
+          // The server already audit-logs overrides, so only ask here
+          this.assetClearance = res.data.assetClearance;
+          const ok = await Swal.fire({ title: 'Assets not returned', text: res.message, icon: 'warning', showCancelButton: true, confirmButtonText: 'Issue anyway' });
+          if (ok.isConfirmed) this.generateServerPdf(true);
         } else {
           this.notyf.error(res.message || 'Failed to generate PDF.');
         }
-        this.isGeneratingPdf = false;
       },
       error: () => {
         this.notyf.error('Server error. Please try again.');

@@ -278,6 +278,133 @@ export const layoutRoutes: Routes = [
           ),
       },
       {
+        path: 'assets/dashboard',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'asset.dashboard' },
+        loadComponent: () => import('../asset/dashboard/as-dashboard.component').then((m) => m.AsDashboardComponent),
+      },
+      {
+        path: 'assets/inventory',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'asset.inventory' },
+        loadComponent: () => import('../asset/inventory/as-inventory.component').then((m) => m.AsInventoryComponent),
+      },
+      {
+        path: 'assets/categories',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'asset.categories' },
+        loadComponent: () => import('../asset/categories/as-categories.component').then((m) => m.AsCategoriesComponent),
+      },
+      {
+        path: 'assets/clearance',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'asset.clearance' },
+        loadComponent: () => import('../asset/clearance/as-clearance.component').then((m) => m.AsClearanceComponent),
+      },
+      {
+        path: 'assets/scan/:token',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'asset.inventory' },
+        loadComponent: () => import('../asset/scan/as-scan.component').then((m) => m.AsScanComponent),
+      },
+      {
+        path: 'assets/:id',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'asset.inventory' },
+        loadComponent: () => import('../asset/detail/as-asset-detail.component').then((m) => m.AsAssetDetailComponent),
+      },
+      {
+        path: 'project/projects',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'proj.projects' },
+        loadComponent: () =>
+          import('../project/projects/pt-projects.component').then((m) => m.PtProjectsComponent),
+      },
+      {
+        path: 'project/projects/:id',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'proj.projects', ptContext: 'hr' },
+        loadComponent: () =>
+          import('../project/project-detail/pt-project-detail.component').then((m) => m.PtProjectDetailComponent),
+      },
+      {
+        path: 'project/clients',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'proj.clients' },
+        loadComponent: () =>
+          import('../project/clients/pt-clients.component').then((m) => m.PtClientsComponent),
+      },
+      {
+        path: 'project/timesheets',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'proj.timesheets' },
+        loadComponent: () =>
+          import('../project/timesheets/pt-timesheets.component').then((m) => m.PtTimesheetsComponent),
+      },
+      {
+        path: 'project/reports',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'proj.reports' },
+        loadComponent: () =>
+          import('../project/reports/pt-reports.component').then((m) => m.PtReportsComponent),
+      },
+      {
+        path: 'expense/dashboard',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'exp.dashboard' },
+        loadComponent: () =>
+          import('../expense/dashboard/ex-dashboard.component').then((m) => m.ExDashboardComponent),
+      },
+      {
+        path: 'expense/claims',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'exp.claims' },
+        loadComponent: () =>
+          import('../expense/claims/ex-claims.component').then((m) => m.ExClaimsComponent),
+      },
+      {
+        path: 'expense/policies',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'exp.policies' },
+        loadComponent: () =>
+          import('../expense/policies/ex-policies.component').then((m) => m.ExPoliciesComponent),
+      },
+      {
+        path: 'performance/dashboard',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'perf.dashboard' },
+        loadComponent: () =>
+          import('../performance/dashboard/pm-dashboard.component').then((m) => m.PmDashboardComponent),
+      },
+      {
+        path: 'performance/cycles',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'perf.cycles' },
+        loadComponent: () =>
+          import('../performance/cycles/pm-cycles.component').then((m) => m.PmCyclesComponent),
+      },
+      {
+        path: 'performance/reviews',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'perf.reviews' },
+        loadComponent: () =>
+          import('../performance/reviews/pm-reviews.component').then((m) => m.PmReviewsComponent),
+      },
+      {
+        path: 'performance/review/:id',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'perf.reviews', pmContext: 'hr' },
+        loadComponent: () =>
+          import('../performance/review-detail/pm-review-detail.component').then((m) => m.PmReviewDetailComponent),
+      },
+      {
+        path: 'performance/history',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'perf.history' },
+        loadComponent: () =>
+          import('../performance/history/pm-history.component').then((m) => m.PmHistoryComponent),
+      },
+      {
         path: 'payroll/arrear-management',
         canActivate: [PermissionGuard],
         data: { permKey: 'pay.arrear' },

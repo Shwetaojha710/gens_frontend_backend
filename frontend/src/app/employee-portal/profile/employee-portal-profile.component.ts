@@ -28,7 +28,7 @@ export class EmployeePortalProfileComponent implements OnInit {
     { label: 'My documents', path: '/employee-portal/documents', icon: 'ri-file-text-line' },
     { label: 'E-Insurance Card', path: '/employee-portal/e-insurance-card', icon: 'ri-bank-card-line' },
     { label: 'Insurance Policy', path: '/employee-portal/insurance-policy', icon: 'ri-shield-check-line' },
-    { label: 'Reimbursement', path: '/employee-portal/reimbursement', icon: 'ri-refund-2-line' },
+    { label: 'Expenses', path: '/employee-portal/expenses', icon: 'ri-refund-2-line' },
   ];
 
   constructor(private api: EmployeePortalService) {}
