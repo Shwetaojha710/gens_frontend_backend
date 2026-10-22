@@ -65,22 +65,18 @@
               All Attendance Submit
             </button>
           </h5>
-          <!-- <div class="d-md-flex justify-content-between align-items-center dt-layout-start col-md-auto me-auto">
-            <p class="card-title mb-0 text-md-start text-center" style="display: flex;
-    flex-wrap: wrap;">
-              <span class="text-success">P = Present</span> &nbsp;
-
-              <span class="text-danger">A = Absent</span> &nbsp;
-
-              <span class="text-primary">L = Leave</span> &nbsp;
-
-              <span class="text-info">H = Holiday</span> &nbsp;
-
-              <span class="text-warning">O = Off Day</span> &nbsp;
-
-              <span class="text-secondary">WO = Week Off</span> &nbsp;
+          <div class="d-md-flex justify-content-between align-items-center dt-layout-start col-md-auto me-auto px-3 pb-2">
+            <p class="card-title mb-0 text-md-start text-center" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+              <span class="text-success">P = Present</span>
+              <span class="text-danger">A = Absent</span>
+              <span class="text-secondary">WO = Week Off</span>
+              <span class="text-warning">RH = Restricted Holiday</span>
+              <span class="text-info">GH = Gazetted Holiday</span>
+              <span class="text-primary">L = Full Day Leave</span>
+              <span style="color:#7c3aed">FH = First Half</span>
+              <span style="color:#c026d3">SH = Second Half</span>
             </p>
-          </div> -->
+          </div>
           <!-- <div class="d-md-flex justify-content-between align-items-center dt-layout-end col-md-auto mt-0">
             <div class="dt-buttons btn-group flex-wrap">
               <div class="btn-group">
@@ -179,8 +175,12 @@
                         'text-success': item?.status == 'P',
                         'text-danger': item?.status == 'A',
                         'text-secondary': item?.status == 'WO',
+                        'text-warning': item?.status == 'RH',
+                        'text-info': item?.status == 'GH',
                         'text-primary': item?.status == 'L'
-                      }">
+                      }"
+                      [style.color]="item?.status == 'FH' ? '#7c3aed' : item?.status == 'SH' ? '#c026d3' : null"
+                      [title]="item?.holidayName || item?.status">
                       {{ item?.status }}
                     </span>
                   </td>

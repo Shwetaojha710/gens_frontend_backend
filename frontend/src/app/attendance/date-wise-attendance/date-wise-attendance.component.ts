@@ -203,12 +203,20 @@ export class DateWiseAttendanceComponent {
         const statusMap: Record<string, string> = {
           'Week Off': 'WO',
           'Present': 'P',
-          'Absent': 'A'
+          'Absent': 'A',
+          'Restricted Holiday': 'RH',
+          'Gazetted Holiday': 'GH',
+          'Holiday': 'GH',
+          'Full Day Leave': 'L',
+          'On Leave': 'L',
+          'First Half': 'FH',
+          'Second Half': 'SH',
+          'First Half Leave': 'FH',
+          'Second Half Leave': 'SH',
         };
         this.AttendanceMasterList = this.AttendanceMasterList.map((item: any) => ({
           ...item,
           status: statusMap[item.status] || item.status
-
         }));
 
         // When navigating from dashboard with a status filter, keep only matching rows

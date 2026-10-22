@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const {AppAdmin, Admin} = require('../middleware/auth');
-const {getDailyAttendance,getAttendance, employeeByDepartment, TeamsAttendance,EmployeeDetails, EmployeeLeaveList,getAppAppliedLeaves, AppupdatedApplyLeaveStatus,AppapplyForLeave, getAppLeaveTypes, AppgetHolidayList, upcomingLeave, AppgetBillDetails, PrintBill, TeamLeaderLeaveList, DirectorLeaveList, notification, applyRegularization, getMyRegularizations, getAttendanceByDateForRegularization, getPendingApproverRequests, updateRegularizationStatus, markattendance, addAppReimbursement, reimbursementList, getTeamReimbursements, updateAppReimbursementStatus, updateAppEmp, getEmpLetterDocs, saveEmpLetterSignature, getMyLeaveHistory, uploadEmpImage, getEmployeeUploadedImage, getAppHandbook, getAppInsurancePolicy, markNotificationsRead, getPendingLeaveList, statusWiseLeaveList}=require("../controller/tenant/appApi");
+const {getDailyAttendance,getAttendance, employeeByDepartment, TeamsAttendance,EmployeeDetails, EmployeeLeaveList,getAppAppliedLeaves, AppupdatedApplyLeaveStatus,AppapplyForLeave, getAppLeaveTypes, AppgetHolidayList, upcomingLeave, AppgetBillDetails, PrintBill, TeamLeaderLeaveList, DirectorLeaveList, notification, applyRegularization, getMyRegularizations, getAttendanceByDateForRegularization, getEmployeeMonthlyAttendance, getPendingApproverRequests, updateRegularizationStatus, markattendance, addAppReimbursement, reimbursementList, getTeamReimbursements, updateAppReimbursementStatus, updateAppEmp, getEmpLetterDocs, saveEmpLetterSignature, getMyLeaveHistory, uploadEmpImage, getEmployeeUploadedImage, getAppHandbook, getAppInsurancePolicy, markNotificationsRead, getPendingLeaveList, statusWiseLeaveList}=require("../controller/tenant/appApi");
 const { trackLocation, getLatestLocation, PinnedtrackLocation, listVistData, updateTrackRemark } = require('../controller/tenant/tracking');
 const { generateAllLettersPdf } = require('../controller/tenant/letter_data');
 const upload = require('../middleware/upload');
@@ -13,8 +13,10 @@ router.get('/get-Emp-Details', AppAdmin, EmployeeDetails);
 //attendance
 router.post('/get-daily-attendance', AppAdmin, getDailyAttendance);
 router.post('/get-monthly-attendance', AppAdmin, getAttendance);
+router.post('/get-employee-monthly-attendance', AppAdmin, getEmployeeMonthlyAttendance);
 router.get('/emp-by-department', AppAdmin, employeeByDepartment);
 router.get('/team-attendances', AppAdmin, TeamsAttendance);
+router.post('/team-attendances', AppAdmin, TeamsAttendance);
 
 
 //leave
