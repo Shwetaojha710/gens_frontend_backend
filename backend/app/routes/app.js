@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const {AppAdmin, Admin} = require('../middleware/auth');
-const {getDailyAttendance,getAttendance, employeeByDepartment, TeamsAttendance,EmployeeDetails, EmployeeLeaveList,getAppAppliedLeaves, AppupdatedApplyLeaveStatus,AppapplyForLeave, getAppLeaveTypes, AppgetHolidayList, upcomingLeave, AppgetBillDetails, PrintBill, TeamLeaderLeaveList, DirectorLeaveList, notification, applyRegularization, getMyRegularizations, getPendingApproverRequests, updateRegularizationStatus, markattendance, addAppReimbursement, reimbursementList, getTeamReimbursements, updateAppReimbursementStatus, updateAppEmp, getEmpLetterDocs, saveEmpLetterSignature, getMyLeaveHistory, uploadEmpImage, getEmployeeUploadedImage, getAppHandbook, getAppInsurancePolicy, markNotificationsRead, getPendingLeaveList, statusWiseLeaveList}=require("../controller/tenant/appApi");
+const {getDailyAttendance,getAttendance, employeeByDepartment, TeamsAttendance,EmployeeDetails, EmployeeLeaveList,getAppAppliedLeaves, AppupdatedApplyLeaveStatus,AppapplyForLeave, getAppLeaveTypes, AppgetHolidayList, upcomingLeave, AppgetBillDetails, PrintBill, TeamLeaderLeaveList, DirectorLeaveList, notification, applyRegularization, getMyRegularizations, getAttendanceByDateForRegularization, getPendingApproverRequests, updateRegularizationStatus, markattendance, addAppReimbursement, reimbursementList, getTeamReimbursements, updateAppReimbursementStatus, updateAppEmp, getEmpLetterDocs, saveEmpLetterSignature, getMyLeaveHistory, uploadEmpImage, getEmployeeUploadedImage, getAppHandbook, getAppInsurancePolicy, markNotificationsRead, getPendingLeaveList, statusWiseLeaveList}=require("../controller/tenant/appApi");
 const { trackLocation, getLatestLocation, PinnedtrackLocation, listVistData, updateTrackRemark } = require('../controller/tenant/tracking');
 const { generateAllLettersPdf } = require('../controller/tenant/letter_data');
 const upload = require('../middleware/upload');
@@ -44,6 +44,7 @@ router.get('/notification',AppAdmin,notification);
 
 router.post("/create-regularization", AppAdmin,applyRegularization);
 router.post("/regularization-list",AppAdmin, getMyRegularizations);
+router.post("/get-attendance-by-date", AppAdmin, getAttendanceByDateForRegularization);
 router.post("/pending-regularize-list", Admin,getPendingApproverRequests);
 router.post("/update-status",Admin, updateRegularizationStatus);
 router.post("/track-location",AppAdmin, trackLocation);
