@@ -5634,7 +5634,7 @@ exports.getAttendanceByDateForRegularization = async (req, res) => {
     return Helper.response(
       true,
       "Success",
-      { date: dateStr, checkIn, checkOut },
+      { date: dateStr, checkIn, checkOut,reason:regularization?.reason },
       res,
       200,
     );
