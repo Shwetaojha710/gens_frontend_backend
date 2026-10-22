@@ -2026,6 +2026,7 @@ exports.employeeByDepartment = async (req, res) => {
   }
 };
 
+
 exports.TeamsAttendance = async (req, res) => {
   try {
     const tenantId = req.users?.tenantId;
@@ -5634,12 +5635,342 @@ exports.getAttendanceByDateForRegularization = async (req, res) => {
     return Helper.response(
       true,
       "Success",
-      { date: dateStr, checkIn, checkOut,reason:regularization?.reason },
+      { date: dateStr, checkIn, checkOut, reason: regularization?.reason },
       res,
       200,
     );
   } catch (err) {
     console.error("getAttendanceByDateForRegularization:", err);
+    return Helper.response(false, err?.message || "Server error", {}, res, 500);
+  }
+};
+
+/**
+ * Monthly attendance for one employee with day-wise status.
+ * Body: { employeeId, month, year }
+ * Status: Present / Late / Absent / On Leave / First Half / Second Half /
+ *         Holiday / Week Off / Regularized / Half Day
+ */
+exports.getEmployeeMonthlyAttendance = async (req, res) => {
+  try {
+    const tenantId = req.users?.tenantId;
+    const { employeeId, month, year } = req.body || {};
+
+    if (!tenantId) {
+      return Helper.response(false, "User Not Found", [], res, 404);
+    }
+    if (!employeeId) {
+      return Helper.response(false, "employeeId is required", {}, res, 200);
+    }
+    if (!month || !year) {
+      return Helper.response(false, "month and year are required", {}, res, 200);
+    }
+
+    const monthNum = Number(month);
+    const yearNum = Number(year);
+    if (
+      !Number.isInteger(monthNum) ||
+      monthNum < 1 ||
+      monthNum > 12 ||
+      !Number.isInteger(yearNum)
+    ) {
+      return Helper.response(false, "Invalid month or year", {}, res, 200);
+    }
+
+    const emp = await empPersonal.findOne({
+      where: { id: employeeId, tenantId, status: "active" },
+      attributes: [
+        "id",
+        "firstName",
+        "lastName",
+        "empCode",
+        "branchId",
+        "shift_id",
+      ],
+      raw: true,
+    });
+    if (!emp) {
+      return Helper.response(false, "Employee not found", {}, res, 404);
+    }
+
+    const branchId = emp.branchId;
+    if (!branchId || branchId == "null") {
+      return Helper.response(false, "Employee branchId is missing", {}, res, 200);
+    }
+
+    const startDate = moment(
+      `${yearNum}-${String(monthNum).padStart(2, "0")}-01`,
+      "YYYY-MM-DD",
+    );
+    const endDate = startDate.clone().endOf("month");
+    const today = moment();
+    let loopEndDate = endDate;
+    if (startDate.isSame(today, "month") && startDate.isSame(today, "year")) {
+      loopEndDate = today.clone();
+    }
+    const fromStr = startDate.format("YYYY-MM-DD");
+    const toStr = endDate.format("YYYY-MM-DD");
+    const totalDays = loopEndDate.date();
+
+    const extractTime = (raw) => {
+      if (raw == null || raw === "" || raw === 0) return null;
+      const s = String(raw).trim();
+      if (!s) return null;
+      if (s.includes(" ")) {
+        const part = s.split(" ")[1] || "";
+        return part.slice(0, 5) || null;
+      }
+      return s.length >= 5 ? s.slice(0, 5) : s;
+    };
+
+    const [
+      shiftMapRaw,
+      AttendanceSettings,
+      records,
+      rhTypes,
+      holidaysInRange,
+      leavesInRange,
+      regsInRange,
+    ] = await Promise.all([
+      Shift.findAll({
+        where: {
+          tenantId,
+          branchId,
+          shift: emp.shift_id,
+          status: { [Op.in]: ["active", "inactive"] },
+        },
+        attributes: ["day_of_week", "is_week_off", "startTime", "endTime", "status"],
+        raw: true,
+      }),
+      attendanceSetting.findOne({ where: { tenantId, branchId }, raw: true }),
+      attendance.findAll({
+        where: {
+          employeeId,
+          tenantId,
+          branchId,
+          date: { [Op.between]: [fromStr, toStr] },
+        },
+        attributes: ["date", "check_in_time", "check_out_time", "is_present"],
+        raw: true,
+      }),
+      HolidayType.findAll({
+        where: {
+          tenantId,
+          branchId,
+          status: "active",
+          name: { [Op.iLike]: "%restricted%" },
+        },
+        attributes: ["id"],
+        raw: true,
+      }),
+      holiday.findAll({
+        where: {
+          tenantId,
+          branchId,
+          status: "active",
+          date: { [Op.between]: [fromStr, toStr] },
+        },
+        raw: true,
+      }),
+      leave_application.findAll({
+        where: {
+          employeeId,
+          tenantId,
+          branchId,
+          fromDate: { [Op.lte]: toStr },
+          toDate: { [Op.gte]: fromStr },
+          status: { [Op.notIn]: ["rejected", "self_declined"] },
+        },
+        raw: true,
+      }),
+      AttendanceRegularization.findAll({
+        where: {
+          employeeId,
+          tenantId,
+          branchId,
+          attendanceDate: { [Op.between]: [fromStr, toStr] },
+        },
+        order: [["createdAt", "DESC"]],
+        raw: true,
+      }),
+    ]);
+
+    const shiftMap = (shiftMapRaw || []).map((s) => ({
+      ...s,
+      day_num:
+        typeof s.day_of_week == "string"
+          ? dayMap[s.day_of_week]
+          : s.day_of_week,
+    }));
+    const weekOffDays = shiftMap
+      .filter((s) => s.is_week_off)
+      .map((s) => s.day_num);
+
+    const rhTypeIds = new Set((rhTypes || []).map((t) => String(t.id)));
+    const holidayMap = new Map();
+    for (const h of holidaysInRange || []) {
+      if (rhTypeIds.size && rhTypeIds.has(String(h.holiday_type))) continue;
+      holidayMap.set(moment(h.date).format("YYYY-MM-DD"), h);
+    }
+
+    const attMap = new Map();
+    for (const r of records || []) {
+      const d = moment(r.date).format("YYYY-MM-DD");
+      attMap.set(d, r);
+    }
+
+    const leaveForDate = (dateStr) =>
+      (leavesInRange || []).find(
+        (l) =>
+          moment(l.fromDate).format("YYYY-MM-DD") <= dateStr &&
+          moment(l.toDate).format("YYYY-MM-DD") >= dateStr,
+      );
+
+    const regMap = new Map();
+    for (const r of regsInRange || []) {
+      const d = moment(r.attendanceDate).format("YYYY-MM-DD");
+      if (!regMap.has(d)) regMap.set(d, r); // latest first due to order
+    }
+
+    const resolveLeaveStatus = (leaveData, dateStr) => {
+      if (!leaveData) return null;
+      const from = moment(leaveData.fromDate).format("YYYY-MM-DD");
+      const to = moment(leaveData.toDate).format("YYYY-MM-DD");
+      if (from == dateStr && to == dateStr) {
+        if (leaveData.duration_type == "first_half") return "First Half";
+        if (leaveData.duration_type == "second_half") return "Second Half";
+        return "On Leave";
+      }
+      if (from == dateStr) {
+        return leaveData.duration_type == "second_half"
+          ? "Second Half"
+          : "On Leave";
+      }
+      if (to == dateStr) {
+        return leaveData.to_duration_type == "first_half"
+          ? "First Half"
+          : "On Leave";
+      }
+      return "On Leave";
+    };
+
+    const data = [];
+    for (let i = 1; i <= totalDays; i++) {
+      const currentDate = moment(
+        `${yearNum}-${String(monthNum).padStart(2, "0")}-${String(i).padStart(2, "0")}`,
+        "YYYY-MM-DD",
+      );
+      const dateStr = currentDate.format("YYYY-MM-DD");
+      const dayNum = currentDate.day();
+      const dayName = currentDate.format("dddd");
+      const entry = attMap.get(dateStr);
+      const HolidayData = holidayMap.get(dateStr);
+      const leaveData = leaveForDate(dateStr);
+      const reg = regMap.get(dateStr) || null;
+      const regStatus = reg?.status ? String(reg.status).toLowerCase() : null;
+      const isRegularized = !!reg;
+      const isApprovedReg = regStatus === "approved";
+
+      let status = "Absent";
+      let checkIn = entry ? extractTime(entry.check_in_time) : null;
+      let checkOut = entry ? extractTime(entry.check_out_time) : null;
+
+      if (isApprovedReg) {
+        // Approved regularization — prefer attendance times, else requested
+        if (!checkIn) checkIn = extractTime(reg.inTimeRequested);
+        if (!checkOut) checkOut = extractTime(reg.outTimeRequested);
+        status = "Regularized";
+      } else if (!entry) {
+        if (HolidayData) {
+          status = "Holiday";
+        } else {
+          const leaveStatus = resolveLeaveStatus(leaveData, dateStr);
+          if (leaveStatus) {
+            status = leaveStatus;
+          } else if (weekOffDays.includes(dayNum)) {
+            status = "Week Off";
+          } else {
+            status = "Absent";
+          }
+        }
+      } else {
+        const leaveStatus = resolveLeaveStatus(leaveData, dateStr);
+        const shiftForDay = shiftMap.find((s) => s.day_num == dayNum);
+        if (leaveStatus && (leaveStatus === "First Half" || leaveStatus === "Second Half")) {
+          status = leaveStatus;
+        } else if (shiftForDay && checkIn) {
+          const shiftStart = moment(
+            `${dateStr} ${shiftForDay.startTime}`,
+            "YYYY-MM-DD HH:mm:ss",
+          );
+          let shiftEnd = moment(
+            `${dateStr} ${shiftForDay.endTime}`,
+            "YYYY-MM-DD HH:mm:ss",
+          );
+          if (shiftEnd.isBefore(shiftStart)) shiftEnd.add(1, "day");
+
+          const checkInTime = moment(`${dateStr} ${checkIn}`, "YYYY-MM-DD HH:mm");
+          const allowedTime = shiftStart
+            .clone()
+            .add(AttendanceSettings?.graceMinutes || 0, "minutes");
+
+          if (checkInTime.isAfter(allowedTime)) {
+            const minutesLate = checkInTime.diff(allowedTime, "minutes");
+            if (minutesLate >= 60) {
+              const hours = Math.floor(minutesLate / 60);
+              const mins = minutesLate % 60;
+              status =
+                mins === 0
+                  ? `Late by ${hours} hr${hours > 1 ? "s" : ""}`
+                  : `Late by ${hours} hr${hours > 1 ? "s" : ""} ${mins} min`;
+            } else {
+              status = `Late by ${minutesLate} min`;
+            }
+          } else if (checkOut) {
+            const checkOutTime = moment(
+              `${dateStr} ${checkOut}`,
+              "YYYY-MM-DD HH:mm",
+            );
+            status = checkOutTime.isBefore(shiftEnd) ? "Half Day" : "Present";
+          } else {
+            status = "Present";
+          }
+        } else if (checkIn) {
+          status = "Present";
+        } else {
+          status = "Absent";
+        }
+      }
+
+      data.push({
+        date: dateStr,
+        day: dayName,
+        checkIn,
+        checkOut,
+        status,
+        isRegularized,
+        regularizationStatus: regStatus,
+        holidayName: HolidayData?.holiday_name ?? null,
+      });
+    }
+
+    return Helper.response(
+      true,
+      "Monthly attendance found",
+      {
+        employeeId: emp.id,
+        empCode: emp.empCode ?? null,
+        employee_name: `${emp.firstName || ""} ${emp.lastName || ""}`.trim(),
+        branchId,
+        month: monthNum,
+        year: yearNum,
+        attendance: data,
+      },
+      res,
+      200,
+    );
+  } catch (err) {
+    console.error("getEmployeeMonthlyAttendance:", err);
     return Helper.response(false, err?.message || "Server error", {}, res, 500);
   }
 };
