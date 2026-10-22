@@ -86,12 +86,12 @@ exports.sendEmployeePortalOtp = async (req, res) => {
     const templateId = "1107164267135286674";
     try {
       if (mobile != "8687651183") {
-        await Helper.sendSMS(mobile, otps.otp, templateId);
+        // await Helper.sendSMS(mobile, otps.otp, templateId);
       }
     } catch (e) {
       console.warn("Employee portal SMS:", e?.message || e);
     }
-
+    await Helper.sendSMS(mobile, otps.otp, templateId);
     return Helper.response(true, "OTP Send Successfully", { masked: true }, res, 200);
   } catch (error) {
     console.error("sendEmployeePortalOtp:", error);

@@ -5557,6 +5557,93 @@ exports.getMyRegularizations = async (req, res) => {
   }
 };
 
+/**
+ * GET attendance + regularization for one date (for apply-regularization prefills).
+ * Body: { date: "YYYY-MM-DD", employeeId?: uuid } — employeeId defaults to logged-in user.
+ * - If attendance exists → checkIn / checkOut filled from attendance
+ * - If no attendance → checkIn / checkOut = null
+ * - If regularization exists for that date → included in response
+ */
+exports.getAttendanceByDateForRegularization = async (req, res) => {
+  try {
+    const tenantId = req.users?.tenantId;
+    const branchId = req.users && req.users.branchId;
+    const employeeId = req.users?.id;
+    const { date } = req.body || {};
+
+    if (!branchId || branchId == "null") {
+      return Helper.response(false, "branchId is required!", {}, res, 200);
+    }
+    if (!tenantId || !employeeId) {
+      return Helper.response(false, "User Not Found", [], res, 404);
+    }
+    if (!date) {
+      return Helper.response(false, "date is required (YYYY-MM-DD)", {}, res, 200);
+    }
+
+    const attendanceDate = moment(date, "YYYY-MM-DD", true);
+    if (!attendanceDate.isValid()) {
+      return Helper.response(false, "Invalid date format. Use YYYY-MM-DD", {}, res, 200);
+    }
+    const dateStr = attendanceDate.format("YYYY-MM-DD");
+
+    const extractTime = (raw) => {
+      if (raw == null || raw === "" || raw === 0) return null;
+      const s = String(raw).trim();
+      if (!s) return null;
+      // "YYYY-MM-DD HH:mm:ss" or "HH:mm:ss" / "HH:mm"
+      if (s.includes(" ")) {
+        const part = s.split(" ")[1] || "";
+        return part.slice(0, 5) || null;
+      }
+      return s.length >= 5 ? s.slice(0, 5) : s;
+    };
+
+    const [attRow, regularization] = await Promise.all([
+      attendance.findOne({
+        where: {
+          employeeId,
+          tenantId,
+          branchId,
+          date: dateStr,
+        },
+        raw: true,
+      }),
+      AttendanceRegularization.findOne({
+        where: {
+          employeeId,
+          tenantId,
+          branchId,
+          attendanceDate: dateStr,
+        },
+        order: [["createdAt", "DESC"]],
+        raw: true,
+      }),
+    ]);
+
+    // Prefer attendance times; fill gaps from regularization requested times
+    let checkIn = attRow ? extractTime(attRow.check_in_time) : null;
+    let checkOut = attRow ? extractTime(attRow.check_out_time) : null;
+    if (!checkIn && regularization) {
+      checkIn = extractTime(regularization.inTimeRequested);
+    }
+    if (!checkOut && regularization) {
+      checkOut = extractTime(regularization.outTimeRequested);
+    }
+
+    return Helper.response(
+      true,
+      "Success",
+      { date: dateStr, checkIn, checkOut },
+      res,
+      200,
+    );
+  } catch (err) {
+    console.error("getAttendanceByDateForRegularization:", err);
+    return Helper.response(false, err?.message || "Server error", {}, res, 500);
+  }
+};
+
 exports.getPendingApproverRequests = async (req, res) => {
   try {
     const tenantId = req.users?.tenantId;
