@@ -161,12 +161,12 @@
                     {{ item?.date | date : "dd-MM-yyyy" }}
                   </td>
                   <td style="width: 50px; font-size: 12px">
-                    <input type="time" [(ngModel)]="item.checkIn" class="form-control" [disabled]="!item.editable" />
+                    <input type="time" step="1" [(ngModel)]="item.checkIn" class="form-control" [disabled]="!item.editable" />
                     <!-- {{item?.checkIn}} -->
                   </td>
 
                   <td style="width: 50px; font-size: 12px">
-                    <input type="time" [(ngModel)]="item.checkOut" class="form-control" [disabled]="!item.editable" />
+                    <input type="time" step="1" [(ngModel)]="item.checkOut" class="form-control" [disabled]="!item.editable" />
                     <!-- {{ item?.checkOut }} -->
                   </td>
 

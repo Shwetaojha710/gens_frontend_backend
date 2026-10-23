@@ -38,13 +38,19 @@ export class DateWiseAttendanceComponent {
   ];
 
   checkUncheckAll() {
-    this.AttendanceMasterList.forEach((item: any) => item.editable = this.masterSelected);
+    // Header checkbox applies to full list (all pages), not just current page
+    (this.originalList || this.AttendanceMasterList).forEach(
+      (item: any) => (item.editable = this.masterSelected),
+    );
   }
   masterSelected: boolean = false;
 
   isAllSelected() {
-    this.masterSelected = this.AttendanceMasterList.every((item: any) => item.editable);
-
+    const list = this.originalList?.length
+      ? this.originalList
+      : this.AttendanceMasterList;
+    this.masterSelected =
+      list.length > 0 && list.every((item: any) => item.editable);
   }
 
   getMin(a: number, b: number): number {
@@ -402,10 +408,10 @@ export class DateWiseAttendanceComponent {
     }).then((result) => {
       if (result.isConfirmed) {
 
-        this.newObj = data;
+        this.newObj = { ...data };
         this.editingId = data.id;
-        this.newObj.checkIn = `${data?.date} ${data?.checkIn}`
-        this.newObj.checkOut = `${data?.date} ${data?.checkOut}`
+        this.newObj.checkIn = this.toDateTimeWithSeconds(data?.date, data?.checkIn);
+        this.newObj.checkOut = this.toDateTimeWithSeconds(data?.date, data?.checkOut);
         this.newObj.startDate = new Date(data.startDate);
         this.newObj.endDate = new Date(data.endDate);
         this.generateDayList(this.newObj.startDate, this.newObj.endDate);
@@ -450,13 +456,35 @@ export class DateWiseAttendanceComponent {
   }
 
 
+  /** Build "YYYY-MM-DD HH:mm:ss" (adds :00 if seconds missing). */
+  toDateTimeWithSeconds(date: string, time: string | null | undefined): string | null {
+    if (!time || time === '--') return null;
+    const raw = String(time).trim();
+    if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(raw)) {
+      const [d, t] = raw.split(/\s+/);
+      if (/^\d{2}:\d{2}:\d{2}/.test(t)) return `${d} ${t.slice(0, 8)}`;
+      if (/^\d{2}:\d{2}$/.test(t)) return `${d} ${t}:00`;
+      return `${d} ${t}`;
+    }
+    if (/^\d{2}:\d{2}:\d{2}/.test(raw)) return `${date} ${raw.slice(0, 8)}`;
+    if (/^\d{2}:\d{2}$/.test(raw)) return `${date} ${raw}:00`;
+    return `${date} ${raw}`;
+  }
+
   correctAll() {
-    const selectedEmployees = this.AttendanceMasterList.filter((item: any) => item.editable);
+    // All pages: only rows whose checkbox is checked
+    const selectedEmployees = (this.originalList || this.AttendanceMasterList)
+      .filter((item: any) => item.editable === true)
+      .map((item: any) => ({
+        ...item,
+        checkIn: this.toDateTimeWithSeconds(item.date, item.checkIn) ?? '--',
+        checkOut: this.toDateTimeWithSeconds(item.date, item.checkOut) ?? '--',
+      }));
     if (selectedEmployees.length == 0) {
       this.notyf.error('Please Select CheckBox');
       return;
     }
-    this.attendanceService.BulkUpdateAttendance(this.AttendanceMasterList).subscribe((data: {
+    this.attendanceService.BulkUpdateAttendance(selectedEmployees).subscribe((data: {
       [x: string]: any;
     }) => {
       if (data['status'] == true) {
