@@ -899,16 +899,24 @@ exports.getDateWiseAttendance = async (req, res) => {
 
     const formatTime = (raw) => {
       if (!raw) return "--";
-      const s = String(raw);
-      if (!s.includes(" ")) return "--";
+      const s = String(raw).trim();
+      // Prefer HH:mm:ss for time inputs (step=1)
+      if (s.includes(" ")) {
+        const part = s.split(" ")[1] || "";
+        if (part.length >= 8) return part.slice(0, 8);
+        if (part.length >= 5) return `${part.slice(0, 5)}:00`;
+      }
+      if (/^\d{2}:\d{2}:\d{2}/.test(s)) return s.slice(0, 8);
+      if (/^\d{2}:\d{2}$/.test(s)) return `${s}:00`;
       try {
         return new Date(raw).toLocaleTimeString("en-IN", {
           hour: "2-digit",
           minute: "2-digit",
+          second: "2-digit",
           hour12: false,
         });
       } catch {
-        return s.split(" ")[1]?.slice(0, 5) || "--";
+        return "--";
       }
     };
 
@@ -1189,6 +1197,23 @@ exports.getAttendanceYears = async (req, res) => {
   }
 };
 
+/** Normalize to "YYYY-MM-DD HH:mm:ss" */
+const toDateTimeWithSeconds = (date, time) => {
+  if (time == null || time === "" || time === "--") return null;
+  const raw = String(time).trim();
+  // Already full datetime
+  if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(raw)) {
+    const [d, t] = raw.split(/\s+/);
+    if (/^\d{2}:\d{2}:\d{2}/.test(t)) return `${d} ${t.slice(0, 8)}`;
+    if (/^\d{2}:\d{2}$/.test(t)) return `${d} ${t}:00`;
+    return `${d} ${t}`;
+  }
+  // Time only
+  if (/^\d{2}:\d{2}:\d{2}/.test(raw)) return `${date} ${raw.slice(0, 8)}`;
+  if (/^\d{2}:\d{2}$/.test(raw)) return `${date} ${raw}:00`;
+  return `${date} ${raw}`;
+};
+
 exports.updateAttendance = async (req, res) => {
   const {
     id,
@@ -1219,6 +1244,9 @@ exports.updateAttendance = async (req, res) => {
       );
     }
 
+    const checkInTime = toDateTimeWithSeconds(date, checkIn);
+    const checkOutTime = toDateTimeWithSeconds(date, checkOut);
+
     const employeeExists = await attendance.findOne({
       where: { employeeId: employeeId, tenantId, branchId, date },
     });
@@ -1231,8 +1259,8 @@ exports.updateAttendance = async (req, res) => {
         year: parseInt(year),
         month: parseInt(month),
         branchId,
-        check_in_time: checkIn,
-        check_out_time: checkOut,
+        check_in_time: checkInTime,
+        check_out_time: checkOutTime,
         date,
         is_present: true,
         ip_address,
@@ -1264,8 +1292,8 @@ exports.updateAttendance = async (req, res) => {
     employeeExists.updatedBy = req.users?.id;
     employeeExists.branchId = branchId;
     employeeExists.updatedAt = new Date();
-    employeeExists.check_in_time = checkIn??  employeeExists.check_in_time ;
-    employeeExists.check_out_time = checkOut??  employeeExists.check_out_time ;
+    employeeExists.check_in_time = checkInTime ?? employeeExists.check_in_time;
+    employeeExists.check_out_time = checkOutTime ?? employeeExists.check_out_time;
     employeeExists.date = date;
     employeeExists.month = new Date(date).getMonth() + 1;
     employeeExists.year = new Date(date).getFullYear();
@@ -1321,11 +1349,9 @@ exports.BulkupdateAttendance = async (req, res) => {
       const month = date.split("-")[1];
       const year = date.split("-")[0];
 
-      // Replace "--" with null
-      const checkInTime = checkIn == "--" ? null : `${date} ${checkIn}`;
-      const checkOutTime = checkOut == "--" ? null : `${date} ${checkOut}`;
-      // this.newObj.checkIn = `${data?.date} ${data?.checkIn}`
-      //       this.newObj.checkOut = `${data?.date} ${data?.checkOut}`
+      // Always store as "YYYY-MM-DD HH:mm:ss"
+      const checkInTime = toDateTimeWithSeconds(date, checkIn);
+      const checkOutTime = toDateTimeWithSeconds(date, checkOut);
       const employeeExists = await attendance.findOne({
         where: {
           employeeId,
