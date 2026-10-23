@@ -29,7 +29,7 @@ const empPersonal = sequelize.define(
     },
     lastName: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
     },
     email: {
       type: DataTypes.STRING,
