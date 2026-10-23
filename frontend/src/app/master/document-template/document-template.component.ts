@@ -1,4 +1,4 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import {
   ChangeDetectorRef,
   Component,
@@ -11,10 +11,55 @@ import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Router, RouterModule } from '@angular/router';
 import { Notyf } from 'notyf';
-import Quill from 'quill';
+import Quill, { Delta } from 'quill';
 import Swal from 'sweetalert2';
 import { MasterService } from '../../services/master.service';
 import { StatusService } from '../../services/status.service';
+
+/** Quill embed: inserts a real page-break marker that print preview can split on. */
+const BlockEmbed = Quill.import('blots/block/embed') as any;
+class PageBreakBlot extends BlockEmbed {
+  static blotName = 'pagebreak';
+  static tagName = 'div';
+  static className = 'page-break';
+
+  static create(): HTMLElement {
+    const node = super.create() as HTMLElement;
+    node.setAttribute('contenteditable', 'false');
+    node.setAttribute('data-page-break', '1');
+    node.setAttribute('style', 'page-break-before:always;break-before:page;');
+    return node;
+  }
+
+  static value(): boolean {
+    return true;
+  }
+}
+
+/** Inline font-size / font-family so Word paste (12pt, Times New Roman…) survives. */
+const QUILL_SIZE_WHITELIST = [
+  '8pt', '9pt', '10pt', '11pt', '12pt', '14pt', '16pt', '18pt', '20pt', '22pt', '24pt', '26pt', '28pt', '32pt', '36pt', '48pt', '72pt',
+  '8px', '9px', '10px', '11px', '12px', '13px', '14px', '15px', '16px', '18px', '20px', '22px', '24px', '28px', '32px', '36px', '48px', '64px', '72px',
+];
+const QUILL_FONT_WHITELIST = [
+  'Arial', 'Helvetica', 'Times New Roman', 'Times', 'Georgia', 'Verdana', 'Tahoma',
+  'Courier New', 'Courier', 'Comic Sans MS', 'Impact', 'Calibri', 'Cambria',
+  'Trebuchet MS', 'Palatino Linotype', 'Lucida Sans Unicode', 'Segoe UI', 'Garamond', 'Book Antiqua',
+];
+
+try {
+  Quill.register(PageBreakBlot, true);
+
+  const SizeStyle = Quill.import('attributors/style/size') as any;
+  SizeStyle.whitelist = QUILL_SIZE_WHITELIST;
+  Quill.register(SizeStyle, true);
+
+  const FontStyle = Quill.import('attributors/style/font') as any;
+  FontStyle.whitelist = QUILL_FONT_WHITELIST;
+  Quill.register(FontStyle, true);
+} catch (_) {
+  // already registered (HMR / re-init)
+}
 
 @Component({
   selector: 'app-document-template',
@@ -32,6 +77,20 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
   previewUrl: SafeResourceUrl | null = null;
   private previewObjectUrl: string | null = null;
   private lastPrintHtml = '';
+  /** Debounce timer for live print-preview refresh while editing. */
+  private previewRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Active inline formats at caret — drives B/I/U/S toolbar highlight. */
+  formatActive = {
+    bold: false,
+    italic: false,
+    underline: false,
+    strikeThrough: false,
+  };
+  /** Last picked foreground / background colors (toolbar swatches). */
+  editorFgColor = '#000000';
+  editorBgColor = '#ffff00';
+  fgPresets = ['#000000', '#dc2626', '#2563eb', '#16a34a', '#9333ea', '#ea580c', '#ffffff'];
+  bgPresets = ['#ffff00', '#fef08a', '#bbf7d0', '#bfdbfe', '#fecaca', '#e9d5ff', '#f3f4f6'];
   notyf = new Notyf();
   list: any[] = [];
   createFlag = false;
@@ -50,6 +109,12 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       { key: 'permanent_address', label: 'Permanent Address' },
       { key: 'gender_title', label: 'Mr. / Ms.' },
       { key: 'relation', label: 'S/O or D/O' },
+      { key: 'pan_no', label: 'PAN No' },
+      { key: 'shift_name', label: 'Shift Name' },
+      {
+        key: 'shift_timing',
+        label: 'Shift Timing (e.g. 9:00 AM to 6:30 PM, Monday to Saturday)',
+      },
     ],
     salary: [],
     company: [],
@@ -72,7 +137,12 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     letterheadBlank: false,
     includeSalaryAnnexure: false,
     status: 'active',
+    branchIds: [] as string[],
+    assignAllBranches: true,
   };
+
+  /** All tenant branches for assign multi-select */
+  branchList: { id: string; name: string }[] = [];
 
   letterheadMode: 'image' | 'blank' = 'image';
 
@@ -109,9 +179,56 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     this.loadCatalog();
     this.loadList();
     this.loadLetterhead();
+    this.loadBranches();
+  }
+
+  loadBranches(): void {
+    this.master.BranchDD().subscribe({
+      next: (res: any) => {
+        if (res?.status) {
+          const raw = Array.isArray(res.data) ? res.data : res.data?.branches || [];
+          this.branchList = (raw || [])
+            .map((b: any) => ({ id: b.id, name: b.name || b.branchName || 'Branch' }))
+            .filter((b: any) => !!b.id);
+        }
+      },
+      error: () => {},
+    });
+  }
+
+  toggleAssignAllBranches(all: boolean): void {
+    this.form.assignAllBranches = all;
+    if (all) this.form.branchIds = [];
+  }
+
+  toggleBranch(id: string, checked: boolean): void {
+    this.form.assignAllBranches = false;
+    const set = new Set<string>(this.form.branchIds || []);
+    if (checked) set.add(id);
+    else set.delete(id);
+    this.form.branchIds = Array.from(set);
+  }
+
+  isBranchSelected(id: string): boolean {
+    if (this.form.assignAllBranches) return false;
+    return (this.form.branchIds || []).includes(id);
+  }
+
+  branchAssignLabel(row: any): string {
+    const ids: string[] = Array.isArray(row?.branchIds) ? row.branchIds : [];
+    if (!ids.length) return 'All branches';
+    const names = ids
+      .map((id) => this.branchList.find((b) => b.id === id)?.name || id.slice(0, 6))
+      .filter(Boolean);
+    if (names.length <= 2) return names.join(', ');
+    return `${names.slice(0, 2).join(', ')} +${names.length - 2}`;
   }
 
   ngOnDestroy(): void {
+    if (this.previewRefreshTimer) {
+      clearTimeout(this.previewRefreshTimer);
+      this.previewRefreshTimer = null;
+    }
     this.destroyEditor();
     this.revokePreviewUrl();
   }
@@ -133,6 +250,30 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     this.form.letterheadBlank = this.letterheadMode === 'blank';
   }
 
+  /**
+   * Foreground (text) / Background (highlight) for Quill + rich editor.
+   * Works on selection, or at caret for subsequent typing.
+   */
+  applyEditorColor(kind: 'foreground' | 'background', value: string): void {
+    if (!value) return;
+    if (kind === 'foreground') this.editorFgColor = value;
+    else this.editorBgColor = value;
+
+    if (this.useRichEditor) {
+      this.applyRichTextStyle(kind === 'foreground' ? 'color' : 'background-color', value);
+      return;
+    }
+    if (!this.quill) return;
+    this.quill.focus();
+    const range = this.quill.getSelection(true);
+    if (!range) {
+      this.quill.setSelection(Math.max(0, this.quill.getLength() - 1), 0, 'silent');
+    }
+    this.quill.format(kind === 'foreground' ? 'color' : 'background', value, 'user');
+    this.form.bodyHtml = this.quill.root.innerHTML;
+    this.refreshPrintPreview(false);
+  }
+
   /** Apply font-family / font-size / color / background to selected text (multi-line safe). */
   applyRichTextStyle(property: string, value: string): void {
     if (!value) return;
@@ -140,13 +281,26 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     const el = this.getRichEl();
     if (!el) return;
 
-    if (!this.restoreRichSelection()) {
-      this.notyf.error('Pehle text select karo');
-      return;
+    const isColor =
+      property === 'color' || property === 'background-color';
+
+    // Color may apply at caret (typing style); font size/family still need a selection
+    const hadSelection = this.restoreRichSelection();
+    if (!hadSelection && this.richSavedRange) {
+      try {
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(this.richSavedRange);
+      } catch (_) {}
     }
+    el.focus();
 
     const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+    if (!selection || selection.rangeCount === 0) {
+      this.notyf.error('Editor mein cursor rakho');
+      return;
+    }
+    if (!isColor && selection.isCollapsed) {
       this.notyf.error('Pehle text select karo');
       return;
     }
@@ -167,7 +321,9 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
           !document.execCommand('hiliteColor', false, value) &&
           !document.execCommand('backColor', false, value)
         ) {
-          this.applyInlineStyleToRange(range, 'background-color', value);
+          if (!selection.isCollapsed) {
+            this.applyInlineStyleToRange(range, 'background-color', value);
+          }
         }
         this.saveRichSelection();
         this.onRichInput();
@@ -393,8 +549,8 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       }
     }
 
-    this.form.bodyHtml = el.innerHTML;
     this.saveRichSelection();
+    this.syncBodyAndPreview();
   }
 
   applyParagraphStyle(property: string, value: string): void {
@@ -427,8 +583,8 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       }
     }
 
-    this.form.bodyHtml = el.innerHTML;
     this.saveRichSelection();
+    this.syncBodyAndPreview();
   }
 
   /** Open file picker to insert image at caret. */
@@ -534,36 +690,75 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       el.innerHTML = (el.innerHTML || '') + html;
     }
 
-    this.form.bodyHtml = el.innerHTML;
     this.saveRichSelection();
+    this.syncBodyAndPreview();
   }
 
 
   openPrintPreview(): void {
-    if (this.useRichEditor) {
-      const el = this.getRichEl();
-      if (el) this.form.bodyHtml = el.innerHTML;
-    } else if (this.quill) {
-      this.form.bodyHtml = this.quill.root.innerHTML;
-    }
-
-    const html = this.buildPrintHtml(this.form.bodyHtml || '');
-    this.lastPrintHtml = html;
-    this.revokePreviewUrl();
-    const blob = new Blob([html], { type: 'text/html' });
-    this.previewObjectUrl = URL.createObjectURL(blob);
-    this.previewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.previewObjectUrl);
+    this.lastPrintHtml = ''; // force rebuild even if HTML string matched a prior open
     this.previewOpen = true;
+    this.refreshPrintPreview(true);
   }
 
   closePrintPreview(): void {
     this.previewOpen = false;
+    if (this.previewRefreshTimer) {
+      clearTimeout(this.previewRefreshTimer);
+      this.previewRefreshTimer = null;
+    }
     this.revokePreviewUrl();
     this.lastPrintHtml = '';
   }
 
+  /** Sync editor → bodyHtml, then rebuild preview iframe (immediate or debounced). */
+  private refreshPrintPreview(immediate = false): void {
+    if (!this.previewOpen) return;
+
+    const run = () => {
+      this.previewRefreshTimer = null;
+      if (!this.previewOpen) return;
+
+      // Same HTML the editor is showing (WYSIWYG)
+      this.pullBodyFromEditor();
+
+      const html = this.buildPrintHtml(this.form.bodyHtml || '');
+      if (html === this.lastPrintHtml && this.previewObjectUrl) return;
+
+      this.lastPrintHtml = html;
+      const prevUrl = this.previewObjectUrl;
+      const blob = new Blob([html], { type: 'text/html' });
+      this.previewObjectUrl = URL.createObjectURL(blob);
+      this.previewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.previewObjectUrl);
+      this.cdr.detectChanges();
+      if (prevUrl) {
+        try {
+          URL.revokeObjectURL(prevUrl);
+        } catch (_) {}
+      }
+    };
+
+    if (this.previewRefreshTimer) {
+      clearTimeout(this.previewRefreshTimer);
+      this.previewRefreshTimer = null;
+    }
+    if (immediate) {
+      run();
+    } else {
+      this.previewRefreshTimer = setTimeout(run, 280);
+    }
+  }
+
+  /** Call after any document edit so open print preview stays in sync. */
+  private syncBodyAndPreview(): void {
+    this.pullBodyFromEditor();
+    this.refreshPrintPreview(false);
+  }
+
   printDocument(): void {
-    const html = this.lastPrintHtml || this.buildPrintHtml(this.form.bodyHtml || '');
+    this.pullBodyFromEditor();
+    const html = this.buildPrintHtml(this.form.bodyHtml || '');
+    this.lastPrintHtml = html;
     if (!html.replace(/<[^>]+>/g, '').trim()) {
       this.notyf.error('Document body is empty');
       return;
@@ -585,11 +780,22 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Full printable HTML â€” same look as browser Print dialog / Generate Letter.
+   * Full printable HTML — match what the editor shows (WYSIWYG).
+   * Page breaks → separate A4 sheets in on-screen preview.
    */
   private buildPrintHtml(bodyHtml: string): string {
-    let filled = this.normalizeHtmlForPrint(String(bodyHtml || ''));
-    filled = this.wrapTrailingFooterForPrint(filled);
+    const raw = String(bodyHtml || '');
+    // Quill editor content: light touch. Word-import HTML: heavier sanitize.
+    const fromQuill =
+      !this.useRichEditor ||
+      /class=["'][^"']*\bql-(?:align|size|font|indent|direction)-/i.test(raw);
+
+    let filled = fromQuill
+      ? this.normalizeQuillHtmlForPrint(raw)
+      : this.normalizeHtmlForPrint(raw);
+    if (!fromQuill) {
+      filled = this.wrapTrailingFooterForPrint(filled);
+    }
 
     const useImage = this.letterheadMode === 'image' && !!this.pageBackground;
     const letterheadBlank = this.letterheadMode === 'blank' || !!this.form.letterheadBlank;
@@ -598,75 +804,128 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       this.useRichEditor ||
       /hr-imported-doc|data-preserve-layout|hr-align-|text-align\s*:|hr-numbered|hr-doc-table/i.test(filled);
 
-    const spacer =
-      letterheadBlank && !hasImportedLayout
-        ? `<div style="height:120mm;min-height:120mm">&nbsp;</div>`
-        : '';
-    const bodyPadTop = hasImportedLayout ? '14mm' : useImage ? '36mm' : letterheadBlank ? '0' : '18mm';
-    const bodyPadX = '16mm';
-    const bodyPadBottom = hasImportedLayout ? '10mm' : '18mm';
+    // Match .ql-editor padding from document-template.component.css (WYSIWYG)
+    const bodyPadTop = useImage ? '36mm' : hasImportedLayout ? '12mm' : letterheadBlank ? '18mm' : '28mm';
+    const bodyPadX = hasImportedLayout ? '14mm' : '18mm';
+    const bodyPadBottom = useImage ? '24mm' : hasImportedLayout ? '14mm' : letterheadBlank ? '18mm' : '22mm';
     const bgUrl = useImage ? String(this.pageBackground).replace(/'/g, '%27') : '';
     const bgCss = bgUrl
       ? `background-image:url('${bgUrl}');background-repeat:no-repeat;background-position:top center;background-size:100% auto;`
       : '';
+
+    const sheets = this.splitHtmlByPageBreaks(filled);
+    const pagesHtml = sheets
+      .map((chunk) => `<div class="page"><div class="page-body ql-editor">${chunk}</div></div>`)
+      .join('\n');
+
+    // Exact editor typography so blank lines / signature gaps match hard copy
+    const bodyTypeCss = fromQuill
+      ? `
+  body {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 12pt;
+    line-height: 1.5;
+    color: #000;
+  }
+  .page-body.ql-editor,
+  .page-body {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 12pt;
+    line-height: 1.5;
+    color: #000;
+    overflow-wrap: anywhere;
+    word-wrap: break-word;
+  }
+  /* Same as editor: each empty <p><br></p> keeps vertical space */
+  .page-body p,
+  .page-body ol,
+  .page-body ul {
+    margin: 0.35em 0;
+    padding: 0;
+  }
+  .page-body p:empty,
+  .page-body p:has(> br:only-child) {
+    min-height: 1.5em;
+    margin: 0.35em 0;
+  }
+  .page-body br { line-height: 1.5; }
+  .page-body h1 { font-size: 2em; margin: 0.35em 0; }
+  .page-body h2 { font-size: 1.5em; margin: 0.35em 0; }
+  .page-body h3 { font-size: 1.17em; margin: 0.35em 0; }
+  .ql-size-small { font-size: 0.75em; }
+  .ql-size-large { font-size: 1.5em; }
+  .ql-size-huge { font-size: 2.5em; }
+  .ql-font-serif { font-family: Georgia, 'Times New Roman', serif; }
+  .ql-font-monospace { font-family: Monaco, 'Courier New', monospace; }
+  .ql-indent-1 { padding-left: 3em; }
+  .ql-indent-2 { padding-left: 6em; }
+  .ql-indent-3 { padding-left: 9em; }
+  .ql-indent-4 { padding-left: 12em; }
+  .ql-indent-5 { padding-left: 15em; }
+  .ql-indent-6 { padding-left: 18em; }
+  .ql-indent-7 { padding-left: 21em; }
+  .ql-indent-8 { padding-left: 24em; }
+  .ql-direction-rtl { direction: rtl; text-align: inherit; }
+`
+      : `
+  body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5; color: #000; }
+  p, h1, h2, h3, h4, h5, h6, li, td, th {
+    margin-top: 0.35em; margin-bottom: 0.35em;
+    line-height: 1.5; height: auto; max-height: none;
+    min-height: 0; overflow: visible; max-width: 100%;
+  }
+  p:empty, p:has(> br:only-child) { min-height: 1.5em; }
+`;
 
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Print Preview</title>
 <style>
   @page { size: A4; margin: 0; }
   html, body { margin: 0; padding: 0; background: #d1d5db; }
   body {
-    font-family: 'Times New Roman', Times, serif;
-    font-size: 11.5pt;
-    line-height: 1.4;
-    color: #000;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  .sheet-wrap { padding: 20px 12px 40px; display: flex; justify-content: center; }
+  ${bodyTypeCss}
+  .sheet-wrap {
+    padding: 20px 12px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+  }
   .page {
     width: 210mm; min-height: 297mm; box-sizing: border-box;
     padding: ${bodyPadTop} ${bodyPadX} ${bodyPadBottom};
-    margin: 0 auto; background: #fff; ${bgCss}
+    margin: 0; background: #fff; ${bgCss}
     box-shadow: 0 4px 24px rgba(0,0,0,0.22); position: relative;
   }
-  /* Force normal flow — Word absolute/float causes overlap on print */
-  .page * { position: static !important; float: none !important; transform: none !important; z-index: auto !important; }
   .page-body { display: block; }
-  p, h1, h2, h3, h4, h5, h6, li, td, th {
-    margin-top: 0.25em !important; margin-bottom: 0.35em !important;
-    line-height: 1.4 !important; height: auto !important; max-height: none !important;
-    min-height: 0 !important; overflow: visible !important; max-width: 100%;
-  }
-  p:empty { display: none !important; }
-  h1, h2, h3 { font-weight: bold; margin-bottom: 0.5em !important; }
   img {
-    max-width: 100% !important; height: auto !important; display: block !important;
-    margin: 4px auto !important; page-break-inside: avoid !important; break-inside: avoid !important;
+    max-width: 100% !important; height: auto !important; display: inline-block;
+    page-break-inside: avoid !important; break-inside: avoid !important;
   }
-  table, .hr-doc-table { width: 100%; border-collapse: collapse; margin: 0.4em 0 !important; border: none; page-break-inside: avoid; }
+  table, .hr-doc-table { width: 100%; border-collapse: collapse; margin: 0.5em 0; border: none; page-break-inside: avoid; }
   td, th { border: none; padding: 2px 4px; vertical-align: top; }
   table.hr-doc-table-bordered td, table.hr-doc-table-bordered th,
   table[border]:not([border="0"]) td, table[border]:not([border="0"]) th { border: 1px solid #000; padding: 4px 6px; }
   ul, ol, .hr-doc-ul, .hr-doc-ol {
-    display: block !important; padding-left: 1.6em !important; margin: 0.45em 0 !important;
-    list-style-position: outside !important;
+    display: block; padding-left: 1.5em; margin: 0.4em 0;
+    list-style-position: outside;
   }
   ol, .hr-doc-ol { list-style-type: decimal !important; }
   ul, .hr-doc-ul { list-style-type: disc !important; }
-  li { display: list-item !important; margin: 0.25em 0 !important; line-height: 1.4 !important; page-break-inside: avoid; }
-  .hr-numbered { margin: 0.3em 0 !important; display: block !important; }
+  li { display: list-item !important; margin: 0.2em 0; }
+  .hr-numbered { margin: 0.3em 0; display: block; }
   .hr-clearfix { display: none !important; height: 0 !important; margin: 0 !important; }
-  .page-break {
-    display: block; page-break-before: always; break-before: page;
-    height: 0 !important; margin: 0 !important; padding: 0 !important; border: 0 !important;
+  .page-break, [data-page-break] {
+    display: none !important; height: 0 !important; margin: 0 !important; padding: 0 !important; border: 0 !important;
   }
-  /* Footer letterhead — keep whole band on one page */
   .hr-print-footer {
     display: block !important; margin-top: 14pt !important;
     page-break-inside: avoid !important; break-inside: avoid !important;
   }
   .hr-print-footer img { page-break-inside: avoid !important; break-inside: avoid !important; margin: 2px auto !important; }
-  .hr-imported-doc { font-family: 'Times New Roman', Times, serif; font-size: 11.5pt; line-height: 1.4 !important; color: #000; }
+  .hr-imported-doc { font-family: 'Times New Roman', Times, serif; font-size: 11.5pt; line-height: 1.4; color: #000; }
   .hr-align-left, .ql-align-left { text-align: left !important; }
   .hr-align-center, .ql-align-center { text-align: center !important; }
   .hr-align-right, .ql-align-right { text-align: right !important; }
@@ -678,27 +937,77 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
   [style*="text-align: justify"], [style*="text-align:justify"] { text-align: justify !important; }
   @media print {
     html, body { background: #fff !important; }
-    .sheet-wrap { padding: 0 !important; }
-    .page { box-shadow: none !important; width: 210mm !important; min-height: 297mm !important; margin: 0 !important; }
-    .page-break { border: 0 !important; margin: 0 !important; page-break-before: always; break-before: page; }
+    .sheet-wrap { padding: 0 !important; gap: 0 !important; }
+    .page {
+      box-shadow: none !important; width: 210mm !important; min-height: 297mm !important;
+      margin: 0 !important; page-break-after: always; break-after: page;
+    }
+    .page:last-child { page-break-after: auto; break-after: auto; }
     .hr-print-footer { page-break-inside: avoid !important; break-inside: avoid !important; }
   }
 </style></head><body spellcheck="false">
-<div class="sheet-wrap"><div class="page"><div class="page-body">${spacer}${filled}</div></div></div>
+<div class="sheet-wrap">${pagesHtml}</div>
 </body></html>`;
+  }
+
+  /**
+   * Light normalize for Quill HTML — keep spacing/formatting like the editor.
+   * Only canonicalize page-break markers; do not strip empty paragraphs or clamp styles.
+   */
+  private normalizeQuillHtmlForPrint(html: string): string {
+    let out = String(html || '');
+    const PAGE_BREAK_MARK = '<div class="page-break" data-page-break="1"></div>';
+    out = out.replace(
+      /<div\b[^>]*(?:class\s*=\s*["'][^"']*page-break[^"']*["']|data-page-break\s*=)[^>]*\/?>(?:[\s\S]*?<\/div>)?/gi,
+      PAGE_BREAK_MARK,
+    );
+    out = out.replace(
+      /<(?:div|p)\b[^>]*class=["'][^"']*\bpage-break\b[^"']*["'][^>]*>\s*(?:<br\s*\/?>)?\s*<\/(?:div|p)>/gi,
+      PAGE_BREAK_MARK,
+    );
+    // Keep blank Quill lines as real vertical space in print (some engines collapse empty p)
+    out = out.replace(
+      /<p(\b[^>]*)>\s*(?:<br\s*\/?>|&nbsp;|\u00a0|\s)*<\/p>/gi,
+      '<p$1><br></p>',
+    );
+    return out;
+  }
+
+  /**
+   * Split HTML into page chunks at page-break markers (after normalizeHtmlForPrint).
+   */
+  private splitHtmlByPageBreaks(html: string): string[] {
+    const src = String(html || '');
+    if (!src.trim()) return ['<p><br></p>'];
+
+    // normalizeHtmlForPrint leaves: <div class="page-break" data-page-break="1"></div>
+    const parts = src.split(/<div\b[^>]*(?:class\s*=\s*["'][^"']*page-break[^"']*["']|data-page-break\s*=)[^>]*>\s*<\/div>/gi);
+
+    const cleaned = parts
+      .map((p) => p.trim())
+      .filter((p) => p.length > 0 && !/^<div\b[^>]*page-break[^>]*>\s*<\/div>$/i.test(p));
+
+    return cleaned.length ? cleaned : ['<p><br></p>'];
   }
 
   private normalizeHtmlForPrint(html: string): string {
     let out = this.sanitizeOverlappingLayoutHtml(String(html || ''));
 
+    // Canonical page-break markers FIRST — empty-block strip used to delete them
+    const PAGE_BREAK_MARK = '<div class="page-break" data-page-break="1"></div>';
     out = out.replace(
-      /<(p|div|h[1-6])\b[^>]*>\s*(?:&nbsp;|\u00a0|<br\s*\/?>|\s)*<\/\1>/gi,
-      '',
+      /<div\b[^>]*(?:class\s*=\s*["'][^"']*page-break[^"']*["']|data-page-break\s*=)[^>]*\/?>(?:[\s\S]*?<\/div>)?/gi,
+      PAGE_BREAK_MARK,
+    );
+    out = out.replace(
+      /<(?:br|hr)\b[^>]*(?:type\s*=\s*["']page["']|style\s*=\s*["'][^"']*page-break-before\s*:\s*always[^"']*["'])[^>]*\/?>/gi,
+      PAGE_BREAK_MARK,
     );
 
+    // Strip empty blocks — never touch page-break markers
     out = out.replace(
-      /<div\b([^>]*class=["'][^"']*page-break[^"']*["'][^>]*)>/gi,
-      '<div$1 style="height:0;margin:0;border:0;page-break-before:always;">',
+      /<(p|div|h[1-6])\b(?![^>]*page-break)(?![^>]*data-page-break)[^>]*>\s*(?:&nbsp;|\u00a0|<br\s*\/?>|\s)*<\/\1>/gi,
+      '',
     );
 
     out = out.replace(/style\s*=\s*(["'])(.*?)\1/gi, (_m, q: string, style: string) => {
@@ -780,10 +1089,18 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       next: (res: any) => {
         if (res?.status && res.data) {
           const emp = Array.isArray(res.data.employee) ? res.data.employee : [];
-          // Ensure department + designation always present in employee chips
+          // Ensure core employee chips always present
           const keys = new Set(emp.map((v: any) => v.key));
           if (!keys.has('designation')) emp.unshift({ key: 'designation', label: 'Designation' });
           if (!keys.has('department')) emp.unshift({ key: 'department', label: 'Department' });
+          if (!keys.has('pan_no')) emp.push({ key: 'pan_no', label: 'PAN No' });
+          if (!keys.has('shift_name')) emp.push({ key: 'shift_name', label: 'Shift Name' });
+          if (!keys.has('shift_timing')) {
+            emp.push({
+              key: 'shift_timing',
+              label: 'Shift Timing (e.g. 9:00 AM to 6:30 PM, Monday to Saturday)',
+            });
+          }
           this.catalog = {
             employee: emp,
             salary: res.data.salary || [],
@@ -837,6 +1154,8 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       letterheadBlank: !this.letterheadUrl && !this.letterheadBase64,
       includeSalaryAnnexure: false,
       status: 'active',
+      branchIds: [],
+      assignAllBranches: true,
     };
     this.letterheadMode = this.form.letterheadBlank ? 'blank' : 'image';
     setTimeout(() => this.initEditor(this.sampleBody), 0);
@@ -845,23 +1164,42 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
   openEdit(row: any): void {
     this.createFlag = true;
     this.updateFlag = true;
-    const html = row.bodyHtml || '';
-    this.importedLayout = /hr-imported-doc|page-break|data:image\/|text-align:|margin-top:|<table\b/i.test(html);
-    this.useRichEditor = this.importedLayout;
-    this.form = {
-      id: row.id,
-      name: row.name,
-      category: row.category || 'custom',
-      bodyHtml: html,
-      letterheadBlank: row.letterheadBlank === true,
-      includeSalaryAnnexure: !!row.includeSalaryAnnexure,
-      status: row.status || 'active',
+    this.useRichEditor = false;
+
+    const applyRow = (data: any) => {
+      const html = data?.bodyHtml || '';
+      // Keep Quill editor for Add + Update. importedLayout only affects page padding.
+      this.importedLayout =
+        /hr-imported-doc|page-break|data:image\/|text-align:|margin-top:|<table\b/i.test(html);
+      const ids = Array.isArray(data.branchIds) ? data.branchIds.filter(Boolean) : [];
+      this.form = {
+        id: data.id,
+        name: data.name,
+        category: data.category || 'custom',
+        bodyHtml: html,
+        letterheadBlank: data.letterheadBlank === true,
+        includeSalaryAnnexure: !!data.includeSalaryAnnexure,
+        status: data.status || 'active',
+        branchIds: ids,
+        assignAllBranches: !ids.length,
+      };
+      this.letterheadMode = this.form.letterheadBlank ? 'blank' : 'image';
+      this.cdr.detectChanges();
+      setTimeout(() => this.initEditor(html), 0);
     };
-    this.letterheadMode = this.form.letterheadBlank ? 'blank' : 'image';
-    setTimeout(() => {
-      if (this.useRichEditor) this.renderRichHtml(html);
-      else this.initEditor(html);
-    }, 0);
+
+    // Fetch fresh row so update always has latest body + id
+    if (row?.id) {
+      this.master.getHrTemplate(row.id).subscribe({
+        next: (res: any) => {
+          if (res?.status && res.data) applyRow(res.data);
+          else applyRow(row);
+        },
+        error: () => applyRow(row),
+      });
+    } else {
+      applyRow(row);
+    }
   }
 
   back(): void {
@@ -880,22 +1218,31 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       return;
     }
     host.innerHTML = '';
+    const self = this;
     this.quill = new Quill(host, {
       theme: 'snow',
-      placeholder: 'Type your letter like in Wordâ€¦ Insert variables from the chips.',
+      placeholder: 'Type your letter like in Word… Paste from Word keeps formatting.',
       modules: {
-        toolbar: [
-          [{ header: [1, 2, 3, false] }],
-          [{ font: [] }],
-          [{ size: ['small', false, 'large', 'huge'] }],
-          ['bold', 'italic', 'underline', 'strike'],
-          [{ color: [] }, { background: [] }],
-          [{ align: [] }],
-          [{ list: 'ordered' }, { list: 'bullet' }],
-          [{ indent: '-1' }, { indent: '+1' }],
-          ['blockquote', 'link', 'image'],
-          ['clean'],
-        ],
+        toolbar: {
+          container: [
+            [{ header: [1, 2, 3, false] }],
+            [{ font: QUILL_FONT_WHITELIST }],
+            [{ size: QUILL_SIZE_WHITELIST }],
+            ['bold', 'italic', 'underline', 'strike'],
+            [{ color: [] }, { background: [] }],
+            [{ align: [] }],
+            [{ list: 'ordered' }, { list: 'bullet' }],
+            [{ indent: '-1' }, { indent: '+1' }],
+            ['blockquote', 'link', 'image'],
+            ['pagebreak'],
+            ['clean'],
+          ],
+          handlers: {
+            pagebreak() {
+              self.insertQuillPageBreak();
+            },
+          },
+        },
         clipboard: {
           matchVisual: false,
         },
@@ -903,20 +1250,315 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     });
 
     this.registerClipboardMatchers();
+    this.bindWordPasteHandler();
     this.setEditorHtml(html || '<p><br></p>');
 
     this.quill.on('text-change', () => {
       // Keep raw HTML so imported tables/images/styles survive edits as much as possible
       this.form.bodyHtml = this.quill?.root.innerHTML || '';
+      this.refreshPrintPreview(false);
     });
+  }
+
+  /** Insert page-break embed at caret (Quill mode). Undo/redo supported via Quill history. */
+  insertQuillPageBreak(): void {
+    if (!this.quill) return;
+    const range = this.quill.getSelection(true);
+    const index = range ? range.index : Math.max(0, this.quill.getLength() - 1);
+    this.quill.insertEmbed(index, 'pagebreak', true, 'user');
+    this.quill.insertText(index + 1, '\n', 'user');
+    this.quill.setSelection(index + 2, 0, 'user');
+    this.form.bodyHtml = this.quill.root.innerHTML;
+    this.refreshPrintPreview(false);
   }
 
   /**
    * Soften Quill's default paste stripping. Prefer setEditorHtml() for full Word imports.
+   * Also map .page-break / data-page-break nodes onto the pagebreak blot.
    */
   private registerClipboardMatchers(): void {
     if (!this.quill) return;
-    // no-op soft matcher â€” keeps default paste behavior intact
+
+    // Preserve inline styles from Word / Google Docs
+    const applyInlineFormats = (node: HTMLElement, delta: any) => {
+      const formats = this.extractFormatsFromElement(node);
+      if (!Object.keys(formats).length) return delta;
+      const next = new Delta();
+      (delta.ops || []).forEach((op: any) => {
+        if (op.insert && typeof op.insert === 'string') {
+          next.insert(op.insert, { ...(op.attributes || {}), ...formats });
+        } else if (op.insert) {
+          next.insert(op.insert, op.attributes);
+        }
+      });
+      return next.ops?.length ? next : delta;
+    };
+
+    for (const tag of ['SPAN', 'FONT', 'P', 'DIV', 'LI', 'TD', 'TH', 'A', 'B', 'I', 'U', 'STRONG', 'EM']) {
+      this.quill.clipboard.addMatcher(tag, (node: HTMLElement, delta: any) => {
+        if (
+          tag === 'DIV' &&
+          (node?.classList?.contains('page-break') || node?.getAttribute?.('data-page-break'))
+        ) {
+          return new Delta().insert({ pagebreak: true });
+        }
+        return applyInlineFormats(node, delta);
+      });
+    }
+  }
+
+  private extractFormatsFromElement(el: HTMLElement): Record<string, any> {
+    const formats: Record<string, any> = {};
+    if (!el) return formats;
+
+    // Legacy <font face="" size="" color="">
+    if (el.tagName === 'FONT') {
+      const face = this.normalizeFontFamily(el.getAttribute('face') || '');
+      if (face) formats['font'] = face;
+      const color = el.getAttribute('color');
+      if (color) formats['color'] = color;
+      const sizeAttr = el.getAttribute('size');
+      if (sizeAttr) {
+        const mapped: Record<string, string> = {
+          '1': '8pt',
+          '2': '10pt',
+          '3': '12pt',
+          '4': '14pt',
+          '5': '18pt',
+          '6': '24pt',
+          '7': '36pt',
+        };
+        if (mapped[sizeAttr]) formats['size'] = mapped[sizeAttr];
+      }
+    }
+
+    const style = el.style;
+    if (style) {
+      const family = this.normalizeFontFamily(style.fontFamily || '');
+      if (family) formats['font'] = family;
+      const size = this.normalizeFontSize(style.fontSize || '');
+      if (size) formats['size'] = size;
+      if (style.color) formats['color'] = style.color;
+      if (style.backgroundColor && style.backgroundColor !== 'transparent') {
+        formats['background'] = style.backgroundColor;
+      }
+      const weight = (style.fontWeight || '').toLowerCase();
+      if (weight === 'bold' || parseInt(weight, 10) >= 600) formats['bold'] = true;
+      if ((style.fontStyle || '').toLowerCase() === 'italic') formats['italic'] = true;
+      const deco = (style.textDecoration || style.textDecorationLine || '').toLowerCase();
+      if (deco.includes('underline')) formats['underline'] = true;
+      if (deco.includes('line-through')) formats['strike'] = true;
+      const align = (style.textAlign || '').toLowerCase();
+      if (align && align !== 'start' && align !== 'left' && align !== 'initial') {
+        formats['align'] = align === 'justify' ? 'justify' : align;
+      }
+    }
+
+    const tag = el.tagName;
+    if (tag === 'B' || tag === 'STRONG') formats['bold'] = true;
+    if (tag === 'I' || tag === 'EM') formats['italic'] = true;
+    if (tag === 'U') formats['underline'] = true;
+    if (tag === 'S' || tag === 'STRIKE') formats['strike'] = true;
+
+    return formats;
+  }
+
+  /** Intercept Word / rich HTML paste so formatting is cleaned then kept. */
+  private bindWordPasteHandler(): void {
+    if (!this.quill) return;
+    const root = this.quill.root;
+    root.addEventListener(
+      'paste',
+      (ev: ClipboardEvent) => {
+        const html = ev.clipboardData?.getData('text/html') || '';
+        if (!html || !this.looksLikeRichOrWordHtml(html)) return;
+
+        ev.preventDefault();
+        ev.stopPropagation();
+
+        const cleaned = this.cleanWordPasteHtml(html);
+        if (!cleaned.trim()) return;
+
+        const quill = this.quill!;
+        const range = quill.getSelection(true);
+        let index = range ? range.index : Math.max(0, quill.getLength() - 1);
+        const length = range && range.length ? range.length : 0;
+        if (length > 0) {
+          quill.deleteText(index, length, 'user');
+        }
+        // Insert cleaned Word HTML through Quill clipboard (uses our style formats)
+        quill.clipboard.dangerouslyPasteHTML(index, cleaned, 'user');
+        this.form.bodyHtml = quill.root.innerHTML;
+        this.refreshPrintPreview(false);
+      },
+      true,
+    );
+  }
+
+  private looksLikeRichOrWordHtml(html: string): boolean {
+    const h = String(html || '');
+    if (!h.includes('<')) return false;
+    return (
+      /mso-|MsoNormal|xmlns:o=|xmlns:w=|WordDocument|office:word/i.test(h) ||
+      /font-family\s*:/i.test(h) ||
+      /font-size\s*:/i.test(h) ||
+      /<span\b[^>]*style=/i.test(h) ||
+      /<p\b[^>]*style=/i.test(h) ||
+      /docs-internal-guid|Apple-converted-space/i.test(h)
+    );
+  }
+
+  /** Strip Word junk; keep font/size/color/align/bold/tables/images. */
+  private cleanWordPasteHtml(html: string): string {
+    let h = String(html || '');
+    h = h.replace(/<!--\[if[\s\S]*?<!\[endif\]-->/gi, '');
+    h = h.replace(/<!--[\s\S]*?-->/g, '');
+    h = h.replace(/<\/?(?:xml|o:p|w:[^>\s]+)[^>]*>/gi, '');
+    h = h.replace(/<style[\s\S]*?<\/style>/gi, '');
+    h = h.replace(/<script[\s\S]*?<\/script>/gi, '');
+    h = h.replace(/<meta[^>]*>/gi, '');
+    h = h.replace(/<link[^>]*>/gi, '');
+
+    try {
+      const doc = new DOMParser().parseFromString(h, 'text/html');
+      this.normalizeWordDom(doc.body);
+      return doc.body.innerHTML;
+    } catch (_) {
+      return h;
+    }
+  }
+
+  private normalizeWordDom(root: HTMLElement): void {
+    const keepProps = new Set([
+      'font-family',
+      'font-size',
+      'color',
+      'background-color',
+      'background',
+      'text-align',
+      'font-weight',
+      'font-style',
+      'text-decoration',
+      'text-decoration-line',
+      'line-height',
+      'margin-left',
+      'text-indent',
+    ]);
+
+    const walk = (node: Node) => {
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      const el = node as HTMLElement;
+      const tag = el.tagName.toLowerCase();
+
+      // Drop Word helper tags
+      if (tag === 'o:p' || tag === 'meta' || tag === 'link' || tag === 'script' || tag === 'style') {
+        el.remove();
+        return;
+      }
+
+      if (el.hasAttribute('style')) {
+        const kept: string[] = [];
+        const style = el.style;
+        for (let i = 0; i < style.length; i++) {
+          const prop = style.item(i);
+          if (!keepProps.has(prop)) continue;
+          let val = style.getPropertyValue(prop);
+          if (!val) continue;
+          if (prop === 'font-family') {
+            const fam = this.normalizeFontFamily(val);
+            if (!fam) continue;
+            val = fam;
+          }
+          if (prop === 'font-size') {
+            const sz = this.normalizeFontSize(val);
+            if (!sz) continue;
+            val = sz;
+          }
+          kept.push(`${prop}:${val}`);
+        }
+        if (kept.length) el.setAttribute('style', kept.join(';'));
+        else el.removeAttribute('style');
+      }
+
+      // Drop Mso* classes — styles already captured
+      if (el.className && /mso/i.test(String(el.className))) {
+        el.removeAttribute('class');
+      }
+
+      // Convert bold/italic tags Word sometimes emits as font-weight on span
+      Array.from(el.childNodes).forEach(walk);
+    };
+
+    Array.from(root.childNodes).forEach(walk);
+  }
+
+  private normalizeFontFamily(raw: string): string | null {
+    if (!raw) return null;
+    const first = raw
+      .split(',')[0]
+      .replace(/['"]/g, '')
+      .trim();
+    if (!first) return null;
+    const lower = first.toLowerCase();
+    const hit = QUILL_FONT_WHITELIST.find((f) => f.toLowerCase() === lower);
+    if (hit) return hit;
+    // Partial match e.g. "TimesNewRoman" / "times new roman"
+    const compact = lower.replace(/\s+/g, '');
+    const soft = QUILL_FONT_WHITELIST.find((f) => f.toLowerCase().replace(/\s+/g, '') === compact);
+    return soft || null;
+  }
+
+  private normalizeFontSize(raw: string): string | null {
+    if (!raw) return null;
+    const m = String(raw)
+      .trim()
+      .match(/^([\d.]+)\s*(pt|px|em|rem)?$/i);
+    if (!m) {
+      // already like "12pt" with extra spaces
+      const cleaned = String(raw).replace(/\s+/g, '').toLowerCase();
+      const hit = QUILL_SIZE_WHITELIST.find((s) => s.toLowerCase() === cleaned);
+      return hit || null;
+    }
+    let n = parseFloat(m[1]);
+    let unit = (m[2] || 'px').toLowerCase();
+    if (unit === 'em' || unit === 'rem') {
+      n = n * 16;
+      unit = 'px';
+    }
+    // Prefer pt for Word docs
+    if (unit === 'px') {
+      const asPt = Math.round((n * 0.75) * 2) / 2; // round to .0/.5
+      const ptStr = `${asPt % 1 === 0 ? asPt.toFixed(0) : asPt}pt`;
+      const exact = QUILL_SIZE_WHITELIST.find((s) => s.toLowerCase() === ptStr.toLowerCase());
+      if (exact) return exact;
+      // nearest pt
+      const pts = QUILL_SIZE_WHITELIST.filter((s) => s.endsWith('pt')).map((s) => parseFloat(s));
+      let best = pts[0];
+      let bestDiff = Math.abs(best - asPt);
+      for (const p of pts) {
+        const d = Math.abs(p - asPt);
+        if (d < bestDiff) {
+          best = p;
+          bestDiff = d;
+        }
+      }
+      return `${best}pt`;
+    }
+    const ptVal = `${Math.round(n * 2) / 2}`.replace(/\.0$/, '');
+    const candidate = `${ptVal}pt`;
+    const hit = QUILL_SIZE_WHITELIST.find((s) => s.toLowerCase() === candidate.toLowerCase());
+    if (hit) return hit;
+    const pts = QUILL_SIZE_WHITELIST.filter((s) => s.endsWith('pt')).map((s) => parseFloat(s));
+    let best = pts[0];
+    let bestDiff = Math.abs(best - n);
+    for (const p of pts) {
+      const d = Math.abs(p - n);
+      if (d < bestDiff) {
+        best = p;
+        bestDiff = d;
+      }
+    }
+    return `${best}pt`;
   }
 
   /**
@@ -935,12 +1577,13 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       this.form.bodyHtml = this.quill.root.innerHTML || safe;
     } catch (e) {
       console.warn('dangerouslyPasteHTML failed', e);
-      // Last resort â€” but prefer switching to rich editor for complex HTML
-      this.useRichEditor = true;
-      this.importedLayout = true;
-      this.destroyEditor();
-      this.cdr.detectChanges();
-      setTimeout(() => this.renderRichHtml(safe), 0);
+      // Stay on Quill — try a simpler paste rather than switching editors
+      try {
+        this.quill.setText(safe.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || '\n', 'silent');
+        this.form.bodyHtml = this.quill.root.innerHTML;
+      } catch (_) {
+        this.notyf.error('Document load partially failed — try re-saving the template');
+      }
     }
   }
 
@@ -1063,8 +1706,8 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
   private richSavedRange: Range | null = null;
 
   onRichInput(): void {
-    const el = this.getRichEl();
-    if (el) this.form.bodyHtml = el.innerHTML;
+    this.syncBodyAndPreview();
+    this.updateFormatActive();
   }
 
   onRichKeydown(ev: KeyboardEvent): void {
@@ -1105,6 +1748,20 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     // Don't overwrite a good multi-line selection with a collapsed caret (e.g. when Font dropdown takes focus)
     if (sel.isCollapsed && this.richSavedRange && !this.richSavedRange.collapsed) return;
     this.richSavedRange = range.cloneRange();
+    this.updateFormatActive();
+  }
+
+  /** Read browser format state at caret so B/I/U/S buttons show on/off. */
+  updateFormatActive(): void {
+    if (!this.useRichEditor) return;
+    try {
+      this.formatActive = {
+        bold: !!document.queryCommandState('bold'),
+        italic: !!document.queryCommandState('italic'),
+        underline: !!document.queryCommandState('underline'),
+        strikeThrough: !!document.queryCommandState('strikeThrough'),
+      };
+    } catch (_) {}
   }
 
   private restoreRichSelection(): boolean {
@@ -1149,6 +1806,67 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
   }
 
 
+  /** A4 height — used so on-screen page breaks push content onto the next page. */
+  private readonly A4_PAGE_HEIGHT_MM = 297;
+
+  /** Convert mm → CSS px in the current document (more accurate than a fixed dpi). */
+  private cssMmToPx(mm: number): number {
+    const probe = document.createElement('div');
+    probe.style.cssText = `position:absolute;left:-9999px;top:0;height:${mm}mm;width:0;pointer-events:none;`;
+    document.body.appendChild(probe);
+    const px = probe.getBoundingClientRect().height;
+    document.body.removeChild(probe);
+    return px > 0 ? px : mm * (96 / 25.4);
+  }
+
+  /** Y offset of the caret inside the rich editor (relative to host top + scroll). */
+  private getRichCaretTop(el: HTMLElement): number {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) {
+      return Math.max(0, el.scrollHeight - 1);
+    }
+
+    const range = sel.getRangeAt(0).cloneRange();
+    range.collapse(true);
+
+    let top = 0;
+    const rects = range.getClientRects();
+    if (rects.length > 0) {
+      top = rects[0].top;
+    } else {
+      const rect = range.getBoundingClientRect();
+      if (rect.top || rect.height) {
+        top = rect.top;
+      } else {
+        // Empty block / end of content — temporary marker, then restore selection
+        const marker = document.createElement('span');
+        marker.textContent = '\u200b';
+        const live = sel.getRangeAt(0).cloneRange();
+        live.collapse(true);
+        live.insertNode(marker);
+        top = marker.getBoundingClientRect().top;
+        const parent = marker.parentNode;
+        const after = document.createRange();
+        after.setStartAfter(marker);
+        after.collapse(true);
+        parent?.removeChild(marker);
+        parent?.normalize();
+        try {
+          sel.removeAllRanges();
+          sel.addRange(after);
+          this.richSavedRange = after.cloneRange();
+        } catch (_) {}
+      }
+    }
+
+    const elRect = el.getBoundingClientRect();
+    return Math.max(0, top - elRect.top + el.scrollTop);
+  }
+
+  /**
+   * Insert a real page break: fill remaining space on the current A4 page so
+   * content after the caret starts on the next page. Uses insertHTML so Undo works.
+   */
   insertPageBreak(): void {
     const el = this.getRichEl();
     if (!el) return;
@@ -1156,40 +1874,36 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     this.restoreRichSelection();
     el.focus();
 
-    const selection = window.getSelection();
-
-    if (!selection || selection.rangeCount === 0) {
-      return;
+    const pageH = this.cssMmToPx(this.A4_PAGE_HEIGHT_MM);
+    const caretTop = this.getRichCaretTop(el);
+    const posInPage = caretTop % pageH;
+    const minGap = 56; // room for the "PAGE BREAK" label
+    let spacerPx = Math.ceil(pageH - posInPage);
+    // Near the bottom of a page → jump a full extra page so content clearly moves
+    if (spacerPx < minGap) {
+      spacerPx += Math.ceil(pageH);
     }
+    spacerPx = Math.max(minGap, Math.min(spacerPx, Math.ceil(pageH + minGap)));
 
-    const range = selection.getRangeAt(0);
+    // contenteditable=false keeps typing out of the spacer; height fills to next page.
+    // Print path (normalizeHtmlForPrint) zeros height and keeps page-break-before.
+    const html =
+      `<div class="page-break" contenteditable="false" data-page-break="1" ` +
+      `style="display:block;box-sizing:border-box;height:${spacerPx}px;` +
+      `margin:0;padding:0;border:0;border-top:2px dashed #94a3b8;` +
+      `page-break-before:always;break-before:page;"></div>` +
+      `<p><br></p>`;
 
-    const pageBreak = document.createElement('div');
-    pageBreak.className = 'page-break';
-    pageBreak.innerHTML = '<br>';
-
-    range.deleteContents();
-    range.insertNode(pageBreak);
-
-    // Cursor page break ke baad
-    const newRange = document.createRange();
-    newRange.setStartAfter(pageBreak);
-    newRange.collapse(true);
-
-    selection.removeAllRanges();
-    selection.addRange(newRange);
-
-    this.richSavedRange = newRange.cloneRange();
-
-    this.form.bodyHtml = el.innerHTML;
+    this.insertHtmlAtCaret(html);
   }
 
   richCmd(command: string, value?: string): void {
     const el = this.getRichEl();
     if (!el) return;
 
+    const inlineFmt = ['bold', 'italic', 'underline', 'strikeThrough'];
     const hadSelection = this.restoreRichSelection();
-    // For indent/align, caret is enough â€” no need for a text selection
+    // For indent/align/inline toggle, caret is enough — no need for a text selection
     if (!hadSelection && this.richSavedRange) {
       try {
         const sel = window.getSelection();
@@ -1199,30 +1913,25 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     }
     el.focus();
 
-    if (!hadSelection && ['bold', 'italic', 'underline'].includes(command)) {
-      this.notyf.error('Pehle text select karo, phir Bold / Italic / Underline dabao');
-      return;
-    }
-
     let applied = false;
     try {
-      document.execCommand('styleWithCSS', false, 'true');
+      // false = use <b>/<i>/<u> tags — more reliable for caret typing than CSS spans
+      document.execCommand('styleWithCSS', false, 'false');
       applied = document.execCommand(command, false, value);
     } catch (e) {
       console.warn('richCmd execCommand failed', command, e);
     }
 
-    // Word HTML often ignores formatting â€” wrap selected text manually
-    if (hadSelection && ['bold', 'italic', 'underline'].includes(command)) {
-      const alreadyOn = document.queryCommandState(command);
-      if (!alreadyOn) {
-        if (command === 'underline') {
-          this.wrapSelection('u') || this.wrapSelection('span', 'text-decoration: underline');
-        } else if (command === 'bold' && !applied) {
-          this.wrapSelection('strong');
-        } else if (command === 'italic' && !applied) {
-          this.wrapSelection('em');
-        }
+    // Selected text: if execCommand failed on complex Word HTML, wrap manually
+    if (hadSelection && inlineFmt.includes(command) && !document.queryCommandState(command)) {
+      if (command === 'underline') {
+        this.wrapSelection('u') || this.wrapSelection('span', 'text-decoration: underline');
+      } else if (command === 'bold' && !applied) {
+        this.wrapSelection('strong') || this.wrapSelection('b');
+      } else if (command === 'italic' && !applied) {
+        this.wrapSelection('em') || this.wrapSelection('i');
+      } else if (command === 'strikeThrough' && !applied) {
+        this.wrapSelection('s') || this.wrapSelection('span', 'text-decoration: line-through');
       }
     }
 
@@ -1244,7 +1953,8 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     }
 
     this.saveRichSelection();
-    this.form.bodyHtml = el.innerHTML;
+    this.updateFormatActive();
+    this.syncBodyAndPreview();
   }
 
   /** Apply CSS to the block containing the caret/selection. */
@@ -1339,45 +2049,27 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
 
   insertVariable(key: string): void {
     const token = `{{${key}}}`;
+    // Insert as bold so filled letter values stay emphasized
     if (this.useRichEditor) {
       const el = this.getRichEl();
       if (!el) {
-        this.form.bodyHtml = (this.form.bodyHtml || '') + token;
+        this.form.bodyHtml = (this.form.bodyHtml || '') + `<strong>${token}</strong>`;
         return;
       }
-      this.restoreRichSelection();
-      el.focus();
-      try {
-        const ok = document.execCommand('insertText', false, token);
-        if (!ok) {
-          const sel = window.getSelection();
-          if (sel && sel.rangeCount) {
-            const range = sel.getRangeAt(0);
-            range.deleteContents();
-            range.insertNode(document.createTextNode(token));
-            range.collapse(false);
-            sel.removeAllRanges();
-            sel.addRange(range);
-          } else {
-            el.innerHTML = (el.innerHTML || '') + token;
-          }
-        }
-      } catch (_) {
-        el.innerHTML = (el.innerHTML || '') + token;
-      }
-      this.saveRichSelection();
-      this.form.bodyHtml = el.innerHTML;
+      this.insertHtmlAtCaret(`<strong>${token}</strong>&nbsp;`);
       return;
     }
     if (!this.quill) {
-      this.form.bodyHtml = (this.form.bodyHtml || '') + token;
+      this.form.bodyHtml = (this.form.bodyHtml || '') + `<strong>${token}</strong>`;
+      this.refreshPrintPreview(false);
       return;
     }
     const range = this.quill.getSelection(true);
     const index = range ? range.index : this.quill.getLength();
-    this.quill.insertText(index, token, 'user');
+    this.quill.insertText(index, token, { bold: true }, 'user');
     this.quill.setSelection(index + token.length, 0, 'user');
     this.form.bodyHtml = this.quill.root.innerHTML;
+    this.refreshPrintPreview(false);
   }
 
   onLetterheadFile(event: Event): void {
@@ -1485,10 +2177,11 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       }
 
       this.importedLayout = true;
-      this.useRichEditor = true;
+      // Always keep Quill editor (same as Add / Update)
+      this.useRichEditor = false;
 
       // Letterhead decision:
-      // - Word body/header already has logo image â†’ blank (avoid double letterhead)
+      // - Word body/header already has logo image → blank (avoid double letterhead)
       // - Otherwise use company uploaded letterhead if available
       const hasEmbeddedLetterhead = /<img\b/i.test(html.slice(0, 4000));
       const hasCompanyLetterhead = !!(this.letterheadBase64 || this.letterheadUrl);
@@ -1507,19 +2200,18 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       this.form.bodyHtml = html;
       this.cdr.detectChanges();
 
-      // Wait for *ngIf to create #richHost, then paint HTML (Quill cannot show full DOCX)
       setTimeout(() => {
-        this.renderRichHtml(html);
+        this.initEditor(html);
         setTimeout(() => {
-          const shown = (this.richHost?.nativeElement?.innerText || '').replace(/\s+/g, '').trim();
+          const shown = (this.quill?.getText() || '').replace(/\s+/g, '').trim();
           if (!shown && !/<img\b/i.test(html)) {
             this.notyf.error('Import ran but content did not render. Try another .docx (Save As in Word).');
           } else {
             const lhNote = this.letterheadMode === 'image'
-              ? ' â€” company letterhead applied'
+              ? ' — company letterhead applied'
               : hasEmbeddedLetterhead
-                ? ' â€” Word letterhead kept in document'
-                : ' â€” no letterhead (upload one & select â€œUse uploaded letterheadâ€)';
+                ? ' — Word letterhead kept in document'
+                : ' — no letterhead (upload one & select “Use uploaded letterhead”)';
             this.notyf.success(
               isDocx
                 ? `Word template imported${lhNote}`
@@ -2144,17 +2836,30 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     return imgCount >= 1 || hasTable || hasPageBreak || html.length > 2500;
   }
 
+  /** Always pull latest HTML from the live editor before save / preview (WYSIWYG). */
+  private pullBodyFromEditor(): void {
+    if (this.useRichEditor) {
+      const el = this.getRichEl();
+      if (el) this.form.bodyHtml = el.innerHTML;
+      return;
+    }
+    // Prefer visible .ql-editor HTML so print preview matches what user sees
+    const domEditor = document.querySelector(
+      'app-document-template .dt-quill-wrap .ql-editor',
+    ) as HTMLElement | null;
+    if (domEditor?.innerHTML != null && String(domEditor.innerHTML).trim() !== '') {
+      this.form.bodyHtml = domEditor.innerHTML;
+      return;
+    }
+    if (this.quill?.root?.innerHTML) {
+      this.form.bodyHtml = this.quill.root.innerHTML;
+    }
+  }
+
   save(): void {
     this.syncLetterheadMode();
-    if (this.useRichEditor && this.richHost?.nativeElement) {
-      this.form.bodyHtml = this.richHost.nativeElement.innerHTML;
-    } else if (this.quill?.root?.innerHTML) {
-      const fromEditor = this.quill.root.innerHTML;
-      const editorPlain = fromEditor.replace(/<[^>]+>/g, '').replace(/&nbsp;/gi, ' ').trim();
-      if (editorPlain.length > 0) {
-        this.form.bodyHtml = fromEditor;
-      }
-    }
+    this.pullBodyFromEditor();
+
     if (!String(this.form.name || '').trim()) {
       this.notyf.error('Template name is required');
       return;
@@ -2168,15 +2873,38 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const payload = { ...this.form };
-    const req = this.updateFlag
+    // Prefer update whenever we have an id (avoids accidental create on edit)
+    const isUpdate = !!(this.updateFlag || this.form?.id);
+    if (isUpdate && !this.form?.id) {
+      this.notyf.error('Template id missing — reopen and try again');
+      return;
+    }
+
+    if (!this.form.assignAllBranches && !(this.form.branchIds || []).length) {
+      this.notyf.error('Select at least one branch, or choose All branches');
+      return;
+    }
+
+    const payload: any = {
+      id: this.form.id,
+      name: String(this.form.name).trim(),
+      category: this.form.category || 'custom',
+      bodyHtml: this.form.bodyHtml,
+      letterheadBlank: !!this.form.letterheadBlank,
+      includeSalaryAnnexure: !!this.form.includeSalaryAnnexure,
+      status: this.form.status || 'active',
+      assignAllBranches: !!this.form.assignAllBranches,
+      branchIds: this.form.assignAllBranches ? [] : this.form.branchIds || [],
+    };
+
+    const req = isUpdate
       ? this.master.updateHrTemplate(payload)
       : this.master.createHrTemplate(payload);
 
     req.subscribe({
       next: (res: any) => {
         if (res?.status) {
-          this.notyf.success(res.message || 'Saved');
+          this.notyf.success(res.message || (isUpdate ? 'Updated' : 'Saved'));
           this.back();
           this.loadList();
         } else {
