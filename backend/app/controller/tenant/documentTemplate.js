@@ -508,9 +508,81 @@ function wrapTrailingFooter(html) {
   return `${src.slice(0, m.index)}<div class="hr-print-footer">${m[0]}</div>`;
 }
 
+/** Match Manage Template print: keep signature gaps / left-right columns. */
+function normalizeQuillHtmlForPrint(html) {
+  let out = String(html || '');
+  const PAGE_BREAK_MARK = '<div class="page-break" data-page-break="1"></div>';
+  out = out.replace(
+    /<div\b[^>]*(?:class\s*=\s*["'][^"']*page-break[^"']*["']|data-page-break\s*=)[^>]*\/?>(?:[\s\S]*?<\/div>)?/gi,
+    PAGE_BREAK_MARK
+  );
+  out = out.replace(
+    /<(?:div|p)\b[^>]*class=["'][^"']*\bpage-break\b[^"']*["'][^>]*>\s*(?:<br\s*\/?>)?\s*<\/(?:div|p)>/gi,
+    PAGE_BREAK_MARK
+  );
+
+  const textOf = (h) =>
+    String(h || '')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;|\u00a0/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  const isSigLine = (h) => {
+    const t = textOf(h);
+    return /signature/i.test(t) || /^\(\s*\)$/.test(t);
+  };
+  const isRight = (attrs) => /ql-align-right|text-align\s*:\s*right/i.test(attrs || '');
+  const isLeftish = (attrs) =>
+    !isRight(attrs) && !/ql-align-center|text-align\s*:\s*center/i.test(attrs || '');
+
+  out = out.replace(
+    /<p\b([^>]*)>([\s\S]*?)<\/p>\s*<p\b([^>]*)>([\s\S]*?)<\/p>/gi,
+    (full, a1, c1, a2, c2) => {
+      if (!isLeftish(a1) || !isRight(a2)) return full;
+      if (!isSigLine(c1) || !isSigLine(c2)) return full;
+      return (
+        `<table class="hr-sig-table" style="width:100%;table-layout:fixed;border-collapse:collapse;border:none;margin:0.35em 0;">` +
+        `<tbody><tr>` +
+        `<td style="width:50%;vertical-align:top;text-align:left;border:none;padding:0 8px 0 0;">${c1}</td>` +
+        `<td style="width:50%;vertical-align:top;text-align:right;border:none;padding:0 0 0 8px;">${c2}</td>` +
+        `</tr></tbody></table>`
+      );
+    }
+  );
+
+  out = out.replace(
+    /<([a-z][a-z0-9]*)\b([^>]*\bclass\s*=\s*["'][^"']*\bql-align-(left|center|right|justify)\b[^"']*["'][^>]*)>/gi,
+    (_m, tag, attrs, align) => {
+      if (/text-align\s*:/i.test(attrs)) return `<${tag}${attrs}>`;
+      if (/style\s*=/i.test(attrs)) {
+        return `<${tag}${attrs.replace(/style\s*=\s*(["'])/i, `style=$1text-align:${align};`)}>`;
+      }
+      return `<${tag}${attrs} style="text-align:${align};">`;
+    }
+  );
+
+  out = out.replace(/>([^<]+)</g, (_m, text) => {
+    const fixed = String(text).replace(/ {2,}/g, (spaces) => '&nbsp;'.repeat(spaces.length));
+    return `>${fixed}<`;
+  });
+
+  out = out.replace(
+    /(?:<p\b[^>]*>\s*(?:<br\s*\/?\s*>|&nbsp;|\u00a0|\s)*<\/p>\s*)+/gi,
+    (block) => {
+      const count = (block.match(/<p\b/gi) || []).length;
+      if (count <= 0) return block;
+      if (count === 1) return '<p><br></p>';
+      const em = (count * 1.85).toFixed(2);
+      return `<div class="ql-spacer" style="height:${em}em;min-height:${em}em;line-height:${em}em;">&nbsp;</div>`;
+    }
+  );
+
+  return out;
+}
+
 function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl }) {
   const useImage = !letterheadBlank && letterheadDataUrl;
-  const body = wrapTrailingFooter(String(filled || ''));
+  const body = wrapTrailingFooter(normalizeQuillHtmlForPrint(String(filled || '')));
   const hasImportedLayout =
     /hr-imported-doc|data-preserve-layout|hr-align-|text-align\s*:|hr-numbered|hr-doc-table/i.test(body);
   // No fake spacer — WYSIWYG with editor (blank lines in HTML keep signature gaps)
@@ -543,14 +615,17 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl }) {
         margin: 0 auto;
         background: #fff;
       }
-      /* Same as Quill editor — empty <p><br></p> keep vertical space */
-      p, h1, h2, h3, h4, h5, h6 { margin: 0.35em 0; line-height: 1.5; }
-      p:empty, p:has(> br:only-child) { min-height: 1.5em; margin: 0.35em 0; }
+      /* Same as Quill editor — empty lines / signature gaps keep space */
+      .page, .page-body { white-space: pre-wrap; }
+      p, h1, h2, h3, h4, h5, h6 { margin: 0.35em 0; line-height: 1.5; white-space: pre-wrap; }
+      p:empty, p:has(> br:only-child) { min-height: 1.5em !important; height: 1.5em; margin: 0.35em 0 !important; }
+      .ql-spacer { display: block; margin: 0; padding: 0; border: 0; }
       p[style*="margin"], h1[style], h2[style], h3[style] { margin-top: unset; margin-bottom: unset; }
       h1, h2, h3 { font-weight: bold; }
       img { max-width: 100%; height: auto; display: inline-block; page-break-inside: avoid; break-inside: avoid; }
       table, .hr-doc-table {
-        width: 100%;
+        width: 100% !important;
+        table-layout: fixed;
         border-collapse: collapse;
         margin: 0.5em 0;
         border: none;
@@ -559,6 +634,7 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl }) {
         border: none;
         padding: 2px 6px;
         vertical-align: top;
+        width: 50%;
       }
       table.hr-doc-table-bordered td,
       table.hr-doc-table-bordered th,

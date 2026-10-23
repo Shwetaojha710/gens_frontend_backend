@@ -835,6 +835,8 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     color: #000;
     overflow-wrap: anywhere;
     word-wrap: break-word;
+    /* Keep multiple spaces (signature columns) like the editor */
+    white-space: pre-wrap;
   }
   /* Same as editor: each empty <p><br></p> keeps vertical space */
   .page-body p,
@@ -842,13 +844,32 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
   .page-body ul {
     margin: 0.35em 0;
     padding: 0;
+    white-space: pre-wrap;
   }
   .page-body p:empty,
   .page-body p:has(> br:only-child) {
-    min-height: 1.5em;
-    margin: 0.35em 0;
+    min-height: 1.5em !important;
+    height: 1.5em;
+    margin: 0.35em 0 !important;
+    line-height: 1.5em;
+  }
+  .page-body .ql-spacer {
+    display: block;
+    margin: 0;
+    padding: 0;
+    border: 0;
   }
   .page-body br { line-height: 1.5; }
+  /* Signature / 2-column tables from Word or editor */
+  .page-body table {
+    width: 100% !important;
+    table-layout: fixed;
+  }
+  .page-body table td,
+  .page-body table th {
+    vertical-align: top;
+    width: 50%;
+  }
   .page-body h1 { font-size: 2em; margin: 0.35em 0; }
   .page-body h2 { font-size: 1.5em; margin: 0.35em 0; }
   .page-body h3 { font-size: 1.17em; margin: 0.35em 0; }
@@ -952,7 +973,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
 
   /**
    * Light normalize for Quill HTML — keep spacing/formatting like the editor.
-   * Only canonicalize page-break markers; do not strip empty paragraphs or clamp styles.
+   * Preserves signature left/right columns and blank-line gaps for print.
    */
   private normalizeQuillHtmlForPrint(html: string): string {
     let out = String(html || '');
@@ -965,12 +986,77 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       /<(?:div|p)\b[^>]*class=["'][^"']*\bpage-break\b[^"']*["'][^>]*>\s*(?:<br\s*\/?>)?\s*<\/(?:div|p)>/gi,
       PAGE_BREAK_MARK,
     );
-    // Keep blank Quill lines as real vertical space in print (some engines collapse empty p)
+
+    // Side-by-side signature rows (left label + right label, or left () + right ())
+    out = this.pairSignatureColumnsForPrint(out);
+
+    // ql-align-* → inline text-align (print engines sometimes drop class-only align)
     out = out.replace(
-      /<p(\b[^>]*)>\s*(?:<br\s*\/?>|&nbsp;|\u00a0|\s)*<\/p>/gi,
-      '<p$1><br></p>',
+      /<([a-z][a-z0-9]*)\b([^>]*\bclass\s*=\s*["'][^"']*\bql-align-(left|center|right|justify)\b[^"']*["'][^>]*)>/gi,
+      (_m, tag: string, attrs: string, align: string) => {
+        if (/text-align\s*:/i.test(attrs)) return `<${tag}${attrs}>`;
+        if (/style\s*=/i.test(attrs)) {
+          return `<${tag}${attrs.replace(/style\s*=\s*(["'])/i, `style=$1text-align:${align};`)}>`;
+        }
+        return `<${tag}${attrs} style="text-align:${align};">`;
+      },
     );
+
+    // Multiple spaces (signature left/right columns) → non-breaking spaces
+    out = out.replace(/>([^<]+)</g, (_m, text: string) => {
+      const fixed = String(text).replace(/ {2,}/g, (spaces: string) =>
+        '&nbsp;'.repeat(spaces.length),
+      );
+      return `>${fixed}<`;
+    });
+
+    // Runs of blank Quill lines → one spacer with exact height (signature gap)
+    // Each blank <p><br></p> ≈ line-height 1.5 + margins 0.7 ≈ 1.85em in editor
+    out = out.replace(
+      /(?:<p\b[^>]*>\s*(?:<br\s*\/?\s*>|&nbsp;|\u00a0|\s)*<\/p>\s*)+/gi,
+      (block: string) => {
+        const count = (block.match(/<p\b/gi) || []).length;
+        if (count <= 0) return block;
+        if (count === 1) return '<p><br></p>';
+        const em = (count * 1.85).toFixed(2);
+        return `<div class="ql-spacer" style="height:${em}em;min-height:${em}em;line-height:${em}em;">&nbsp;</div>`;
+      },
+    );
+
     return out;
+  }
+
+  /** Keep "Signature of Service Provider | Receiver" (and () marks) on one row in print. */
+  private pairSignatureColumnsForPrint(html: string): string {
+    const textOf = (h: string) =>
+      String(h || '')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;|\u00a0/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    const isSigLine = (h: string) => {
+      const t = textOf(h);
+      return /signature/i.test(t) || /^\(\s*\)$/.test(t);
+    };
+    const isRight = (attrs: string) =>
+      /ql-align-right|text-align\s*:\s*right/i.test(attrs || '');
+    const isLeftish = (attrs: string) =>
+      !isRight(attrs) && !/ql-align-center|text-align\s*:\s*center/i.test(attrs || '');
+
+    return String(html || '').replace(
+      /<p\b([^>]*)>([\s\S]*?)<\/p>\s*<p\b([^>]*)>([\s\S]*?)<\/p>/gi,
+      (full, a1: string, c1: string, a2: string, c2: string) => {
+        if (!isLeftish(a1) || !isRight(a2)) return full;
+        if (!isSigLine(c1) || !isSigLine(c2)) return full;
+        return (
+          `<table class="hr-sig-table" style="width:100%;table-layout:fixed;border-collapse:collapse;border:none;margin:0.35em 0;">` +
+          `<tbody><tr>` +
+          `<td style="width:50%;vertical-align:top;text-align:left;border:none;padding:0 8px 0 0;">${c1}</td>` +
+          `<td style="width:50%;vertical-align:top;text-align:right;border:none;padding:0 0 0 8px;">${c2}</td>` +
+          `</tr></tbody></table>`
+        );
+      },
+    );
   }
 
   /**
