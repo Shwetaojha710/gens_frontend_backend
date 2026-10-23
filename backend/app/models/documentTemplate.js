@@ -43,6 +43,12 @@ const DocumentTemplate = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    /** User-controlled top margin (mm). null = auto from letterhead / import mode. */
+    topPaddingMm: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null,
+    },
     includeSalaryAnnexure: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,

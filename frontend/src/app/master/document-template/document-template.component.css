@@ -118,19 +118,19 @@
   z-index: 1;
 }
 
-/* Reserve space for uploaded letterhead band so body doesn't overlap logo */
+/* Reserve space for uploaded letterhead band — Top space control (--dt-top-pad) */
 .editor-frame--image .dt-rich-host {
-  padding-top: 42mm;
+  padding-top: var(--dt-top-pad, 24mm);
 }
 
 .editor-frame--blank .dt-rich-host,
 .editor-frame--imported .dt-rich-host {
-  padding-top: 12mm;
+  padding-top: var(--dt-top-pad, 0);
 }
 
 /* When using company letterhead WITH imported Word body, still leave header band */
 .editor-frame--image.editor-frame--imported .dt-rich-host {
-  padding-top: 42mm;
+  padding-top: var(--dt-top-pad, 24mm);
 }
 
 .dt-rich-host:focus {
@@ -303,7 +303,7 @@
 
 :host ::ng-deep .editor-frame .ql-editor {
   min-height: 297mm;
-  padding: 28mm 18mm 22mm;
+  padding: var(--dt-top-pad, 0) 18mm 22mm;
   color: #000;
   background: transparent;
   box-sizing: border-box;
@@ -312,23 +312,24 @@
 }
 
 :host ::ng-deep .editor-frame--blank .ql-editor {
-  /* Pre-printed paper / Word templates that already include letterhead */
-  padding-top: 18mm;
+  /* Pre-printed paper — 0 top; user Top space overrides */
+  padding-top: var(--dt-top-pad, 0);
   padding-bottom: 18mm;
 }
 
 :host ::ng-deep .editor-frame--image .ql-editor {
-  /* Reserve space so body does not overlap header artwork */
-  padding-top: 36mm;
+  /* Letterhead band — user Top space overrides */
+  padding-top: var(--dt-top-pad, 24mm);
   padding-bottom: 24mm;
 }
 
 :host ::ng-deep .editor-frame--imported .ql-editor,
 :host ::ng-deep .editor-frame--blank.editor-frame--imported .ql-editor {
-  /* Imported DOCX already encodes margins / letterhead images */
-  padding: 12mm 14mm 14mm;
+  /* Imported DOCX — 0 top; user can raise via Top space */
+  padding: var(--dt-top-pad, 0) 14mm 14mm;
   min-height: 297mm;
 }
+
 
 :host ::ng-deep .editor-frame .ql-editor p {
   margin: 0.35em 0;
@@ -338,6 +339,16 @@
 :host ::ng-deep .editor-frame .ql-editor p:empty,
 :host ::ng-deep .editor-frame .ql-editor p:has(> br:only-child) {
   min-height: 1.5em;
+}
+
+/* Saved vertical spacers (signature gaps) — same height in editor after reload */
+:host ::ng-deep .editor-frame .ql-editor .ql-spacer,
+:host ::ng-deep .editor-frame .ql-editor div[data-vspace] {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  user-select: none;
 }
 
 /* DOCX import: respect inline spacing/alignment from Word (don't flatten margins) */
@@ -379,6 +390,30 @@
 :host ::ng-deep .editor-frame .ql-editor table.hr-doc-table-bordered th {
   border: 1px solid #000;
   padding: 4px 6px;
+}
+
+/* Quill toolbar — Table button label (icon + text) */
+:host ::ng-deep .ql-snow .ql-toolbar button.ql-table,
+:host ::ng-deep .ql-snow.ql-toolbar button.ql-table {
+  width: auto !important;
+  min-width: 56px;
+  padding: 0 6px !important;
+}
+
+:host ::ng-deep .ql-snow .ql-toolbar button.ql-table::after,
+:host ::ng-deep .ql-snow.ql-toolbar button.ql-table::after {
+  content: 'Table';
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #334155;
+  margin-left: 2px;
+  white-space: nowrap;
+}
+
+:host ::ng-deep .ql-snow .ql-toolbar button.ql-table:hover::after,
+:host ::ng-deep .ql-snow.ql-toolbar button.ql-table:hover::after {
+  color: #0f172a;
 }
 
 /* Quill toolbar — custom Page Break button */

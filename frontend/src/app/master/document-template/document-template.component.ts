@@ -36,6 +36,37 @@ class PageBreakBlot extends BlockEmbed {
   }
 }
 
+/**
+ * Durable vertical gap (signature blank lines). Survives Quill save/reload —
+ * consecutive empty <p><br></p> alone often collapse on paste.
+ */
+class VerticalSpaceBlot extends BlockEmbed {
+  static blotName = 'vspace';
+  static tagName = 'div';
+  static className = 'ql-spacer';
+
+  static create(value: unknown): HTMLElement {
+    const node = super.create() as HTMLElement;
+    const em = Math.max(0.5, parseFloat(String(value ?? '')) || 1.85);
+    node.setAttribute('contenteditable', 'false');
+    node.setAttribute('data-vspace', String(em));
+    node.setAttribute(
+      'style',
+      `display:block;height:${em}em;min-height:${em}em;line-height:${em}em;margin:0;padding:0;border:0;`,
+    );
+    node.innerHTML = '\u00a0';
+    return node;
+  }
+
+  static value(node: HTMLElement): number {
+    const fromData = parseFloat(node.getAttribute('data-vspace') || '');
+    if (!Number.isNaN(fromData) && fromData > 0) return fromData;
+    const m = String(node.getAttribute('style') || '').match(/height\s*:\s*([\d.]+)\s*em/i);
+    const h = m ? parseFloat(m[1]) : NaN;
+    return !Number.isNaN(h) && h > 0 ? h : 1.85;
+  }
+}
+
 /** Inline font-size / font-family so Word paste (12pt, Times New Roman…) survives. */
 const QUILL_SIZE_WHITELIST = [
   '8pt', '9pt', '10pt', '11pt', '12pt', '14pt', '16pt', '18pt', '20pt', '22pt', '24pt', '26pt', '28pt', '32pt', '36pt', '48pt', '72pt',
@@ -49,6 +80,7 @@ const QUILL_FONT_WHITELIST = [
 
 try {
   Quill.register(PageBreakBlot, true);
+  Quill.register(VerticalSpaceBlot, true);
 
   const SizeStyle = Quill.import('attributors/style/size') as any;
   SizeStyle.whitelist = QUILL_SIZE_WHITELIST;
@@ -135,11 +167,16 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     category: 'custom',
     bodyHtml: '',
     letterheadBlank: false,
+    /** null = auto; otherwise mm from page top to content */
+    topPaddingMm: null as number | null,
     includeSalaryAnnexure: false,
     status: 'active',
     branchIds: [] as string[],
     assignAllBranches: true,
   };
+
+  /** Top space options (mm) — user can pick how much gap above content */
+  topPadOptions = [0, 2, 4, 5, 8, 10, 12, 15, 18, 20, 22, 25, 28, 30, 35, 40];
 
   /** All tenant branches for assign multi-select */
   branchList: { id: string; name: string }[] = [];
@@ -621,13 +658,14 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
 
   /** Prompt for rows/cols and insert a bordered Word-like table. */
   insertTable(): void {
-    const rowsRaw = window.prompt('Number of rows?', '3');
-    if (rowsRaw == null) return;
-    const colsRaw = window.prompt('Number of columns?', '3');
-    if (colsRaw == null) return;
+    if (this.quill && !this.useRichEditor) {
+      this.insertQuillTable();
+      return;
+    }
 
-    const rows = Math.min(20, Math.max(1, parseInt(rowsRaw, 10) || 3));
-    const cols = Math.min(10, Math.max(1, parseInt(colsRaw, 10) || 3));
+    const size = this.promptTableSize();
+    if (!size) return;
+    const { rows, cols } = size;
 
     let html =
       '<table class="hr-doc-table hr-doc-table-bordered" border="1" cellpadding="4" cellspacing="0" style="width:100%;border-collapse:collapse;margin:8px 0;">';
@@ -644,6 +682,65 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     }
     html += '</table><p><br></p>';
     this.insertHtmlAtCaret(html);
+  }
+
+  private promptTableSize(): { rows: number; cols: number } | null {
+    const rowsRaw = window.prompt('Number of rows?', '3');
+    if (rowsRaw == null) return null;
+    const colsRaw = window.prompt('Number of columns?', '3');
+    if (colsRaw == null) return null;
+    return {
+      rows: Math.min(20, Math.max(1, parseInt(rowsRaw, 10) || 3)),
+      cols: Math.min(10, Math.max(1, parseInt(colsRaw, 10) || 3)),
+    };
+  }
+
+  /** Insert table via Quill table module (toolbar Table button). */
+  insertQuillTable(): void {
+    if (!this.quill) return;
+    const size = this.promptTableSize();
+    if (!size) return;
+
+    const tableModule = this.quill.getModule('table') as {
+      insertTable?: (rows: number, cols: number) => void;
+      getTable?: () => [any, any, any, number] | null;
+    } | null;
+    if (!tableModule?.insertTable) {
+      this.notyf.error('Table tool is not available');
+      return;
+    }
+
+    let range = this.quill.getSelection(true);
+    if (!range) {
+      const idx = Math.max(0, this.quill.getLength() - 1);
+      this.quill.setSelection(idx, 0, 'silent');
+      range = this.quill.getSelection(true);
+    }
+    if (!range) return;
+
+    tableModule.insertTable(size.rows, size.cols);
+
+    // Border + print classes so table shows like Word / rich-editor insert
+    try {
+      const [tableBlot] = tableModule.getTable?.() || [null];
+      const el = tableBlot?.domNode as HTMLElement | undefined;
+      if (el && el.tagName === 'TABLE') {
+        el.classList.add('hr-doc-table', 'hr-doc-table-bordered');
+        el.setAttribute('border', '1');
+        el.setAttribute('cellpadding', '4');
+        el.setAttribute('cellspacing', '0');
+        const prev = el.getAttribute('style') || '';
+        if (!/width\s*:/i.test(prev)) {
+          el.setAttribute(
+            'style',
+            `${prev};width:100%;border-collapse:collapse;margin:8px 0;`.replace(/^;/, ''),
+          );
+        }
+      }
+    } catch (_) {}
+
+    this.form.bodyHtml = this.quill.root.innerHTML;
+    this.refreshPrintPreview(false);
   }
 
   insertHorizontalRule(): void {
@@ -804,8 +901,8 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       this.useRichEditor ||
       /hr-imported-doc|data-preserve-layout|hr-align-|text-align\s*:|hr-numbered|hr-doc-table/i.test(filled);
 
-    // Match .ql-editor padding from document-template.component.css (WYSIWYG)
-    const bodyPadTop = useImage ? '36mm' : hasImportedLayout ? '12mm' : letterheadBlank ? '18mm' : '28mm';
+    // Match .ql-editor padding (user Top space overrides auto)
+    const bodyPadTop = this.topPadCss;
     const bodyPadX = hasImportedLayout ? '14mm' : '18mm';
     const bodyPadBottom = useImage ? '24mm' : hasImportedLayout ? '14mm' : letterheadBlank ? '18mm' : '22mm';
     const bgUrl = useImage ? String(this.pageBackground).replace(/'/g, '%27') : '';
@@ -972,11 +1069,33 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Light normalize for Quill HTML — keep spacing/formatting like the editor.
-   * Preserves signature left/right columns and blank-line gaps for print.
+   * Remove empty lines / spacers at the very start of the document
+   * (Word imports often leave a big gap above "SERVICES AGREEMENT").
    */
-  private normalizeQuillHtmlForPrint(html: string): string {
-    let out = String(html || '');
+  private stripLeadingVerticalSpace(html: string): string {
+    let out = String(html || '').replace(/^\s+/, '');
+    const leadingEmpty =
+      /^(?:(?:<p\b[^>]*>\s*(?:<br\s*\/?\s*>|&nbsp;|\u00a0|\s)*<\/p>\s*)|(?:<div\b[^>]*\b(?:ql-spacer|data-vspace|hr-blank-gap)\b[^>]*>[\s\S]*?<\/div>\s*)|(?:<br\s*\/?\s*>\s*)|(?:<!--[\s\S]*?-->\s*))+/i;
+    out = out.replace(leadingEmpty, '');
+    // First real block: kill oversized top margin/padding from Word
+    out = out.replace(
+      /^(<[a-z][a-z0-9]*)\b([^>]*\bstyle\s*=\s*)(["'])([^"']*)\3([^>]*>)/i,
+      (_m, tag: string, pre: string, q: string, style: string, post: string) => {
+        let s = String(style)
+          .replace(/margin-top\s*:\s*[^;]+;?/gi, 'margin-top:0;')
+          .replace(/padding-top\s*:\s*[^;]+;?/gi, 'padding-top:0;');
+        return `${tag}${pre}${q}${s}${q}${post}`;
+      },
+    );
+    return out;
+  }
+
+  /**
+   * Keep signature gaps / left-right layout / multi-spaces in HTML.
+   * Used for print AND save so spacing survives reload.
+   */
+  private preserveSpacingInHtml(html: string): string {
+    let out = this.stripLeadingVerticalSpace(html);
     const PAGE_BREAK_MARK = '<div class="page-break" data-page-break="1"></div>';
     out = out.replace(
       /<div\b[^>]*(?:class\s*=\s*["'][^"']*page-break[^"']*["']|data-page-break\s*=)[^>]*\/?>(?:[\s\S]*?<\/div>)?/gi,
@@ -985,6 +1104,22 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     out = out.replace(
       /<(?:div|p)\b[^>]*class=["'][^"']*\bpage-break\b[^"']*["'][^>]*>\s*(?:<br\s*\/?>)?\s*<\/(?:div|p)>/gi,
       PAGE_BREAK_MARK,
+    );
+
+    // Already-saved spacers: keep height, ensure data-vspace for Quill blot
+    out = out.replace(
+      /<div\b([^>]*\b(?:ql-spacer|data-vspace)\b[^>]*)>([\s\S]*?)<\/div>/gi,
+      (_m, attrs: string, inner: string) => {
+        const emMatch =
+          String(attrs).match(/data-vspace\s*=\s*["']([\d.]+)["']/i) ||
+          String(attrs).match(/height\s*:\s*([\d.]+)\s*em/i);
+        const em = (emMatch ? parseFloat(emMatch[1]) : 1.85) || 1.85;
+        return (
+          `<div class="ql-spacer" data-vspace="${em}" contenteditable="false" ` +
+          `style="display:block;height:${em}em;min-height:${em}em;line-height:${em}em;margin:0;padding:0;border:0;">` +
+          `${inner && String(inner).trim() ? inner : '&nbsp;'}</div>`
+        );
+      },
     );
 
     // Side-by-side signature rows (left label + right label, or left () + right ())
@@ -1010,7 +1145,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       return `>${fixed}<`;
     });
 
-    // Runs of blank Quill lines → one spacer with exact height (signature gap)
+    // Runs of blank Quill lines → durable spacer (survives save + Quill reload)
     // Each blank <p><br></p> ≈ line-height 1.5 + margins 0.7 ≈ 1.85em in editor
     out = out.replace(
       /(?:<p\b[^>]*>\s*(?:<br\s*\/?\s*>|&nbsp;|\u00a0|\s)*<\/p>\s*)+/gi,
@@ -1019,11 +1154,20 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
         if (count <= 0) return block;
         if (count === 1) return '<p><br></p>';
         const em = (count * 1.85).toFixed(2);
-        return `<div class="ql-spacer" style="height:${em}em;min-height:${em}em;line-height:${em}em;">&nbsp;</div>`;
+        return (
+          `<div class="ql-spacer" data-vspace="${em}" contenteditable="false" ` +
+          `style="display:block;height:${em}em;min-height:${em}em;line-height:${em}em;margin:0;padding:0;border:0;">&nbsp;</div>`
+        );
       },
     );
 
-    return out;
+    // Never keep a spacer / blank run at the document start
+    return this.stripLeadingVerticalSpace(out);
+  }
+
+  /** Print path — same spacing rules as save. */
+  private normalizeQuillHtmlForPrint(html: string): string {
+    return this.preserveSpacingInHtml(html);
   }
 
   /** Keep "Signature of Service Provider | Receiver" (and () marks) on one row in print. */
@@ -1227,6 +1371,26 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Resolved top padding in mm (saved value or sensible auto default). */
+  get effectiveTopPadMm(): number {
+    const custom = this.form?.topPaddingMm;
+    if (custom != null && custom !== '' && !Number.isNaN(Number(custom))) {
+      return Math.min(80, Math.max(0, Number(custom)));
+    }
+    // 0 mm top by default; letterhead image still needs a band for logo
+    if (this.letterheadMode === 'image' && this.pageBackground) return 24;
+    return 0;
+  }
+
+  get topPadCss(): string {
+    return `${this.effectiveTopPadMm}mm`;
+  }
+
+  onTopPaddingChange(): void {
+    this.cdr.detectChanges();
+    this.refreshPrintPreview(true);
+  }
+
   openCreate(): void {
     this.createFlag = true;
     this.updateFlag = false;
@@ -1238,6 +1402,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       category: 'custom',
       bodyHtml: this.sampleBody,
       letterheadBlank: !this.letterheadUrl && !this.letterheadBase64,
+      topPaddingMm: 0,
       includeSalaryAnnexure: false,
       status: 'active',
       branchIds: [],
@@ -1258,12 +1423,22 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       this.importedLayout =
         /hr-imported-doc|page-break|data:image\/|text-align:|margin-top:|<table\b/i.test(html);
       const ids = Array.isArray(data.branchIds) ? data.branchIds.filter(Boolean) : [];
+      let topPad =
+        data.topPaddingMm != null && data.topPaddingMm !== ''
+          ? Number(data.topPaddingMm)
+          : null;
+      if (topPad != null && Number.isNaN(topPad)) topPad = null;
+      // Default / blank letterhead → 0 mm top (user can raise via Top space)
+      if (topPad == null || data.letterheadBlank === true) {
+        topPad = 0;
+      }
       this.form = {
         id: data.id,
         name: data.name,
         category: data.category || 'custom',
         bodyHtml: html,
         letterheadBlank: data.letterheadBlank === true,
+        topPaddingMm: topPad,
         includeSalaryAnnexure: !!data.includeSalaryAnnexure,
         status: data.status || 'active',
         branchIds: ids,
@@ -1309,6 +1484,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       theme: 'snow',
       placeholder: 'Type your letter like in Word… Paste from Word keeps formatting.',
       modules: {
+        table: true,
         toolbar: {
           container: [
             [{ header: [1, 2, 3, false] }],
@@ -1319,13 +1495,16 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
             [{ align: [] }],
             [{ list: 'ordered' }, { list: 'bullet' }],
             [{ indent: '-1' }, { indent: '+1' }],
-            ['blockquote', 'link', 'image'],
+            ['blockquote', 'link', 'image', 'table'],
             ['pagebreak'],
             ['clean'],
           ],
           handlers: {
             pagebreak() {
               self.insertQuillPageBreak();
+            },
+            table() {
+              self.insertQuillTable();
             },
           },
         },
@@ -1382,11 +1561,17 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
 
     for (const tag of ['SPAN', 'FONT', 'P', 'DIV', 'LI', 'TD', 'TH', 'A', 'B', 'I', 'U', 'STRONG', 'EM']) {
       this.quill.clipboard.addMatcher(tag, (node: HTMLElement, delta: any) => {
-        if (
-          tag === 'DIV' &&
-          (node?.classList?.contains('page-break') || node?.getAttribute?.('data-page-break'))
-        ) {
-          return new Delta().insert({ pagebreak: true });
+        if (tag === 'DIV') {
+          if (node?.classList?.contains('page-break') || node?.getAttribute?.('data-page-break')) {
+            return new Delta().insert({ pagebreak: true });
+          }
+          if (node?.classList?.contains('ql-spacer') || node?.getAttribute?.('data-vspace')) {
+            const em =
+              parseFloat(node.getAttribute('data-vspace') || '') ||
+              parseFloat(String(node.style?.height || '').replace(/em$/i, '')) ||
+              1.85;
+            return new Delta().insert({ vspace: em });
+          }
         }
         return applyInlineFormats(node, delta);
       });
@@ -1652,7 +1837,9 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
    * that desyncs Quill's Delta and the toolbar/caret stop working.
    */
   private setEditorHtml(html: string, _preserveLayout = false): void {
-    const safe = html && html.trim() ? html : '<p><br></p>';
+    const safe = this.stripLeadingVerticalSpace(
+      html && html.trim() ? html : '<p><br></p>',
+    ) || '<p><br></p>';
     this.form.bodyHtml = safe;
     if (!this.quill) return;
 
@@ -1660,7 +1847,9 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       this.quill.setText('', 'silent');
       this.quill.clipboard.dangerouslyPasteHTML(0, safe, 'silent');
       this.quill.root.classList.remove('ql-blank');
-      this.form.bodyHtml = this.quill.root.innerHTML || safe;
+      this.form.bodyHtml = this.stripLeadingVerticalSpace(
+        this.quill.root.innerHTML || safe,
+      );
     } catch (e) {
       console.warn('dangerouslyPasteHTML failed', e);
       // Stay on Quill — try a simpler paste rather than switching editors
@@ -2265,6 +2454,10 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       this.importedLayout = true;
       // Always keep Quill editor (same as Add / Update)
       this.useRichEditor = false;
+      // Imported docs: 0 top by default (user can raise via Top space)
+      if (this.form.topPaddingMm == null || Number(this.form.topPaddingMm) > 0) {
+        this.form.topPaddingMm = 0;
+      }
 
       // Letterhead decision:
       // - Word body/header already has logo image → blank (avoid double letterhead)
@@ -2945,12 +3138,15 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
   save(): void {
     this.syncLetterheadMode();
     this.pullBodyFromEditor();
+    // Lock signature blank-line gaps + left/right layout into saved HTML
+    this.form.bodyHtml = this.preserveSpacingInHtml(this.form.bodyHtml || '');
 
     if (!String(this.form.name || '').trim()) {
       this.notyf.error('Template name is required');
       return;
     }
     const plain = String(this.form.bodyHtml || '')
+      .replace(/<div\b[^>]*\bql-spacer\b[^>]*>[\s\S]*?<\/div>/gi, ' ')
       .replace(/<[^>]+>/g, '')
       .replace(/&nbsp;/g, ' ')
       .trim();
@@ -2971,12 +3167,18 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const topPad =
+      this.form.topPaddingMm == null || this.form.topPaddingMm === ''
+        ? null
+        : Math.min(80, Math.max(0, parseInt(String(this.form.topPaddingMm), 10) || 0));
+
     const payload: any = {
       id: this.form.id,
       name: String(this.form.name).trim(),
       category: this.form.category || 'custom',
       bodyHtml: this.form.bodyHtml,
       letterheadBlank: !!this.form.letterheadBlank,
+      topPaddingMm: topPad,
       includeSalaryAnnexure: !!this.form.includeSalaryAnnexure,
       status: this.form.status || 'active',
       assignAllBranches: !!this.form.assignAllBranches,

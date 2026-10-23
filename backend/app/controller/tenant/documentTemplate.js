@@ -164,6 +164,7 @@ exports.createTemplate = async (req, res) => {
       category,
       bodyHtml,
       letterheadBlank,
+      topPaddingMm,
       includeSalaryAnnexure,
       status,
       branchIds,
@@ -186,6 +187,7 @@ exports.createTemplate = async (req, res) => {
       category: category || 'custom',
       bodyHtml,
       letterheadBlank: letterheadBlank === true,
+      topPaddingMm: normalizeTopPaddingMm(topPaddingMm),
       includeSalaryAnnexure: !!includeSalaryAnnexure,
       status: status === 'inactive' ? 'inactive' : 'active',
       createdBy: req.users?.id,
@@ -217,6 +219,7 @@ exports.updateTemplate = async (req, res) => {
       category,
       bodyHtml,
       letterheadBlank,
+      topPaddingMm,
       includeSalaryAnnexure,
       status,
       branchIds,
@@ -237,6 +240,10 @@ exports.updateTemplate = async (req, res) => {
       row.changed('bodyHtml', true);
     }
     if (letterheadBlank != null) row.letterheadBlank = !!letterheadBlank;
+    if (topPaddingMm !== undefined) {
+      row.set('topPaddingMm', normalizeTopPaddingMm(topPaddingMm));
+      row.changed('topPaddingMm', true);
+    }
     if (includeSalaryAnnexure != null) row.includeSalaryAnnexure = !!includeSalaryAnnexure;
     if (status != null) row.status = status === 'inactive' ? 'inactive' : 'active';
     if (assignAllBranches === true) {
@@ -573,22 +580,46 @@ function normalizeQuillHtmlForPrint(html) {
       if (count <= 0) return block;
       if (count === 1) return '<p><br></p>';
       const em = (count * 1.85).toFixed(2);
-      return `<div class="ql-spacer" style="height:${em}em;min-height:${em}em;line-height:${em}em;">&nbsp;</div>`;
+      return (
+        `<div class="ql-spacer" data-vspace="${em}" contenteditable="false" ` +
+        `style="display:block;height:${em}em;min-height:${em}em;line-height:${em}em;margin:0;padding:0;border:0;">&nbsp;</div>`
+      );
     }
   );
 
   return out;
 }
 
-function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl }) {
+function normalizeTopPaddingMm(value) {
+  if (value == null || value === '' || value === 'auto') return null;
+  const n = parseInt(value, 10);
+  if (Number.isNaN(n)) return null;
+  return Math.min(80, Math.max(0, n));
+}
+
+function resolveBodyPadTopMm({ letterheadBlank, letterheadDataUrl, hasImportedLayout, topPaddingMm }) {
+  const custom = normalizeTopPaddingMm(topPaddingMm);
+  if (custom != null) return custom;
+  const useImage = !letterheadBlank && letterheadDataUrl;
+  // Defaults: 0 top; letterhead image keeps a logo band
+  if (useImage) return 24;
+  return 0;
+}
+
+function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl, topPaddingMm }) {
   const useImage = !letterheadBlank && letterheadDataUrl;
   const body = wrapTrailingFooter(normalizeQuillHtmlForPrint(String(filled || '')));
   const hasImportedLayout =
     /hr-imported-doc|data-preserve-layout|hr-align-|text-align\s*:|hr-numbered|hr-doc-table/i.test(body);
   // No fake spacer — WYSIWYG with editor (blank lines in HTML keep signature gaps)
   const spacer = '';
-  // Match Manage Template .ql-editor padding
-  const bodyPadTop = useImage ? '36mm' : hasImportedLayout ? '12mm' : letterheadBlank ? '18mm' : '28mm';
+  // Match Manage Template .ql-editor padding (user topPaddingMm overrides)
+  const bodyPadTop = `${resolveBodyPadTopMm({
+    letterheadBlank,
+    letterheadDataUrl,
+    hasImportedLayout,
+    topPaddingMm,
+  })}mm`;
   const bodyPadX = hasImportedLayout ? '14mm' : '18mm';
   const bodyPadBottom = useImage ? '24mm' : hasImportedLayout ? '14mm' : letterheadBlank ? '18mm' : '22mm';
   const bgCss = useImage
@@ -737,6 +768,7 @@ exports.previewDocument = async (req, res) => {
       filled,
       letterheadBlank: !!template.letterheadBlank,
       letterheadDataUrl,
+      topPaddingMm: template.topPaddingMm,
     });
 
     return Helper.response(
@@ -751,6 +783,7 @@ exports.previewDocument = async (req, res) => {
           employeeId,
           templateName: template.name,
           letterheadBlank: template.letterheadBlank,
+          topPaddingMm: template.topPaddingMm,
           includeSalaryAnnexure: template.includeSalaryAnnexure,
           hasLetterheadImage: !!letterheadDataUrl,
         },
@@ -791,6 +824,7 @@ exports.saveGeneratedDocument = async (req, res) => {
         filled,
         letterheadBlank: !!template.letterheadBlank,
         letterheadDataUrl,
+        topPaddingMm: template.topPaddingMm,
       });
     } else if (!/^\s*<!DOCTYPE html/i.test(html) && !/<html[\s>]/i.test(html)) {
       // Body-only HTML from client — wrap so print/assign matches template layout
@@ -801,6 +835,7 @@ exports.saveGeneratedDocument = async (req, res) => {
         filled: html,
         letterheadBlank: !!template.letterheadBlank,
         letterheadDataUrl,
+        topPaddingMm: template.topPaddingMm,
       });
     }
 
