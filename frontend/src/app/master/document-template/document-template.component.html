@@ -36,7 +36,38 @@
           </div>
 
           <div class="row g-3 mt-1">
-            <div class="col-md-6">
+            <div class="col-12">
+              <label class="form-label fw-bold">Assign to branches</label>
+              <div class="dt-branch-assign">
+                <label class="form-check mb-2">
+                  <input
+                    type="checkbox"
+                    class="form-check-input"
+                    [checked]="form.assignAllBranches"
+                    (change)="toggleAssignAllBranches($any($event.target).checked)"
+                  />
+                  <span class="fw-semibold">All branches</span>
+                  <small class="text-muted ms-1">(template available everywhere)</small>
+                </label>
+                <div class="dt-branch-grid" [class.dt-branch-grid--dim]="form.assignAllBranches">
+                  <label class="form-check" *ngFor="let b of branchList">
+                    <input
+                      type="checkbox"
+                      class="form-check-input"
+                      [checked]="isBranchSelected(b.id)"
+                      [disabled]="form.assignAllBranches"
+                      (change)="toggleBranch(b.id, $any($event.target).checked)"
+                    />
+                    {{ b.name }}
+                  </label>
+                  <small class="text-muted" *ngIf="!branchList.length">No branches found.</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3 mt-1">
+            <div class="col-md-5">
               <label class="form-label fw-bold">Letterhead</label>
               <div class="d-flex flex-wrap gap-3 align-items-center">
                 <label class="form-check mb-0">
@@ -73,7 +104,21 @@
                 </small>
               </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-3">
+              <label class="form-label fw-bold">Top space</label>
+              <select
+                class="form-select"
+                [(ngModel)]="form.topPaddingMm"
+                (ngModelChange)="onTopPaddingChange()"
+              >
+                <option [ngValue]="null">Auto ({{ effectiveTopPadMm }} mm)</option>
+                <option *ngFor="let mm of topPadOptions" [ngValue]="mm">{{ mm }} mm</option>
+              </select>
+              <small class="text-muted d-block mt-1">
+                Page top se content ka gap — editor + print dono mein same.
+              </small>
+            </div>
+            <div class="col-md-4">
               <label class="form-label fw-bold">Import document (optional)</label>
               <div>
                 <label class="btn btn-sm btn-outline-primary mb-0" [class.disabled]="importingDoc">
@@ -121,10 +166,10 @@
               <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('undo')" title="Undo">↶</button>
               <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('redo')" title="Redo">↷</button>
               <span class="dt-rich-sep"></span>
-              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('bold')" title="Bold"><b>B</b></button>
-              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('italic')" title="Italic"><i>I</i></button>
-              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('underline')" title="Underline"><u>U</u></button>
-              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('strikeThrough')" title="Strikethrough"><s>S</s></button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" [class.active]="formatActive.bold" (mousedown)="$event.preventDefault()" (click)="richCmd('bold')" title="Bold — click then type, or select text"><b>B</b></button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" [class.active]="formatActive.italic" (mousedown)="$event.preventDefault()" (click)="richCmd('italic')" title="Italic — click then type, or select text"><i>I</i></button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" [class.active]="formatActive.underline" (mousedown)="$event.preventDefault()" (click)="richCmd('underline')" title="Underline — click then type, or select text"><u>U</u></button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" [class.active]="formatActive.strikeThrough" (mousedown)="$event.preventDefault()" (click)="richCmd('strikeThrough')" title="Strikethrough — click then type, or select text"><s>S</s></button>
               <span class="dt-rich-sep"></span>
 
               <!-- Font Family -->
@@ -175,21 +220,39 @@
                 <option value="72pt">72</option>
               </select>
 
-              <!-- Text Color -->
-              <label class="dt-color-wrap" title="Text color" (mousedown)="$event.preventDefault()">
-                <span class="dt-color-label">A</span>
-                <input type="color" value="#000000"
+              <!-- Foreground / Background — also in shared bar below for Quill mode -->
+              <label class="dt-color-tool" title="Foreground (text color)" (mousedown)="$event.preventDefault()">
+                <span class="dt-color-tool-label">Fg</span>
+                <span class="dt-color-swatch" [style.background]="editorFgColor"></span>
+                <input type="color" [value]="editorFgColor"
                   (mousedown)="$event.stopPropagation()"
-                  (input)="applyRichTextStyle('color', $any($event.target).value)" />
+                  (input)="applyEditorColor('foreground', $any($event.target).value)" />
               </label>
-
-              <!-- Highlight -->
-              <label class="dt-color-wrap" title="Highlight" (mousedown)="$event.preventDefault()">
-                <span class="dt-color-label dt-color-label--bg">A</span>
-                <input type="color" value="#ffff00"
+              <label class="dt-color-tool" title="Background (highlight)" (mousedown)="$event.preventDefault()">
+                <span class="dt-color-tool-label">Bg</span>
+                <span class="dt-color-swatch" [style.background]="editorBgColor"></span>
+                <input type="color" [value]="editorBgColor"
                   (mousedown)="$event.stopPropagation()"
-                  (input)="applyRichTextStyle('background-color', $any($event.target).value)" />
+                  (input)="applyEditorColor('background', $any($event.target).value)" />
               </label>
+              <button
+                type="button"
+                class="dt-color-preset"
+                *ngFor="let c of fgPresets"
+                [style.background]="c"
+                [title]="'Text ' + c"
+                (mousedown)="$event.preventDefault()"
+                (click)="applyEditorColor('foreground', c)"
+              ></button>
+              <button
+                type="button"
+                class="dt-color-preset dt-color-preset--bg"
+                *ngFor="let c of bgPresets"
+                [style.background]="c"
+                [title]="'Highlight ' + c"
+                (mousedown)="$event.preventDefault()"
+                (click)="applyEditorColor('background', c)"
+              ></button>
 
               <!-- Line Height -->
               <select
@@ -288,12 +351,54 @@
               <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('removeFormat')" title="Clear formatting">Clear</button>
             </div>
 
+            <!-- Color tools (Quill + rich) — Foreground / Background -->
+            <div class="dt-color-bar" *ngIf="!useRichEditor" (mousedown)="$event.preventDefault()">
+              <span class="dt-color-bar-title">Color</span>
+              <label class="dt-color-tool" title="Foreground (text color)">
+                <span class="dt-color-tool-label">Foreground</span>
+                <span class="dt-color-swatch" [style.background]="editorFgColor"></span>
+                <input type="color" [value]="editorFgColor"
+                  (mousedown)="$event.stopPropagation()"
+                  (change)="applyEditorColor('foreground', $any($event.target).value)"
+                  (input)="applyEditorColor('foreground', $any($event.target).value)" />
+              </label>
+              <label class="dt-color-tool" title="Background (highlight)">
+                <span class="dt-color-tool-label">Background</span>
+                <span class="dt-color-swatch" [style.background]="editorBgColor"></span>
+                <input type="color" [value]="editorBgColor"
+                  (mousedown)="$event.stopPropagation()"
+                  (change)="applyEditorColor('background', $any($event.target).value)"
+                  (input)="applyEditorColor('background', $any($event.target).value)" />
+              </label>
+              <span class="dt-rich-sep"></span>
+              <button
+                type="button"
+                class="dt-color-preset"
+                *ngFor="let c of fgPresets"
+                [style.background]="c"
+                [title]="'Text ' + c"
+                (mousedown)="$event.preventDefault()"
+                (click)="applyEditorColor('foreground', c)"
+              ></button>
+              <span class="dt-rich-sep"></span>
+              <button
+                type="button"
+                class="dt-color-preset dt-color-preset--bg"
+                *ngFor="let c of bgPresets"
+                [style.background]="c"
+                [title]="'Highlight ' + c"
+                (mousedown)="$event.preventDefault()"
+                (click)="applyEditorColor('background', c)"
+              ></button>
+            </div>
+
             <div class="a4-stage">
               <div
                 class="editor-frame"
                 [class.editor-frame--blank]="letterheadMode === 'blank'"
                 [class.editor-frame--image]="letterheadMode === 'image' && !!pageBackground"
                 [class.editor-frame--imported]="importedLayout || useRichEditor"
+                [style.--dt-top-pad]="topPadCss"
                 [style.background-image]="pageBackground && letterheadMode === 'image' ? 'url(' + pageBackground + ')' : null"
               >
                 <!-- Wrap Quill so its toolbar (sibling of host) is destroyed with *ngIf -->
@@ -360,6 +465,7 @@
                 <th>#</th>
                 <th>Name</th>
                 <th>Category</th>
+                <th>Branches</th>
                 <th>Letterhead</th>
                 <th>Salary Annexure</th>
                 <th>Status</th>
@@ -371,6 +477,7 @@
                 <td>{{ i + 1 }}</td>
                 <td>{{ row.name }}</td>
                 <td>{{ row.category }}</td>
+                <td><small>{{ branchAssignLabel(row) }}</small></td>
                 <td>{{ letterheadLabel(row) }}</td>
                 <td>{{ row.includeSalaryAnnexure ? 'Yes' : 'No' }}</td>
                 <td>
@@ -384,7 +491,7 @@
                 </td>
               </tr>
               <tr *ngIf="!list?.length">
-                <td colspan="7" class="text-center text-muted">No templates yet. Upload letterhead, then create a template.</td>
+                <td colspan="8" class="text-center text-muted">No templates yet. Upload letterhead, then create a template.</td>
               </tr>
             </tbody>
           </table>
@@ -392,33 +499,31 @@
       </div>
     </div>
   </div>
-  <!-- PRINT PREVIEW — iframe shows exact print layout -->
-  <div class="print-preview-backdrop" *ngIf="previewOpen">
-    <div class="print-preview-modal">
-      <div class="print-preview-header">
-        <div>
-          <strong>Print Preview</strong>
-          <small class="text-muted ms-2">A4 — jaisa print pe dikhega</small>
-        </div>
-        <div class="d-flex gap-2">
-          <button type="button" class="btn btn-dark btn-sm" (click)="printDocument()">
-            <i class="fa-solid fa-print"></i>
-            Print
-          </button>
-          <button type="button" class="btn btn-outline-secondary btn-sm" (click)="closePrintPreview()">
-            <i class="fa-solid fa-xmark"></i>
-            Close
-          </button>
-        </div>
+  <!-- PRINT PREVIEW — side dock so editor stays usable; live-updates on edits -->
+  <div class="print-preview-dock" *ngIf="previewOpen" [class.print-preview-dock--open]="previewOpen">
+    <div class="print-preview-header">
+      <div>
+        <strong>Print Preview</strong>
+        <small class="text-muted ms-2">Live — edits update instantly</small>
       </div>
-      <div class="print-preview-body">
-        <iframe
-          *ngIf="previewUrl"
-          class="print-preview-iframe"
-          [src]="previewUrl"
-          title="Print preview"
-        ></iframe>
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-dark btn-sm" (click)="printDocument()">
+          <i class="fa-solid fa-print"></i>
+          Print
+        </button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" (click)="closePrintPreview()">
+          <i class="fa-solid fa-xmark"></i>
+          Close
+        </button>
       </div>
+    </div>
+    <div class="print-preview-body">
+      <iframe
+        *ngIf="previewUrl"
+        class="print-preview-iframe"
+        [src]="previewUrl"
+        title="Print preview"
+      ></iframe>
     </div>
   </div>
 </div>

@@ -4,13 +4,87 @@ const empPersonal = require('../../models/empPersonal');
 const Tenant = require('../../models/tenant');
 const Designation = require('../../models/designation');
 const Department = require('../../models/department');
+const Shift = require('../../models/shift');
 const Helper = require('../../helper/helper');
 const { writeAudit, toPlain } = require('../../helper/auditLog');
 const { Op } = require('sequelize');
 const fs = require('fs');
 const path = require('path');
+const moment = require('moment');
 
 const BLANK = '____________';
+
+/** Normalize assigned branches: null/[] = all branches; else UUID[]. */
+function normalizeBranchIds(input) {
+  if (input === null || input === undefined) return null;
+  if (input === true || input === 'all') return null;
+  if (!Array.isArray(input)) return null;
+  const ids = [...new Set(input.map((id) => String(id || '').trim()).filter(Boolean))];
+  return ids.length ? ids : null;
+}
+
+/** Template visible for a branch if unassigned (all) or branch is in branchIds. */
+function templateMatchesBranch(row, branchId) {
+  if (!branchId) return true;
+  const ids = row?.branchIds;
+  if (!ids || !Array.isArray(ids) || ids.length === 0) return true;
+  return ids.map(String).includes(String(branchId));
+}
+
+const DAY_ORDER = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+];
+
+/** Build "9:00 AM to 6:30 PM, Monday to Saturday." from shift day rows. */
+function formatShiftTiming(shiftRows) {
+  if (!Array.isArray(shiftRows) || !shiftRows.length) return BLANK;
+
+  const working = shiftRows.filter((s) => {
+    if (s.is_week_off) return false;
+    const start = String(s.startTime || '');
+    const end = String(s.endTime || '');
+    if (!start || !end) return false;
+    if (start.startsWith('00:00') && end.startsWith('00:00')) return false;
+    return true;
+  });
+  if (!working.length) return BLANK;
+
+  const start = moment(working[0].startTime, ['HH:mm:ss', 'HH:mm']).format('h:mm A');
+  const end = moment(working[0].endTime, ['HH:mm:ss', 'HH:mm']).format('h:mm A');
+
+  const uniqDays = [
+    ...new Set(
+      working
+        .map((s) => s.day_of_week)
+        .filter((d) => d && DAY_ORDER.includes(d)),
+    ),
+  ].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b));
+
+  let dayLabel = '';
+  if (uniqDays.length === 1) {
+    dayLabel = uniqDays[0];
+  } else if (uniqDays.length > 1) {
+    const idxs = uniqDays.map((d) => DAY_ORDER.indexOf(d));
+    let consecutive = true;
+    for (let i = 1; i < idxs.length; i++) {
+      if (idxs[i] !== idxs[i - 1] + 1) {
+        consecutive = false;
+        break;
+      }
+    }
+    dayLabel = consecutive
+      ? `${uniqDays[0]} to ${uniqDays[uniqDays.length - 1]}`
+      : uniqDays.join(', ');
+  }
+
+  return dayLabel ? `${start} to ${end}, ${dayLabel}.` : `${start} to ${end}.`;
+}
 
 const fmtDate = (value) => {
   if (!value) return BLANK;
@@ -53,6 +127,12 @@ exports.getVariableCatalog = async (_req, res) => {
       { key: 'permanent_address', label: 'Permanent Address' },
       { key: 'gender_title', label: 'Mr. / Ms.' },
       { key: 'relation', label: 'S/O or D/O' },
+      { key: 'pan_no', label: 'PAN No' },
+      { key: 'shift_name', label: 'Shift Name' },
+      {
+        key: 'shift_timing',
+        label: 'Shift Timing (e.g. 9:00 AM to 6:30 PM, Monday to Saturday)',
+      },
     ],
     salary: [
       { key: 'basic_salary', label: 'Basic Salary (monthly)' },
@@ -84,8 +164,11 @@ exports.createTemplate = async (req, res) => {
       category,
       bodyHtml,
       letterheadBlank,
+      topPaddingMm,
       includeSalaryAnnexure,
       status,
+      branchIds,
+      assignAllBranches,
     } = req.body;
 
     if (!tenantId) return Helper.response(false, 'Unauthorized', {}, res, 401);
@@ -93,13 +176,18 @@ exports.createTemplate = async (req, res) => {
       return Helper.response(false, 'Name and body are required', {}, res, 400);
     }
 
+    const assigned =
+      assignAllBranches === true ? null : normalizeBranchIds(branchIds);
+
     const row = await DocumentTemplate.create({
       tenantId,
       branchId,
+      branchIds: assigned,
       name: String(name).trim(),
       category: category || 'custom',
       bodyHtml,
       letterheadBlank: letterheadBlank === true,
+      topPaddingMm: normalizeTopPaddingMm(topPaddingMm),
       includeSalaryAnnexure: !!includeSalaryAnnexure,
       status: status === 'inactive' ? 'inactive' : 'active',
       createdBy: req.users?.id,
@@ -125,8 +213,18 @@ exports.createTemplate = async (req, res) => {
 exports.updateTemplate = async (req, res) => {
   try {
     const tenantId = req.users?.tenantId;
-    const { id, name, category, bodyHtml, letterheadBlank, includeSalaryAnnexure, status } =
-      req.body;
+    const {
+      id,
+      name,
+      category,
+      bodyHtml,
+      letterheadBlank,
+      topPaddingMm,
+      includeSalaryAnnexure,
+      status,
+      branchIds,
+      assignAllBranches,
+    } = req.body;
     if (!tenantId || !id) return Helper.response(false, 'id is required', {}, res, 400);
 
     const row = await DocumentTemplate.findOne({ where: { id, tenantId } });
@@ -136,10 +234,25 @@ exports.updateTemplate = async (req, res) => {
 
     if (name != null) row.name = String(name).trim();
     if (category != null) row.category = category;
-    if (bodyHtml != null) row.bodyHtml = bodyHtml;
+    if (bodyHtml != null) {
+      // Force dirty flag — LONGTEXT sometimes skips update when Sequelize diffs poorly
+      row.set('bodyHtml', String(bodyHtml));
+      row.changed('bodyHtml', true);
+    }
     if (letterheadBlank != null) row.letterheadBlank = !!letterheadBlank;
+    if (topPaddingMm !== undefined) {
+      row.set('topPaddingMm', normalizeTopPaddingMm(topPaddingMm));
+      row.changed('topPaddingMm', true);
+    }
     if (includeSalaryAnnexure != null) row.includeSalaryAnnexure = !!includeSalaryAnnexure;
     if (status != null) row.status = status === 'inactive' ? 'inactive' : 'active';
+    if (assignAllBranches === true) {
+      row.set('branchIds', null);
+      row.changed('branchIds', true);
+    } else if (branchIds !== undefined) {
+      row.set('branchIds', normalizeBranchIds(branchIds));
+      row.changed('branchIds', true);
+    }
     row.updatedBy = req.users?.id;
     await row.save();
 
@@ -168,10 +281,17 @@ exports.listTemplates = async (req, res) => {
     if (req.body?.status) where.status = req.body.status;
     if (req.body?.category) where.category = req.body.category;
 
-    const rows = await DocumentTemplate.findAll({
+    let rows = await DocumentTemplate.findAll({
       where,
       order: [['updatedAt', 'DESC']],
     });
+
+    // Optional: only templates assigned to this branch (or all-branch templates)
+    const filterBranchId = req.body?.branchId || null;
+    if (filterBranchId) {
+      rows = rows.filter((r) => templateMatchesBranch(r, filterBranchId));
+    }
+
     return Helper.response(true, 'Templates fetched', rows, res, 200);
   } catch (error) {
     console.error('listTemplates', error);
@@ -254,6 +374,26 @@ async function buildVariableMap(tenantId, employeeId, hrName, issueDate) {
     }
   } catch (_) {}
 
+  // Shift name + timing e.g. "9:00 AM to 6:30 PM, Monday to Saturday."
+  let shiftName = emp.shift_id || BLANK;
+  let shiftTiming = BLANK;
+  try {
+    if (emp.shift_id) {
+      const where = { tenantId, shift: emp.shift_id };
+      if (emp.branchId) where.branchId = emp.branchId;
+      const shiftRows = await Shift.findAll({
+        where,
+        attributes: ['day_of_week', 'startTime', 'endTime', 'is_week_off', 'shift'],
+        raw: true,
+        order: [['day_of_week', 'ASC']],
+      });
+      if (shiftRows?.length) {
+        shiftName = shiftRows[0].shift || emp.shift_id;
+        shiftTiming = formatShiftTiming(shiftRows);
+      }
+    }
+  } catch (_) {}
+
   // Soft salary lookup — ignore failures
   let salaryItems = [];
   let annualCtc = 0;
@@ -318,6 +458,9 @@ async function buildVariableMap(tenantId, employeeId, hrName, issueDate) {
     permanent_address: emp.permanentAddress || emp.address || BLANK,
     gender_title: isMale ? 'Mr.' : 'Ms.',
     relation: isMale ? 'S/O' : 'D/O',
+    pan_no: emp.panNo || BLANK,
+    shift_name: shiftName,
+    shift_timing: shiftTiming,
     basic_salary: basic ? fmtMoney(basic) : BLANK,
     hra: hra ? fmtMoney(hra) : BLANK,
     special_allowance: special ? fmtMoney(special) : BLANK,
@@ -372,20 +515,115 @@ function wrapTrailingFooter(html) {
   return `${src.slice(0, m.index)}<div class="hr-print-footer">${m[0]}</div>`;
 }
 
-function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl }) {
+/** Match Manage Template print: keep signature gaps / left-right columns. */
+function normalizeQuillHtmlForPrint(html) {
+  let out = String(html || '');
+  const PAGE_BREAK_MARK = '<div class="page-break" data-page-break="1"></div>';
+  out = out.replace(
+    /<div\b[^>]*(?:class\s*=\s*["'][^"']*page-break[^"']*["']|data-page-break\s*=)[^>]*\/?>(?:[\s\S]*?<\/div>)?/gi,
+    PAGE_BREAK_MARK
+  );
+  out = out.replace(
+    /<(?:div|p)\b[^>]*class=["'][^"']*\bpage-break\b[^"']*["'][^>]*>\s*(?:<br\s*\/?>)?\s*<\/(?:div|p)>/gi,
+    PAGE_BREAK_MARK
+  );
+
+  const textOf = (h) =>
+    String(h || '')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;|\u00a0/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  const isSigLine = (h) => {
+    const t = textOf(h);
+    return /signature/i.test(t) || /^\(\s*\)$/.test(t);
+  };
+  const isRight = (attrs) => /ql-align-right|text-align\s*:\s*right/i.test(attrs || '');
+  const isLeftish = (attrs) =>
+    !isRight(attrs) && !/ql-align-center|text-align\s*:\s*center/i.test(attrs || '');
+
+  out = out.replace(
+    /<p\b([^>]*)>([\s\S]*?)<\/p>\s*<p\b([^>]*)>([\s\S]*?)<\/p>/gi,
+    (full, a1, c1, a2, c2) => {
+      if (!isLeftish(a1) || !isRight(a2)) return full;
+      if (!isSigLine(c1) || !isSigLine(c2)) return full;
+      return (
+        `<table class="hr-sig-table" style="width:100%;table-layout:fixed;border-collapse:collapse;border:none;margin:0.35em 0;">` +
+        `<tbody><tr>` +
+        `<td style="width:50%;vertical-align:top;text-align:left;border:none;padding:0 8px 0 0;">${c1}</td>` +
+        `<td style="width:50%;vertical-align:top;text-align:right;border:none;padding:0 0 0 8px;">${c2}</td>` +
+        `</tr></tbody></table>`
+      );
+    }
+  );
+
+  out = out.replace(
+    /<([a-z][a-z0-9]*)\b([^>]*\bclass\s*=\s*["'][^"']*\bql-align-(left|center|right|justify)\b[^"']*["'][^>]*)>/gi,
+    (_m, tag, attrs, align) => {
+      if (/text-align\s*:/i.test(attrs)) return `<${tag}${attrs}>`;
+      if (/style\s*=/i.test(attrs)) {
+        return `<${tag}${attrs.replace(/style\s*=\s*(["'])/i, `style=$1text-align:${align};`)}>`;
+      }
+      return `<${tag}${attrs} style="text-align:${align};">`;
+    }
+  );
+
+  out = out.replace(/>([^<]+)</g, (_m, text) => {
+    const fixed = String(text).replace(/ {2,}/g, (spaces) => '&nbsp;'.repeat(spaces.length));
+    return `>${fixed}<`;
+  });
+
+  out = out.replace(
+    /(?:<p\b[^>]*>\s*(?:<br\s*\/?\s*>|&nbsp;|\u00a0|\s)*<\/p>\s*)+/gi,
+    (block) => {
+      const count = (block.match(/<p\b/gi) || []).length;
+      if (count <= 0) return block;
+      if (count === 1) {
+        return '<p style="margin:0.35em 0;min-height:1.5em;line-height:1.5em;"><br></p>';
+      }
+      const em = (count * 1.85).toFixed(2);
+      return (
+        `<div class="ql-spacer" data-vspace="${em}" contenteditable="false" ` +
+        `style="display:block;height:${em}em;min-height:${em}em;line-height:${em}em;margin:0;padding:0;border:0;">&nbsp;</div>`
+      );
+    }
+  );
+
+  return out;
+}
+
+function normalizeTopPaddingMm(value) {
+  if (value == null || value === '' || value === 'auto') return null;
+  const n = parseInt(value, 10);
+  if (Number.isNaN(n)) return null;
+  return Math.min(80, Math.max(0, n));
+}
+
+function resolveBodyPadTopMm({ letterheadBlank, letterheadDataUrl, hasImportedLayout, topPaddingMm }) {
+  const custom = normalizeTopPaddingMm(topPaddingMm);
+  if (custom != null) return custom;
   const useImage = !letterheadBlank && letterheadDataUrl;
-  const body = wrapTrailingFooter(String(filled || ''));
+  // Defaults: 0 top; letterhead image keeps a logo band
+  if (useImage) return 24;
+  return 0;
+}
+
+function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl, topPaddingMm }) {
+  const useImage = !letterheadBlank && letterheadDataUrl;
+  const body = wrapTrailingFooter(normalizeQuillHtmlForPrint(String(filled || '')));
   const hasImportedLayout =
     /hr-imported-doc|data-preserve-layout|hr-align-|text-align\s*:|hr-numbered|hr-doc-table/i.test(body);
-  // Pre-printed paper spacer only when template is blank-top AND not a full imported Word layout
-  const spacer =
-    letterheadBlank && !hasImportedLayout
-      ? `<div style="height:120mm;min-height:120mm">&nbsp;</div>`
-      : '';
-  // Match Manage Template editor padding so assign/preview looks identical
-  const bodyPadTop = hasImportedLayout ? '12mm' : useImage ? '36mm' : letterheadBlank ? '0' : '18mm';
+  // No fake spacer — WYSIWYG with editor (blank lines in HTML keep signature gaps)
+  const spacer = '';
+  // Match Manage Template .ql-editor padding (user topPaddingMm overrides)
+  const bodyPadTop = `${resolveBodyPadTopMm({
+    letterheadBlank,
+    letterheadDataUrl,
+    hasImportedLayout,
+    topPaddingMm,
+  })}mm`;
   const bodyPadX = hasImportedLayout ? '14mm' : '18mm';
-  const bodyPadBottom = hasImportedLayout ? '14mm' : '22mm';
+  const bodyPadBottom = useImage ? '24mm' : hasImportedLayout ? '14mm' : letterheadBlank ? '18mm' : '22mm';
   const bgCss = useImage
     ? `background-image:url('${letterheadDataUrl}');background-repeat:no-repeat;background-position:top center;background-size:100% auto;`
     : '';
@@ -398,6 +636,8 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl }) {
         font-size: 12pt;
         line-height: 1.5;
         color: #000;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
         ${bgCss}
       }
       .page {
@@ -408,14 +648,17 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl }) {
         margin: 0 auto;
         background: #fff;
       }
-      /* Keep template spacing — do not flatten */
-      p, h1, h2, h3, h4, h5, h6 { margin: 0.35em 0; }
+      /* Same as Quill editor — empty lines / signature gaps keep space */
+      .page, .page-body { white-space: pre-wrap; }
+      p, h1, h2, h3, h4, h5, h6 { margin: 0.35em 0; line-height: 1.5; white-space: pre-wrap; }
+      p:empty, p:has(> br:only-child) { min-height: 1.5em !important; height: 1.5em; margin: 0.35em 0 !important; }
+      .ql-spacer { display: block; margin: 0; padding: 0; border: 0; }
       p[style*="margin"], h1[style], h2[style], h3[style] { margin-top: unset; margin-bottom: unset; }
-      /* Do NOT force center on headings — template alignment wins */
       h1, h2, h3 { font-weight: bold; }
-      img { max-width: 100%; height: auto; display: block; page-break-inside: avoid; break-inside: avoid; }
+      img { max-width: 100%; height: auto; display: inline-block; page-break-inside: avoid; break-inside: avoid; }
       table, .hr-doc-table {
-        width: 100%;
+        width: 100% !important;
+        table-layout: fixed;
         border-collapse: collapse;
         margin: 0.5em 0;
         border: none;
@@ -424,8 +667,8 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl }) {
         border: none;
         padding: 2px 6px;
         vertical-align: top;
+        width: 50%;
       }
-      /* Only show grid when template/table explicitly bordered */
       table.hr-doc-table-bordered td,
       table.hr-doc-table-bordered th,
       table[border]:not([border="0"]) td,
@@ -433,24 +676,33 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl }) {
         border: 1px solid #000;
         padding: 4px 6px;
       }
-      ul, ol, .hr-doc-ul, .hr-doc-ol { padding-left: 1.6em; margin: 0.4em 0; display: block; }
+      ul, ol, .hr-doc-ul, .hr-doc-ol { padding-left: 1.5em; margin: 0.4em 0; display: block; }
       ol, .hr-doc-ol { list-style-type: decimal !important; list-style-position: outside; }
       ul, .hr-doc-ul { list-style-type: disc !important; list-style-position: outside; }
-      li { display: list-item !important; margin: 0.2em 0; line-height: 1.45 !important; }
+      li { display: list-item !important; margin: 0.2em 0; line-height: 1.5; }
       .hr-numbered { margin: 0.35em 0; }
-      .page * { position: static !important; float: none !important; transform: none !important; }
-      p, li, h1, h2, h3 { line-height: 1.45 !important; height: auto !important; overflow: visible !important; }
+      .ql-align-left, .hr-align-left { text-align: left !important; }
+      .ql-align-center, .hr-align-center { text-align: center !important; }
+      .ql-align-right, .hr-align-right { text-align: right !important; }
+      .ql-align-justify, .hr-align-justify { text-align: justify !important; }
+      .ql-size-small { font-size: 0.75em; }
+      .ql-size-large { font-size: 1.5em; }
+      .ql-size-huge { font-size: 2.5em; }
       .hr-print-footer { page-break-inside: avoid !important; break-inside: avoid !important; margin-top: 12pt; }
       .hr-print-footer img { page-break-inside: avoid !important; break-inside: avoid !important; }
       .page-break {
         display: block;
-        page-break-before: always;
-        break-before: page;
-        height: 0;
-        margin: 12mm 0;
-        border: 0;
-        border-top: 1px dashed #cbd5e1;
+        page-break-before: always !important;
+        break-before: page !important;
+        /* Override tall on-screen spacer heights from the editor */
+        height: 0 !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        background: none !important;
       }
+      .page-break::after { display: none !important; content: none !important; }
       .hr-imported-doc {
         font-family: 'Times New Roman', Times, serif;
         font-size: 12pt;
@@ -469,7 +721,12 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl }) {
       [style*="text-align: justify"], [style*="text-align:justify"] { text-align: justify !important; }
       @media print {
         .page { box-shadow: none; }
-        .page-break { page-break-before: always; break-before: page; border: 0; }
+        .page-break {
+          page-break-before: always !important;
+          break-before: page !important;
+          height: 0 !important;
+          border: 0 !important;
+        }
       }
     </style></head><body><div class="page">${spacer}${body}</div></body></html>`;
 }
@@ -513,6 +770,7 @@ exports.previewDocument = async (req, res) => {
       filled,
       letterheadBlank: !!template.letterheadBlank,
       letterheadDataUrl,
+      topPaddingMm: template.topPaddingMm,
     });
 
     return Helper.response(
@@ -527,6 +785,7 @@ exports.previewDocument = async (req, res) => {
           employeeId,
           templateName: template.name,
           letterheadBlank: template.letterheadBlank,
+          topPaddingMm: template.topPaddingMm,
           includeSalaryAnnexure: template.includeSalaryAnnexure,
           hasLetterheadImage: !!letterheadDataUrl,
         },
@@ -567,6 +826,7 @@ exports.saveGeneratedDocument = async (req, res) => {
         filled,
         letterheadBlank: !!template.letterheadBlank,
         letterheadDataUrl,
+        topPaddingMm: template.topPaddingMm,
       });
     } else if (!/^\s*<!DOCTYPE html/i.test(html) && !/<html[\s>]/i.test(html)) {
       // Body-only HTML from client — wrap so print/assign matches template layout
@@ -577,6 +837,7 @@ exports.saveGeneratedDocument = async (req, res) => {
         filled: html,
         letterheadBlank: !!template.letterheadBlank,
         letterheadDataUrl,
+        topPaddingMm: template.topPaddingMm,
       });
     }
 

@@ -300,10 +300,26 @@ stats:any
   }
   adhaarvalidaiton(event: KeyboardEvent, value: string): void {
     const isDigit = /^[0-9]$/.test(event.key);
-    if (!isDigit || (value && value.length >= 12)) {
+    const digits = String(value || '').replace(/\D/g, '');
+    if (!isDigit || digits.length >= 12) {
       event.preventDefault();
     }
   }
+
+  /** Optional: empty OK; if filled must be 12 digits. */
+  isValidAadhaar(value: any): boolean {
+    const raw = String(value || '').replace(/\D/g, '');
+    if (!raw) return true;
+    return raw.length === 12;
+  }
+
+  /** Optional: empty OK; if filled must match PAN format. */
+  isValidPan(value: any): boolean {
+    const raw = String(value || '').trim().toUpperCase();
+    if (!raw) return true;
+    return /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(raw);
+  }
+
   validateField(value: any, fieldName: string): boolean {
     if (!value || value.toString().trim() === '') {
       this.notyf.error(`Please enter a valid ${fieldName}`);
@@ -354,14 +370,18 @@ stats:any
       this.notyf.error('Please select at least one Branch');
       return;
     }
-    let aadhaarRaw
-    if(this.personalDetails.adhaarNo){
-       aadhaarRaw = this.personalDetails.adhaarNo.replace(/\D/g, '');
+    if (!this.isValidAadhaar(this.personalDetails.adhaarNo)) {
+      this.notyf.error('Please enter a valid 12 digit Aadhaar number');
+      return;
     }
-    // if (aadhaarRaw.length !== 12) {
-    //   this.notyf.error('Please enter a valid 12 digit Aadhaar number');
-    //   return;
-    // }
+    if (!this.isValidPan(this.personalDetails.panNo)) {
+      this.notyf.error('Please enter a valid PAN (e.g., ABCDE1234F)');
+      return;
+    }
+    let aadhaarRaw: string | undefined;
+    if (this.personalDetails.adhaarNo) {
+      aadhaarRaw = this.personalDetails.adhaarNo.replace(/\D/g, '');
+    }
     const dob = new Date(this.personalDetails.dateOfBirth);
     const formattedDob = `${dob.getDate().toString().padStart(2, '0')}/${(dob.getMonth() + 1).toString().padStart(2, '0')}/${dob.getFullYear()}`;;
     let obj: any = {}
@@ -645,16 +665,22 @@ stats:any
      obj = Object.assign({}, this.personalDetails);
     obj.dateOfBirth = formattedDob;
     //  }
-     let aadhaarRaw: any;
-     if(obj.adhaarNo){
+    if (!this.isValidAadhaar(obj.adhaarNo)) {
+      this.notyf.error('Please enter a valid 12 digit Aadhaar number');
+      return;
+    }
+    if (!this.isValidPan(obj.panNo)) {
+      this.notyf.error('Please enter a valid PAN (e.g., ABCDE1234F)');
+      return;
+    }
+    let aadhaarRaw: any;
+    if (obj.adhaarNo) {
       aadhaarRaw = obj.adhaarNo.replace(/\D/g, '');
-     }
-
-    // if (aadhaarRaw.length !== 12) {
-    //   this.notyf.error('Please enter a valid 12 digit Aadhaar number');
-    //   return;
-    // }
-    obj.adhaarNo=aadhaarRaw
+    }
+    obj.adhaarNo = aadhaarRaw;
+    if (obj.panNo) {
+      obj.panNo = String(obj.panNo).trim().toUpperCase();
+    }
     obj.branchId = this.personalDetails['branchId'];
     obj.branchIds = this.personalDetails['branchIds'] || [];
     this.employeeService.updateEmp(obj).subscribe(

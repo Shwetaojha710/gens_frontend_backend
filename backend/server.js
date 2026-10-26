@@ -27,7 +27,8 @@ UserPermission.sync({ alter: false }).catch(err =>
   console.error('UserPermission sync error:', err)
 );
 
-DocumentTemplate.sync({ alter: false }).catch(err =>
+// alter:true so new columns (e.g. branchIds) are added without manual migration
+DocumentTemplate.sync({ alter: true }).catch(err =>
   console.error('DocumentTemplate sync error:', err)
 );
 GeneratedDocument.sync({ alter: false }).catch(err =>

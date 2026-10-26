@@ -17,6 +17,15 @@ const DocumentTemplate = sequelize.define(
       type: DataTypes.UUID,
       allowNull: true,
     },
+    /**
+     * Branches this template is assigned to.
+     * null / [] = available for all branches.
+     */
+    branchIds: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+      defaultValue: null,
+    },
     name: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -33,6 +42,12 @@ const DocumentTemplate = sequelize.define(
     letterheadBlank: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
+    },
+    /** User-controlled top margin (mm). null = auto from letterhead / import mode. */
+    topPaddingMm: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null,
     },
     includeSalaryAnnexure: {
       type: DataTypes.BOOLEAN,

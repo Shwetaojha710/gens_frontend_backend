@@ -39,7 +39,8 @@ export class GenerateLetterComponent implements OnInit {
   }
 
   loadTemplates(): void {
-    this.master.listHrTemplates({ status: 'active' }).subscribe({
+    const branchId = localStorage.getItem('branchId') || undefined;
+    this.master.listHrTemplates({ status: 'active', branchId }).subscribe({
       next: (res: any) => {
         if (res?.status) this.templates = res.data || [];
       },
