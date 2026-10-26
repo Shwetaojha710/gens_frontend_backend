@@ -578,7 +578,9 @@ function normalizeQuillHtmlForPrint(html) {
     (block) => {
       const count = (block.match(/<p\b/gi) || []).length;
       if (count <= 0) return block;
-      if (count === 1) return '<p><br></p>';
+      if (count === 1) {
+        return '<p style="margin:0.35em 0;min-height:1.5em;line-height:1.5em;"><br></p>';
+      }
       const em = (count * 1.85).toFixed(2);
       return (
         `<div class="ql-spacer" data-vspace="${em}" contenteditable="false" ` +

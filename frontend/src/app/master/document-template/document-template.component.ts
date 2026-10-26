@@ -1069,33 +1069,12 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Remove empty lines / spacers at the very start of the document
-   * (Word imports often leave a big gap above "SERVICES AGREEMENT").
-   */
-  private stripLeadingVerticalSpace(html: string): string {
-    let out = String(html || '').replace(/^\s+/, '');
-    const leadingEmpty =
-      /^(?:(?:<p\b[^>]*>\s*(?:<br\s*\/?\s*>|&nbsp;|\u00a0|\s)*<\/p>\s*)|(?:<div\b[^>]*\b(?:ql-spacer|data-vspace|hr-blank-gap)\b[^>]*>[\s\S]*?<\/div>\s*)|(?:<br\s*\/?\s*>\s*)|(?:<!--[\s\S]*?-->\s*))+/i;
-    out = out.replace(leadingEmpty, '');
-    // First real block: kill oversized top margin/padding from Word
-    out = out.replace(
-      /^(<[a-z][a-z0-9]*)\b([^>]*\bstyle\s*=\s*)(["'])([^"']*)\3([^>]*>)/i,
-      (_m, tag: string, pre: string, q: string, style: string, post: string) => {
-        let s = String(style)
-          .replace(/margin-top\s*:\s*[^;]+;?/gi, 'margin-top:0;')
-          .replace(/padding-top\s*:\s*[^;]+;?/gi, 'padding-top:0;');
-        return `${tag}${pre}${q}${s}${q}${post}`;
-      },
-    );
-    return out;
-  }
-
-  /**
    * Keep signature gaps / left-right layout / multi-spaces in HTML.
    * Used for print AND save so spacing survives reload.
+   * Do NOT strip leading blank lines — if user pushes title down, print must match.
    */
   private preserveSpacingInHtml(html: string): string {
-    let out = this.stripLeadingVerticalSpace(html);
+    let out = String(html || '');
     const PAGE_BREAK_MARK = '<div class="page-break" data-page-break="1"></div>';
     out = out.replace(
       /<div\b[^>]*(?:class\s*=\s*["'][^"']*page-break[^"']*["']|data-page-break\s*=)[^>]*\/?>(?:[\s\S]*?<\/div>)?/gi,
@@ -1145,14 +1124,19 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       return `>${fixed}<`;
     });
 
-    // Runs of blank Quill lines → durable spacer (survives save + Quill reload)
+    // Runs of blank Quill lines → durable spacer (incl. space above title)
     // Each blank <p><br></p> ≈ line-height 1.5 + margins 0.7 ≈ 1.85em in editor
     out = out.replace(
       /(?:<p\b[^>]*>\s*(?:<br\s*\/?\s*>|&nbsp;|\u00a0|\s)*<\/p>\s*)+/gi,
       (block: string) => {
         const count = (block.match(/<p\b/gi) || []).length;
         if (count <= 0) return block;
-        if (count === 1) return '<p><br></p>';
+        if (count === 1) {
+          // Keep single blank line as a real vertical gap in print
+          return (
+            `<p style="margin:0.35em 0;min-height:1.5em;line-height:1.5em;"><br></p>`
+          );
+        }
         const em = (count * 1.85).toFixed(2);
         return (
           `<div class="ql-spacer" data-vspace="${em}" contenteditable="false" ` +
@@ -1161,8 +1145,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       },
     );
 
-    // Never keep a spacer / blank run at the document start
-    return this.stripLeadingVerticalSpace(out);
+    return out;
   }
 
   /** Print path — same spacing rules as save. */
@@ -1837,9 +1820,8 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
    * that desyncs Quill's Delta and the toolbar/caret stop working.
    */
   private setEditorHtml(html: string, _preserveLayout = false): void {
-    const safe = this.stripLeadingVerticalSpace(
-      html && html.trim() ? html : '<p><br></p>',
-    ) || '<p><br></p>';
+    // Keep leading blank lines — user may push title down intentionally
+    const safe = html && html.trim() ? html : '<p><br></p>';
     this.form.bodyHtml = safe;
     if (!this.quill) return;
 
@@ -1847,9 +1829,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       this.quill.setText('', 'silent');
       this.quill.clipboard.dangerouslyPasteHTML(0, safe, 'silent');
       this.quill.root.classList.remove('ql-blank');
-      this.form.bodyHtml = this.stripLeadingVerticalSpace(
-        this.quill.root.innerHTML || safe,
-      );
+      this.form.bodyHtml = this.quill.root.innerHTML || safe;
     } catch (e) {
       console.warn('dangerouslyPasteHTML failed', e);
       // Stay on Quill — try a simpler paste rather than switching editors
