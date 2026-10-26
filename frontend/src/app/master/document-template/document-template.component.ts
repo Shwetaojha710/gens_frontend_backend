@@ -122,7 +122,7 @@ try {
   FontStyle.whitelist = QUILL_FONT_WHITELIST;
   Quill.register(FontStyle, true);
 
-  // Block line-height (toolbar "Line" picker) — default editor CSS is 1
+  // Block line-height (toolbar "Line" picker) — applied only when user selects
   const Parchment = Quill.import('parchment') as any;
   const LineHeightStyle = new Parchment.StyleAttributor('lineheight', 'line-height', {
     scope: Parchment.Scope.BLOCK,
@@ -964,14 +964,12 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
   body {
     font-family: "Times New Roman", Times, serif;
     font-size: 12pt;
-    line-height: 1;
     color: #000;
   }
   .page-body.ql-editor,
   .page-body {
     font-family: "Times New Roman", Times, serif;
     font-size: 12pt;
-    line-height: 1;
     color: #000;
     overflow-wrap: anywhere;
     word-wrap: break-word;
@@ -988,7 +986,6 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     margin: 0;
     padding: 0;
   }
-  .page-body br { line-height: 1; }
   .page-body table {
     width: 100% !important;
     border-collapse: collapse;
@@ -1074,7 +1071,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     page-break-inside: avoid !important; break-inside: avoid !important;
   }
   .hr-print-footer img { page-break-inside: avoid !important; break-inside: avoid !important; margin: 2px auto !important; }
-  .hr-imported-doc { font-family: 'Times New Roman', Times, serif; font-size: 11.5pt; line-height: 1; color: #000; }
+  .hr-imported-doc { font-family: 'Times New Roman', Times, serif; font-size: 11.5pt; color: #000; }
   .hr-align-left, .ql-align-left { text-align: left !important; }
   .hr-align-center, .ql-align-center { text-align: center !important; }
   .hr-align-right, .ql-align-right { text-align: right !important; }

@@ -677,7 +677,6 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl, topPaddin
       body {
         font-family: 'Times New Roman', Times, serif;
         font-size: 12pt;
-        line-height: 1;
         color: #000;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
@@ -696,7 +695,6 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl, topPaddin
       p, h1, h2, h3, h4, h5, h6, ol, ul, blockquote {
         margin: 0;
         padding: 0;
-        line-height: 1;
         margin-left: 0 !important;
         text-indent: 0 !important;
         padding-left: 0 !important;
@@ -729,7 +727,7 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl, topPaddin
       ul, ol, .hr-doc-ul, .hr-doc-ol { padding-left: 1.5em; margin: 0.4em 0; display: block; }
       ol, .hr-doc-ol { list-style-type: decimal !important; list-style-position: outside; }
       ul, .hr-doc-ul { list-style-type: disc !important; list-style-position: outside; }
-      li { display: list-item !important; margin: 0.2em 0; line-height: 1; }
+      li { display: list-item !important; margin: 0.2em 0; }
       .hr-numbered { margin: 0.35em 0; }
       .ql-align-left, .hr-align-left { text-align: left !important; }
       .ql-align-center, .hr-align-center { text-align: center !important; }
@@ -756,7 +754,6 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl, topPaddin
       .hr-imported-doc {
         font-family: 'Times New Roman', Times, serif;
         font-size: 12pt;
-        line-height: 1;
         color: #000;
       }
       .hr-align-left, .ql-align-left { text-align: left !important; }

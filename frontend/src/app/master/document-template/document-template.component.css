@@ -106,7 +106,6 @@
   background: transparent;
   font-family: "Times New Roman", Times, serif;
   font-size: 12pt;
-  line-height: 1;
   color: #000;
   overflow-wrap: anywhere;
   cursor: text;
@@ -297,7 +296,6 @@
   border: none;
   font-family: "Times New Roman", Times, serif;
   font-size: 12pt;
-  line-height: 1;
   background: transparent;
 }
 
@@ -307,7 +305,6 @@
   color: #000;
   background: transparent;
   box-sizing: border-box;
-  line-height: 1;
   /* Keep body clear of letterhead band / footer band when using company image */
   overflow-wrap: anywhere;
 }
@@ -662,7 +659,6 @@
 :host ::ng-deep .editor-frame .ql-editor .hr-imported-doc {
   font-family: "Times New Roman", Times, serif;
   font-size: 12pt;
-  line-height: 1;
   color: #000;
 }
 
