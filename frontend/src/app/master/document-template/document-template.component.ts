@@ -73,10 +73,42 @@ const QUILL_SIZE_WHITELIST = [
   '8px', '9px', '10px', '11px', '12px', '13px', '14px', '15px', '16px', '18px', '20px', '22px', '24px', '28px', '32px', '36px', '48px', '64px', '72px',
 ];
 const QUILL_FONT_WHITELIST = [
-  'Arial', 'Helvetica', 'Times New Roman', 'Times', 'Georgia', 'Verdana', 'Tahoma',
-  'Courier New', 'Courier', 'Comic Sans MS', 'Impact', 'Calibri', 'Cambria',
-  'Trebuchet MS', 'Palatino Linotype', 'Lucida Sans Unicode', 'Segoe UI', 'Garamond', 'Book Antiqua',
+  'Arial',
+  'Arial Black',
+  'Arial Narrow',
+  'Book Antiqua',
+  'Bookman Old Style',
+  'Calibri',
+  'Cambria',
+  'Candara',
+  'Century Gothic',
+  'Comic Sans MS',
+  'Consolas',
+  'Constantia',
+  'Corbel',
+  'Courier',
+  'Courier New',
+  'Franklin Gothic Medium',
+  'Garamond',
+  'Georgia',
+  'Helvetica',
+  'Impact',
+  'Lucida Console',
+  'Lucida Sans',
+  'Lucida Sans Unicode',
+  'Microsoft Sans Serif',
+  'Monaco',
+  'Palatino',
+  'Palatino Linotype',
+  'Rockwell',
+  'Segoe UI',
+  'Tahoma',
+  'Times',
+  'Times New Roman',
+  'Trebuchet MS',
+  'Verdana',
 ];
+const QUILL_LINEHEIGHT_WHITELIST = ['1', '1.15', '1.5', '1.75', '2', '2.5'];
 
 try {
   Quill.register(PageBreakBlot, true);
@@ -89,6 +121,14 @@ try {
   const FontStyle = Quill.import('attributors/style/font') as any;
   FontStyle.whitelist = QUILL_FONT_WHITELIST;
   Quill.register(FontStyle, true);
+
+  // Block line-height (toolbar "Line" picker) — default editor CSS is 1
+  const Parchment = Quill.import('parchment') as any;
+  const LineHeightStyle = new Parchment.StyleAttributor('lineheight', 'line-height', {
+    scope: Parchment.Scope.BLOCK,
+    whitelist: QUILL_LINEHEIGHT_WHITELIST,
+  });
+  Quill.register(LineHeightStyle, true);
 } catch (_) {
   // already registered (HMR / re-init)
 }
@@ -177,6 +217,9 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
 
   /** Top space options (mm) — user can pick how much gap above content */
   topPadOptions = [0, 2, 4, 5, 8, 10, 12, 15, 18, 20, 22, 25, 28, 30, 35, 40];
+
+  /** Font family list for Format bar + Quill toolbar */
+  fontFamilyOptions = QUILL_FONT_WHITELIST;
 
   /** All tenant branches for assign multi-select */
   branchList: { id: string; name: string }[] = [];
@@ -881,8 +924,9 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
    * Page breaks → separate A4 sheets in on-screen preview.
    */
   private buildPrintHtml(bodyHtml: string): string {
-    const raw = String(bodyHtml || '');
-    // Quill editor content: light touch. Word-import HTML: heavier sanitize.
+    // Always use live editor DOM so print = what user sees
+    this.pullBodyFromEditor();
+    const raw = String(bodyHtml || this.form.bodyHtml || '');
     const fromQuill =
       !this.useRichEditor ||
       /class=["'][^"']*\bql-(?:align|size|font|indent|direction)-/i.test(raw);
@@ -901,7 +945,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       this.useRichEditor ||
       /hr-imported-doc|data-preserve-layout|hr-align-|text-align\s*:|hr-numbered|hr-doc-table/i.test(filled);
 
-    // Match .ql-editor padding (user Top space overrides auto)
+    // Same padding numbers as document-template.component.css .ql-editor
     const bodyPadTop = this.topPadCss;
     const bodyPadX = hasImportedLayout ? '14mm' : '18mm';
     const bodyPadBottom = useImage ? '24mm' : hasImportedLayout ? '14mm' : letterheadBlank ? '18mm' : '22mm';
@@ -915,84 +959,70 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       .map((chunk) => `<div class="page"><div class="page-body ql-editor">${chunk}</div></div>`)
       .join('\n');
 
-    // Exact editor typography so blank lines / signature gaps match hard copy
-    const bodyTypeCss = fromQuill
-      ? `
+    // Mirror Quill snow + our editor CSS (no extra print-only spacing)
+    const bodyTypeCss = `
   body {
     font-family: "Times New Roman", Times, serif;
     font-size: 12pt;
-    line-height: 1.5;
+    line-height: 1;
     color: #000;
   }
   .page-body.ql-editor,
   .page-body {
     font-family: "Times New Roman", Times, serif;
     font-size: 12pt;
-    line-height: 1.5;
+    line-height: 1;
     color: #000;
     overflow-wrap: anywhere;
     word-wrap: break-word;
-    /* Keep multiple spaces (signature columns) like the editor */
     white-space: pre-wrap;
   }
-  /* Same as editor: each empty <p><br></p> keeps vertical space */
+  /* Quill snow default: p margin 0 — we use same 0 so print ≠ extra gaps */
   .page-body p,
   .page-body ol,
-  .page-body ul {
-    margin: 0.35em 0;
-    padding: 0;
-    white-space: pre-wrap;
-  }
-  .page-body p:empty,
-  .page-body p:has(> br:only-child) {
-    min-height: 1.5em !important;
-    height: 1.5em;
-    margin: 0.35em 0 !important;
-    line-height: 1.5em;
-  }
-  .page-body .ql-spacer {
-    display: block;
+  .page-body ul,
+  .page-body pre,
+  .page-body blockquote,
+  .page-body h1, .page-body h2, .page-body h3,
+  .page-body h4, .page-body h5, .page-body h6 {
     margin: 0;
     padding: 0;
-    border: 0;
   }
-  .page-body br { line-height: 1.5; }
-  /* Signature / 2-column tables from Word or editor */
+  .page-body br { line-height: 1; }
   .page-body table {
     width: 100% !important;
-    table-layout: fixed;
+    border-collapse: collapse;
+    table-layout: auto;
   }
   .page-body table td,
   .page-body table th {
     vertical-align: top;
+    /* NEVER force 50% — that looked like a 1-tab / half-page indent */
+    width: auto;
+  }
+  .page-body table.hr-sig-table td {
     width: 50%;
   }
-  .page-body h1 { font-size: 2em; margin: 0.35em 0; }
-  .page-body h2 { font-size: 1.5em; margin: 0.35em 0; }
-  .page-body h3 { font-size: 1.17em; margin: 0.35em 0; }
+  .page-body h1 { font-size: 2em; }
+  .page-body h2 { font-size: 1.5em; }
+  .page-body h3 { font-size: 1.17em; }
   .ql-size-small { font-size: 0.75em; }
   .ql-size-large { font-size: 1.5em; }
   .ql-size-huge { font-size: 2.5em; }
   .ql-font-serif { font-family: Georgia, 'Times New Roman', serif; }
   .ql-font-monospace { font-family: Monaco, 'Courier New', monospace; }
-  .ql-indent-1 { padding-left: 3em; }
-  .ql-indent-2 { padding-left: 6em; }
-  .ql-indent-3 { padding-left: 9em; }
-  .ql-indent-4 { padding-left: 12em; }
-  .ql-indent-5 { padding-left: 15em; }
-  .ql-indent-6 { padding-left: 18em; }
-  .ql-indent-7 { padding-left: 21em; }
-  .ql-indent-8 { padding-left: 24em; }
-  .ql-direction-rtl { direction: rtl; text-align: inherit; }
-`
-      : `
-  body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5; color: #000; }
-  p, h1, h2, h3, h4, h5, h6, li, td, th {
-    margin-top: 0.35em; margin-bottom: 0.35em;
-    line-height: 1.5; height: auto; max-height: none;
-    min-height: 0; overflow: visible; max-width: 100%;
+  [class*="ql-indent"] { padding-left: 0 !important; margin-left: 0 !important; }
+  .page-body p, .page-body div, .page-body h1, .page-body h2, .page-body h3,
+  .page-body h4, .page-body h5, .page-body h6, .page-body span, .page-body li {
+    margin-left: 0 !important;
+    text-indent: 0 !important;
   }
-  p:empty, p:has(> br:only-child) { min-height: 1.5em; }
+  .page-body p, .page-body h1, .page-body h2, .page-body h3,
+  .page-body h4, .page-body h5, .page-body h6 {
+    padding-left: 0 !important;
+  }
+  .ql-direction-rtl { direction: rtl; text-align: inherit; }
+  blockquote { margin: 0; padding: 0; border: 0; }
 `;
 
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Print Preview</title>
@@ -1022,12 +1052,13 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     max-width: 100% !important; height: auto !important; display: inline-block;
     page-break-inside: avoid !important; break-inside: avoid !important;
   }
-  table, .hr-doc-table { width: 100%; border-collapse: collapse; margin: 0.5em 0; border: none; page-break-inside: avoid; }
+  /* Do NOT page-break-inside:avoid on all tables — that leaves almost-blank pages */
+  table, .hr-doc-table { width: 100%; border-collapse: collapse; margin: 0.5em 0; border: none; }
   td, th { border: none; padding: 2px 4px; vertical-align: top; }
   table.hr-doc-table-bordered td, table.hr-doc-table-bordered th,
   table[border]:not([border="0"]) td, table[border]:not([border="0"]) th { border: 1px solid #000; padding: 4px 6px; }
   ul, ol, .hr-doc-ul, .hr-doc-ol {
-    display: block; padding-left: 1.5em; margin: 0.4em 0;
+    display: block; padding-left: 1.25em !important; margin: 0.4em 0;
     list-style-position: outside;
   }
   ol, .hr-doc-ol { list-style-type: decimal !important; }
@@ -1043,7 +1074,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     page-break-inside: avoid !important; break-inside: avoid !important;
   }
   .hr-print-footer img { page-break-inside: avoid !important; break-inside: avoid !important; margin: 2px auto !important; }
-  .hr-imported-doc { font-family: 'Times New Roman', Times, serif; font-size: 11.5pt; line-height: 1.4; color: #000; }
+  .hr-imported-doc { font-family: 'Times New Roman', Times, serif; font-size: 11.5pt; line-height: 1; color: #000; }
   .hr-align-left, .ql-align-left { text-align: left !important; }
   .hr-align-center, .ql-align-center { text-align: center !important; }
   .hr-align-right, .ql-align-right { text-align: right !important; }
@@ -1054,14 +1085,17 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
   [style*="text-align: center"], [style*="text-align:center"] { text-align: center !important; }
   [style*="text-align: justify"], [style*="text-align:justify"] { text-align: justify !important; }
   @media print {
-    html, body { background: #fff !important; }
-    .sheet-wrap { padding: 0 !important; gap: 0 !important; }
+    html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+    .sheet-wrap { padding: 0 !important; gap: 0 !important; margin: 0 !important; }
     .page {
-      box-shadow: none !important; width: 210mm !important; min-height: 297mm !important;
+      box-shadow: none !important; width: 210mm !important; min-height: auto !important;
       margin: 0 !important; page-break-after: always; break-after: page;
     }
     .page:last-child { page-break-after: auto; break-after: auto; }
     .hr-print-footer { page-break-inside: avoid !important; break-inside: avoid !important; }
+    /* Browser print dialog: set Margins = None for true edge match */
+    [class*="ql-indent"] { padding-left: 0 !important; margin-left: 0 !important; }
+    .page-body p, .page-body div { margin-left: 0 !important; text-indent: 0 !important; padding-left: 0 !important; }
   }
 </style></head><body spellcheck="false">
 <div class="sheet-wrap">${pagesHtml}</div>
@@ -1069,12 +1103,55 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Keep signature gaps / left-right layout / multi-spaces in HTML.
-   * Used for print AND save so spacing survives reload.
-   * Do NOT strip leading blank lines — if user pushes title down, print must match.
+   * Remove accidental left indent (Word / Quill Tab / leading &nbsp; inside spans).
+   * Print + editor must stay flush left like headings.
+   */
+  private stripDefaultTabIndent(html: string): string {
+    let out = String(html || '');
+
+    // Any Quill indent level (1 tab, 2 tabs, …)
+    out = out.replace(/\bql-indent-\d+\b/gi, '');
+    out = out.replace(/\sclass=(["'])\s*\1/gi, '');
+
+    // Drop left indent styles entirely on body content (keep list padding via CSS only)
+    out = out.replace(/style\s*=\s*(["'])(.*?)\1/gi, (_m, q: string, style: string) => {
+      let s = String(style)
+        .replace(/margin-left\s*:\s*[^;]+;?/gi, '')
+        .replace(/padding-left\s*:\s*[^;]+;?/gi, '')
+        .replace(/text-indent\s*:\s*[^;]+;?/gi, '')
+        .replace(/;;+/g, ';')
+        .replace(/^;|;$/g, '')
+        .trim();
+      return s ? `style=${q}${s}${q}` : '';
+    });
+    out = out.replace(/\sstyle=(["'])\s*\1/gi, '');
+
+    // Leading spaces / &nbsp; / tabs right after <p> or after opening inline tags
+    const leadWs = '(?:&nbsp;|\\u00a0|&#160;|&#xA0;|\\t| |\\u2003|\\u2002){1,24}';
+    out = out.replace(
+      new RegExp(`<(p|h[1-6]|div|li|td|th)(\\b[^>]*)>${leadWs}`, 'gi'),
+      '<$1$2>',
+    );
+    out = out.replace(
+      new RegExp(
+        `<(p|h[1-6]|li|td|th)(\\b[^>]*)>((?:<(?:strong|b|em|i|u|span|a|font)\\b[^>]*>)+)${leadWs}`,
+        'gi',
+      ),
+      '<$1$2>$3',
+    );
+
+    // Unwrap empty blockquotes Quill sometimes wraps around indented paras
+    out = out.replace(/<blockquote[^>]*>\s*/gi, '').replace(/\s*<\/blockquote>/gi, '');
+
+    return out;
+  }
+
+  /**
+   * Light print normalize — keep HTML as editor shows it (WYSIWYG).
+   * Only fix page-breaks, strip fake tab-indent, flatten Word vertical margins.
    */
   private preserveSpacingInHtml(html: string): string {
-    let out = String(html || '');
+    let out = this.stripDefaultTabIndent(html);
     const PAGE_BREAK_MARK = '<div class="page-break" data-page-break="1"></div>';
     out = out.replace(
       /<div\b[^>]*(?:class\s*=\s*["'][^"']*page-break[^"']*["']|data-page-break\s*=)[^>]*\/?>(?:[\s\S]*?<\/div>)?/gi,
@@ -1085,26 +1162,44 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       PAGE_BREAK_MARK,
     );
 
-    // Already-saved spacers: keep height, ensure data-vspace for Quill blot
+    // Old inflated spacers → blank Quill lines
     out = out.replace(
-      /<div\b([^>]*\b(?:ql-spacer|data-vspace)\b[^>]*)>([\s\S]*?)<\/div>/gi,
-      (_m, attrs: string, inner: string) => {
+      /<div\b([^>]*\b(?:ql-spacer|data-vspace)\b[^>]*)>[\s\S]*?<\/div>/gi,
+      (_m, attrs: string) => {
         const emMatch =
           String(attrs).match(/data-vspace\s*=\s*["']([\d.]+)["']/i) ||
           String(attrs).match(/height\s*:\s*([\d.]+)\s*em/i);
-        const em = (emMatch ? parseFloat(emMatch[1]) : 1.85) || 1.85;
-        return (
-          `<div class="ql-spacer" data-vspace="${em}" contenteditable="false" ` +
-          `style="display:block;height:${em}em;min-height:${em}em;line-height:${em}em;margin:0;padding:0;border:0;">` +
-          `${inner && String(inner).trim() ? inner : '&nbsp;'}</div>`
+        const em = (emMatch ? parseFloat(emMatch[1]) : 1.5) || 1.5;
+        const count = Math.min(
+          3,
+          Math.max(1, Math.round(em / 1.85) || Math.round(em / 1.5) || 1),
         );
+        return Array.from({ length: count }, () => '<p><br></p>').join('');
       },
     );
 
-    // Side-by-side signature rows (left label + right label, or left () + right ())
+    // Word often leaves margin-top/bottom:12pt on every <p> → print looks much looser than Quill
+    out = out.replace(/style\s*=\s*(["'])(.*?)\1/gi, (_m, q: string, style: string) => {
+      let s = String(style)
+        .replace(/margin\s*:\s*[^;]+;?/gi, '')
+        .replace(/margin-top\s*:\s*[^;]+;?/gi, '')
+        .replace(/margin-bottom\s*:\s*[^;]+;?/gi, '')
+        .replace(/margin-left\s*:\s*[^;]+;?/gi, '')
+        .replace(/margin-right\s*:\s*[^;]+;?/gi, '')
+        .replace(/padding-top\s*:\s*[^;]+;?/gi, '')
+        .replace(/padding-bottom\s*:\s*[^;]+;?/gi, '')
+        // Keep unitless line-height (toolbar); drop Word absolute pt/px line boxes
+        .replace(/line-height\s*:\s*[\d.]+(?:pt|px)\s*;?/gi, '')
+        .replace(/;;+/g, ';')
+        .replace(/^;|;$/g, '')
+        .trim();
+      return s ? `style=${q}${s}${q}` : '';
+    });
+    out = out.replace(/\sstyle=(["'])\s*\1/gi, '');
+
+    // Side-by-side signature rows
     out = this.pairSignatureColumnsForPrint(out);
 
-    // ql-align-* → inline text-align (print engines sometimes drop class-only align)
     out = out.replace(
       /<([a-z][a-z0-9]*)\b([^>]*\bclass\s*=\s*["'][^"']*\bql-align-(left|center|right|justify)\b[^"']*["'][^>]*)>/gi,
       (_m, tag: string, attrs: string, align: string) => {
@@ -1116,36 +1211,16 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       },
     );
 
-    // Multiple spaces (signature left/right columns) → non-breaking spaces
+    // Leading indent spaces only (keep mid-sentence double spaces as nbsp)
     out = out.replace(/>([^<]+)</g, (_m, text: string) => {
-      const fixed = String(text).replace(/ {2,}/g, (spaces: string) =>
+      const trimmedLead = String(text).replace(/^[\s\u00a0\t]+/, '');
+      const fixed = trimmedLead.replace(/ {2,}/g, (spaces: string) =>
         '&nbsp;'.repeat(spaces.length),
       );
       return `>${fixed}<`;
     });
 
-    // Runs of blank Quill lines → durable spacer (incl. space above title)
-    // Each blank <p><br></p> ≈ line-height 1.5 + margins 0.7 ≈ 1.85em in editor
-    out = out.replace(
-      /(?:<p\b[^>]*>\s*(?:<br\s*\/?\s*>|&nbsp;|\u00a0|\s)*<\/p>\s*)+/gi,
-      (block: string) => {
-        const count = (block.match(/<p\b/gi) || []).length;
-        if (count <= 0) return block;
-        if (count === 1) {
-          // Keep single blank line as a real vertical gap in print
-          return (
-            `<p style="margin:0.35em 0;min-height:1.5em;line-height:1.5em;"><br></p>`
-          );
-        }
-        const em = (count * 1.85).toFixed(2);
-        return (
-          `<div class="ql-spacer" data-vspace="${em}" contenteditable="false" ` +
-          `style="display:block;height:${em}em;min-height:${em}em;line-height:${em}em;margin:0;padding:0;border:0;">&nbsp;</div>`
-        );
-      },
-    );
-
-    return out;
+    return this.stripDefaultTabIndent(out);
   }
 
   /** Print path — same spacing rules as save. */
@@ -1473,6 +1548,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
             [{ header: [1, 2, 3, false] }],
             [{ font: QUILL_FONT_WHITELIST }],
             [{ size: QUILL_SIZE_WHITELIST }],
+            [{ lineheight: QUILL_LINEHEIGHT_WHITELIST }],
             ['bold', 'italic', 'underline', 'strike'],
             [{ color: [] }, { background: [] }],
             [{ align: [] }],
@@ -1488,6 +1564,18 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
             },
             table() {
               self.insertQuillTable();
+            },
+            lineheight(value: string) {
+              const q = self.quill;
+              if (!q) return;
+              const range = q.getSelection(true);
+              if (range) {
+                q.format('lineheight', value || false, 'user');
+              } else {
+                q.format('lineheight', value || false, 'user');
+              }
+              self.form.bodyHtml = q.root.innerHTML;
+              self.refreshPrintPreview(false);
             },
           },
         },
@@ -1506,6 +1594,45 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       this.form.bodyHtml = this.quill?.root.innerHTML || '';
       this.refreshPrintPreview(false);
     });
+  }
+
+  /** Apply font-family from Format bar select (Quill mode). */
+  applyQuillFontFamily(value: string): void {
+    if (!this.quill || !value) return;
+    const range = this.quill.getSelection(true);
+    if (!range) {
+      const idx = Math.max(0, this.quill.getLength() - 1);
+      this.quill.setSelection(idx, 0, 'silent');
+    }
+    this.quill.format('font', value, 'user');
+    this.form.bodyHtml = this.quill.root.innerHTML;
+    this.refreshPrintPreview(false);
+  }
+
+  /** Apply font-size from Format bar select (Quill mode). */
+  applyQuillFontSize(value: string): void {
+    if (!this.quill || !value) return;
+    const range = this.quill.getSelection(true);
+    if (!range) {
+      const idx = Math.max(0, this.quill.getLength() - 1);
+      this.quill.setSelection(idx, 0, 'silent');
+    }
+    this.quill.format('size', value, 'user');
+    this.form.bodyHtml = this.quill.root.innerHTML;
+    this.refreshPrintPreview(false);
+  }
+
+  /** Apply line-height from toolbar / Format bar select (Quill mode). */
+  applyQuillLineHeight(value: string): void {
+    if (!this.quill || !value) return;
+    const range = this.quill.getSelection(true);
+    if (!range) {
+      const idx = Math.max(0, this.quill.getLength() - 1);
+      this.quill.setSelection(idx, 0, 'silent');
+    }
+    this.quill.format('lineheight', value, 'user');
+    this.form.bodyHtml = this.quill.root.innerHTML;
+    this.refreshPrintPreview(false);
   }
 
   /** Insert page-break embed at caret (Quill mode). Undo/redo supported via Quill history. */
@@ -1676,9 +1803,9 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     try {
       const doc = new DOMParser().parseFromString(h, 'text/html');
       this.normalizeWordDom(doc.body);
-      return doc.body.innerHTML;
+      return this.stripDefaultTabIndent(doc.body.innerHTML);
     } catch (_) {
-      return h;
+      return this.stripDefaultTabIndent(h);
     }
   }
 
@@ -1695,8 +1822,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       'text-decoration',
       'text-decoration-line',
       'line-height',
-      'margin-left',
-      'text-indent',
+      // Intentionally omit margin-left / text-indent — Word "1 tab" indent
     ]);
 
     const walk = (node: Node) => {
@@ -1820,8 +1946,10 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
    * that desyncs Quill's Delta and the toolbar/caret stop working.
    */
   private setEditorHtml(html: string, _preserveLayout = false): void {
-    // Keep leading blank lines — user may push title down intentionally
-    const safe = html && html.trim() ? html : '<p><br></p>';
+    // Keep leading blank lines; strip accidental 1-tab indent from Word/Quill
+    const safe = this.stripDefaultTabIndent(
+      html && html.trim() ? html : '<p><br></p>',
+    );
     this.form.bodyHtml = safe;
     if (!this.quill) return;
 
@@ -1829,7 +1957,9 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       this.quill.setText('', 'silent');
       this.quill.clipboard.dangerouslyPasteHTML(0, safe, 'silent');
       this.quill.root.classList.remove('ql-blank');
-      this.form.bodyHtml = this.quill.root.innerHTML || safe;
+      this.form.bodyHtml = this.stripDefaultTabIndent(
+        this.quill.root.innerHTML || safe,
+      );
     } catch (e) {
       console.warn('dangerouslyPasteHTML failed', e);
       // Stay on Quill — try a simpler paste rather than switching editors
@@ -2863,12 +2993,17 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
           const attrs = ind[1];
           const left = attrs.match(/w:(?:left|start)="(\d+)"/);
           const right = attrs.match(/w:(?:right|end)="(\d+)"/);
-          const first = attrs.match(/w:firstLine="(\d+)"/);
-          const hanging = attrs.match(/w:hanging="(\d+)"/);
-          if (left) styles.push(`margin-left:${Math.min(parseInt(left[1], 10) / 20, 72).toFixed(1)}pt`);
-          if (right) styles.push(`margin-right:${Math.min(parseInt(right[1], 10) / 20, 72).toFixed(1)}pt`);
-          if (first) styles.push(`text-indent:${Math.min(parseInt(first[1], 10) / 20, 36).toFixed(1)}pt`);
-          if (hanging) styles.push(`text-indent:-${Math.min(parseInt(hanging[1], 10) / 20, 36).toFixed(1)}pt`);
+          // Skip firstLine / hanging / small left — they show as unwanted "1 tab" gap
+          if (left) {
+            const pt = parseInt(left[1], 10) / 20;
+            if (pt > 36) {
+              styles.push(`margin-left:${Math.min(pt, 72).toFixed(1)}pt`);
+            }
+          }
+          if (right) {
+            const pt = parseInt(right[1], 10) / 20;
+            if (pt > 0) styles.push(`margin-right:${Math.min(pt, 72).toFixed(1)}pt`);
+          }
         }
 
         return { align, style: styles.join(';') };
@@ -3069,7 +3204,8 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
         .replace(/word-spacing\s*:\s*-?[\d.]+(?:px|pt|em|rem)?;?/gi, '')
         .replace(/margin-top\s*:\s*-\d[\d.]*(?:px|pt|em|rem|mm)?;?/gi, 'margin-top:0;')
         .replace(/margin-bottom\s*:\s*-\d[\d.]*(?:px|pt|em|rem|mm)?;?/gi, 'margin-bottom:0;')
-        .replace(/text-indent\s*:\s*-\d[\d.]*(?:px|pt|em|rem|mm)?;?/gi, 'text-indent:0;')
+        .replace(/text-indent\s*:\s*-?\d[\d.]*(?:px|pt|em|rem|mm)?;?/gi, '')
+        .replace(/margin-left\s*:\s*-?\d[\d.]*(?:px|pt|em|rem|mm)?;?/gi, '')
         .replace(/;;+/g, ';')
         .replace(/^;|;$/g, '')
         .trim();
@@ -3085,7 +3221,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       '$1<div class="hr-clearfix" style="clear:both;height:0;margin:0;padding:0;border:0;"></div>',
     );
 
-    return out;
+    return this.stripDefaultTabIndent(out);
   }
 
   private looksLikeFullLetterLayout(html: string): boolean {
