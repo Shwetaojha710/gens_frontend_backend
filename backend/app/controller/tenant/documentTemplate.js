@@ -568,24 +568,67 @@ function normalizeQuillHtmlForPrint(html) {
     }
   );
 
+  // Drop Quill / Word left indent (print was showing fake 1-tab gap)
+  out = out.replace(/\bql-indent-\d+\b/gi, '');
+  out = out.replace(/style\s*=\s*(["'])(.*?)\1/gi, (_m, q, style) => {
+    let s = String(style)
+      .replace(/margin-left\s*:\s*[^;]+;?/gi, '')
+      .replace(/padding-left\s*:\s*[^;]+;?/gi, '')
+      .replace(/text-indent\s*:\s*[^;]+;?/gi, '')
+      .replace(/;;+/g, ';')
+      .replace(/^;|;$/g, '')
+      .trim();
+    return s ? `style=${q}${s}${q}` : '';
+  });
+  const leadWs = '(?:&nbsp;|\\u00a0|&#160;|\\t| ){1,24}';
+  out = out.replace(new RegExp(`<(p|h[1-6]|div|li|td|th)(\\b[^>]*)>${leadWs}`, 'gi'), '<$1$2>');
+  out = out.replace(
+    new RegExp(
+      `<(p|h[1-6]|li|td|th)(\\b[^>]*)>((?:<(?:strong|b|em|i|u|span|a|font)\\b[^>]*>)+)${leadWs}`,
+      'gi'
+    ),
+    '<$1$2>$3'
+  );
+  out = out.replace(/<blockquote[^>]*>\s*/gi, '').replace(/\s*<\/blockquote>/gi, '');
+
+  // Flatten Word vertical margins so print matches tight Quill editor
+  out = out.replace(/style\s*=\s*(["'])(.*?)\1/gi, (_m, q, style) => {
+    let s = String(style)
+      .replace(/margin\s*:\s*[^;]+;?/gi, '')
+      .replace(/margin-top\s*:\s*[^;]+;?/gi, '')
+      .replace(/margin-bottom\s*:\s*[^;]+;?/gi, '')
+      .replace(/margin-left\s*:\s*[^;]+;?/gi, '')
+      .replace(/margin-right\s*:\s*[^;]+;?/gi, '')
+      .replace(/padding-top\s*:\s*[^;]+;?/gi, '')
+      .replace(/padding-bottom\s*:\s*[^;]+;?/gi, '')
+      .replace(/padding-left\s*:\s*[^;]+;?/gi, '')
+      .replace(/text-indent\s*:\s*[^;]+;?/gi, '')
+      // Keep unitless line-height from toolbar; drop Word absolute pt/px
+      .replace(/line-height\s*:\s*[\d.]+(?:pt|px)\s*;?/gi, '')
+      .replace(/;;+/g, ';')
+      .replace(/^;|;$/g, '')
+      .trim();
+    return s ? `style=${q}${s}${q}` : '';
+  });
+
   out = out.replace(/>([^<]+)</g, (_m, text) => {
-    const fixed = String(text).replace(/ {2,}/g, (spaces) => '&nbsp;'.repeat(spaces.length));
+    const trimmedLead = String(text).replace(/^[\s\u00a0\t]+/, '');
+    const fixed = trimmedLead.replace(/ {2,}/g, (spaces) => '&nbsp;'.repeat(spaces.length));
     return `>${fixed}<`;
   });
 
   out = out.replace(
-    /(?:<p\b[^>]*>\s*(?:<br\s*\/?\s*>|&nbsp;|\u00a0|\s)*<\/p>\s*)+/gi,
-    (block) => {
-      const count = (block.match(/<p\b/gi) || []).length;
-      if (count <= 0) return block;
-      if (count === 1) {
-        return '<p style="margin:0.35em 0;min-height:1.5em;line-height:1.5em;"><br></p>';
-      }
-      const em = (count * 1.85).toFixed(2);
-      return (
-        `<div class="ql-spacer" data-vspace="${em}" contenteditable="false" ` +
-        `style="display:block;height:${em}em;min-height:${em}em;line-height:${em}em;margin:0;padding:0;border:0;">&nbsp;</div>`
+    /<div\b([^>]*\b(?:ql-spacer|data-vspace)\b[^>]*)>[\s\S]*?<\/div>/gi,
+    (_m, attrs) => {
+      const emMatch =
+        String(attrs).match(/data-vspace\s*=\s*["']([\d.]+)["']/i) ||
+        String(attrs).match(/height\s*:\s*([\d.]+)\s*em/i);
+      const em = (emMatch ? parseFloat(emMatch[1]) : 1.5) || 1.5;
+      const count = Math.min(
+        3,
+        Math.max(1, Math.round(em / 1.85) || Math.round(em / 1.5) || 1)
       );
+      return Array.from({ length: count }, () => '<p><br></p>').join('');
     }
   );
 
@@ -634,7 +677,7 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl, topPaddin
       body {
         font-family: 'Times New Roman', Times, serif;
         font-size: 12pt;
-        line-height: 1.5;
+        line-height: 1;
         color: #000;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
@@ -648,27 +691,34 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl, topPaddin
         margin: 0 auto;
         background: #fff;
       }
-      /* Same as Quill editor — empty lines / signature gaps keep space */
+      /* Match Quill editor — no extra paragraph gaps / no fake 1-tab indent */
       .page, .page-body { white-space: pre-wrap; }
-      p, h1, h2, h3, h4, h5, h6 { margin: 0.35em 0; line-height: 1.5; white-space: pre-wrap; }
-      p:empty, p:has(> br:only-child) { min-height: 1.5em !important; height: 1.5em; margin: 0.35em 0 !important; }
-      .ql-spacer { display: block; margin: 0; padding: 0; border: 0; }
-      p[style*="margin"], h1[style], h2[style], h3[style] { margin-top: unset; margin-bottom: unset; }
+      p, h1, h2, h3, h4, h5, h6, ol, ul, blockquote {
+        margin: 0;
+        padding: 0;
+        line-height: 1;
+        margin-left: 0 !important;
+        text-indent: 0 !important;
+        padding-left: 0 !important;
+      }
+      [class*="ql-indent"] { padding-left: 0 !important; margin-left: 0 !important; }
+      blockquote { border: 0; }
       h1, h2, h3 { font-weight: bold; }
       img { max-width: 100%; height: auto; display: inline-block; page-break-inside: avoid; break-inside: avoid; }
       table, .hr-doc-table {
         width: 100% !important;
-        table-layout: fixed;
+        table-layout: auto;
         border-collapse: collapse;
-        margin: 0.5em 0;
+        margin: 0;
         border: none;
       }
       td, th {
         border: none;
         padding: 2px 6px;
         vertical-align: top;
-        width: 50%;
+        width: auto;
       }
+      table.hr-sig-table td { width: 50%; }
       table.hr-doc-table-bordered td,
       table.hr-doc-table-bordered th,
       table[border]:not([border="0"]) td,
@@ -679,7 +729,7 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl, topPaddin
       ul, ol, .hr-doc-ul, .hr-doc-ol { padding-left: 1.5em; margin: 0.4em 0; display: block; }
       ol, .hr-doc-ol { list-style-type: decimal !important; list-style-position: outside; }
       ul, .hr-doc-ul { list-style-type: disc !important; list-style-position: outside; }
-      li { display: list-item !important; margin: 0.2em 0; line-height: 1.5; }
+      li { display: list-item !important; margin: 0.2em 0; line-height: 1; }
       .hr-numbered { margin: 0.35em 0; }
       .ql-align-left, .hr-align-left { text-align: left !important; }
       .ql-align-center, .hr-align-center { text-align: center !important; }
@@ -706,7 +756,7 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl, topPaddin
       .hr-imported-doc {
         font-family: 'Times New Roman', Times, serif;
         font-size: 12pt;
-        line-height: 1.5;
+        line-height: 1;
         color: #000;
       }
       .hr-align-left, .ql-align-left { text-align: left !important; }

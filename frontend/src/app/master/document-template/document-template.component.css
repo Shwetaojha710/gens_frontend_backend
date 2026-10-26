@@ -106,7 +106,7 @@
   background: transparent;
   font-family: "Times New Roman", Times, serif;
   font-size: 12pt;
-  line-height: 1.5;
+  line-height: 1;
   color: #000;
   overflow-wrap: anywhere;
   cursor: text;
@@ -297,7 +297,7 @@
   border: none;
   font-family: "Times New Roman", Times, serif;
   font-size: 12pt;
-  line-height: 1.5;
+  line-height: 1;
   background: transparent;
 }
 
@@ -307,6 +307,7 @@
   color: #000;
   background: transparent;
   box-sizing: border-box;
+  line-height: 1;
   /* Keep body clear of letterhead band / footer band when using company image */
   overflow-wrap: anywhere;
 }
@@ -331,14 +332,28 @@
 }
 
 
-:host ::ng-deep .editor-frame .ql-editor p {
-  margin: 0.35em 0;
+/* Match Quill snow + print: no extra paragraph margins (Enter = <p><br>) */
+:host ::ng-deep .editor-frame .ql-editor p,
+:host ::ng-deep .editor-frame .ql-editor ol,
+:host ::ng-deep .editor-frame .ql-editor ul,
+:host ::ng-deep .editor-frame .ql-editor h1,
+:host ::ng-deep .editor-frame .ql-editor h2,
+:host ::ng-deep .editor-frame .ql-editor h3 {
+  margin: 0;
+  padding: 0;
 }
 
-/* Blank Enter lines keep height (signature gap matches print) */
-:host ::ng-deep .editor-frame .ql-editor p:empty,
-:host ::ng-deep .editor-frame .ql-editor p:has(> br:only-child) {
-  min-height: 1.5em;
+/* No default left indent in editor */
+:host ::ng-deep .editor-frame .ql-editor [class*='ql-indent'] {
+  padding-left: 0 !important;
+}
+:host ::ng-deep .editor-frame .ql-editor p,
+:host ::ng-deep .editor-frame .ql-editor h1,
+:host ::ng-deep .editor-frame .ql-editor h2,
+:host ::ng-deep .editor-frame .ql-editor h3 {
+  margin-left: 0 !important;
+  text-indent: 0 !important;
+  padding-left: 0 !important;
 }
 
 /* Saved vertical spacers (signature gaps) — same height in editor after reload */
@@ -390,6 +405,167 @@
 :host ::ng-deep .editor-frame .ql-editor table.hr-doc-table-bordered th {
   border: 1px solid #000;
   padding: 4px 6px;
+}
+
+.dt-font-select {
+  min-width: 150px;
+  max-width: 200px;
+}
+
+/* Quill toolbar — Font family picker labels */
+:host ::ng-deep .ql-snow .ql-picker.ql-font {
+  width: 140px;
+}
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item::before {
+  content: 'Font';
+}
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Arial']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Arial']::before { content: 'Arial'; font-family: Arial, sans-serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Arial Black']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Arial Black']::before { content: 'Arial Black'; font-family: 'Arial Black', sans-serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Arial Narrow']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Arial Narrow']::before { content: 'Arial Narrow'; font-family: 'Arial Narrow', sans-serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Book Antiqua']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Book Antiqua']::before { content: 'Book Antiqua'; font-family: 'Book Antiqua', serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Bookman Old Style']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Bookman Old Style']::before { content: 'Bookman Old Style'; font-family: 'Bookman Old Style', serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Calibri']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Calibri']::before { content: 'Calibri'; font-family: Calibri, sans-serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Cambria']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Cambria']::before { content: 'Cambria'; font-family: Cambria, serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Candara']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Candara']::before { content: 'Candara'; font-family: Candara, sans-serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Century Gothic']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Century Gothic']::before { content: 'Century Gothic'; font-family: 'Century Gothic', sans-serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Comic Sans MS']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Comic Sans MS']::before { content: 'Comic Sans MS'; font-family: 'Comic Sans MS', cursive; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Consolas']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Consolas']::before { content: 'Consolas'; font-family: Consolas, monospace; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Constantia']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Constantia']::before { content: 'Constantia'; font-family: Constantia, serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Corbel']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Corbel']::before { content: 'Corbel'; font-family: Corbel, sans-serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Courier']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Courier']::before { content: 'Courier'; font-family: Courier, monospace; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Courier New']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Courier New']::before { content: 'Courier New'; font-family: 'Courier New', monospace; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Franklin Gothic Medium']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Franklin Gothic Medium']::before { content: 'Franklin Gothic'; font-family: 'Franklin Gothic Medium', sans-serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Garamond']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Garamond']::before { content: 'Garamond'; font-family: Garamond, serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Georgia']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Georgia']::before { content: 'Georgia'; font-family: Georgia, serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Helvetica']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Helvetica']::before { content: 'Helvetica'; font-family: Helvetica, sans-serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Impact']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Impact']::before { content: 'Impact'; font-family: Impact, sans-serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Lucida Console']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Lucida Console']::before { content: 'Lucida Console'; font-family: 'Lucida Console', monospace; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Lucida Sans']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Lucida Sans']::before { content: 'Lucida Sans'; font-family: 'Lucida Sans', sans-serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Lucida Sans Unicode']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Lucida Sans Unicode']::before { content: 'Lucida Sans Unicode'; font-family: 'Lucida Sans Unicode', sans-serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Microsoft Sans Serif']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Microsoft Sans Serif']::before { content: 'MS Sans Serif'; font-family: 'Microsoft Sans Serif', sans-serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Monaco']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Monaco']::before { content: 'Monaco'; font-family: Monaco, monospace; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Palatino']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Palatino']::before { content: 'Palatino'; font-family: Palatino, serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Palatino Linotype']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Palatino Linotype']::before { content: 'Palatino Linotype'; font-family: 'Palatino Linotype', serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Rockwell']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Rockwell']::before { content: 'Rockwell'; font-family: Rockwell, serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Segoe UI']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Segoe UI']::before { content: 'Segoe UI'; font-family: 'Segoe UI', sans-serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Tahoma']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Tahoma']::before { content: 'Tahoma'; font-family: Tahoma, sans-serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Times']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Times']::before { content: 'Times'; font-family: Times, serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Times New Roman']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Times New Roman']::before { content: 'Times New Roman'; font-family: 'Times New Roman', Times, serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Trebuchet MS']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Trebuchet MS']::before { content: 'Trebuchet MS'; font-family: 'Trebuchet MS', sans-serif; }
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Verdana']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Verdana']::before { content: 'Verdana'; font-family: Verdana, sans-serif; }
+
+/* Quill toolbar — Font size picker labels (pt whitelist) */
+:host ::ng-deep .ql-snow .ql-picker.ql-size {
+  width: 64px;
+}
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-label::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-item::before {
+  content: 'Size';
+}
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='8pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='8pt']::before { content: '8'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='9pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='9pt']::before { content: '9'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='10pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='10pt']::before { content: '10'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='11pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='11pt']::before { content: '11'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='12pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='12pt']::before { content: '12'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='14pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='14pt']::before { content: '14'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='16pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='16pt']::before { content: '16'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='18pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='18pt']::before { content: '18'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='20pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='20pt']::before { content: '20'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='22pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='22pt']::before { content: '22'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='24pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='24pt']::before { content: '24'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='28pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='28pt']::before { content: '28'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='32pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='32pt']::before { content: '32'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='36pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='36pt']::before { content: '36'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='48pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='48pt']::before { content: '48'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='72pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='72pt']::before { content: '72'; }
+
+/* Quill toolbar — Line height picker */
+:host ::ng-deep .ql-snow .ql-picker.ql-lineheight {
+  width: 72px;
+}
+:host ::ng-deep .ql-snow .ql-picker.ql-lineheight .ql-picker-label::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-lineheight .ql-picker-item::before {
+  content: 'Line';
+}
+:host ::ng-deep .ql-snow .ql-picker.ql-lineheight .ql-picker-label[data-value='1']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-lineheight .ql-picker-item[data-value='1']::before {
+  content: '1.0';
+}
+:host ::ng-deep .ql-snow .ql-picker.ql-lineheight .ql-picker-label[data-value='1.15']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-lineheight .ql-picker-item[data-value='1.15']::before {
+  content: '1.15';
+}
+:host ::ng-deep .ql-snow .ql-picker.ql-lineheight .ql-picker-label[data-value='1.5']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-lineheight .ql-picker-item[data-value='1.5']::before {
+  content: '1.5';
+}
+:host ::ng-deep .ql-snow .ql-picker.ql-lineheight .ql-picker-label[data-value='1.75']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-lineheight .ql-picker-item[data-value='1.75']::before {
+  content: '1.75';
+}
+:host ::ng-deep .ql-snow .ql-picker.ql-lineheight .ql-picker-label[data-value='2']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-lineheight .ql-picker-item[data-value='2']::before {
+  content: '2.0';
+}
+:host ::ng-deep .ql-snow .ql-picker.ql-lineheight .ql-picker-label[data-value='2.5']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-lineheight .ql-picker-item[data-value='2.5']::before {
+  content: '2.5';
+}
+:host ::ng-deep .ql-snow .ql-picker.ql-lineheight .ql-picker-label::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-lineheight .ql-picker-item::before {
+  display: inline-block;
+  line-height: 22px;
 }
 
 /* Quill toolbar — Table button label (icon + text) */
@@ -486,7 +662,7 @@
 :host ::ng-deep .editor-frame .ql-editor .hr-imported-doc {
   font-family: "Times New Roman", Times, serif;
   font-size: 12pt;
-  line-height: 1.5;
+  line-height: 1;
   color: #000;
 }
 

@@ -174,23 +174,14 @@
 
               <!-- Font Family -->
               <select
-                class="form-select form-select-sm dt-format-select"
+                class="form-select form-select-sm dt-format-select dt-font-select"
                 title="Font family"
                 (mousedown)="saveRichSelection(); $event.stopPropagation()"
                 (focus)="saveRichSelection()"
                 (change)="applyRichTextStyle('font-family', $any($event.target).value); $any($event.target).value = ''"
               >
                 <option value="">Font</option>
-                <option value="Arial, Helvetica, sans-serif">Arial</option>
-                <option value="Calibri, Candara, sans-serif">Calibri</option>
-                <option value="'Times New Roman', Times, serif">Times New Roman</option>
-                <option value="Georgia, serif">Georgia</option>
-                <option value="Verdana, Geneva, sans-serif">Verdana</option>
-                <option value="Tahoma, Geneva, sans-serif">Tahoma</option>
-                <option value="'Courier New', Courier, monospace">Courier New</option>
-                <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
-                <option value="'Comic Sans MS', cursive">Comic Sans MS</option>
-                <option value="Impact, Charcoal, sans-serif">Impact</option>
+                <option *ngFor="let f of fontFamilyOptions" [value]="f" [style.font-family]="f">{{ f }}</option>
               </select>
 
               <!-- Font Size -->
@@ -351,9 +342,57 @@
               <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('removeFormat')" title="Clear formatting">Clear</button>
             </div>
 
-            <!-- Color tools (Quill + rich) — Foreground / Background -->
+            <!-- Font family + size + line height + color (Quill mode) -->
             <div class="dt-color-bar" *ngIf="!useRichEditor" (mousedown)="$event.preventDefault()">
-              <span class="dt-color-bar-title">Color</span>
+              <span class="dt-color-bar-title">Format</span>
+              <select
+                class="form-select form-select-sm dt-format-select dt-font-select"
+                title="Font family"
+                (mousedown)="$event.stopPropagation()"
+                (change)="applyQuillFontFamily($any($event.target).value); $any($event.target).value = ''"
+              >
+                <option value="">Font</option>
+                <option *ngFor="let f of fontFamilyOptions" [value]="f" [style.font-family]="f">{{ f }}</option>
+              </select>
+              <select
+                class="form-select form-select-sm dt-format-select"
+                title="Font size"
+                (mousedown)="$event.stopPropagation()"
+                (change)="applyQuillFontSize($any($event.target).value); $any($event.target).value = ''"
+              >
+                <option value="">Font Size</option>
+                <option value="8pt">8</option>
+                <option value="9pt">9</option>
+                <option value="10pt">10</option>
+                <option value="11pt">11</option>
+                <option value="12pt">12</option>
+                <option value="14pt">14</option>
+                <option value="16pt">16</option>
+                <option value="18pt">18</option>
+                <option value="20pt">20</option>
+                <option value="22pt">22</option>
+                <option value="24pt">24</option>
+                <option value="28pt">28</option>
+                <option value="32pt">32</option>
+                <option value="36pt">36</option>
+                <option value="48pt">48</option>
+                <option value="72pt">72</option>
+              </select>
+              <select
+                class="form-select form-select-sm dt-format-select"
+                title="Line height"
+                (mousedown)="$event.stopPropagation()"
+                (change)="applyQuillLineHeight($any($event.target).value); $any($event.target).value = ''"
+              >
+                <option value="">Line Height</option>
+                <option value="1">1.0</option>
+                <option value="1.15">1.15</option>
+                <option value="1.5">1.5</option>
+                <option value="1.75">1.75</option>
+                <option value="2">2.0</option>
+                <option value="2.5">2.5</option>
+              </select>
+              <span class="dt-rich-sep"></span>
               <label class="dt-color-tool" title="Foreground (text color)">
                 <span class="dt-color-tool-label">Foreground</span>
                 <span class="dt-color-swatch" [style.background]="editorFgColor"></span>
