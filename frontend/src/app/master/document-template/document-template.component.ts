@@ -940,10 +940,9 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
 
     const useImage = this.letterheadMode === 'image' && !!this.pageBackground;
     const letterheadBlank = this.letterheadMode === 'blank' || !!this.form.letterheadBlank;
-    const hasImportedLayout =
-      this.importedLayout ||
-      this.useRichEditor ||
-      /hr-imported-doc|data-preserve-layout|hr-align-|text-align\s*:|hr-numbered|hr-doc-table/i.test(filled);
+    // Match editor-frame modifiers only — do NOT infer from HTML (text-align etc.)
+    // or print gets 14mm pad while Quill editor stays 18mm (wider text / tighter look).
+    const hasImportedLayout = !!(this.importedLayout || this.useRichEditor);
 
     // Same padding numbers as document-template.component.css .ql-editor
     const bodyPadTop = this.topPadCss;
@@ -959,23 +958,26 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       .map((chunk) => `<div class="page"><div class="page-body ql-editor">${chunk}</div></div>`)
       .join('\n');
 
-    // Mirror Quill snow + our editor CSS (no extra print-only spacing)
+    // Mirror editor .ql-editor CSS exactly (WYSIWYG — same type metrics)
     const bodyTypeCss = `
   body {
     font-family: "Times New Roman", Times, serif;
     font-size: 12pt;
+    /* Match editor (Bootstrap --bs-body-line-height: 1.375) */
+    line-height: 1.375;
     color: #000;
   }
   .page-body.ql-editor,
   .page-body {
     font-family: "Times New Roman", Times, serif;
     font-size: 12pt;
+    line-height: 1.375;
     color: #000;
     overflow-wrap: anywhere;
     word-wrap: break-word;
     white-space: pre-wrap;
   }
-  /* Quill snow default: p margin 0 — we use same 0 so print ≠ extra gaps */
+  /* Base like editor — inline margin/padding/line-height still win (WYSIWYG) */
   .page-body p,
   .page-body ol,
   .page-body ul,
@@ -986,16 +988,29 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     margin: 0;
     padding: 0;
   }
+  /* Empty Enter-lines must keep a full line box (same as Quill) */
+  .page-body p:empty,
+  .page-body p:has(> br:only-child) {
+    min-height: 1.375em;
+  }
+  .page-body .ql-spacer,
+  .page-body div[data-vspace] {
+    display: block;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
   .page-body table {
     width: 100% !important;
     border-collapse: collapse;
     table-layout: auto;
+    margin: 0;
   }
   .page-body table td,
   .page-body table th {
     vertical-align: top;
-    /* NEVER force 50% — that looked like a 1-tab / half-page indent */
     width: auto;
+    padding: 2px 4px;
   }
   .page-body table.hr-sig-table td {
     width: 50%;
@@ -1049,18 +1064,18 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     max-width: 100% !important; height: auto !important; display: inline-block;
     page-break-inside: avoid !important; break-inside: avoid !important;
   }
-  /* Do NOT page-break-inside:avoid on all tables — that leaves almost-blank pages */
-  table, .hr-doc-table { width: 100%; border-collapse: collapse; margin: 0.5em 0; border: none; }
+  /* Match editor table/list spacing (no print-only extra margins) */
+  table, .hr-doc-table { width: 100%; border-collapse: collapse; margin: 0; border: none; }
   td, th { border: none; padding: 2px 4px; vertical-align: top; }
   table.hr-doc-table-bordered td, table.hr-doc-table-bordered th,
   table[border]:not([border="0"]) td, table[border]:not([border="0"]) th { border: 1px solid #000; padding: 4px 6px; }
   ul, ol, .hr-doc-ul, .hr-doc-ol {
-    display: block; padding-left: 1.25em !important; margin: 0.4em 0;
+    display: block; padding-left: 1.4em !important; margin: 0.4em 0;
     list-style-position: outside;
   }
   ol, .hr-doc-ol { list-style-type: decimal !important; }
   ul, .hr-doc-ul { list-style-type: disc !important; }
-  li { display: list-item !important; margin: 0.2em 0; }
+  li { display: list-item !important; margin: 0; }
   .hr-numbered { margin: 0.3em 0; display: block; }
   .hr-clearfix { display: none !important; height: 0 !important; margin: 0 !important; }
   .page-break, [data-page-break] {
@@ -1159,33 +1174,14 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       PAGE_BREAK_MARK,
     );
 
-    // Old inflated spacers → blank Quill lines
-    out = out.replace(
-      /<div\b([^>]*\b(?:ql-spacer|data-vspace)\b[^>]*)>[\s\S]*?<\/div>/gi,
-      (_m, attrs: string) => {
-        const emMatch =
-          String(attrs).match(/data-vspace\s*=\s*["']([\d.]+)["']/i) ||
-          String(attrs).match(/height\s*:\s*([\d.]+)\s*em/i);
-        const em = (emMatch ? parseFloat(emMatch[1]) : 1.5) || 1.5;
-        const count = Math.min(
-          3,
-          Math.max(1, Math.round(em / 1.85) || Math.round(em / 1.5) || 1),
-        );
-        return Array.from({ length: count }, () => '<p><br></p>').join('');
-      },
-    );
-
-    // Word often leaves margin-top/bottom:12pt on every <p> → print looks much looser than Quill
+    // Keep vertical spacing that editor shows (inline margin beats CSS margin:0).
+    // Only drop absolute Word line-height pt/px that create giant line boxes.
     out = out.replace(/style\s*=\s*(["'])(.*?)\1/gi, (_m, q: string, style: string) => {
-      let s = String(style)
-        .replace(/margin\s*:\s*[^;]+;?/gi, '')
-        .replace(/margin-top\s*:\s*[^;]+;?/gi, '')
-        .replace(/margin-bottom\s*:\s*[^;]+;?/gi, '')
-        .replace(/margin-left\s*:\s*[^;]+;?/gi, '')
-        .replace(/margin-right\s*:\s*[^;]+;?/gi, '')
-        .replace(/padding-top\s*:\s*[^;]+;?/gi, '')
-        .replace(/padding-bottom\s*:\s*[^;]+;?/gi, '')
-        // Keep unitless line-height (toolbar); drop Word absolute pt/px line boxes
+      const rawStyle = String(style);
+      if (/height\s*:\s*[\d.]+em/i.test(rawStyle) && /min-height/i.test(rawStyle)) {
+        return `style=${q}${rawStyle}${q}`;
+      }
+      let s = rawStyle
         .replace(/line-height\s*:\s*[\d.]+(?:pt|px)\s*;?/gi, '')
         .replace(/;;+/g, ';')
         .replace(/^;|;$/g, '')
@@ -1220,9 +1216,32 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     return this.stripDefaultTabIndent(out);
   }
 
-  /** Print path — same spacing rules as save. */
+  /**
+   * Print path — keep editor HTML almost verbatim (WYSIWYG).
+   * Only canonicalize page-breaks for sheet split; do NOT strip margins/empty lines.
+   */
   private normalizeQuillHtmlForPrint(html: string): string {
-    return this.preserveSpacingInHtml(html);
+    let out = String(html || '');
+    const PAGE_BREAK_MARK = '<div class="page-break" data-page-break="1"></div>';
+    out = out.replace(
+      /<div\b[^>]*(?:class\s*=\s*["'][^"']*page-break[^"']*["']|data-page-break\s*=)[^>]*\/?>(?:[\s\S]*?<\/div>)?/gi,
+      PAGE_BREAK_MARK,
+    );
+    out = out.replace(
+      /<(?:div|p)\b[^>]*class=["'][^"']*\bpage-break\b[^"']*["'][^>]*>\s*(?:<br\s*\/?>)?\s*<\/(?:div|p)>/gi,
+      PAGE_BREAK_MARK,
+    );
+    // Keep unitless toolbar line-height; drop only absolute Word pt/px line boxes
+    out = out.replace(/style\s*=\s*(["'])(.*?)\1/gi, (_m, q: string, style: string) => {
+      let s = String(style)
+        .replace(/line-height\s*:\s*[\d.]+(?:pt|px)\s*;?/gi, '')
+        .replace(/;;+/g, ';')
+        .replace(/^;|;$/g, '')
+        .trim();
+      return s ? `style=${q}${s}${q}` : '';
+    });
+    out = out.replace(/\sstyle=(["'])\s*\1/gi, '');
+    return out;
   }
 
   /** Keep "Signature of Service Provider | Receiver" (and () marks) on one row in print. */
@@ -1533,7 +1552,11 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       setTimeout(() => this.initEditor(html), 50);
       return;
     }
+    // Ensure no leftover toolbar/container from a previous Quill before re-init
+    const wrap = host.closest('.dt-quill-wrap') || host.parentElement;
+    wrap?.querySelectorAll('.ql-toolbar').forEach((n) => n.remove());
     host.innerHTML = '';
+    host.className = 'dt-quill-host';
     const self = this;
     this.quill = new Quill(host, {
       theme: 'snow',
@@ -1975,25 +1998,30 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
         this.form.bodyHtml = this.quill.root.innerHTML;
       }
       try {
-        // Detach Quill listeners if possible
         (this.quill as any).off?.('text-change');
       } catch (_) {}
       this.quill = null;
     }
-    if (this.editorHost?.nativeElement) {
-      this.editorHost.nativeElement.innerHTML = '';
+
+    const host = this.editorHost?.nativeElement;
+    if (host) {
+      // Quill snow inserts .ql-toolbar as a SIBLING of the host — must remove or import doubles it
+      const wrap = host.closest('.dt-quill-wrap') || host.parentElement;
+      if (wrap) {
+        wrap.querySelectorAll('.ql-toolbar').forEach((n) => n.remove());
+      }
+      host.innerHTML = '';
+      host.className = 'dt-quill-host';
+      host.removeAttribute('data-gramm');
     }
-    // Quill snow theme inserts .ql-toolbar as a SIBLING of the host â€” remove orphans
-    // so Word-import mode doesn't show a dead Quill toolbar.
+
+    // Orphans outside the wrap (older init paths)
     try {
       document
-        .querySelectorAll('app-document-template .editor-frame > .ql-toolbar, app-document-template .editor-frame > .ql-container')
+        .querySelectorAll(
+          'app-document-template .editor-frame > .ql-toolbar, app-document-template .dt-quill-wrap > .ql-toolbar',
+        )
         .forEach((n) => n.remove());
-      document
-        .querySelectorAll('app-document-template .dt-quill-wrap .ql-toolbar')
-        .forEach((n) => {
-          // leave inside wrap; wrap *ngIf handles cleanup
-        });
     } catch (_) {}
   }
 

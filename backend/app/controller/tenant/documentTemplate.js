@@ -591,16 +591,10 @@ function normalizeQuillHtmlForPrint(html) {
   );
   out = out.replace(/<blockquote[^>]*>\s*/gi, '').replace(/\s*<\/blockquote>/gi, '');
 
-  // Flatten Word vertical margins so print matches tight Quill editor
+  // Keep vertical margin/padding (matches editor). Only strip fake left indent + Word pt/px line-height.
   out = out.replace(/style\s*=\s*(["'])(.*?)\1/gi, (_m, q, style) => {
     let s = String(style)
-      .replace(/margin\s*:\s*[^;]+;?/gi, '')
-      .replace(/margin-top\s*:\s*[^;]+;?/gi, '')
-      .replace(/margin-bottom\s*:\s*[^;]+;?/gi, '')
       .replace(/margin-left\s*:\s*[^;]+;?/gi, '')
-      .replace(/margin-right\s*:\s*[^;]+;?/gi, '')
-      .replace(/padding-top\s*:\s*[^;]+;?/gi, '')
-      .replace(/padding-bottom\s*:\s*[^;]+;?/gi, '')
       .replace(/padding-left\s*:\s*[^;]+;?/gi, '')
       .replace(/text-indent\s*:\s*[^;]+;?/gi, '')
       // Keep unitless line-height from toolbar; drop Word absolute pt/px
@@ -617,21 +611,7 @@ function normalizeQuillHtmlForPrint(html) {
     return `>${fixed}<`;
   });
 
-  out = out.replace(
-    /<div\b([^>]*\b(?:ql-spacer|data-vspace)\b[^>]*)>[\s\S]*?<\/div>/gi,
-    (_m, attrs) => {
-      const emMatch =
-        String(attrs).match(/data-vspace\s*=\s*["']([\d.]+)["']/i) ||
-        String(attrs).match(/height\s*:\s*([\d.]+)\s*em/i);
-      const em = (emMatch ? parseFloat(emMatch[1]) : 1.5) || 1.5;
-      const count = Math.min(
-        3,
-        Math.max(1, Math.round(em / 1.85) || Math.round(em / 1.5) || 1)
-      );
-      return Array.from({ length: count }, () => '<p><br></p>').join('');
-    }
-  );
-
+  // Keep ql-spacer / data-vspace heights as-is (same as editor)
   return out;
 }
 
@@ -654,8 +634,9 @@ function resolveBodyPadTopMm({ letterheadBlank, letterheadDataUrl, hasImportedLa
 function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl, topPaddingMm }) {
   const useImage = !letterheadBlank && letterheadDataUrl;
   const body = wrapTrailingFooter(normalizeQuillHtmlForPrint(String(filled || '')));
+  // Only real Word-import markers — not text-align (Quill also emits that)
   const hasImportedLayout =
-    /hr-imported-doc|data-preserve-layout|hr-align-|text-align\s*:|hr-numbered|hr-doc-table/i.test(body);
+    /hr-imported-doc|data-preserve-layout|hr-doc-table|hr-numbered/i.test(body);
   // No fake spacer — WYSIWYG with editor (blank lines in HTML keep signature gaps)
   const spacer = '';
   // Match Manage Template .ql-editor padding (user topPaddingMm overrides)
@@ -677,6 +658,7 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl, topPaddin
       body {
         font-family: 'Times New Roman', Times, serif;
         font-size: 12pt;
+        line-height: 1.375;
         color: #000;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
@@ -699,6 +681,8 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl, topPaddin
         text-indent: 0 !important;
         padding-left: 0 !important;
       }
+      p:empty, p:has(> br:only-child) { min-height: 1.375em; }
+      .ql-spacer, div[data-vspace] { display: block; margin: 0; padding: 0; border: 0; }
       [class*="ql-indent"] { padding-left: 0 !important; margin-left: 0 !important; }
       blockquote { border: 0; }
       h1, h2, h3 { font-weight: bold; }
@@ -724,10 +708,10 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl, topPaddin
         border: 1px solid #000;
         padding: 4px 6px;
       }
-      ul, ol, .hr-doc-ul, .hr-doc-ol { padding-left: 1.5em; margin: 0.4em 0; display: block; }
+      ul, ol, .hr-doc-ul, .hr-doc-ol { padding-left: 1.4em; margin: 0.4em 0; display: block; }
       ol, .hr-doc-ol { list-style-type: decimal !important; list-style-position: outside; }
       ul, .hr-doc-ul { list-style-type: disc !important; list-style-position: outside; }
-      li { display: list-item !important; margin: 0.2em 0; }
+      li { display: list-item !important; margin: 0; }
       .hr-numbered { margin: 0.35em 0; }
       .ql-align-left, .hr-align-left { text-align: left !important; }
       .ql-align-center, .hr-align-center { text-align: center !important; }

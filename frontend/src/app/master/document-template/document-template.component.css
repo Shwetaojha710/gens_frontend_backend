@@ -106,6 +106,8 @@
   background: transparent;
   font-family: "Times New Roman", Times, serif;
   font-size: 12pt;
+  /* Match app body / print (Bootstrap --bs-body-line-height) */
+  line-height: 1.375;
   color: #000;
   overflow-wrap: anywhere;
   cursor: text;
@@ -296,6 +298,8 @@
   border: none;
   font-family: "Times New Roman", Times, serif;
   font-size: 12pt;
+  /* Same as print iframe — Bootstrap body line-height */
+  line-height: 1.375;
   background: transparent;
 }
 
@@ -305,6 +309,9 @@
   color: #000;
   background: transparent;
   box-sizing: border-box;
+  line-height: 1.375;
+  white-space: pre-wrap;
+  word-wrap: break-word;
   /* Keep body clear of letterhead band / footer band when using company image */
   overflow-wrap: anywhere;
 }
@@ -338,6 +345,12 @@
 :host ::ng-deep .editor-frame .ql-editor h3 {
   margin: 0;
   padding: 0;
+}
+
+/* Empty Enter-lines keep a full line box (match print preview) */
+:host ::ng-deep .editor-frame .ql-editor p:empty,
+:host ::ng-deep .editor-frame .ql-editor p:has(> br:only-child) {
+  min-height: 1.375em;
 }
 
 /* No default left indent in editor */
