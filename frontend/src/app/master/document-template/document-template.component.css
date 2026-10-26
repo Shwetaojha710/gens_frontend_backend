@@ -34,30 +34,399 @@
   font-weight: 700;
 }
 
+/* Formatting tools stay in a sticky header — never overlay the A4 page */
+.dt-editor-toolbar-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+  margin-bottom: 0;
+}
+
+.dt-editor-toolbar-slot {
+  min-height: 0;
+}
+
+.dt-editor-toolbar-slot:empty {
+  display: none;
+}
+
+.dt-editor-toolbar-bar .dt-rich-toolbar {
+  padding: 8px 10px;
+}
+
 .a4-stage {
   background: #e8eaed;
-  border-radius: 8px;
+  border-radius: 0 0 8px 8px;
   padding: 24px 12px;
   overflow: auto;
   max-height: 78vh;
 }
 
 .editor-frame {
-  width: 210mm;
+  --dt-page-w: 210mm;
+  --dt-page-h: 297mm;
+  --dt-lh-header: 28mm;
+  --dt-lh-footer: 40mm;
+  width: var(--dt-page-w, 210mm);
   max-width: 100%;
   margin: 0 auto;
   background-color: #fff;
-  background-repeat: no-repeat;
-  background-position: top center;
-  background-size: 100% auto;
+  background-image: none;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
   border-radius: 4px;
   overflow: visible;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 .editor-frame--blank {
   background-image: none !important;
+}
+
+/* On-page Top space drag handle (Word-style margin marker) */
+.dt-top-pad-guide {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  z-index: 5;
+  pointer-events: none;
+  border-top: 1px dashed transparent;
+}
+
+.editor-frame:hover .dt-top-pad-guide,
+.dt-top-pad-guide--dragging {
+  border-top-color: rgba(13, 110, 253, 0.55);
+}
+
+.dt-top-pad-grip {
+  position: absolute;
+  left: -30px;
+  top: -11px;
+  width: 26px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #fff;
+  background: #0d6efd;
+  border-radius: 4px 0 0 4px;
+  cursor: ns-resize;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.dt-top-pad-label {
+  position: absolute;
+  left: 4px;
+  top: -20px;
+  padding: 1px 6px;
+  font-size: 11px;
+  line-height: 16px;
+  color: #fff;
+  background: #0d6efd;
+  border-radius: 3px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.editor-frame:hover .dt-top-pad-label,
+.dt-top-pad-guide--dragging .dt-top-pad-label {
+  opacity: 1;
+}
+
+.dt-top-pad-guide--dragging .dt-top-pad-grip {
+  background: #0a58ca;
+}
+
+/**
+ * Full A4 letterhead PNG: window into top / bottom of the same image
+ * (background-size = full page so logo + GSTN / certs are not cropped).
+ */
+.dt-letterhead-band {
+  pointer-events: none;
+  user-select: none;
+  background-repeat: no-repeat;
+  /* Viewport into full page letterhead for selected page size */
+  background-size: 100% var(--dt-page-h, 297mm);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dt-letterhead-band--header {
+  height: var(--dt-lh-header, 28mm);
+  min-height: var(--dt-lh-header, 28mm);
+  flex-shrink: 0;
+  background-position: top center;
+  border-bottom: 0;
+}
+
+.dt-letterhead-band--footer {
+  height: var(--dt-lh-footer, 40mm);
+  min-height: var(--dt-lh-footer, 40mm);
+  flex-shrink: 0;
+  background-position: bottom center;
+  margin-top: 0;
+}
+
+.dt-lh-band-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dt-lh-band-ctrl .form-select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.dt-lh-band-ctrl .btn {
+  min-width: 2.4rem;
+  padding: 0.25rem 0.35rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* Two-column editor: settings on the left, page on the right */
+.dt-layout {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.dt-settings-panel {
+  position: sticky;
+  top: 80px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.dt-editor-main {
+  min-width: 0;
+}
+
+.dt-panel-actions {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 12px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.dt-panel-section {
+  padding: 12px;
+  border-bottom: 1px solid #eef0f2;
+}
+
+.dt-panel-section:last-child {
+  border-bottom: 0;
+}
+
+.dt-panel-title {
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #0d6efd;
+}
+
+.dt-field {
+  margin-bottom: 12px;
+}
+
+.dt-field:last-child {
+  margin-bottom: 0;
+}
+
+.dt-settings-panel .form-label {
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.dt-settings-panel small {
+  font-size: 11.5px;
+}
+
+.dt-settings-panel .dt-branch-grid .form-check {
+  min-width: 120px;
+}
+
+/*
+ * Word-like page break inside the editor: bottom margin of page N, grey gap between
+ * sheets, top margin of page N+1 (letterhead bands + header/footer drawn per page).
+ */
+.dt-page-seam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+}
+
+.dt-seam-foot,
+.dt-seam-head {
+  position: relative;
+  flex: 0 0 auto;
+  overflow: hidden;
+  background: #fff;
+}
+
+.dt-seam-foot {
+  border-radius: 0 0 4px 4px;
+  box-shadow: 0 6px 8px -6px rgba(0, 0, 0, 0.22);
+}
+
+.dt-seam-head {
+  border-radius: 4px 4px 0 0;
+  box-shadow: 0 -6px 8px -6px rgba(0, 0, 0, 0.22);
+}
+
+/* Same grey as the stage — reads as the space between two sheets of paper */
+.dt-seam-gap {
+  position: relative;
+  flex: 0 0 auto;
+  margin: 0 -14px;
+  background: #e8eaed;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 18px;
+}
+
+.dt-seam-gap span {
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 600;
+  color: #64748b;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.dt-seam-lh {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background-repeat: no-repeat;
+  background-size: 100% var(--dt-page-h, 297mm);
+}
+
+.dt-seam-lh--foot {
+  bottom: 0;
+  height: var(--dt-lh-footer, 40mm);
+  background-position: bottom center;
+}
+
+.dt-seam-lh--head {
+  top: 0;
+  height: var(--dt-lh-header, 28mm);
+  background-position: top center;
+}
+
+/* Header / footer text of that page — click to edit in the left panel */
+.dt-seam-hf {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+:host ::ng-deep .dt-seam-hf .page-hf {
+  position: absolute;
+  left: 0;
+  right: 0;
+  box-sizing: border-box;
+  line-height: 1.25;
+  color: #000;
+  white-space: normal;
+}
+
+/* Header & footer settings */
+.dt-hf-part {
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  border: 1px solid #eef0f2;
+  border-radius: 6px;
+}
+
+.dt-hf-part--on {
+  border-color: #b6d4fe;
+  background: #f5f9ff;
+}
+
+.dt-hf-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.dt-hf-size {
+  width: 76px;
+  flex: 0 0 auto;
+}
+
+.dt-hf-mm {
+  min-width: 44px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Header / footer shown on the editor page — click to edit */
+.dt-hf-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 4;
+  padding: 0 18mm;
+  box-sizing: border-box;
+  line-height: 1.25;
+  color: #000;
+  white-space: normal;
+  cursor: pointer;
+  outline: 1px dashed transparent;
+  outline-offset: 2px;
+}
+
+.editor-frame--imported .dt-hf-overlay {
+  padding: 0 14mm;
+}
+
+.editor-frame:hover .dt-hf-overlay {
+  outline-color: rgba(13, 110, 253, 0.45);
+}
+
+.dt-hf-overlay:hover {
+  background: rgba(13, 110, 253, 0.06);
+}
+
+@media (max-width: 1100px) {
+  .dt-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dt-settings-panel {
+    position: static;
+    max-height: none;
+  }
 }
 
 .dt-quill-host {
@@ -78,6 +447,8 @@
 
 .dt-quill-wrap {
   width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .dt-rich-toolbar .btn {
@@ -106,8 +477,8 @@
   background: transparent;
   font-family: "Times New Roman", Times, serif;
   font-size: 12pt;
-  /* Match app body / print (Bootstrap --bs-body-line-height) */
-  line-height: 1.375;
+  /* Same line height as print — editor pages match printed pages */
+  line-height: 1.15;
   color: #000;
   overflow-wrap: anywhere;
   cursor: text;
@@ -119,9 +490,12 @@
   z-index: 1;
 }
 
-/* Reserve space for uploaded letterhead band — Top space control (--dt-top-pad) */
+/* Header/footer bands show full letterhead strips — body sits between them */
 .editor-frame--image .dt-rich-host {
-  padding-top: var(--dt-top-pad, 24mm);
+  flex: 1 1 auto;
+  padding-top: var(--dt-top-pad, 2mm);
+  padding-bottom: 8mm;
+  background: #fff;
 }
 
 .editor-frame--blank .dt-rich-host,
@@ -129,9 +503,10 @@
   padding-top: var(--dt-top-pad, 0);
 }
 
-/* When using company letterhead WITH imported Word body, still leave header band */
 .editor-frame--image.editor-frame--imported .dt-rich-host {
-  padding-top: var(--dt-top-pad, 24mm);
+  padding-top: var(--dt-top-pad, 2mm);
+  padding-bottom: 8mm;
+  background: #fff;
 }
 
 .dt-rich-host:focus {
@@ -185,11 +560,11 @@
   float: none !important;
 }
 
-/* Word empty paragraphs → huge white gaps + giant blue select highlight */
+/* Default paragraph spacing 5pt (toolbar Para Space overrides via inline style) */
 .dt-rich-host p,
 .dt-rich-host .hr-imported-doc p {
-  margin-top: 0.15em;
-  margin-bottom: 0.15em;
+  margin-top: 0;
+  margin-bottom: 5pt;
 }
 
 .dt-rich-host p:empty,
@@ -285,35 +660,40 @@
   -webkit-user-select: none;
 }
 
+:host ::ng-deep .dt-editor-toolbar-slot .ql-toolbar.ql-snow,
 :host ::ng-deep .ql-toolbar.ql-snow {
   background: #f8f9fa;
   border: none;
-  border-bottom: 1px solid #dee2e6;
-  position: sticky;
-  top: 0;
-  z-index: 2;
+  border-bottom: none;
+  position: static;
+  top: auto;
+  z-index: auto;
+  padding: 8px 10px;
+  flex-wrap: wrap;
 }
 
 :host ::ng-deep .editor-frame .ql-container.ql-snow {
   border: none;
   font-family: "Times New Roman", Times, serif;
   font-size: 12pt;
-  /* Same as print iframe — Bootstrap body line-height */
-  line-height: 1.375;
+  /* Same line height as print — editor pages match printed pages */
+  line-height: 1.15;
   background: transparent;
 }
 
 :host ::ng-deep .editor-frame .ql-editor {
-  min-height: 297mm;
-  padding: var(--dt-top-pad, 0) 18mm 22mm;
+  min-height: 220mm;
+  padding: var(--dt-top-pad, 0) 18mm 18mm;
   color: #000;
-  background: transparent;
+  background-color: #fff;
+  background-image: none;
   box-sizing: border-box;
-  line-height: 1.375;
+  line-height: 1.15;
   white-space: pre-wrap;
   word-wrap: break-word;
-  /* Keep body clear of letterhead band / footer band when using company image */
   overflow-wrap: anywhere;
+  position: relative;
+  z-index: 1;
 }
 
 :host ::ng-deep .editor-frame--blank .ql-editor {
@@ -323,20 +703,26 @@
 }
 
 :host ::ng-deep .editor-frame--image .ql-editor {
-  /* Letterhead band — user Top space overrides */
-  padding-top: var(--dt-top-pad, 24mm);
-  padding-bottom: 24mm;
+  padding-top: var(--dt-top-pad, 2mm);
+  padding-bottom: 8mm;
+  min-height: 200mm;
 }
 
 :host ::ng-deep .editor-frame--imported .ql-editor,
 :host ::ng-deep .editor-frame--blank.editor-frame--imported .ql-editor {
-  /* Imported DOCX — 0 top; user can raise via Top space */
   padding: var(--dt-top-pad, 0) 14mm 14mm;
-  min-height: 297mm;
+  min-height: 220mm;
+}
+
+:host ::ng-deep .editor-frame--image.editor-frame--imported .ql-editor {
+  padding-top: var(--dt-top-pad, 2mm);
+  padding-left: 14mm;
+  padding-right: 14mm;
+  padding-bottom: 8mm;
 }
 
 
-/* Match Quill snow + print: no extra paragraph margins (Enter = <p><br>) */
+/* Default paragraph spacing = 5pt (toolbar "Space" can override via inline style) */
 :host ::ng-deep .editor-frame .ql-editor p,
 :host ::ng-deep .editor-frame .ql-editor ol,
 :host ::ng-deep .editor-frame .ql-editor ul,
@@ -344,7 +730,11 @@
 :host ::ng-deep .editor-frame .ql-editor h2,
 :host ::ng-deep .editor-frame .ql-editor h3 {
   margin: 0;
+  margin-bottom: 5pt;
   padding: 0;
+}
+:host ::ng-deep .editor-frame .ql-editor li {
+  margin-bottom: 0;
 }
 
 /* Empty Enter-lines keep a full line box (match print preview) */
@@ -417,14 +807,51 @@
   padding: 4px 6px;
 }
 
-.dt-font-select {
-  min-width: 150px;
-  max-width: 200px;
-}
-
-/* Quill toolbar — Font family picker labels */
+/* Quill toolbar — Font family picker: scroll + search */
 :host ::ng-deep .ql-snow .ql-picker.ql-font {
   width: 140px;
+}
+:host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-options {
+  max-height: min(320px, 55vh);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-top: 0;
+  width: 220px;
+}
+:host ::ng-deep .ql-snow .ql-picker.ql-size .ql-picker-options {
+  max-height: min(280px, 50vh);
+  overflow-y: auto;
+}
+:host ::ng-deep .dt-font-search {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #fff;
+  padding: 6px 8px;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+}
+:host ::ng-deep .dt-font-search input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: system-ui, sans-serif;
+  line-height: 1.3;
+  color: #0f172a;
+  background: #f8fafc;
+  outline: none;
+}
+:host ::ng-deep .dt-font-search input:focus {
+  border-color: #3b82f6;
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+:host ::ng-deep .dt-font-search input::placeholder {
+  color: #94a3b8;
 }
 :host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label::before,
 :host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item::before {
@@ -578,6 +1005,80 @@
   line-height: 22px;
 }
 
+/* Quill toolbar — Paragraph spacing (default 5pt) */
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing {
+  width: 78px;
+}
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-label::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-item::before {
+  content: 'Space';
+  display: inline-block;
+  line-height: 22px;
+}
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-options {
+  max-height: min(280px, 50vh);
+  overflow-y: auto;
+}
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-label[data-value='0pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-item[data-value='0pt']::before { content: '0 pt'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-label[data-value='1pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-item[data-value='1pt']::before { content: '1 pt'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-label[data-value='2pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-item[data-value='2pt']::before { content: '2 pt'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-label[data-value='3pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-item[data-value='3pt']::before { content: '3 pt'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-label[data-value='4pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-item[data-value='4pt']::before { content: '4 pt'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-label[data-value='5pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-item[data-value='5pt']::before { content: '5 pt'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-label[data-value='6pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-item[data-value='6pt']::before { content: '6 pt'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-label[data-value='8pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-item[data-value='8pt']::before { content: '8 pt'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-label[data-value='10pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-item[data-value='10pt']::before { content: '10 pt'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-label[data-value='12pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-item[data-value='12pt']::before { content: '12 pt'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-label[data-value='14pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-item[data-value='14pt']::before { content: '14 pt'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-label[data-value='18pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-item[data-value='18pt']::before { content: '18 pt'; }
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-label[data-value='24pt']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-paragraphspacing .ql-picker-item[data-value='24pt']::before { content: '24 pt'; }
+
+/* Quill toolbar — ABC case tools */
+:host ::ng-deep .ql-snow .ql-toolbar button.ql-uppercase,
+:host ::ng-deep .ql-snow.ql-toolbar button.ql-uppercase,
+:host ::ng-deep .ql-snow .ql-toolbar button.ql-lowercase,
+:host ::ng-deep .ql-snow.ql-toolbar button.ql-lowercase,
+:host ::ng-deep .ql-snow .ql-toolbar button.ql-titlecase,
+:host ::ng-deep .ql-snow.ql-toolbar button.ql-titlecase {
+  width: auto !important;
+  min-width: 36px;
+  padding: 0 5px !important;
+}
+:host ::ng-deep .ql-snow .ql-toolbar button.ql-uppercase svg,
+:host ::ng-deep .ql-snow .ql-toolbar button.ql-lowercase svg,
+:host ::ng-deep .ql-snow .ql-toolbar button.ql-titlecase svg {
+  display: none !important;
+}
+:host ::ng-deep .ql-snow .ql-toolbar button.ql-uppercase::before {
+  content: 'ABC';
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+:host ::ng-deep .ql-snow .ql-toolbar button.ql-lowercase::before {
+  content: 'abc';
+  font-size: 10px;
+  font-weight: 500;
+}
+:host ::ng-deep .ql-snow .ql-toolbar button.ql-titlecase::before {
+  content: 'Abc';
+  font-size: 10px;
+  font-weight: 600;
+}
+
 /* Quill toolbar — Table button label (icon + text) */
 :host ::ng-deep .ql-snow .ql-toolbar button.ql-table,
 :host ::ng-deep .ql-snow.ql-toolbar button.ql-table {
@@ -718,39 +1219,84 @@
   }
 }
 
-.dt-format-select {
+/* ---------- Toolbar controls: one compact height, bordered, grouped ---------- */
+.dt-editor-toolbar-bar .form-select.dt-format-select {
   width: auto;
-  min-width: 110px;
-  height: 31px;
-  padding: 2px 28px 2px 8px;
-  font-size: 13px;
+  min-width: 0;
+  height: 30px !important;
+  min-height: 30px !important;
+  padding: 0 26px 0 8px !important;
+  font-size: 13px !important;
+  line-height: 28px !important;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background-position: right 8px center;
+  background-size: 12px 10px;
+  box-shadow: none;
+}
+
+.dt-editor-toolbar-bar .form-select.dt-format-select:hover {
+  border-color: #94a3b8;
+}
+
+.dt-editor-toolbar-bar .form-select.dt-format-select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.dt-editor-toolbar-bar .dt-font-select {
+  width: 160px;
+}
+
+.dt-w-page {
+  width: 76px !important;
+}
+
+.dt-w-size {
+  width: 64px !important;
+}
+
+.dt-w-spacing {
+  width: 122px !important;
 }
 
 .dt-color-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 8px;
-  padding: 8px 10px;
+  gap: 6px 0;
+  margin: 0;
+  padding: 6px 8px;
   background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  border-top: 1px solid #e2e8f0;
 }
 
 .dt-color-bar-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  color: #475569;
-  margin-right: 4px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+  padding-right: 10px;
+}
+
+/* Related controls stay together; groups separated by a thin divider */
+.dt-tool-group {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  padding: 0 10px;
+  border-left: 1px solid #e2e8f0;
 }
 
 .dt-color-tool {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 32px;
-  padding: 0 8px 0 10px;
+  height: 30px;
+  padding: 0 8px;
   margin: 0;
   border: 1px solid #cbd5e1;
   border-radius: 6px;
@@ -768,14 +1314,14 @@
 
 .dt-color-tool-label {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   color: #334155;
   pointer-events: none;
 }
 
 .dt-color-swatch {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 4px;
   border: 1px solid #94a3b8;
   pointer-events: none;
@@ -794,9 +1340,15 @@
   padding: 0;
 }
 
+.dt-swatch-group {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 3px;
+}
+
 .dt-color-preset {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   padding: 0;
   border: 1px solid #94a3b8;
   border-radius: 4px;
@@ -811,6 +1363,81 @@
 
 .dt-color-preset--bg {
   border-style: dashed;
+}
+
+/* Quill toolbar: compact groups with dividers, bordered pickers like the selects below */
+:host ::ng-deep .dt-editor-toolbar-slot .ql-toolbar.ql-snow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 0;
+  padding: 6px 8px;
+}
+
+:host ::ng-deep .dt-editor-toolbar-slot .ql-toolbar.ql-snow .ql-formats {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 0 8px;
+  border-left: 1px solid #e2e8f0;
+}
+
+:host ::ng-deep .dt-editor-toolbar-slot .ql-toolbar.ql-snow .ql-formats:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+:host ::ng-deep .dt-editor-toolbar-slot .ql-snow .ql-picker {
+  height: 30px;
+  font-size: 13px;
+}
+
+:host ::ng-deep .dt-editor-toolbar-slot .ql-snow .ql-picker:not(.ql-color-picker):not(.ql-icon-picker) .ql-picker-label {
+  display: flex;
+  align-items: center;
+  padding: 0 22px 0 8px;
+  color: #334155;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+}
+
+:host ::ng-deep .dt-editor-toolbar-slot .ql-snow .ql-picker:not(.ql-color-picker):not(.ql-icon-picker) .ql-picker-label:hover {
+  border-color: #94a3b8;
+}
+
+:host ::ng-deep .dt-editor-toolbar-slot .ql-snow .ql-picker.ql-expanded .ql-picker-label {
+  border-color: #3b82f6;
+}
+
+:host ::ng-deep .dt-editor-toolbar-slot .ql-snow .ql-picker:not(.ql-color-picker):not(.ql-icon-picker) .ql-picker-label svg {
+  right: 4px;
+  width: 16px;
+}
+
+:host ::ng-deep .dt-editor-toolbar-slot .ql-snow .ql-picker.ql-header {
+  width: 104px;
+}
+
+:host ::ng-deep .dt-editor-toolbar-slot .ql-snow .ql-picker-options {
+  z-index: 30;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.15);
+}
+
+:host ::ng-deep .dt-editor-toolbar-slot .ql-toolbar.ql-snow button {
+  height: 30px;
+  padding: 5px;
+  border-radius: 6px;
+}
+
+:host ::ng-deep .dt-editor-toolbar-slot .ql-toolbar.ql-snow button:hover {
+  background: #e2e8f0;
+}
+
+:host ::ng-deep .dt-editor-toolbar-slot .ql-toolbar.ql-snow button.ql-active {
+  background: #dbeafe;
 }
 
 /* legacy aliases if any remain */
