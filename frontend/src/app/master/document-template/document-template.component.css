@@ -1130,6 +1130,135 @@
   display: none;
 }
 
+/* Quill toolbar — Text Box button */
+:host ::ng-deep .ql-snow .ql-toolbar button.ql-textbox,
+:host ::ng-deep .ql-snow.ql-toolbar button.ql-textbox {
+  width: auto !important;
+  min-width: 72px;
+  padding: 0 8px !important;
+}
+
+:host ::ng-deep .ql-snow .ql-toolbar button.ql-textbox::before,
+:host ::ng-deep .ql-snow.ql-toolbar button.ql-textbox::before {
+  content: '▭ Text Box';
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #334155;
+  white-space: nowrap;
+}
+
+:host ::ng-deep .ql-snow .ql-toolbar button.ql-textbox svg {
+  display: none;
+}
+
+/* Text boxes inside the page (both editors) */
+:host ::ng-deep .editor-frame .hr-tb-row {
+  display: block;
+  margin: 0 0 5pt;
+  padding: 0;
+  user-select: none;
+}
+
+:host ::ng-deep .editor-frame .hr-tb-text {
+  outline: none;
+  cursor: text;
+  user-select: text;
+  white-space: pre-wrap;
+  min-height: 1em;
+}
+
+/* Borderless boxes still show a faint guide while editing (not printed) */
+:host ::ng-deep .editor-frame .hr-tb[data-border='0'] {
+  outline: 1px dashed #cbd5e1;
+}
+
+:host ::ng-deep .editor-frame .hr-tb:hover {
+  outline: 1px dashed #60a5fa;
+}
+
+/* Selected text box: outline + mini toolbar + resize corner */
+.dt-tb-ui {
+  position: absolute;
+  z-index: 7;
+  box-sizing: border-box;
+  outline: 2px solid #3b82f6;
+  outline-offset: 1px;
+  pointer-events: none;
+}
+
+.dt-tb-bar {
+  position: absolute;
+  left: -2px;
+  bottom: calc(100% + 6px);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  white-space: nowrap;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.15);
+  pointer-events: auto;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.dt-tb-bar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 7px;
+  font-size: 12px;
+  color: #334155;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.dt-tb-bar button:hover {
+  background: #e2e8f0;
+}
+
+.dt-tb-bar button.active {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.dt-tb-bar .dt-tb-move {
+  cursor: move;
+  touch-action: none;
+  font-weight: 600;
+}
+
+.dt-tb-bar .dt-tb-del:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.dt-tb-sep {
+  width: 1px;
+  height: 18px;
+  margin: 0 3px;
+  background: #e2e8f0;
+}
+
+.dt-tb-resize {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border: 2px solid #3b82f6;
+  border-radius: 3px;
+  cursor: nwse-resize;
+  touch-action: none;
+  pointer-events: auto;
+}
+
 :host ::ng-deep .editor-frame .ql-editor .page-break {
   display: block;
   position: relative;
