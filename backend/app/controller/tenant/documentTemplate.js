@@ -7,6 +7,7 @@ const Department = require('../../models/department');
 const Shift = require('../../models/shift');
 const Helper = require('../../helper/helper');
 const { writeAudit, toPlain } = require('../../helper/auditLog');
+const { paginatorScriptTag } = require('../../helper/printPaginator');
 const { Op } = require('sequelize');
 const fs = require('fs');
 const path = require('path');
@@ -165,6 +166,13 @@ exports.createTemplate = async (req, res) => {
       bodyHtml,
       letterheadBlank,
       topPaddingMm,
+      letterheadPages,
+      letterheadHeaderMm,
+      letterheadFooterMm,
+      pageSize,
+      defaultFontFamily,
+      defaultFontSize,
+      headerFooter,
       includeSalaryAnnexure,
       status,
       branchIds,
@@ -186,8 +194,19 @@ exports.createTemplate = async (req, res) => {
       name: String(name).trim(),
       category: category || 'custom',
       bodyHtml,
-      letterheadBlank: letterheadBlank === true,
+      letterheadBlank:
+        letterheadBlank === true ||
+        letterheadBlank === 'true' ||
+        letterheadBlank === 1 ||
+        letterheadBlank === '1',
       topPaddingMm: normalizeTopPaddingMm(topPaddingMm),
+      letterheadPages: normalizeLetterheadPages(letterheadPages),
+      letterheadHeaderMm: normalizeLhBandMm(letterheadHeaderMm, 28),
+      letterheadFooterMm: normalizeLhBandMm(letterheadFooterMm, 40),
+      pageSize: normalizePageSize(pageSize),
+      defaultFontFamily: normalizeDefaultFontFamily(defaultFontFamily),
+      defaultFontSize: normalizeDefaultFontSize(defaultFontSize),
+      headerFooter: normalizeHeaderFooter(headerFooter),
       includeSalaryAnnexure: !!includeSalaryAnnexure,
       status: status === 'inactive' ? 'inactive' : 'active',
       createdBy: req.users?.id,
@@ -220,6 +239,13 @@ exports.updateTemplate = async (req, res) => {
       bodyHtml,
       letterheadBlank,
       topPaddingMm,
+      letterheadPages,
+      letterheadHeaderMm,
+      letterheadFooterMm,
+      pageSize,
+      defaultFontFamily,
+      defaultFontSize,
+      headerFooter,
       includeSalaryAnnexure,
       status,
       branchIds,
@@ -239,10 +265,45 @@ exports.updateTemplate = async (req, res) => {
       row.set('bodyHtml', String(bodyHtml));
       row.changed('bodyHtml', true);
     }
-    if (letterheadBlank != null) row.letterheadBlank = !!letterheadBlank;
+    // Always persist letterhead choice (false = show company letterhead on edit/print)
+    if (letterheadBlank !== undefined) {
+      row.set(
+        'letterheadBlank',
+        letterheadBlank === true || letterheadBlank === 'true' || letterheadBlank === 1 || letterheadBlank === '1',
+      );
+      row.changed('letterheadBlank', true);
+    }
     if (topPaddingMm !== undefined) {
       row.set('topPaddingMm', normalizeTopPaddingMm(topPaddingMm));
       row.changed('topPaddingMm', true);
+    }
+    if (letterheadPages !== undefined) {
+      row.set('letterheadPages', normalizeLetterheadPages(letterheadPages));
+      row.changed('letterheadPages', true);
+    }
+    if (letterheadHeaderMm !== undefined) {
+      row.set('letterheadHeaderMm', normalizeLhBandMm(letterheadHeaderMm, 28));
+      row.changed('letterheadHeaderMm', true);
+    }
+    if (letterheadFooterMm !== undefined) {
+      row.set('letterheadFooterMm', normalizeLhBandMm(letterheadFooterMm, 40));
+      row.changed('letterheadFooterMm', true);
+    }
+    if (pageSize !== undefined) {
+      row.set('pageSize', normalizePageSize(pageSize));
+      row.changed('pageSize', true);
+    }
+    if (defaultFontFamily !== undefined) {
+      row.set('defaultFontFamily', normalizeDefaultFontFamily(defaultFontFamily));
+      row.changed('defaultFontFamily', true);
+    }
+    if (defaultFontSize !== undefined) {
+      row.set('defaultFontSize', normalizeDefaultFontSize(defaultFontSize));
+      row.changed('defaultFontSize', true);
+    }
+    if (headerFooter !== undefined) {
+      row.set('headerFooter', normalizeHeaderFooter(headerFooter));
+      row.changed('headerFooter', true);
     }
     if (includeSalaryAnnexure != null) row.includeSalaryAnnexure = !!includeSalaryAnnexure;
     if (status != null) row.status = status === 'inactive' ? 'inactive' : 'active';
@@ -515,6 +576,73 @@ function wrapTrailingFooter(html) {
   return `${src.slice(0, m.index)}<div class="hr-print-footer">${m[0]}</div>`;
 }
 
+/** Bake Quill .ql-color-* / .ql-bg-* + bold tags into inline styles for print HTML. */
+function inlineQuillFormatClassesForPrint(html) {
+  const COLOR = {
+    white: '#fff',
+    red: '#e60000',
+    orange: '#f90',
+    yellow: '#ff0',
+    green: '#008a00',
+    blue: '#06c',
+    purple: '#93f',
+    black: '#000',
+  };
+  const BG = {
+    black: '#000',
+    red: '#e60000',
+    orange: '#f90',
+    yellow: '#ff0',
+    green: '#008a00',
+    blue: '#06c',
+    purple: '#93f',
+    white: '#fff',
+  };
+  let out = String(html || '');
+  out = out.replace(
+    /<([a-z][a-z0-9]*)\b([^>]*\bclass\s*=\s*["'][^"']*\bql-(?:color|bg)-[^"']*["'][^>]*)>/gi,
+    (_m, tag, attrs) => {
+      let a = attrs;
+      const extras = [];
+      a = a.replace(/\bql-color-([a-z0-9#-]+)\b/gi, (_c, name) => {
+        const hex = COLOR[String(name).toLowerCase()] || (/^#/.test(name) ? name : null);
+        if (hex) extras.push(`color:${hex}`);
+        return '';
+      });
+      a = a.replace(/\bql-bg-([a-z0-9#-]+)\b/gi, (_c, name) => {
+        const hex = BG[String(name).toLowerCase()] || (/^#/.test(name) ? name : null);
+        if (hex) extras.push(`background-color:${hex}`);
+        return '';
+      });
+      a = a.replace(/class=(["'])\s*\1/gi, '');
+      a = a.replace(/class=(["'])\s+/gi, 'class=$1');
+      a = a.replace(/\s{2,}/g, ' ');
+      if (!extras.length) return `<${tag}${attrs}>`;
+      if (/style\s*=/i.test(a)) {
+        a = a.replace(/style\s*=\s*(["'])/i, `style=$1${extras.join(';')};`);
+      } else {
+        a += ` style="${extras.join(';')}"`;
+      }
+      return `<${tag}${a}>`;
+    }
+  );
+  out = out.replace(/<(strong|b)(\b[^>]*)>/gi, (_m, tag, attrs) => {
+    if (/font-weight\s*:/i.test(attrs)) return `<${tag}${attrs}>`;
+    if (/style\s*=/i.test(attrs)) {
+      return `<${tag}${attrs.replace(/style\s*=\s*(["'])/i, 'style=$1font-weight:700;')}>`;
+    }
+    return `<${tag}${attrs} style="font-weight:700">`;
+  });
+  out = out.replace(/<(em|i)(\b[^>]*)>/gi, (_m, tag, attrs) => {
+    if (/font-style\s*:/i.test(attrs)) return `<${tag}${attrs}>`;
+    if (/style\s*=/i.test(attrs)) {
+      return `<${tag}${attrs.replace(/style\s*=\s*(["'])/i, 'style=$1font-style:italic;')}>`;
+    }
+    return `<${tag}${attrs} style="font-style:italic">`;
+  });
+  return out;
+}
+
 /** Match Manage Template print: keep signature gaps / left-right columns. */
 function normalizeQuillHtmlForPrint(html) {
   let out = String(html || '');
@@ -580,6 +708,7 @@ function normalizeQuillHtmlForPrint(html) {
       .trim();
     return s ? `style=${q}${s}${q}` : '';
   });
+  out = inlineQuillFormatClassesForPrint(out);
   const leadWs = '(?:&nbsp;|\\u00a0|&#160;|\\t| ){1,24}';
   out = out.replace(new RegExp(`<(p|h[1-6]|div|li|td|th)(\\b[^>]*)>${leadWs}`, 'gi'), '<$1$2>');
   out = out.replace(
@@ -591,16 +720,10 @@ function normalizeQuillHtmlForPrint(html) {
   );
   out = out.replace(/<blockquote[^>]*>\s*/gi, '').replace(/\s*<\/blockquote>/gi, '');
 
-  // Flatten Word vertical margins so print matches tight Quill editor
+  // Keep vertical margin/padding (matches editor). Only strip fake left indent + Word pt/px line-height.
   out = out.replace(/style\s*=\s*(["'])(.*?)\1/gi, (_m, q, style) => {
     let s = String(style)
-      .replace(/margin\s*:\s*[^;]+;?/gi, '')
-      .replace(/margin-top\s*:\s*[^;]+;?/gi, '')
-      .replace(/margin-bottom\s*:\s*[^;]+;?/gi, '')
       .replace(/margin-left\s*:\s*[^;]+;?/gi, '')
-      .replace(/margin-right\s*:\s*[^;]+;?/gi, '')
-      .replace(/padding-top\s*:\s*[^;]+;?/gi, '')
-      .replace(/padding-bottom\s*:\s*[^;]+;?/gi, '')
       .replace(/padding-left\s*:\s*[^;]+;?/gi, '')
       .replace(/text-indent\s*:\s*[^;]+;?/gi, '')
       // Keep unitless line-height from toolbar; drop Word absolute pt/px
@@ -617,21 +740,7 @@ function normalizeQuillHtmlForPrint(html) {
     return `>${fixed}<`;
   });
 
-  out = out.replace(
-    /<div\b([^>]*\b(?:ql-spacer|data-vspace)\b[^>]*)>[\s\S]*?<\/div>/gi,
-    (_m, attrs) => {
-      const emMatch =
-        String(attrs).match(/data-vspace\s*=\s*["']([\d.]+)["']/i) ||
-        String(attrs).match(/height\s*:\s*([\d.]+)\s*em/i);
-      const em = (emMatch ? parseFloat(emMatch[1]) : 1.5) || 1.5;
-      const count = Math.min(
-        3,
-        Math.max(1, Math.round(em / 1.85) || Math.round(em / 1.5) || 1)
-      );
-      return Array.from({ length: count }, () => '<p><br></p>').join('');
-    }
-  );
-
+  // Keep ql-spacer / data-vspace heights as-is (same as editor)
   return out;
 }
 
@@ -640,6 +749,160 @@ function normalizeTopPaddingMm(value) {
   const n = parseInt(value, 10);
   if (Number.isNaN(n)) return null;
   return Math.min(80, Math.max(0, n));
+}
+
+/** Letterhead header/footer band height (mm). null → default. */
+function normalizeLhBandMm(value, fallback) {
+  if (value == null || value === '' || value === 'auto') return fallback;
+  const n = parseInt(value, 10);
+  if (Number.isNaN(n)) return fallback;
+  return Math.min(90, Math.max(10, n));
+}
+
+function normalizeLetterheadPages(value) {
+  const s = String(value || 'all').toLowerCase();
+  if (s === '1' || s === 'one' || s === 'first') return '1';
+  if (s === '2' || s === 'two') return '2';
+  return 'all';
+}
+
+const HF_ALIGNS = ['left', 'center', 'right'];
+const HF_PAGES = ['all', 'first', 'notFirst'];
+
+function normalizeHfPart(part, withPageNumber) {
+  const p = part && typeof part === 'object' ? part : {};
+  const offset = parseInt(p.offsetMm, 10);
+  const out = {
+    enabled: !!p.enabled,
+    text: String(p.text || '').slice(0, 1000),
+    align: HF_ALIGNS.includes(p.align) ? p.align : 'center',
+    fontSize: normalizeDefaultFontSize(p.fontSize || '10pt'),
+    bold: !!p.bold,
+    offsetMm: Number.isNaN(offset) ? 8 : Math.min(60, Math.max(0, offset)),
+  };
+  if (withPageNumber) out.pageNumber = !!p.pageNumber;
+  return out;
+}
+
+/** Custom running header/footer config. null when nothing was set up. */
+function normalizeHeaderFooter(value) {
+  let v = value;
+  if (typeof v === 'string') {
+    try {
+      v = JSON.parse(v);
+    } catch (_) {
+      return null;
+    }
+  }
+  if (!v || typeof v !== 'object') return null;
+  const header = normalizeHfPart(v.header, false);
+  const footer = normalizeHfPart(v.footer, true);
+  if (!header.enabled && !footer.enabled && !header.text && !footer.text) return null;
+  return { header, footer, pages: HF_PAGES.includes(v.pages) ? v.pages : 'all' };
+}
+
+function hfPartActive(part) {
+  return !!(part && part.enabled && (String(part.text || '').trim() || part.pageNumber));
+}
+
+function hfActive(hf) {
+  return !!hf && (hfPartActive(hf.header) || hfPartActive(hf.footer));
+}
+
+function hfShowsOnPage(hf, index) {
+  if (!hfActive(hf)) return false;
+  if (hf.pages === 'first') return index === 0;
+  if (hf.pages === 'notFirst') return index > 0;
+  return true;
+}
+
+/** Space (mm) the header/footer text needs from the page edge, so body text never overlaps it. */
+function hfReserveMm(part) {
+  if (!hfPartActive(part)) return 0;
+  const pt = parseFloat(part.fontSize) || 10;
+  const text = String(part.text || '').trim();
+  const lines = (text ? text.split('\n').length : 0) + (part.pageNumber ? 1 : 0);
+  return Math.ceil(part.offsetMm + Math.max(1, lines) * pt * 0.3528 * 1.25 + 3);
+}
+
+function hfPartHtml(hf, kind, vars, padX, pageNo, total) {
+  const part = hf[kind];
+  const escaped = String(part.text || '')
+    .trim()
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  let html = (vars ? fillTemplate(escaped, vars) : escaped).replace(/\r?\n/g, '<br>');
+  if (part.pageNumber) {
+    html +=
+      `${html ? '<br>' : ''}Page <span class="hr-pg">${pageNo}</span> of <span class="hr-pgs">${total}</span>`;
+  }
+  const pos = kind === 'header' ? `top:${part.offsetMm}mm` : `bottom:${part.offsetMm}mm`;
+  return (
+    `<div class="page-hf page-hf--${kind}" style="${pos};padding:0 ${padX};` +
+    `text-align:${part.align};font-size:${part.fontSize};font-weight:${part.bold ? 700 : 400};">` +
+    `${html}</div>`
+  );
+}
+
+function hfOverlayHtml(hf, index, total, vars, padX) {
+  if (!hfShowsOnPage(hf, index)) return '';
+  return ['header', 'footer']
+    .filter((kind) => hfPartActive(hf[kind]))
+    .map((kind) => hfPartHtml(hf, kind, vars, padX, index + 1, total))
+    .join('');
+}
+
+/** Header/footer config for the in-browser paginator (printPaginator.js). */
+function hfPaginateCfg(hf, vars, padX) {
+  if (!hfActive(hf)) return null;
+  const one = (kind) =>
+    hfPartActive(hf[kind])
+      ? { reserve: hfReserveMm(hf[kind]), html: hfPartHtml(hf, kind, vars, padX, 1, 1) }
+      : null;
+  return { pages: hf.pages, header: one('header'), footer: one('footer') };
+}
+
+const PAGE_SIZE_PRESETS = {
+  A4: { wMm: 210, hMm: 297, label: 'A4' },
+  Letter: { wMm: 216, hMm: 279, label: 'Letter' },
+  Legal: { wMm: 216, hMm: 356, label: 'Legal' },
+  A5: { wMm: 148, hMm: 210, label: 'A5' },
+};
+
+function normalizePageSize(value) {
+  const s = String(value || 'A4').trim();
+  const key = Object.keys(PAGE_SIZE_PRESETS).find((k) => k.toLowerCase() === s.toLowerCase());
+  return key || 'A4';
+}
+
+function normalizeDefaultFontFamily(value) {
+  const s = String(value || '').trim();
+  if (!s) return 'Times New Roman';
+  return s.slice(0, 64);
+}
+
+function normalizeDefaultFontSize(value) {
+  const s = String(value || '').trim().toLowerCase();
+  if (!s) return '12pt';
+  if (/^\d+(\.\d+)?pt$/i.test(s)) return s.replace(/\s+/g, '');
+  if (/^\d+(\.\d+)?px$/i.test(s)) {
+    const px = parseFloat(s);
+    return `${Math.round(px * 0.75)}pt`;
+  }
+  if (/^\d+(\.\d+)?$/.test(s)) return `${s}pt`;
+  return '12pt';
+}
+
+function resolvePageDims(pageSize) {
+  return PAGE_SIZE_PRESETS[normalizePageSize(pageSize)] || PAGE_SIZE_PRESETS.A4;
+}
+
+function letterheadPageLimit(letterheadPages) {
+  const mode = normalizeLetterheadPages(letterheadPages);
+  if (mode === '1') return 1;
+  if (mode === '2') return 2;
+  return Number.POSITIVE_INFINITY;
 }
 
 function resolveBodyPadTopMm({ letterheadBlank, letterheadDataUrl, hasImportedLayout, topPaddingMm }) {
@@ -651,54 +914,277 @@ function resolveBodyPadTopMm({ letterheadBlank, letterheadDataUrl, hasImportedLa
   return 0;
 }
 
-function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl, topPaddingMm }) {
+function isEmptyPrintSheet(html) {
+  const raw = String(html || '');
+  if (/<img\b/i.test(raw) || /<table\b/i.test(raw) || /<svg\b/i.test(raw)) return false;
+  const plain = raw
+    .replace(/<div\b[^>]*(?:page-break|data-page-break)[^>]*>[\s\S]*?<\/div>/gi, '')
+    .replace(/<br\s*\/?>/gi, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;|&#160;|\u00a0/gi, '')
+    .replace(/\s+/g, '')
+    .trim();
+  return plain.length === 0;
+}
+
+/** Plain-text length estimate for a block (letterhead body packing). */
+function plainLen(html) {
+  return String(html || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(?:p|div|h[1-6]|li|tr)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;|&#160;|\u00a0/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim().length;
+}
+
+/**
+ * Split HTML into top-level blocks (best-effort, no DOM).
+ * Used to pack ~one A4 body (~207mm ≈ 3200 chars of body text) per letterhead page.
+ */
+function splitTopLevelBlocks(html) {
+  const src = String(html || '').trim();
+  if (!src) return [];
+  const blocks = [];
+  const re =
+    /<(p|div|h[1-6]|table|ul|ol|blockquote|pre|hr|section|article)\b[^>]*(?:\/>|>[\s\S]*?<\/\1>)/gi;
+  let last = 0;
+  let m;
+  while ((m = re.exec(src))) {
+    if (m.index > last) {
+      const gap = src.slice(last, m.index).trim();
+      if (gap) blocks.push(gap.startsWith('<') ? gap : `<p>${gap}</p>`);
+    }
+    blocks.push(m[0]);
+    last = m.index + m[0].length;
+  }
+  if (last < src.length) {
+    const gap = src.slice(last).trim();
+    if (gap) blocks.push(gap.startsWith('<') ? gap : `<p>${gap}</p>`);
+  }
+  return blocks.length ? blocks : [src];
+}
+
+/** ~3200 plain chars ≈ letterhead body band (207mm at 12pt). */
+const LH_BODY_CHARS = 3200;
+
+function fitHtmlToLetterheadBody(html, maxChars = LH_BODY_CHARS) {
+  const blocks = splitTopLevelBlocks(html);
+  if (!blocks.length) return { fitted: '<p><br></p>', rest: '' };
+  if (plainLen(blocks.join('')) <= maxChars) {
+    return { fitted: blocks.join(''), rest: '' };
+  }
+  let used = 0;
+  let best = 0;
+  for (let n = 1; n <= blocks.length; n++) {
+    const next = plainLen(blocks[n - 1]);
+    if (best > 0 && used + next > maxChars) break;
+    used += next;
+    best = n;
+    if (used >= maxChars) break;
+  }
+  if (best === 0) best = 1;
+  return {
+    fitted: blocks.slice(0, best).join(''),
+    rest: blocks.slice(best).join(''),
+  };
+}
+
+/**
+ * Server-side estimate of the printed pages (fallback when the in-browser paginator
+ * can't run). Every page is a fixed sheet; each keeps the index of its manual
+ * page-break sheet so the browser paginator can re-flow it accurately.
+ * layout = { hf, pageHMm, lhHead, lhFoot, lhTopPad, plainTop, plainBottom } (mm).
+ */
+function paginateSheetsForLetterhead(sheets, lhMax, useImage, layout = {}) {
+  const { hf, pageHMm, lhHead, lhFoot, lhTopPad = 0, plainTop, plainBottom } = layout;
+  // ~LH_BODY_CHARS fit the default A4 letterhead body band (297 − 28 − 40 mm)
+  const charsFor = (top, bottom) =>
+    Math.max(400, Math.round((LH_BODY_CHARS * (pageHMm - top - bottom)) / (297 - 28 - 40)));
+  const out = [];
+  const queue = sheets
+    .map((html, sheet) => ({ html, sheet }))
+    .filter((q) => q.html && !isEmptyPrintSheet(q.html));
+  let lhUsed = 0;
+  while (queue.length) {
+    const { html: chunk, sheet } = queue.shift();
+    const wantLh = useImage && lhUsed < lhMax;
+    const showHf = hfShowsOnPage(hf, out.length);
+    const headRes = showHf ? hfReserveMm(hf.header) : 0;
+    const footRes = showHf ? hfReserveMm(hf.footer) : 0;
+    // Top space applies below the letterhead logo band too (same as the editor)
+    const padTop = Math.max(wantLh ? lhHead + lhTopPad : plainTop, headRes);
+    const padBottom = Math.max(wantLh ? lhFoot : plainBottom, footRes);
+    const { fitted, rest } = fitHtmlToLetterheadBody(chunk, charsFor(padTop, padBottom));
+    if (!isEmptyPrintSheet(fitted)) {
+      out.push({ chunk: fitted, withLh: wantLh, sheet, padTop, padBottom });
+      if (wantLh) lhUsed++;
+    }
+    if (rest && !isEmptyPrintSheet(rest)) queue.unshift({ html: rest, sheet });
+  }
+  return out.length
+    ? out
+    : [{ chunk: '<p><br></p>', withLh: false, sheet: 0, padTop: plainTop, padBottom: plainBottom }];
+}
+
+function splitBodyByPageBreaks(html) {
+  let src = String(html || '');
+  src = src.replace(
+    /(?:<div\b[^>]*(?:class\s*=\s*["'][^"']*\bpage-break\b[^"']*["']|data-page-break\s*=)[^>]*>\s*<\/div>\s*){2,}/gi,
+    '<div class="page-break" data-page-break="1"></div>'
+  );
+  const parts = src.split(
+    /<div\b[^>]*(?:class\s*=\s*["'][^"']*page-break[^"']*["']|data-page-break\s*=)[^>]*>\s*<\/div>/gi
+  );
+  const cleaned = parts
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0 && !isEmptyPrintSheet(p));
+  return cleaned.length ? cleaned : ['<p><br></p>'];
+}
+
+function wrapPreviewHtml({
+  filled,
+  letterheadBlank,
+  letterheadDataUrl,
+  topPaddingMm,
+  letterheadPages,
+  letterheadHeaderMm,
+  letterheadFooterMm,
+  pageSize,
+  defaultFontFamily,
+  defaultFontSize,
+  headerFooter,
+  vars,
+}) {
   const useImage = !letterheadBlank && letterheadDataUrl;
+  const hf = normalizeHeaderFooter(headerFooter);
   const body = wrapTrailingFooter(normalizeQuillHtmlForPrint(String(filled || '')));
   const hasImportedLayout =
-    /hr-imported-doc|data-preserve-layout|hr-align-|text-align\s*:|hr-numbered|hr-doc-table/i.test(body);
-  // No fake spacer — WYSIWYG with editor (blank lines in HTML keep signature gaps)
-  const spacer = '';
-  // Match Manage Template .ql-editor padding (user topPaddingMm overrides)
-  const bodyPadTop = `${resolveBodyPadTopMm({
+    /hr-imported-doc|data-preserve-layout|hr-doc-table|hr-numbered/i.test(body);
+  const padTopMm = resolveBodyPadTopMm({
     letterheadBlank,
     letterheadDataUrl,
     hasImportedLayout,
     topPaddingMm,
-  })}mm`;
+  });
+  const dims = resolvePageDims(pageSize);
+  const pageW = `${dims.wMm}mm`;
+  const pageH = `${dims.hMm}mm`;
+  const fontFamily = normalizeDefaultFontFamily(defaultFontFamily).replace(/'/g, "\\'");
+  const fontSize = normalizeDefaultFontSize(defaultFontSize);
   const bodyPadX = hasImportedLayout ? '14mm' : '18mm';
-  const bodyPadBottom = useImage ? '24mm' : hasImportedLayout ? '14mm' : letterheadBlank ? '18mm' : '22mm';
-  const bgCss = useImage
-    ? `background-image:url('${letterheadDataUrl}');background-repeat:no-repeat;background-position:top center;background-size:100% auto;`
-    : '';
+  const bodyPadBottom = hasImportedLayout ? '14mm' : letterheadBlank ? '18mm' : '22mm';
+  const bgUrl = useImage ? String(letterheadDataUrl).replace(/'/g, '%27') : '';
+  const lhMax = useImage ? letterheadPageLimit(letterheadPages) : 0;
+  const LH_HEAD_MM = normalizeLhBandMm(letterheadHeaderMm, 28);
+  const LH_FOOT_MM = normalizeLhBandMm(letterheadFooterMm, 40);
+  const sheets = splitBodyByPageBreaks(body);
+  const lhTopPad = normalizeTopPaddingMm(topPaddingMm) ?? 0;
+  const pageSpecs = paginateSheetsForLetterhead(sheets, lhMax, useImage && !!bgUrl, {
+    hf,
+    pageHMm: dims.hMm,
+    lhHead: LH_HEAD_MM,
+    lhFoot: LH_FOOT_MM,
+    lhTopPad,
+    plainTop: padTopMm,
+    plainBottom: parseFloat(bodyPadBottom),
+  });
+  const totalPages = pageSpecs.length;
+  const pagesHtml = pageSpecs
+    .map(({ chunk, withLh, sheet, padTop, padBottom }, i) => {
+      const layers = withLh
+        ? '<div class="page-lh-header"></div><div class="page-lh-footer"></div><div class="page-lh-mask"></div>'
+        : '';
+      return (
+        `<div class="page ${withLh ? 'page--lh' : 'page--plain'}" data-sheet="${sheet}">` +
+        layers +
+        hfOverlayHtml(hf, i, totalPages, vars, bodyPadX) +
+        `<div class="page-body" style="padding:${padTop}mm ${bodyPadX} ${padBottom}mm;">${chunk}</div>` +
+        `</div>`
+      );
+    })
+    .join('\n');
+  // Browser re-flows the estimate above by measuring the real layout
+  const paginateCfg = {
+    useImage: !!(useImage && bgUrl),
+    lhMax: Number.isFinite(lhMax) ? lhMax : 9999,
+    lhHead: LH_HEAD_MM,
+    lhFoot: LH_FOOT_MM,
+    lhTopPad,
+    plainTop: padTopMm,
+    plainBottom: parseFloat(bodyPadBottom),
+    padX: bodyPadX,
+    hf: hfPaginateCfg(hf, vars, bodyPadX),
+  };
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
-      @page { size: A4; margin: 0; }
-      html, body { margin: 0; padding: 0; }
+      @page { size: ${dims.label}; margin: 0; }
+      html, body { margin: 0; padding: 0; background: #fff; }
       body {
-        font-family: 'Times New Roman', Times, serif;
-        font-size: 12pt;
+        font-family: '${fontFamily}', Arial, sans-serif;
+        font-size: ${fontSize};
+        line-height: 1.15;
         color: #000;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
-        ${bgCss}
       }
+      /* Every page is a fixed sheet of the selected paper size (auto-paginated) */
       .page {
-        width: 210mm;
-        min-height: 297mm;
+        position: relative;
+        width: ${pageW};
+        height: ${pageH};
         box-sizing: border-box;
-        padding: ${bodyPadTop} ${bodyPadX} ${bodyPadBottom};
         margin: 0 auto;
-        background: #fff;
+        padding: 0;
+        overflow: hidden;
+        background-color: #fff;
+        page-break-after: always;
+        break-after: page;
       }
-      /* Match Quill editor — no extra paragraph gaps / no fake 1-tab indent */
+      .page:last-child { page-break-after: auto; break-after: auto; }
+      .page-lh-header, .page-lh-footer {
+        position: absolute; left: 0; right: 0; z-index: 0; pointer-events: none;
+        background-image: url('${bgUrl}');
+        background-repeat: no-repeat; background-size: ${pageW} ${pageH};
+      }
+      .page-lh-header {
+        top: 0; height: ${LH_HEAD_MM}mm; background-position: top center;
+      }
+      .page-lh-footer {
+        bottom: 0; height: ${LH_FOOT_MM}mm; background-position: bottom center;
+      }
+      .page-lh-mask {
+        position: absolute; left: 0; right: 0; z-index: 0; pointer-events: none;
+        top: ${LH_HEAD_MM}mm; bottom: ${LH_FOOT_MM}mm; background: #fff;
+      }
+      .page > .page-body {
+        position: relative; z-index: 1; box-sizing: border-box;
+        height: 100%; overflow: hidden !important;
+        background: transparent; margin: 0;
+      }
+      .page-hf {
+        position: absolute; left: 0; right: 0; z-index: 2; box-sizing: border-box;
+        line-height: 1.25; color: #000; white-space: normal; pointer-events: none;
+      }
+      /* On screen show separate sheets so page breaks are visible in the preview */
+      @media screen {
+        html, body { background: #d1d5db; }
+        body { padding: 16px 0; }
+        .page { margin: 0 auto 16px; box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2); }
+      }
+      .page-body { display: block; }
       .page, .page-body { white-space: pre-wrap; }
       p, h1, h2, h3, h4, h5, h6, ol, ul, blockquote {
         margin: 0;
+        margin-bottom: 5pt;
         padding: 0;
         margin-left: 0 !important;
         text-indent: 0 !important;
         padding-left: 0 !important;
       }
+      li { margin-bottom: 0; }
+      p:empty, p:has(> br:only-child) { min-height: 1.375em; }
+      .ql-spacer, div[data-vspace] { display: block; margin: 0; padding: 0; border: 0; }
       [class*="ql-indent"] { padding-left: 0 !important; margin-left: 0 !important; }
       blockquote { border: 0; }
       h1, h2, h3 { font-weight: bold; }
@@ -724,10 +1210,10 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl, topPaddin
         border: 1px solid #000;
         padding: 4px 6px;
       }
-      ul, ol, .hr-doc-ul, .hr-doc-ol { padding-left: 1.5em; margin: 0.4em 0; display: block; }
+      ul, ol, .hr-doc-ul, .hr-doc-ol { padding-left: 1.4em; margin: 0.4em 0; display: block; }
       ol, .hr-doc-ol { list-style-type: decimal !important; list-style-position: outside; }
       ul, .hr-doc-ul { list-style-type: disc !important; list-style-position: outside; }
-      li { display: list-item !important; margin: 0.2em 0; }
+      li { display: list-item !important; margin: 0; }
       .hr-numbered { margin: 0.35em 0; }
       .ql-align-left, .hr-align-left { text-align: left !important; }
       .ql-align-center, .hr-align-center { text-align: center !important; }
@@ -736,24 +1222,36 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl, topPaddin
       .ql-size-small { font-size: 0.75em; }
       .ql-size-large { font-size: 1.5em; }
       .ql-size-huge { font-size: 2.5em; }
+      strong, b { font-weight: 700 !important; }
+      em, i { font-style: italic !important; }
+      u { text-decoration: underline !important; }
+      s, strike, del { text-decoration: line-through !important; }
+      .ql-color-white { color: #fff !important; }
+      .ql-color-red { color: #e60000 !important; }
+      .ql-color-orange { color: #f90 !important; }
+      .ql-color-yellow { color: #ff0 !important; }
+      .ql-color-green { color: #008a00 !important; }
+      .ql-color-blue { color: #06c !important; }
+      .ql-color-purple { color: #93f !important; }
+      .ql-bg-black { background-color: #000 !important; }
+      .ql-bg-red { background-color: #e60000 !important; }
+      .ql-bg-orange { background-color: #f90 !important; }
+      .ql-bg-yellow { background-color: #ff0 !important; }
+      .ql-bg-green { background-color: #008a00 !important; }
+      .ql-bg-blue { background-color: #06c !important; }
+      .ql-bg-purple { background-color: #93f !important; }
+      [style*="color:"], [style*="background-color"], [style*="background:"], font[color] {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
       .hr-print-footer { page-break-inside: avoid !important; break-inside: avoid !important; margin-top: 12pt; }
       .hr-print-footer img { page-break-inside: avoid !important; break-inside: avoid !important; }
-      .page-break {
-        display: block;
-        page-break-before: always !important;
-        break-before: page !important;
-        /* Override tall on-screen spacer heights from the editor */
-        height: 0 !important;
-        min-height: 0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        border: 0 !important;
-        background: none !important;
+      .page-break, [data-page-break] {
+        display: none !important; height: 0 !important; margin: 0 !important; padding: 0 !important; border: 0 !important;
       }
-      .page-break::after { display: none !important; content: none !important; }
       .hr-imported-doc {
-        font-family: 'Times New Roman', Times, serif;
-        font-size: 12pt;
+        font-family: '${fontFamily}', Arial, sans-serif;
+        font-size: ${fontSize};
         color: #000;
       }
       .hr-align-left, .ql-align-left { text-align: left !important; }
@@ -761,21 +1259,25 @@ function wrapPreviewHtml({ filled, letterheadBlank, letterheadDataUrl, topPaddin
       .hr-align-right, .ql-align-right { text-align: right !important; }
       .hr-align-justify, .ql-align-justify { text-align: justify !important; }
       u, span[style*="underline"] { text-decoration: underline !important; }
-      /* Preserve inline text-align from editor / Word */
       [style*="text-align: right"], [style*="text-align:right"] { text-align: right !important; }
       [style*="text-align: left"], [style*="text-align:left"] { text-align: left !important; }
       [style*="text-align: center"], [style*="text-align:center"] { text-align: center !important; }
       [style*="text-align: justify"], [style*="text-align:justify"] { text-align: justify !important; }
       @media print {
-        .page { box-shadow: none; }
-        .page-break {
-          page-break-before: always !important;
-          break-before: page !important;
-          height: 0 !important;
-          border: 0 !important;
+        .page {
+          box-shadow: none;
+          margin: 0 !important;
+          height: ${pageH} !important; min-height: 0 !important; max-height: ${pageH} !important;
+          overflow: hidden !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .page-lh-header, .page-lh-footer, .page-lh-mask {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
         }
       }
-    </style></head><body><div class="page">${spacer}${body}</div></body></html>`;
+    </style></head><body><div class="sheet-wrap" data-hr-root>${pagesHtml}</div>${paginatorScriptTag(paginateCfg)}</body></html>`;
 }
 
 function buildAnnexure(vars) {
@@ -818,6 +1320,14 @@ exports.previewDocument = async (req, res) => {
       letterheadBlank: !!template.letterheadBlank,
       letterheadDataUrl,
       topPaddingMm: template.topPaddingMm,
+      letterheadPages: template.letterheadPages,
+      letterheadHeaderMm: template.letterheadHeaderMm,
+      letterheadFooterMm: template.letterheadFooterMm,
+      pageSize: template.pageSize,
+      defaultFontFamily: template.defaultFontFamily,
+      defaultFontSize: template.defaultFontSize,
+      headerFooter: template.headerFooter,
+      vars,
     });
 
     return Helper.response(
@@ -833,6 +1343,13 @@ exports.previewDocument = async (req, res) => {
           templateName: template.name,
           letterheadBlank: template.letterheadBlank,
           topPaddingMm: template.topPaddingMm,
+          letterheadPages: template.letterheadPages || 'all',
+          letterheadHeaderMm: template.letterheadHeaderMm ?? 28,
+          letterheadFooterMm: template.letterheadFooterMm ?? 40,
+          pageSize: template.pageSize || 'A4',
+          defaultFontFamily: template.defaultFontFamily || 'Times New Roman',
+          defaultFontSize: template.defaultFontSize || '12pt',
+          headerFooter: template.headerFooter || null,
           includeSalaryAnnexure: template.includeSalaryAnnexure,
           hasLetterheadImage: !!letterheadDataUrl,
         },
@@ -874,6 +1391,14 @@ exports.saveGeneratedDocument = async (req, res) => {
         letterheadBlank: !!template.letterheadBlank,
         letterheadDataUrl,
         topPaddingMm: template.topPaddingMm,
+        letterheadPages: template.letterheadPages,
+        letterheadHeaderMm: template.letterheadHeaderMm,
+        letterheadFooterMm: template.letterheadFooterMm,
+        pageSize: template.pageSize,
+        defaultFontFamily: template.defaultFontFamily,
+        defaultFontSize: template.defaultFontSize,
+        headerFooter: template.headerFooter,
+        vars,
       });
     } else if (!/^\s*<!DOCTYPE html/i.test(html) && !/<html[\s>]/i.test(html)) {
       // Body-only HTML from client — wrap so print/assign matches template layout
@@ -885,6 +1410,14 @@ exports.saveGeneratedDocument = async (req, res) => {
         letterheadBlank: !!template.letterheadBlank,
         letterheadDataUrl,
         topPaddingMm: template.topPaddingMm,
+        letterheadPages: template.letterheadPages,
+        letterheadHeaderMm: template.letterheadHeaderMm,
+        letterheadFooterMm: template.letterheadFooterMm,
+        pageSize: template.pageSize,
+        defaultFontFamily: template.defaultFontFamily,
+        defaultFontSize: template.defaultFontSize,
+        headerFooter: template.headerFooter,
+        vars: snapshot || {},
       });
     }
 

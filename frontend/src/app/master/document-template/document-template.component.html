@@ -9,118 +9,407 @@
           </button>
         </h5>
         <div class="card-body">
-          <div class="row g-3 align-items-end">
-            <div class="col-md-4">
-              <label class="form-label fw-bold">Template Name</label>
-              <input class="form-control" [(ngModel)]="form.name" placeholder="e.g. Experience Letter" />
-            </div>
-            <div class="col-md-3">
-              <label class="form-label fw-bold">Category</label>
-              <select class="form-select" [(ngModel)]="form.category">
-                <option *ngFor="let c of categories" [value]="c.value">{{ c.label }}</option>
-              </select>
-            </div>
-            <div class="col-md-2" *ngIf="updateFlag">
-              <label class="form-label fw-bold">Status</label>
-              <select class="form-select" [(ngModel)]="form.status">
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-            <div class="col-md-3">
-              <label class="form-check mt-4">
-                <input type="checkbox" class="form-check-input" [(ngModel)]="form.includeSalaryAnnexure" />
-                Append salary annexure
-              </label>
-            </div>
-          </div>
+          <div class="dt-layout">
+            <!-- Left settings panel — sticky, scrolls on its own so the page never needs scrolling -->
+            <aside class="dt-settings-panel">
+              <div class="dt-panel-actions">
+                <button type="button" class="btn btn-primary btn-sm" (click)="save()">
+                  {{ updateFlag ? 'Update' : 'Save' }} Template
+                </button>
+                <button type="button" class="btn btn-outline-dark btn-sm" (click)="openPrintPreview()">
+                  <i class="fa-solid fa-eye"></i>
+                  Preview
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" (click)="exportAsDocx()" title="Download as Word (.docx)">
+                  DOCX
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" (click)="exportAsPdf()" title="Download as PDF">
+                  PDF
+                </button>
+                <a class="btn btn-outline-primary btn-sm" routerLink="/layout/employee/generate-letter">
+                  Generate for employee
+                </a>
+              </div>
 
-          <div class="row g-3 mt-1">
-            <div class="col-12">
-              <label class="form-label fw-bold">Assign to branches</label>
-              <div class="dt-branch-assign">
-                <label class="form-check mb-2">
-                  <input
-                    type="checkbox"
-                    class="form-check-input"
-                    [checked]="form.assignAllBranches"
-                    (change)="toggleAssignAllBranches($any($event.target).checked)"
-                  />
-                  <span class="fw-semibold">All branches</span>
-                  <small class="text-muted ms-1">(template available everywhere)</small>
+              <!-- Template details -->
+              <div class="dt-panel-section">
+                <div class="dt-panel-title">Template details</div>
+                <div class="dt-field">
+                  <label class="form-label fw-bold">Template Name</label>
+                  <input class="form-control form-control-sm" [(ngModel)]="form.name" placeholder="e.g. Experience Letter" />
+                </div>
+                <div class="dt-field">
+                  <label class="form-label fw-bold">Category</label>
+                  <select class="form-select form-select-sm" [(ngModel)]="form.category">
+                    <option *ngFor="let c of categories" [value]="c.value">{{ c.label }}</option>
+                  </select>
+                </div>
+                <div class="dt-field" *ngIf="updateFlag">
+                  <label class="form-label fw-bold">Status</label>
+                  <select class="form-select form-select-sm" [(ngModel)]="form.status">
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+                <label class="form-check mb-0">
+                  <input type="checkbox" class="form-check-input" [(ngModel)]="form.includeSalaryAnnexure" />
+                  Append salary annexure
                 </label>
-                <div class="dt-branch-grid" [class.dt-branch-grid--dim]="form.assignAllBranches">
-                  <label class="form-check" *ngFor="let b of branchList">
+              </div>
+
+              <!-- Branches -->
+              <div class="dt-panel-section">
+                <div class="dt-panel-title">Assign to branches</div>
+                <div class="dt-branch-assign">
+                  <label class="form-check mb-2">
                     <input
                       type="checkbox"
                       class="form-check-input"
-                      [checked]="isBranchSelected(b.id)"
-                      [disabled]="form.assignAllBranches"
-                      (change)="toggleBranch(b.id, $any($event.target).checked)"
+                      [checked]="form.assignAllBranches"
+                      (change)="toggleAssignAllBranches($any($event.target).checked)"
                     />
-                    {{ b.name }}
+                    <span class="fw-semibold">All branches</span>
+                    <small class="text-muted ms-1">(available everywhere)</small>
                   </label>
-                  <small class="text-muted" *ngIf="!branchList.length">No branches found.</small>
+                  <div class="dt-branch-grid" [class.dt-branch-grid--dim]="form.assignAllBranches">
+                    <label class="form-check" *ngFor="let b of branchList">
+                      <input
+                        type="checkbox"
+                        class="form-check-input"
+                        [checked]="isBranchSelected(b.id)"
+                        [disabled]="form.assignAllBranches"
+                        (change)="toggleBranch(b.id, $any($event.target).checked)"
+                      />
+                      {{ b.name }}
+                    </label>
+                    <small class="text-muted" *ngIf="!branchList.length">No branches found.</small>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <div class="row g-3 mt-1">
-            <div class="col-md-5">
-              <label class="form-label fw-bold">Letterhead</label>
-              <div class="d-flex flex-wrap gap-3 align-items-center">
-                <label class="form-check mb-0">
-                  <input
-                    type="radio"
-                    class="form-check-input"
-                    name="lhMode"
-                    value="image"
-                    [(ngModel)]="letterheadMode"
-                    (ngModelChange)="syncLetterheadMode()"
-                  />
-                  Use uploaded letterhead
-                </label>
-                <label class="form-check mb-0">
-                  <input
-                    type="radio"
-                    class="form-check-input"
-                    name="lhMode"
-                    value="blank"
-                    [(ngModel)]="letterheadMode"
-                    (ngModelChange)="syncLetterheadMode()"
-                  />
-                  Blank top (pre-printed paper)
-                </label>
+              <!-- Page & letterhead -->
+              <div class="dt-panel-section">
+                <div class="dt-panel-title">Page &amp; letterhead</div>
+                <div class="dt-field">
+                  <label class="form-label fw-bold">Letterhead</label>
+                  <label class="form-check mb-1">
+                    <input
+                      type="radio"
+                      class="form-check-input"
+                      name="lhMode"
+                      value="image"
+                      [(ngModel)]="letterheadMode"
+                      (ngModelChange)="syncLetterheadMode()"
+                    />
+                    Use uploaded letterhead
+                  </label>
+                  <label class="form-check mb-1">
+                    <input
+                      type="radio"
+                      class="form-check-input"
+                      name="lhMode"
+                      value="blank"
+                      [(ngModel)]="letterheadMode"
+                      (ngModelChange)="syncLetterheadMode()"
+                    />
+                    Blank top (pre-printed paper)
+                  </label>
+                  <div class="mt-1 d-flex flex-wrap gap-2 align-items-center">
+                    <label class="btn btn-sm btn-outline-secondary mb-0">
+                      {{ uploadingLetterhead ? 'Uploading…' : 'Upload letterhead' }}
+                      <input type="file" accept="image/*" hidden (change)="onLetterheadFile($event)" [disabled]="uploadingLetterhead" />
+                    </label>
+                    <a class="btn btn-sm btn-link px-0" routerLink="/layout/master/letterhead">Manage letterhead</a>
+                  </div>
+                  <small class="text-muted d-block" *ngIf="!pageBackground && letterheadMode === 'image'">
+                    No letterhead yet — upload one or choose blank top.
+                  </small>
+                </div>
+
+                <div class="dt-field" *ngIf="letterheadMode === 'image'">
+                  <label class="form-label fw-bold">Show letterhead on</label>
+                  <div class="d-flex flex-wrap gap-3">
+                    <label class="form-check mb-0">
+                      <input
+                        type="radio"
+                        class="form-check-input"
+                        name="lhPages"
+                        value="1"
+                        [(ngModel)]="form.letterheadPages"
+                        (ngModelChange)="onLetterheadPagesChange()"
+                      />
+                      First page only
+                    </label>
+                    <label class="form-check mb-0">
+                      <input
+                        type="radio"
+                        class="form-check-input"
+                        name="lhPages"
+                        value="2"
+                        [(ngModel)]="form.letterheadPages"
+                        (ngModelChange)="onLetterheadPagesChange()"
+                      />
+                      First 2 pages
+                    </label>
+                    <label class="form-check mb-0">
+                      <input
+                        type="radio"
+                        class="form-check-input"
+                        name="lhPages"
+                        value="all"
+                        [(ngModel)]="form.letterheadPages"
+                        (ngModelChange)="onLetterheadPagesChange()"
+                      />
+                      All pages
+                    </label>
+                  </div>
+                  <small class="text-muted d-block mt-1">
+                    Applies to Print Preview, PDF and generated letters. Remember to save the template.
+                  </small>
+                </div>
+
+                <div class="dt-field">
+                  <label class="form-label fw-bold">Page type</label>
+                  <select
+                    class="form-select form-select-sm"
+                    [(ngModel)]="form.pageSize"
+                    (ngModelChange)="onPageSizeChange()"
+                  >
+                    <option *ngFor="let p of pageSizeOptions" [ngValue]="p.id">{{ p.label }}</option>
+                  </select>
+                  <small class="text-muted d-block mt-1">
+                    Paper size for the editor and Print Preview (kept when you edit later).
+                  </small>
+                </div>
+
+                <div class="dt-field">
+                  <label class="form-label fw-bold">Top space</label>
+                  <select
+                    class="form-select form-select-sm"
+                    [(ngModel)]="form.topPaddingMm"
+                    (ngModelChange)="onTopPaddingChange()"
+                  >
+                    <option [ngValue]="null">Auto ({{ effectiveTopPadMm }} mm)</option>
+                    <option *ngFor="let mm of topPadOptions" [ngValue]="mm">{{ mm }} mm</option>
+                  </select>
+                  <small class="text-muted d-block mt-1">
+                    Gap from the page top to the content — same in editor and print. You can also drag the blue handle on the page.
+                  </small>
+                </div>
+
+                <div class="dt-field" *ngIf="letterheadMode === 'image'">
+                  <label class="form-label fw-bold">Letterhead header height</label>
+                  <div class="dt-lh-band-ctrl">
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary btn-sm"
+                      title="−1 mm"
+                      (click)="nudgeLhBand('header', -1)"
+                    >−1</button>
+                    <select
+                      class="form-select form-select-sm"
+                      [(ngModel)]="form.letterheadHeaderMm"
+                      (ngModelChange)="onLhBandChange()"
+                    >
+                      <option *ngFor="let mm of lhBandOptions" [ngValue]="mm">{{ mm }} mm</option>
+                    </select>
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary btn-sm"
+                      title="+1 mm"
+                      (click)="nudgeLhBand('header', 1)"
+                    >+1</button>
+                  </div>
+                  <small class="text-muted d-block mt-1">
+                    Logo band — use −1 / +1 mm to adjust the header space.
+                  </small>
+                </div>
+
+                <div class="dt-field" *ngIf="letterheadMode === 'image'">
+                  <label class="form-label fw-bold">Letterhead footer height</label>
+                  <div class="dt-lh-band-ctrl">
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary btn-sm"
+                      title="−1 mm"
+                      (click)="nudgeLhBand('footer', -1)"
+                    >−1</button>
+                    <select
+                      class="form-select form-select-sm"
+                      [(ngModel)]="form.letterheadFooterMm"
+                      (ngModelChange)="onLhBandChange()"
+                    >
+                      <option *ngFor="let mm of lhBandOptions" [ngValue]="mm">{{ mm }} mm</option>
+                    </select>
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary btn-sm"
+                      title="+1 mm"
+                      (click)="nudgeLhBand('footer', 1)"
+                    >+1</button>
+                  </div>
+                  <small class="text-muted d-block mt-1">
+                    Address / GSTN band — use −1 / +1 mm to adjust the footer space.
+                  </small>
+                </div>
               </div>
-              <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
-                <label class="btn btn-sm btn-outline-secondary mb-0">
-                  {{ uploadingLetterhead ? 'Uploading…' : 'Upload letterhead' }}
-                  <input type="file" accept="image/*" hidden (change)="onLetterheadFile($event)" [disabled]="uploadingLetterhead" />
-                </label>
-                <a class="btn btn-sm btn-link" routerLink="/layout/master/letterhead">Manage letterhead</a>
-                <small class="text-muted" *ngIf="!pageBackground && letterheadMode === 'image'">
-                  No letterhead yet — upload one or choose blank top.
+
+              <!-- Header & footer -->
+              <div class="dt-panel-section" *ngIf="form.headerFooter">
+                <div class="dt-panel-title">Header &amp; footer</div>
+                <small class="text-muted d-block mb-2">
+                  Repeats on every printed page and supports variables. Click it on the page to edit.
                 </small>
+                <div class="dt-hf-part" [class.dt-hf-part--on]="form.headerFooter.header.enabled">
+                  <label class="form-check form-switch mb-1">
+                    <input
+                      type="checkbox"
+                      class="form-check-input"
+                      [(ngModel)]="form.headerFooter.header.enabled"
+                      (ngModelChange)="onHeaderFooterChange()"
+                    />
+                    <span class="fw-bold">Add header</span>
+                  </label>
+                  <ng-container *ngIf="form.headerFooter.header.enabled">
+                    <textarea
+                      id="dt-hf-header-text"
+                      class="form-control form-control-sm"
+                      rows="2"
+                      [(ngModel)]="form.headerFooter.header.text"
+                      (ngModelChange)="onHeaderFooterChange()"
+                      [placeholder]="'e.g. ' + '{{' + 'Company_name' + '}}' + ' — Confidential'"
+                    ></textarea>
+                    <div class="dt-hf-row">
+                      <div class="btn-group btn-group-sm" role="group" aria-label="Header alignment">
+                        <button type="button" class="btn btn-outline-secondary" title="Left" [class.active]="form.headerFooter.header.align === 'left'" (click)="setHfAlign('header', 'left')"><i class="fa-solid fa-align-left"></i></button>
+                        <button type="button" class="btn btn-outline-secondary" title="Center" [class.active]="form.headerFooter.header.align === 'center'" (click)="setHfAlign('header', 'center')"><i class="fa-solid fa-align-center"></i></button>
+                        <button type="button" class="btn btn-outline-secondary" title="Right" [class.active]="form.headerFooter.header.align === 'right'" (click)="setHfAlign('header', 'right')"><i class="fa-solid fa-align-right"></i></button>
+                      </div>
+                      <select
+                        class="form-select form-select-sm dt-hf-size"
+                        title="Font size"
+                        [(ngModel)]="form.headerFooter.header.fontSize"
+                        (ngModelChange)="onHeaderFooterChange()"
+                      >
+                        <option *ngFor="let sz of hfFontSizes" [ngValue]="sz">{{ sz.replace('pt', '') }} pt</option>
+                      </select>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-secondary"
+                        title="Bold"
+                        [class.active]="form.headerFooter.header.bold"
+                        (click)="form.headerFooter.header.bold = !form.headerFooter.header.bold; onHeaderFooterChange()"
+                      ><b>B</b></button>
+                    </div>
+                    <div class="dt-hf-row">
+                      <select
+                        #headerVarSel
+                        class="form-select form-select-sm"
+                        title="Insert a variable at the cursor"
+                        (change)="insertHfVariable('header', headerVarSel.value, headerVarSel)"
+                      >
+                        <option value="">+ Insert variable</option>
+                        <option *ngFor="let v of allVariables" [value]="v.key">{{ v.label || v.key }}</option>
+                      </select>
+                    </div>
+                    <div class="dt-hf-row">
+                      <span class="small text-muted">Distance from top</span>
+                      <div class="dt-lh-band-ctrl ms-auto">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" (click)="nudgeHfOffset('header', -1)">−1</button>
+                        <span class="dt-hf-mm">{{ form.headerFooter.header.offsetMm }} mm</span>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" (click)="nudgeHfOffset('header', 1)">+1</button>
+                      </div>
+                    </div>
+                  </ng-container>
+                </div>
+                <div class="dt-hf-part" [class.dt-hf-part--on]="form.headerFooter.footer.enabled">
+                  <label class="form-check form-switch mb-1">
+                    <input
+                      type="checkbox"
+                      class="form-check-input"
+                      [(ngModel)]="form.headerFooter.footer.enabled"
+                      (ngModelChange)="onHeaderFooterChange()"
+                    />
+                    <span class="fw-bold">Add footer</span>
+                  </label>
+                  <ng-container *ngIf="form.headerFooter.footer.enabled">
+                    <textarea
+                      id="dt-hf-footer-text"
+                      class="form-control form-control-sm"
+                      rows="2"
+                      [(ngModel)]="form.headerFooter.footer.text"
+                      (ngModelChange)="onHeaderFooterChange()"
+                      [placeholder]="'e.g. ' + '{{' + 'Company_address' + '}}'"
+                    ></textarea>
+                    <div class="dt-hf-row">
+                      <div class="btn-group btn-group-sm" role="group" aria-label="Footer alignment">
+                        <button type="button" class="btn btn-outline-secondary" title="Left" [class.active]="form.headerFooter.footer.align === 'left'" (click)="setHfAlign('footer', 'left')"><i class="fa-solid fa-align-left"></i></button>
+                        <button type="button" class="btn btn-outline-secondary" title="Center" [class.active]="form.headerFooter.footer.align === 'center'" (click)="setHfAlign('footer', 'center')"><i class="fa-solid fa-align-center"></i></button>
+                        <button type="button" class="btn btn-outline-secondary" title="Right" [class.active]="form.headerFooter.footer.align === 'right'" (click)="setHfAlign('footer', 'right')"><i class="fa-solid fa-align-right"></i></button>
+                      </div>
+                      <select
+                        class="form-select form-select-sm dt-hf-size"
+                        title="Font size"
+                        [(ngModel)]="form.headerFooter.footer.fontSize"
+                        (ngModelChange)="onHeaderFooterChange()"
+                      >
+                        <option *ngFor="let sz of hfFontSizes" [ngValue]="sz">{{ sz.replace('pt', '') }} pt</option>
+                      </select>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-secondary"
+                        title="Bold"
+                        [class.active]="form.headerFooter.footer.bold"
+                        (click)="form.headerFooter.footer.bold = !form.headerFooter.footer.bold; onHeaderFooterChange()"
+                      ><b>B</b></button>
+                    </div>
+                    <div class="dt-hf-row">
+                      <select
+                        #footerVarSel
+                        class="form-select form-select-sm"
+                        title="Insert a variable at the cursor"
+                        (change)="insertHfVariable('footer', footerVarSel.value, footerVarSel)"
+                      >
+                        <option value="">+ Insert variable</option>
+                        <option *ngFor="let v of allVariables" [value]="v.key">{{ v.label || v.key }}</option>
+                      </select>
+                    </div>
+                    <div class="dt-hf-row">
+                      <span class="small text-muted">Distance from bottom</span>
+                      <div class="dt-lh-band-ctrl ms-auto">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" (click)="nudgeHfOffset('footer', -1)">−1</button>
+                        <span class="dt-hf-mm">{{ form.headerFooter.footer.offsetMm }} mm</span>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" (click)="nudgeHfOffset('footer', 1)">+1</button>
+                      </div>
+                    </div>
+                    <label class="form-check mb-0 mt-1">
+                      <input
+                        type="checkbox"
+                        class="form-check-input"
+                        [(ngModel)]="form.headerFooter.footer.pageNumber"
+                        (ngModelChange)="onHeaderFooterChange()"
+                      />
+                      Show page number (Page 1 of 3)
+                    </label>
+                  </ng-container>
+                </div>
+                <div class="dt-field mt-2" *ngIf="form.headerFooter.header.enabled || form.headerFooter.footer.enabled">
+                  <label class="form-label fw-bold">Show on</label>
+                  <select
+                    class="form-select form-select-sm"
+                    [(ngModel)]="form.headerFooter.pages"
+                    (ngModelChange)="onHeaderFooterChange()"
+                  >
+                    <option value="all">All pages</option>
+                    <option value="first">First page only</option>
+                    <option value="notFirst">All pages except the first</option>
+                  </select>
+                </div>
               </div>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label fw-bold">Top space</label>
-              <select
-                class="form-select"
-                [(ngModel)]="form.topPaddingMm"
-                (ngModelChange)="onTopPaddingChange()"
-              >
-                <option [ngValue]="null">Auto ({{ effectiveTopPadMm }} mm)</option>
-                <option *ngFor="let mm of topPadOptions" [ngValue]="mm">{{ mm }} mm</option>
-              </select>
-              <small class="text-muted d-block mt-1">
-                Page top se content ka gap — editor + print dono mein same.
-              </small>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label fw-bold">Import document (optional)</label>
-              <div>
+
+              <!-- Import -->
+              <div class="dt-panel-section">
+                <div class="dt-panel-title">Import document (optional)</div>
                 <label class="btn btn-sm btn-outline-primary mb-0" [class.disabled]="importingDoc">
                   {{ importingDoc ? 'Importing…' : 'Import Word / HTML / TXT' }}
                   <input
@@ -132,34 +421,45 @@
                   />
                 </label>
                 <small class="text-muted d-block mt-1">
-                  Import Offer / Appointment / NDA as <b>.docx</b>. Agar Word header mein logo hai woh aa jayega;
-                  warna pehle <b>Upload letterhead</b> karo aur <b>Use uploaded letterhead</b> select rakho.
-                  Old <b>.doc</b> → Save As <b>.docx</b> first.
+                  Import any <b>.docx</b> — fonts, sizes, headings, tables and page breaks are preserved on a best-effort basis.
+                  A logo in the Word header is imported too; otherwise use <b>Upload letterhead</b>.
+                  For old <b>.doc</b> files, Save As <b>.docx</b> first.
                 </small>
               </div>
-            </div>
-          </div>
 
-          <div class="mt-3">
-            <label class="form-label fw-bold">Insert variable</label>
-            <div class="var-groups">
-              <div class="var-group" *ngFor="let group of ['employee','salary','company']">
-                <small class="text-muted text-uppercase">{{ group }}</small>
-                <div class="d-flex flex-wrap gap-1 mt-1">
-                  <button
-                    type="button"
-                    class="btn btn-outline-secondary btn-sm var-chip"
-                    *ngFor="let v of catalog[group]"
-                    (click)="insertVariable(v.key)"
-                    [title]="v.label"
-                  >{{'{{' + v.key + '}}'}}</button>
+              <!-- Variables -->
+              <div class="dt-panel-section">
+                <div class="dt-panel-title">Insert variable</div>
+                <small class="text-muted d-block mb-1">Click to insert at the cursor.</small>
+                <div class="var-groups">
+                  <div class="var-group" *ngFor="let group of ['employee','salary','company']">
+                    <small class="text-muted text-uppercase">{{ group }}</small>
+                    <div class="d-flex flex-wrap gap-1 mt-1">
+                      <button
+                        type="button"
+                        class="btn btn-outline-secondary btn-sm var-chip"
+                        *ngFor="let v of catalog[group]"
+                        (click)="insertVariable(v.key)"
+                        [title]="v.label"
+                      >{{'{{' + v.key + '}}'}}</button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </aside>
 
-          <div class="mt-3">
+            <div class="dt-editor-main">
+          <div>
             <label class="form-label fw-bold">Document body</label>
+
+            <!-- Sticky toolbar chrome — always ABOVE the A4 page (never overlays letterhead) -->
+            <div class="dt-editor-toolbar-bar">
+              <!-- Quill toolbar mounts here (moved out of .editor-frame after init) -->
+              <div
+                #quillToolbarHost
+                class="dt-editor-toolbar-slot"
+                [hidden]="useRichEditor"
+              ></div>
 
             <!-- Formatting toolbar for Word-import (contenteditable) mode -->
             <div class="dt-rich-toolbar" *ngIf="useRichEditor" (mousedown)="$event.preventDefault()">
@@ -170,6 +470,12 @@
               <button type="button" class="btn btn-sm btn-outline-secondary" [class.active]="formatActive.italic" (mousedown)="$event.preventDefault()" (click)="richCmd('italic')" title="Italic — click then type, or select text"><i>I</i></button>
               <button type="button" class="btn btn-sm btn-outline-secondary" [class.active]="formatActive.underline" (mousedown)="$event.preventDefault()" (click)="richCmd('underline')" title="Underline — click then type, or select text"><u>U</u></button>
               <button type="button" class="btn btn-sm btn-outline-secondary" [class.active]="formatActive.strikeThrough" (mousedown)="$event.preventDefault()" (click)="richCmd('strikeThrough')" title="Strikethrough — click then type, or select text"><s>S</s></button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('subscript')" title="Subscript">X₂</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('superscript')" title="Superscript">X²</button>
+              <span class="dt-rich-sep"></span>
+              <button type="button" class="btn btn-sm btn-outline-secondary fw-bold" (mousedown)="$event.preventDefault()" (click)="applyTextCase('upper')" title="UPPERCASE (ABC)">ABC</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="applyTextCase('lower')" title="lowercase (abc)">abc</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="applyTextCase('title')" title="Title Case (Abc)">Abc</button>
               <span class="dt-rich-sep"></span>
 
               <!-- Font Family -->
@@ -262,21 +568,28 @@
                 <option value="2.5">2.5</option>
               </select>
 
-              <!-- Paragraph Spacing -->
+              <!-- Paragraph Spacing (default 5pt) -->
               <select
                 class="form-select form-select-sm dt-format-select"
-                title="Paragraph spacing (gaps between lines)"
+                title="Paragraph spacing after block (default 5 pt)"
                 (mousedown)="saveRichSelection(); $event.stopPropagation()"
                 (focus)="saveRichSelection()"
                 (change)="applyParagraphSpacing($any($event.target).value); $any($event.target).value = ''"
               >
-                <option value="">Paragraph Spacing</option>
-                <option value="0px">0 (tight)</option>
-                <option value="4px">4</option>
-                <option value="8px">8</option>
-                <option value="12px">12</option>
-                <option value="16px">16</option>
-                <option value="20px">20</option>
+                <option value="">Para Space</option>
+                <option value="0pt">0 pt</option>
+                <option value="1pt">1 pt</option>
+                <option value="2pt">2 pt</option>
+                <option value="3pt">3 pt</option>
+                <option value="4pt">4 pt</option>
+                <option value="5pt">5 pt (default)</option>
+                <option value="6pt">6 pt</option>
+                <option value="8pt">8 pt</option>
+                <option value="10pt">10 pt</option>
+                <option value="12pt">12 pt</option>
+                <option value="14pt">14 pt</option>
+                <option value="18pt">18 pt</option>
+                <option value="24pt">24 pt</option>
               </select>
 
               <span class="dt-rich-sep"></span>
@@ -345,91 +658,116 @@
             <!-- Font family + size + line height + color (Quill mode) -->
             <div class="dt-color-bar" *ngIf="!useRichEditor" (mousedown)="$event.preventDefault()">
               <span class="dt-color-bar-title">Format</span>
-              <select
-                class="form-select form-select-sm dt-format-select dt-font-select"
-                title="Font family"
-                (mousedown)="$event.stopPropagation()"
-                (change)="applyQuillFontFamily($any($event.target).value); $any($event.target).value = ''"
-              >
-                <option value="">Font</option>
-                <option *ngFor="let f of fontFamilyOptions" [value]="f" [style.font-family]="f">{{ f }}</option>
-              </select>
-              <select
-                class="form-select form-select-sm dt-format-select"
-                title="Font size"
-                (mousedown)="$event.stopPropagation()"
-                (change)="applyQuillFontSize($any($event.target).value); $any($event.target).value = ''"
-              >
-                <option value="">Font Size</option>
-                <option value="8pt">8</option>
-                <option value="9pt">9</option>
-                <option value="10pt">10</option>
-                <option value="11pt">11</option>
-                <option value="12pt">12</option>
-                <option value="14pt">14</option>
-                <option value="16pt">16</option>
-                <option value="18pt">18</option>
-                <option value="20pt">20</option>
-                <option value="22pt">22</option>
-                <option value="24pt">24</option>
-                <option value="28pt">28</option>
-                <option value="32pt">32</option>
-                <option value="36pt">36</option>
-                <option value="48pt">48</option>
-                <option value="72pt">72</option>
-              </select>
-              <select
-                class="form-select form-select-sm dt-format-select"
-                title="Line height"
-                (mousedown)="$event.stopPropagation()"
-                (change)="applyQuillLineHeight($any($event.target).value); $any($event.target).value = ''"
-              >
-                <option value="">Line Height</option>
-                <option value="1">1.0</option>
-                <option value="1.15">1.15</option>
-                <option value="1.5">1.5</option>
-                <option value="1.75">1.75</option>
-                <option value="2">2.0</option>
-                <option value="2.5">2.5</option>
-              </select>
-              <span class="dt-rich-sep"></span>
-              <label class="dt-color-tool" title="Foreground (text color)">
-                <span class="dt-color-tool-label">Foreground</span>
-                <span class="dt-color-swatch" [style.background]="editorFgColor"></span>
-                <input type="color" [value]="editorFgColor"
+              <div class="dt-tool-group">
+                <select
+                  class="form-select form-select-sm dt-format-select dt-w-page"
+                  title="Page type"
+                  [(ngModel)]="form.pageSize"
+                  (ngModelChange)="onPageSizeChange()"
                   (mousedown)="$event.stopPropagation()"
-                  (change)="applyEditorColor('foreground', $any($event.target).value)"
-                  (input)="applyEditorColor('foreground', $any($event.target).value)" />
-              </label>
-              <label class="dt-color-tool" title="Background (highlight)">
-                <span class="dt-color-tool-label">Background</span>
-                <span class="dt-color-swatch" [style.background]="editorBgColor"></span>
-                <input type="color" [value]="editorBgColor"
+                >
+                  <option *ngFor="let p of pageSizeOptions" [ngValue]="p.id">{{ p.id }}</option>
+                </select>
+                <select
+                  class="form-select form-select-sm dt-format-select dt-font-select"
+                  title="Font family (saved with template)"
+                  [(ngModel)]="form.defaultFontFamily"
+                  (ngModelChange)="applyQuillFontFamily($event)"
                   (mousedown)="$event.stopPropagation()"
-                  (change)="applyEditorColor('background', $any($event.target).value)"
-                  (input)="applyEditorColor('background', $any($event.target).value)" />
-              </label>
-              <span class="dt-rich-sep"></span>
-              <button
-                type="button"
-                class="dt-color-preset"
-                *ngFor="let c of fgPresets"
-                [style.background]="c"
-                [title]="'Text ' + c"
-                (mousedown)="$event.preventDefault()"
-                (click)="applyEditorColor('foreground', c)"
-              ></button>
-              <span class="dt-rich-sep"></span>
-              <button
-                type="button"
-                class="dt-color-preset dt-color-preset--bg"
-                *ngFor="let c of bgPresets"
-                [style.background]="c"
-                [title]="'Highlight ' + c"
-                (mousedown)="$event.preventDefault()"
-                (click)="applyEditorColor('background', c)"
-              ></button>
+                >
+                  <option *ngFor="let f of fontFamilyOptions" [ngValue]="f" [style.font-family]="f">{{ f }}</option>
+                </select>
+                <select
+                  class="form-select form-select-sm dt-format-select dt-w-size"
+                  title="Font size (saved with template)"
+                  [(ngModel)]="form.defaultFontSize"
+                  (ngModelChange)="applyQuillFontSize($event)"
+                  (mousedown)="$event.stopPropagation()"
+                >
+                  <option *ngFor="let s of fontSizeOptions" [ngValue]="s">{{ s.replace('pt','') }}</option>
+                </select>
+              </div>
+              <div class="dt-tool-group">
+                <select
+                  class="form-select form-select-sm dt-format-select dt-w-spacing"
+                  title="Line height"
+                  (mousedown)="$event.stopPropagation()"
+                  (change)="applyQuillLineHeight($any($event.target).value); $any($event.target).value = ''"
+                >
+                  <option value="">Line height</option>
+                  <option value="1">1.0</option>
+                  <option value="1.15">1.15</option>
+                  <option value="1.5">1.5</option>
+                  <option value="1.75">1.75</option>
+                  <option value="2">2.0</option>
+                  <option value="2.5">2.5</option>
+                </select>
+                <select
+                  class="form-select form-select-sm dt-format-select dt-w-spacing"
+                  title="Paragraph spacing after block (default 5 pt)"
+                  (mousedown)="$event.stopPropagation()"
+                  (change)="applyQuillParagraphSpacing($any($event.target).value); $any($event.target).value = ''"
+                >
+                  <option value="">Para spacing</option>
+                  <option value="0pt">0 pt</option>
+                  <option value="1pt">1 pt</option>
+                  <option value="2pt">2 pt</option>
+                  <option value="3pt">3 pt</option>
+                  <option value="4pt">4 pt</option>
+                  <option value="5pt">5 pt (default)</option>
+                  <option value="6pt">6 pt</option>
+                  <option value="8pt">8 pt</option>
+                  <option value="10pt">10 pt</option>
+                  <option value="12pt">12 pt</option>
+                  <option value="14pt">14 pt</option>
+                  <option value="18pt">18 pt</option>
+                  <option value="24pt">24 pt</option>
+                </select>
+              </div>
+              <div class="dt-tool-group">
+                <label class="dt-color-tool" title="Text color — pick any color">
+                  <span class="dt-color-tool-label">Text</span>
+                  <span class="dt-color-swatch" [style.background]="editorFgColor"></span>
+                  <input type="color" [value]="editorFgColor"
+                    (mousedown)="$event.stopPropagation()"
+                    (change)="applyEditorColor('foreground', $any($event.target).value)"
+                    (input)="applyEditorColor('foreground', $any($event.target).value)" />
+                </label>
+                <div class="dt-swatch-group" aria-label="Text colors">
+                  <button
+                    type="button"
+                    class="dt-color-preset"
+                    *ngFor="let c of fgPresets"
+                    [style.background]="c"
+                    [title]="'Text ' + c"
+                    (mousedown)="$event.preventDefault()"
+                    (click)="applyEditorColor('foreground', c)"
+                  ></button>
+                </div>
+              </div>
+              <div class="dt-tool-group">
+                <label class="dt-color-tool" title="Highlight color — pick any color">
+                  <span class="dt-color-tool-label">Highlight</span>
+                  <span class="dt-color-swatch" [style.background]="editorBgColor"></span>
+                  <input type="color" [value]="editorBgColor"
+                    (mousedown)="$event.stopPropagation()"
+                    (change)="applyEditorColor('background', $any($event.target).value)"
+                    (input)="applyEditorColor('background', $any($event.target).value)" />
+                </label>
+                <div class="dt-swatch-group" aria-label="Highlight colors">
+                  <button
+                    type="button"
+                    class="dt-color-preset dt-color-preset--bg"
+                    *ngFor="let c of bgPresets"
+                    [style.background]="c"
+                    [title]="'Highlight ' + c"
+                    (mousedown)="$event.preventDefault()"
+                    (click)="applyEditorColor('background', c)"
+                  ></button>
+                </div>
+              </div>
             </div>
+            </div><!-- /.dt-editor-toolbar-bar -->
 
             <div class="a4-stage">
               <div
@@ -437,9 +775,95 @@
                 [class.editor-frame--blank]="letterheadMode === 'blank'"
                 [class.editor-frame--image]="letterheadMode === 'image' && !!pageBackground"
                 [class.editor-frame--imported]="importedLayout || useRichEditor"
-                [style.--dt-top-pad]="topPadCss"
-                [style.background-image]="pageBackground && letterheadMode === 'image' ? 'url(' + pageBackground + ')' : null"
+                [style.--dt-top-pad]="editorTopPadCss"
+                [style.--dt-lh-header]="lhHeaderCss"
+                [style.--dt-lh-footer]="lhFooterCss"
+                [style.--dt-page-w]="pageWidthCss"
+                [style.--dt-page-h]="pageHeightCss"
+                [style.width]="pageWidthCss"
+                [style.min-height.px]="autoFrameMinPx"
               >
+                <!-- Letterhead header only (clip top of A4 image — avoids mid-page footer overlap) -->
+                <div
+                  *ngIf="letterheadMode === 'image' && pageBackground"
+                  class="dt-letterhead-band dt-letterhead-band--header"
+                  [style.background-image]="'url(' + pageBackground + ')'"
+                  aria-hidden="true"
+                ></div>
+
+                <!-- Word-like page breaks (same pages as Print Preview / PDF):
+                     bottom margin of page N, grey gap, top margin of page N+1 -->
+                <div
+                  class="dt-page-seam"
+                  *ngFor="let b of autoBreaks"
+                  [style.top.px]="b.top"
+                  [style.height.px]="b.height"
+                >
+                  <div class="dt-seam-foot" [style.height.px]="b.bottomPx" (click)="b.footHtml && focusHfText('footer')">
+                    <div
+                      *ngIf="b.lhFoot && pageBackground"
+                      class="dt-seam-lh dt-seam-lh--foot"
+                      [style.background-image]="'url(' + pageBackground + ')'"
+                    ></div>
+                    <div *ngIf="b.footHtml" class="dt-seam-hf" [innerHTML]="b.footHtml"></div>
+                  </div>
+                  <div class="dt-seam-gap" [style.height.px]="b.gapPx">
+                    <span>Page {{ b.page }}</span>
+                  </div>
+                  <div class="dt-seam-head" [style.height.px]="b.topPx" (click)="b.headHtml && focusHfText('header')">
+                    <div
+                      *ngIf="b.lhHead && pageBackground"
+                      class="dt-seam-lh dt-seam-lh--head"
+                      [style.background-image]="'url(' + pageBackground + ')'"
+                    ></div>
+                    <div *ngIf="b.headHtml" class="dt-seam-hf" [innerHTML]="b.headHtml"></div>
+                  </div>
+                </div>
+
+                <!-- Custom header / footer preview — click to edit in the left panel -->
+                <div
+                  *ngIf="hfEditorVisible('header')"
+                  class="dt-hf-overlay dt-hf-overlay--header"
+                  title="Header — click to edit"
+                  [style.top.mm]="form.headerFooter.header.offsetMm"
+                  [style.text-align]="form.headerFooter.header.align"
+                  [style.font-size]="form.headerFooter.header.fontSize"
+                  [style.font-weight]="form.headerFooter.header.bold ? 700 : 400"
+                  [innerHTML]="hfEditorHtml('header')"
+                  (click)="focusHfText('header')"
+                ></div>
+                <div
+                  *ngIf="hfEditorVisible('footer')"
+                  class="dt-hf-overlay dt-hf-overlay--footer"
+                  title="Footer — click to edit"
+                  [style.bottom.mm]="form.headerFooter.footer.offsetMm"
+                  [style.text-align]="form.headerFooter.footer.align"
+                  [style.font-size]="form.headerFooter.footer.fontSize"
+                  [style.font-weight]="form.headerFooter.footer.bold ? 700 : 400"
+                  [innerHTML]="hfEditorHtml('footer')"
+                  (click)="focusHfText('footer')"
+                ></div>
+
+                <!-- Drag handle: set Top space with the mouse (like a Word margin) -->
+                <div
+                  class="dt-top-pad-guide"
+                  [class.dt-top-pad-guide--dragging]="topPadDrag"
+                  [style.top]="topPadGuideTopCss"
+                >
+                  <div
+                    class="dt-top-pad-grip"
+                    title="Drag up/down to set Top space · double-click = 0 mm"
+                    (pointerdown)="startTopPadDrag($event)"
+                    (pointermove)="moveTopPadDrag($event)"
+                    (pointerup)="endTopPadDrag($event)"
+                    (pointercancel)="endTopPadDrag($event)"
+                    (dblclick)="resetTopPad()"
+                  >
+                    <i class="fa-solid fa-grip-lines"></i>
+                  </div>
+                  <span class="dt-top-pad-label">Top {{ effectiveTopPadMm }} mm</span>
+                </div>
+
                 <!-- Wrap Quill so its toolbar (sibling of host) is destroyed with *ngIf -->
                 <div *ngIf="!useRichEditor" class="dt-quill-wrap">
                   <div #editorHost class="dt-quill-host"></div>
@@ -457,30 +881,26 @@
                   (keyup)="saveRichSelection()"
                   (click)="saveRichSelection()"
                 ></div>
+
+                <!-- Letterhead footer only at document end (clip bottom of A4 image) -->
+                <div
+                  *ngIf="letterheadMode === 'image' && pageBackground && autoLastPageLh"
+                  class="dt-letterhead-band dt-letterhead-band--footer"
+                  [style.background-image]="'url(' + pageBackground + ')'"
+                  aria-hidden="true"
+                ></div>
               </div>
             </div>
+            <small class="text-muted d-block" *ngIf="autoPageCount">
+              {{ autoPageCount }} {{ autoPageCount === 1 ? 'page' : 'pages' }} ({{ form.pageSize }}) —
+              pages break here exactly as in Print Preview / PDF.
+            </small>
             <small class="text-muted" *ngIf="useRichEditor">
-              Word layout mode — text select karke Font / Size / Color / Image / Table use karo.
+              Word layout mode — select text, then use Font / Size / Color / Image / Table.
             </small>
           </div>
-
-          <div class="mt-3 d-flex gap-2">
-            <button type="button" class="btn btn-primary btn-sm" (click)="save()">
-              {{ updateFlag ? 'Update' : 'Save' }} Template
-            </button>
-            <a class="btn btn-outline-primary btn-sm" routerLink="/layout/employee/generate-letter">
-              Generate for employee
-            </a>
-          </div>
-
-          <button
-  type="button"
-  class="btn btn-outline-dark btn-sm"
-  (click)="openPrintPreview()"
->
-  <i class="fa-solid fa-eye"></i>
-  Print Preview
-</button>
+            </div><!-- /.dt-editor-main -->
+          </div><!-- /.dt-layout -->
         </div>
       </div>
     </div>
