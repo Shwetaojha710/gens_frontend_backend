@@ -67,22 +67,24 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.45);
+  background: rgba(11, 43, 58, 0.2);
   cursor: pointer;
   transition: background 0.2s, transform 0.2s;
 }
 
 .bw-slider-dot--active {
-  background: #fff;
+  background: #0663a9;
   transform: scale(1.3);
 }
 
-@media (max-width: 991px) {
-  .bw-slider-item { flex: 0 0 50%; }
+/* Slide width (4/3/2/1 per row) is set inline from getSlidesVisible() */
+@media (max-width: 1024px) {
+  .bw-slider-item { padding: 0 0.6rem; }
 }
 
 @media (max-width: 575px) {
-  .bw-slider-item { flex: 0 0 100%; }
+  .bw-slider-wrapper { gap: 0.25rem; }
+  .bw-slider-btn { width: 2rem; height: 2rem; font-size: 1.1rem; }
 }
 /* ─────────────────────────────────────────────── */
 
@@ -239,8 +241,11 @@ body {
     background-position: center;
     position: relative;
     overflow: hidden;
-    width: 268px;
-    height: 380px;
+    width: 100%;
+    max-width: clamp(240px, 22vw, 320px);
+    aspect-ratio: 268 / 380;
+    min-height: 280px;
+    margin: 0 auto;
     opacity: 1;
 }
 
@@ -265,10 +270,7 @@ body {
 /* Inner Glass Card */
 .overlay {
     position: absolute;
-    top: 24px;
-    left: 20px;
-    right: 20px;
-    bottom: 24px;
+    inset: clamp(14px, 6%, 24px) clamp(12px, 7%, 20px);
     border-radius: 16px;
     border: 1.5px solid rgba(255, 255, 255, 0.55);
     background: rgba(255, 255, 255, 0.06);
@@ -279,7 +281,7 @@ body {
     align-items: center;
     color: #fff;
     text-align: center;
-    padding: 20px;
+    padding: clamp(12px, 8%, 20px);
     transition: border-color 0.25s ease, background 0.25s ease;
 }
 
@@ -290,37 +292,43 @@ body {
 
 /* Text */
 .overlay h2 {
-    font-size: 26px;
+    font-size: clamp(20px, 1.2rem + 0.6vw, 28px);
     font-weight: 800;
     letter-spacing: 0.5px;
-    margin-bottom: 0px;
-    line-height: 20px;
+    margin-bottom: 4px;
+    line-height: 1.15;
+    word-break: break-word;
 }
 
 .overlay h4 {
-    font-size: 14px;
-    margin-bottom: 15px;
+    font-size: clamp(12px, 0.7rem + 0.2vw, 14px);
     opacity: 0.9;
     margin-bottom: 0px;
 }
 
 .overlay p {
-    font-size: 13px;
+    font-size: clamp(11px, 0.65rem + 0.2vw, 13px);
     line-height: 1.5;
-    margin-bottom: 25px;
+    margin: 0.5rem 0 clamp(14px, 1.5vw, 25px);
     font-weight: 300;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 .btn-dashboard {
   width: auto;
-  min-width: 160px;
-  height: 42px;
-  padding: 0 20px;
+  min-width: min(150px, 100%);
+  max-width: 100%;
+  min-height: clamp(36px, 2rem + 0.4vw, 42px);
+  line-height: 1.2;
+  padding: 0 clamp(12px, 1.2vw, 20px);
   border-radius: 10px;
   border: 1.5px solid rgba(255, 255, 255, 0.75);
   background: rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(6px);
   color: #fff;
-  font-size: 13px;
+  font-size: clamp(11px, 0.65rem + 0.2vw, 13px);
   font-weight: 600;
   letter-spacing: 0.3px;
   box-shadow: none;
@@ -361,13 +369,30 @@ body {
 } */
 
 
+/* ── Page shell (fluid on every screen) ── */
+.bw-page {
+    min-height: 100vh;
+    width: 100%;
+    padding: clamp(10px, 2.5vw, 40px);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    overflow-x: hidden;
+}
+
+.bw-container {
+    width: 100%;
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: clamp(4px, 1.5vw, 28px);
+}
+
 .bg-1 {
     border: 0px solid;
-    padding: 30px 30px;
+    padding: clamp(14px, 2vw, 30px);
     width: 100%;
-    border: 0px solid;
-    padding: 30px 30px;
-    width: 1588px;
+    max-width: 1588px;
+    margin: 0 auto;
     background-image: url('/assets/img/bg-login/bg-branch1.pn');
     background-size: cover;
     background-position: center;
@@ -377,9 +402,9 @@ body {
 
 .bg-2 {
     border: 0px solid;
-    padding: 30px 30px;
-    width: 1394px;
-    height: 650px;
+    padding: clamp(10px, 2vw, 30px);
+    width: 100%;
+    max-width: 1394px;
     background-image: url('/assets/img/bg-login/bg-branch1.pn');
     background-size: cover;
     background-position: center;
@@ -390,110 +415,124 @@ body {
 }
 
 .company-text {
-    font-size: 32px;
+    font-size: clamp(18px, 1rem + 1.4vw, 34px);
     color: #0b2b3a;
     font-weight: 700;
     letter-spacing: -0.02em;
+    line-height: 1.2;
+    word-break: break-word;
 }
 
-/* Media Queries */
+.company-address {
+    font-size: clamp(12px, 0.7rem + 0.3vw, 15px);
+    color: #4b5563;
+    margin-bottom: clamp(8px, 1.5vw, 20px);
+    padding: 0 8px;
+}
 
+/* Branch grid: 4 per row on desktop, 3 at ≤1024px, 2 at ≤767px, 1 at ≤575px */
+.bw-branch-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(12px, 2vw, 28px);
+    justify-items: center;
+    max-width: 1240px;
+    margin: 0 auto;
+}
+
+.bw-branch-grid .card-wrapper {
+    width: 100%;
+}
+
+/* Top action buttons — right padding keeps them clear of the fixed palette/shield FABs */
+.bw-top-actions {
+    padding-right: 4rem;
+    row-gap: 0.5rem;
+}
+
+.bw-top-actions .btn {
+    font-size: clamp(12px, 0.7rem + 0.2vw, 14px);
+    padding: clamp(0.35rem, 0.5vw, 0.5rem) clamp(0.7rem, 1vw, 1.1rem);
+    white-space: nowrap;
+}
+
+/* ── Media Queries ── */
+
+/* Large desktop / 2K / 4K */
+@media screen and (min-width: 1920px) {
+    .bg-1 { max-width: 1760px; }
+    .bg-2 { max-width: 1600px; }
+    .bw-container { max-width: 1500px; }
+    .bw-branch-grid { max-width: 1440px; }
+}
+
+/* Tablets / small laptops (≤1024px): 3 cards per row */
 @media screen and (max-width: 1024px) {
-    .bg-1 {
-        border: 0px solid;
-        padding: 30px 30px;
-        width: 100%;
-        background: linear-gradient(110.78deg, rgba(255, 255, 255, 0.41) 7.01%, rgba(255, 255, 255, 0.01) 106.22%), linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));
+    .bw-top-actions .btn {
+        font-size: 13px;
+        padding: 0.4rem 0.85rem;
     }
 
+    .bw-branch-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
-    .bg-2 {
-        border: 0px solid;
-        padding: 30px 30px;
-        width: 100%;
-        height: 650px;
-        background-image: url('/assets/img/bg-login/bg-branch1.pn');
-        background-size: cover;
-        background-position: center;
-        border-radius: 32px;
-        margin: auto;
-        background: linear-gradient(110.78deg, rgba(255, 255, 255, 0.41) 7.01%, rgba(255, 255, 255, 0.01) 106.22%),
-            linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1))
+    .city-card { max-width: 280px; }
+}
+
+/* Tablets */
+@media screen and (max-width: 991px) {
+    .bg-1,
+    .bg-2 { border-radius: 24px; }
+}
+
+/* Small tablets / large phones */
+@media screen and (max-width: 767px) {
+    .bg-1,
+    .bg-2 { border-radius: 18px; }
+
+    .bw-top-actions { justify-content: flex-start !important; }
+
+    .bw-branch-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    .city-card { max-width: 300px; }
+}
+
+/* Phones */
+@media screen and (max-width: 575px) {
+    .bw-top-actions { padding-right: 3.25rem; }
+
+    .bw-top-actions .btn {
+        flex: 1 1 100%;
+        white-space: normal;
     }
 
-    .card-wrapper {
-        width: 100%;
-    }
+    .bw-branch-grid { grid-template-columns: 1fr; }
 
     .city-card {
-        width: 100%;
-        height: 320px;
+        max-width: 340px;
+        min-height: 300px;
+        max-height: 440px;
     }
 
-    .city {
-        font-size: 14px !important;
-    }
-
-    .office {
-        font-size: 14px !important;
-    }
-
-    .sub-line {
-        font-size: 11px !important;
-    }
-
-    .btn-dashboard {
-        font-size: 11px;
-        width: 100px;
-    }
-
-    .buy-now .btn-buy-now {
-        position: fixed;
-        z-index: 1080;
-        box-shadow: 0 1px 20px 1px rgba(0, 180, 166, 0.55);
-        inset-block-end: 4rem;
-        inset-inline-end: 28.5rem;
-    }
+    .bg-1,
+    .bg-2 { border-radius: 14px; }
 }
 
-@media screen and (max-width: 1440px) {
-    .buy-now .btn-buy-now {
-        position: fixed;
-        z-index: 1080;
-        box-shadow: 0 1px 20px 1px rgba(0, 180, 166, 0.55);
-        inset-block-end: 2rem;
-        inset-inline-end: 42.5rem;
-    }
-
+/* Very small phones (≤360px) */
+@media screen and (max-width: 360px) {
+    .city-card { min-height: 260px; }
+    .overlay p { -webkit-line-clamp: 2; }
 }
 
+/* Phones in landscape / short screens: keep cards from getting too tall */
+@media screen and (max-height: 520px) and (orientation: landscape) {
+    .bw-page { min-height: auto; }
 
-@media screen and (max-width: 768px) {
-    .buy-now .btn-buy-now {
-        position: fixed;
-        z-index: 1080;
-        box-shadow: 0 1px 20px 1px rgba(0, 180, 166, 0.55);
-        inset-block-end: 2rem;
-        inset-inline-end: 20.5rem;
+    .city-card {
+        aspect-ratio: auto;
+        height: 260px;
+        min-height: 0;
     }
 
-    .company-text {
-        font-size: 18px;
-        color: #0b2b3a;
-        font-weight: 700;
-    }
-
-}
-
-
-@media screen and (max-width: 480px) {
-    .buy-now .btn-buy-now {
-        position: fixed;
-        z-index: 1080;
-        box-shadow: 0 1px 20px 1px rgba(0, 180, 166, 0.55);
-        inset-block-end: 2rem;
-        inset-inline-end: 9.5rem;
-    }
 }
 
 /* ── Branchwise Settings Drawer ─────────────────── */
@@ -1187,8 +1226,19 @@ body {
 }
 
 /* ── Responsive: stack panels vertically on mobile ── */
+@media (max-width:575px) {
+  .bw-settings-fab,
+  .bw-perm-fab {
+    width:2.4rem; height:2.4rem;
+    right:.6rem; font-size:1.05rem;
+  }
+  .bw-settings-fab { top:.6rem; }
+  .bw-perm-fab { top:3.4rem; }
+  .bw-perm-child-item--indented { margin-left:.75rem; }
+}
+
 @media (max-width:700px) {
-  .bw-perm-drawer { width:100vw; }
+  .bw-perm-drawer { width:100vw; max-width:100vw; }
   .bw-perm-body { flex-direction:column; }
   .bw-perm-users {
     width:100%; height:200px;
