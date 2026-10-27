@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { NgSelectModule } from '@ng-select/ng-select';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Notyf } from 'notyf';
 import { MasterService } from '../../services/master.service';
@@ -10,7 +11,7 @@ import { EmployeeService } from '../../services/employee.service';
 @Component({
   selector: 'app-generate-letter',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, NgSelectModule],
   templateUrl: './generate-letter.component.html',
   styleUrl: './generate-letter.component.css',
 })
@@ -19,7 +20,7 @@ export class GenerateLetterComponent implements OnInit {
   templates: any[] = [];
   employees: any[] = [];
   templateId = '';
-  employeeId = '';
+  employeeId: string | null = null;
   issueDate = new Date().toISOString().slice(0, 10);
   previewHtml = '';
   previewUrl: SafeResourceUrl | null = null;
@@ -52,7 +53,8 @@ export class GenerateLetterComponent implements OnInit {
     this.employeeService.getEmp().subscribe({
       next: (res: any) => {
         if (res?.status === true) {
-          this.employees = res.data?.formattedActiveEmps || res.data?.formattedEmps || [];
+          const list = res.data?.formattedActiveEmps || res.data?.formattedEmps || [];
+          this.employees = list.map((e: any) => ({ ...e, label: this.empLabel(e) }));
         }
       },
       error: () => this.notyf.error('Failed to load employees'),
@@ -64,6 +66,12 @@ export class GenerateLetterComponent implements OnInit {
     const code = e.empCode || '';
     return code ? `${name} (${code})` : name;
   }
+
+  // Match any word typed against name, employee code, email or phone
+  searchEmployee = (term: string, e: any): boolean => {
+    const hay = [e.label, e.empCode, e.email, e.mobile].filter(Boolean).join(' ').toLowerCase();
+    return term.toLowerCase().split(/s+/).filter(Boolean).every((w) => hay.includes(w));
+  };
 
   private setPreview(html: string): void {
     this.previewHtml = html;
