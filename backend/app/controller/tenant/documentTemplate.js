@@ -5,6 +5,13 @@ const Tenant = require('../../models/tenant');
 const Designation = require('../../models/designation');
 const Department = require('../../models/department');
 const Shift = require('../../models/shift');
+const EmploymentType = require('../../models/employmentType');
+const Branch = require('../../models/branch');
+const Country = require('../../models/country');
+const Basic = require('../../models/basic');
+const Allowance = require('../../models/allowance');
+const Deduction = require('../../models/deductions');
+const MasterComponents = require('../../models/master_components');
 const Helper = require('../../helper/helper');
 const { writeAudit, toPlain } = require('../../helper/auditLog');
 const { paginatorScriptTag } = require('../../helper/printPaginator');
@@ -113,27 +120,204 @@ const pickAmount = (items, keys) => {
   return found ? Number(found.amount) || 0 : 0;
 };
 
+/**
+ * Active salary setup of an employee, read like getActiveSalaryComponents (salary.js):
+ * earnings = basics + allowances, benefits = deductions except plain "deduction" rows.
+ * All amounts are annual.
+ *
+ * Rows follow the Salary Component master (in master order, 0 when the employee has no
+ * amount); components the employee has that are not in the master are added after them.
+ * earnings = payable; deductions = deductible / reimbursable ("Parts of Benefits").
+ * `reducesInHand` marks employee-side deductions (not employer shares or reimbursements).
+ */
+async function loadSalaryStructure(tenantId, employeeId, branchId) {
+  const empty = { earnings: [], deductions: [], ctc: 0 };
+  try {
+    const where = { tenantId, employeeId, status: 'active' };
+    const [basics, allowances, deductions, masters] = await Promise.all([
+      Basic.findAll({ where, raw: true }),
+      Allowance.findAll({ where, raw: true }),
+      Deduction.findAll({ where: { ...where, type: { [Op.ne]: 'deduction' } }, raw: true }),
+      MasterComponents.findAll({
+        where: {
+          tenantId,
+          status: 'active',
+          ...(branchId ? { [Op.or]: [{ branchId }, { branchId: null }] } : {}),
+        },
+        order: [['createdAt', 'ASC']],
+        raw: true,
+      }).catch(() => []),
+    ]);
+
+    const key = (name) => String(name || '').trim().toLowerCase();
+    const isEmployer = (name) => /employer/i.test(name);
+    const own = [
+      ...[...(basics || []), ...(allowances || [])].map((r) => ({ ...r, kind: 'payable' })),
+      ...(deductions || []).map((r) => ({ ...r, kind: 'deductible' })),
+    ];
+    const used = new Set();
+    const out = { earnings: [], deductions: [], ctc: Number((basics || [])[0]?.finalCTC) || 0 };
+    const push = (name, kind, annual) => {
+      const item = {
+        name,
+        annual,
+        reducesInHand: kind === 'deductible' && !isEmployer(name),
+      };
+      (kind === 'payable' ? out.earnings : out.deductions).push(item);
+    };
+
+    // Master components first (one row per name, branch copy preferred over a tenant-wide one)
+    const seen = new Set();
+    const masterRows = [...(masters || [])].sort((a, b) => (a.branchId ? 0 : 1) - (b.branchId ? 0 : 1));
+    const masterOrder = (masters || []).map((m) => key(m.component_name));
+    masterRows
+      .filter((m) => {
+        const k = key(m.component_name);
+        if (!k || seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      })
+      .sort((a, b) => masterOrder.indexOf(key(a.component_name)) - masterOrder.indexOf(key(b.component_name)))
+      .forEach((m) => {
+        const idx = own.findIndex(
+          (r, i) => !used.has(i) && (r.componentId === m.id || key(r.name) === key(m.component_name)),
+        );
+        if (idx !== -1) used.add(idx);
+        const annual = idx !== -1 ? Number(own[idx].finalAmount) || 0 : 0;
+        push(m.component_name, m.component_type, annual);
+      });
+
+    // Employee components not in the master (e.g. auto-added Misc / ESIC rows)
+    own.forEach((r, i) => {
+      const annual = Number(r.finalAmount) || 0;
+      if (!used.has(i) && annual > 0) push(r.name || '', r.kind, annual);
+    });
+    return out;
+  } catch (_) {
+    return empty;
+  }
+}
+
+/** 266000 -> "Two Lakh Sixty Six Thousand" (Indian numbering). */
+function amountInWords(amount) {
+  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+    'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const words = (n) => {
+    if (n < 20) return a[n];
+    if (n < 100) return b[Math.floor(n / 10)] + (n % 10 ? ' ' + a[n % 10] : '');
+    if (n < 1000) return a[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + words(n % 100) : '');
+    if (n < 100000) return words(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + words(n % 1000) : '');
+    if (n < 10000000) return words(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + words(n % 100000) : '');
+    return words(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + words(n % 10000000) : '');
+  };
+  const n = Math.floor(Number(amount) || 0);
+  return n > 0 ? words(n) : 'Zero';
+}
+
+/** Annexure "A" salary table, laid out like the Appointment Letter annexure. */
+function salaryAnnexureHtml(structure, letterDate) {
+  const esc = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const num = (n) => Math.round(Number(n) || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+  const td = 'border:1px solid #000;padding:2px 6px;';
+  const amt = (annual, bold) =>
+    `<td style="${td}text-align:right;${bold ? 'font-weight:bold;' : ''}">${num(annual)}</td>` +
+    `<td style="${td}text-align:right;${bold ? 'font-weight:bold;' : ''}">${num(annual / 12)}</td>`;
+  const line = (label, annual, bold) => `<tr><td style="${td}">${label}</td>${amt(annual, bold)}</tr>`;
+
+  const earnings = structure.earnings;
+  const benefits = structure.deductions;
+  const gross = earnings.reduce((s, r) => s + r.annual, 0);
+  const benefitTotal = benefits.filter((r) => r.reducesInHand).reduce((s, r) => s + r.annual, 0);
+  const ctc = structure.ctc || gross;
+
+  const head =
+    '<p style="text-align:center;"><b><u>Annexure “A”</u></b></p>' +
+    '<p style="text-align:center;"><u>Cost to Company Details</u></p>' +
+    `<p>In continuation to our appointment letter dated <b>${esc(letterDate)}</b>&nbsp;mentioned above, ` +
+    'please note that the breakup of your salary will be as follows:-</p>' +
+    '<p style="text-align:center;"><b><u>Salary Annexure</u></b></p>';
+  if (!earnings.some((r) => r.annual > 0)) {
+    return `<div class="hr-annexure">${head}<p>Salary breakup not available.</p></div>`;
+  }
+
+  // "PF Employee" -> "PF Employee Contribution"; other benefits keep their master name
+  const contribution = (name) =>
+    /\b(pf|esi|esic|provident)\b/i.test(name) && !/contribution/i.test(name)
+      ? `${esc(name)} Contribution`
+      : esc(name);
+  return (
+    `<div class="hr-annexure">${head}` +
+    '<table class="hr-doc-table hr-doc-table-bordered" border="1" cellpadding="0" cellspacing="0" ' +
+    'style="width:100%;border-collapse:collapse;">' +
+    `<tr><th style="${td}text-align:center;">Particulars</th>` +
+    `<th style="${td}text-align:center;width:18%;">Annual<br>Remuneration</th>` +
+    `<th style="${td}text-align:center;width:18%;">Monthly<br>Remuneration</th></tr>` +
+    line('<b>Gross Remuneration</b>', gross, true) +
+    earnings.map((r) => line(esc(r.name), r.annual)).join('') +
+    (benefits.length
+      ? `<tr><td style="${td}"><b>Parts of Benefits</b></td><td style="${td}"></td><td style="${td}"></td></tr>` +
+        benefits.map((r) => line(contribution(r.name), r.annual)).join('')
+      : '') +
+    line('<b>In Hand Remuneration</b>', gross - benefitTotal, true) +
+    line('<b>Total Cost to the Company (Annual)</b>', ctc, true) +
+    `<tr><td colspan="3" style="${td}"><b>Annual Cost to Company (In Words) – ${amountInWords(ctc)} Only.</b></td></tr>` +
+    '</table></div>'
+  );
+}
+
 exports.getVariableCatalog = async (_req, res) => {
   const catalog = {
     employee: [
-      { key: 'employee_name', label: 'Employee Name' },
+      { key: 'employee_name', label: 'Employee Name (first + last)' },
+      { key: 'first_name', label: 'First Name' },
+      { key: 'last_name', label: 'Last Name' },
       { key: 'employee_id', label: 'Employee ID / Code' },
       { key: 'designation', label: 'Designation' },
       { key: 'department', label: 'Department' },
       { key: 'joining_date', label: 'Joining Date' },
       { key: 'employment_type', label: 'Employment Type' },
+      { key: 'contractual', label: 'Contractual Employee (Yes / No)' },
+      { key: 'role', label: 'Role' },
+      { key: 'reporting_manager', label: 'Reporting Person' },
+      { key: 'branch', label: 'Branch' },
       { key: 'work_location', label: 'Work Location' },
-      { key: 'reporting_manager', label: 'Reporting Manager' },
-      { key: 'father_name', label: 'Father Name' },
-      { key: 'permanent_address', label: 'Permanent Address' },
-      { key: 'gender_title', label: 'Mr. / Ms.' },
-      { key: 'relation', label: 'S/O or D/O' },
-      { key: 'pan_no', label: 'PAN No' },
       { key: 'shift_name', label: 'Shift Name' },
       {
         key: 'shift_timing',
         label: 'Shift Timing (e.g. 9:00 AM to 6:30 PM, Monday to Saturday)',
       },
+    ],
+    personal: [
+      { key: 'gender', label: 'Gender' },
+      { key: 'gender_title', label: 'Mr. / Ms.' },
+      { key: 'relation', label: 'S/O or D/O' },
+      { key: 'father_name', label: 'Father Name' },
+      { key: 'mother_name', label: 'Mother Name' },
+      { key: 'date_of_birth', label: 'Date of Birth' },
+      { key: 'age', label: 'Age' },
+      { key: 'blood_group', label: 'Blood Group' },
+      { key: 'marital_status', label: 'Marital Status' },
+      { key: 'nationality', label: 'Nationality' },
+      { key: 'pan_no', label: 'PAN No' },
+      { key: 'aadhaar_no', label: 'Aadhaar Number' },
+    ],
+    contact: [
+      { key: 'email', label: 'Email' },
+      { key: 'phone', label: 'Phone Number' },
+      { key: 'alternate_phone', label: 'Alternate Phone Number' },
+      { key: 'permanent_address', label: 'Permanent Address' },
+      { key: 'current_address', label: 'Current Address' },
+      { key: 'city', label: 'City' },
+      { key: 'state', label: 'State' },
+      { key: 'pin_code', label: 'PIN Code' },
+      { key: 'country', label: 'Country' },
+    ],
+    guarantor: [
+      { key: 'guarantor_name', label: 'Guarantor Name' },
+      { key: 'guarantor_age', label: 'Guarantor Age' },
+      { key: 'guarantor_relation', label: 'Guarantor Relation' },
+      { key: 'guarantor_address', label: 'Guarantor Address' },
     ],
     salary: [
       { key: 'basic_salary', label: 'Basic Salary (monthly)' },
@@ -145,6 +329,8 @@ exports.getVariableCatalog = async (_req, res) => {
       { key: 'employee_pf', label: 'Employee PF' },
       { key: 'employer_pf', label: 'Employer PF' },
       { key: 'salary_table', label: 'Salary Table (HTML)' },
+      { key: 'ctc_in_words', label: 'Annual CTC in Words' },
+      { key: 'salary_annexure', label: 'Salary Annexure (place it where it should print)' },
     ],
     company: [
       { key: 'company_name', label: 'Company Name' },
@@ -435,6 +621,46 @@ async function buildVariableMap(tenantId, employeeId, hrName, issueDate) {
     }
   } catch (_) {}
 
+  // Names for fields stored as IDs / codes on the joining form
+  const ROLE_LABELS = { manager: 'Manager', teamLeader: 'Team Leader', employee: 'Employee' };
+  let employmentTypeName = BLANK;
+  let reportingManagerName = BLANK;
+  let branchName = BLANK;
+  let countryName = BLANK;
+  try {
+    const [empType, manager, branch, country] = await Promise.all([
+      emp.empType
+        ? EmploymentType.findOne({ where: { id: emp.empType, tenantId }, attributes: ['name'], raw: true })
+        : null,
+      emp.reportingPersonId
+        ? empPersonal.findOne({
+            where: { id: emp.reportingPersonId, tenantId },
+            attributes: ['firstName', 'lastName'],
+            raw: true,
+          })
+        : null,
+      emp.branchId
+        ? Branch.findOne({ where: { id: emp.branchId, tenantId }, attributes: ['name'], raw: true })
+        : null,
+      // Country is stored as the country master id (older rows may hold the name)
+      emp.country && /^\d+$/.test(String(emp.country))
+        ? Country.findByPk(emp.country, { attributes: ['name'], raw: true })
+        : null,
+    ]);
+    if (empType?.name) employmentTypeName = empType.name;
+    if (manager) reportingManagerName = `${manager.firstName || ''} ${manager.lastName || ''}`.trim() || BLANK;
+    if (branch?.name) branchName = branch.name;
+    countryName = country?.name || (emp.country && !/^\d+$/.test(String(emp.country)) ? emp.country : BLANK);
+  } catch (_) {}
+
+  // Age from the form, else from date of birth
+  let age = emp.age;
+  if ((age == null || age === '') && emp.dateOfBirth) {
+    const years = moment().diff(moment(emp.dateOfBirth), 'years');
+    if (years > 0 && years < 120) age = years;
+  }
+  const val = (v) => (v == null || String(v).trim() === '' ? BLANK : String(v).trim());
+
   // Shift name + timing e.g. "9:00 AM to 6:30 PM, Monday to Saturday."
   let shiftName = emp.shift_id || BLANK;
   let shiftTiming = BLANK;
@@ -456,39 +682,18 @@ async function buildVariableMap(tenantId, employeeId, hrName, issueDate) {
   } catch (_) {}
 
   // Soft salary lookup — ignore failures
-  let salaryItems = [];
-  let annualCtc = 0;
-  try {
-    const sequelize = require('../../connection/connection');
-    // Prefer active basic/allowance rows if tables exist; otherwise leave blank
-    const [basics] = await sequelize.query(
-      `SELECT "component_name" as name, "finalAmount" as amount, "finalCTC" as ctc
-       FROM "basics" WHERE "employeeId" = :employeeId AND "tenantId" = :tenantId AND status = 'active'
-       LIMIT 50`,
-      { replacements: { employeeId, tenantId } }
-    ).catch(() => [[]]);
-    const [allowances] = await sequelize.query(
-      `SELECT "component_name" as name, "finalAmount" as amount
-       FROM "allowances" WHERE "employeeId" = :employeeId AND "tenantId" = :tenantId AND status = 'active'
-       LIMIT 50`,
-      { replacements: { employeeId, tenantId } }
-    ).catch(() => [[]]);
-
-    const toMonthly = (row) => Math.round(Number(row.amount || 0) / 12);
-    salaryItems = [
-      ...(basics || []).map((r) => ({ name: r.name, amount: toMonthly(r) })),
-      ...(allowances || []).map((r) => ({ name: r.name, amount: toMonthly(r) })),
-    ];
-    annualCtc = Number((basics || [])[0]?.ctc || 0);
-  } catch (_) {
-    salaryItems = [];
-  }
+  // Active salary setup (same rows the Salary Setup / Appointment Letter pages use; amounts are annual)
+  const structure = await loadSalaryStructure(tenantId, employeeId, emp.branchId);
+  const toMonthly = (annual) => Math.round(Number(annual || 0) / 12);
+  const salaryItems = structure.earnings.map((r) => ({ name: r.name, amount: toMonthly(r.annual) }));
+  const deductionItems = structure.deductions.map((r) => ({ name: r.name, amount: toMonthly(r.annual) }));
+  const annualCtc = structure.ctc;
 
   const basic = pickAmount(salaryItems, ['basic']);
   const hra = pickAmount(salaryItems, ['hra', 'house rent']);
   const special = pickAmount(salaryItems, ['special', 'misc']);
-  const empPf = pickAmount(salaryItems, ['employee pf', 'pf employee', 'epf']);
-  const erPf = pickAmount(salaryItems, ['employer pf', 'pf employer']);
+  const empPf = pickAmount([...salaryItems, ...deductionItems], ['employee pf', 'pf employee', 'epf']);
+  const erPf = pickAmount([...salaryItems, ...deductionItems], ['employer pf', 'pf employer']);
   const monthlyCtc = annualCtc ? Math.round(annualCtc / 12) : salaryItems.reduce((s, i) => s + (i.amount || 0), 0);
   const gross = basic + hra + special;
 
@@ -508,20 +713,45 @@ async function buildVariableMap(tenantId, employeeId, hrName, issueDate) {
 
   return {
     employee_name: `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || BLANK,
+    first_name: val(emp.firstName),
+    last_name: val(emp.lastName),
     employee_id: emp.empCode || BLANK,
     designation: designationName,
     department: departmentName,
     joining_date: fmtDate(emp.joiningDate),
-    employment_type: emp.empType || BLANK,
+    employment_type: employmentTypeName,
+    contractual: emp.isContractual ? 'Yes' : 'No',
+    role: emp.role ? ROLE_LABELS[emp.role] || emp.role : BLANK,
+    reporting_manager: reportingManagerName,
+    branch: branchName,
     work_location: emp.city || emp.state || tenant?.companyAddress || BLANK,
-    reporting_manager: BLANK,
-    father_name: emp.fatherName || BLANK,
-    permanent_address: emp.permanentAddress || emp.address || BLANK,
-    gender_title: isMale ? 'Mr.' : 'Ms.',
-    relation: isMale ? 'S/O' : 'D/O',
-    pan_no: emp.panNo || BLANK,
     shift_name: shiftName,
     shift_timing: shiftTiming,
+    gender: val(emp.gender),
+    gender_title: isMale ? 'Mr.' : 'Ms.',
+    relation: isMale ? 'S/O' : 'D/O',
+    father_name: emp.fatherName || BLANK,
+    mother_name: val(emp.motherName),
+    date_of_birth: fmtDate(emp.dateOfBirth),
+    age: val(age),
+    blood_group: val(emp.bloodGroup),
+    marital_status: val(emp.martialStatus),
+    nationality: val(emp.nationality),
+    pan_no: emp.panNo || BLANK,
+    aadhaar_no: val(emp.adhaarNo),
+    email: val(emp.email),
+    phone: val(emp.mobile),
+    alternate_phone: val(emp.alternateMobile),
+    permanent_address: emp.permanentAddress || emp.address || BLANK,
+    current_address: val(emp.currentAddress),
+    city: val(emp.city),
+    state: val(emp.state),
+    pin_code: val(emp.pinCode),
+    country: countryName,
+    guarantor_name: val(emp.guarantorName),
+    guarantor_age: val(emp.guarantorAge),
+    guarantor_relation: val(emp.guarantorRelation),
+    guarantor_address: val(emp.guarantorAddress),
     basic_salary: basic ? fmtMoney(basic) : BLANK,
     hra: hra ? fmtMoney(hra) : BLANK,
     special_allowance: special ? fmtMoney(special) : BLANK,
@@ -531,6 +761,8 @@ async function buildVariableMap(tenantId, employeeId, hrName, issueDate) {
     employee_pf: empPf ? fmtMoney(empPf) : BLANK,
     employer_pf: erPf ? fmtMoney(erPf) : BLANK,
     salary_table: salaryTable,
+    ctc_in_words: annualCtc ? `${amountInWords(annualCtc)} Only` : BLANK,
+    salary_annexure: salaryAnnexureHtml(structure, fmtDate(emp.joiningDate)),
     company_name: tenant?.companyName || BLANK,
     company_address: tenant?.companyAddress || BLANK,
     hr_name: hrName || BLANK,
@@ -1058,7 +1290,10 @@ function wrapPreviewHtml({
 }) {
   const useImage = !letterheadBlank && letterheadDataUrl;
   const hf = normalizeHeaderFooter(headerFooter);
-  const body = wrapTrailingFooter(normalizeQuillHtmlForPrint(String(filled || '')));
+  // Text boxes are editable only in the template editor
+  const body = wrapTrailingFooter(
+    normalizeQuillHtmlForPrint(String(filled || '')).replace(/\scontenteditable="(?:true|false)"/gi, '')
+  );
   const hasImportedLayout =
     /hr-imported-doc|data-preserve-layout|hr-doc-table|hr-numbered/i.test(body);
   const padTopMm = resolveBodyPadTopMm({
@@ -1280,16 +1515,45 @@ function wrapPreviewHtml({
     </style></head><body><div class="sheet-wrap" data-hr-root>${pagesHtml}</div>${paginatorScriptTag(paginateCfg)}</body></html>`;
 }
 
+/** Annexure "A" for the {{salary_annexure}} slot (no forced page break; the template decides). */
+function annexureBlock(vars) {
+  return vars.salary_annexure || '<div class="hr-annexure"><p>Salary breakup not available.</p></div>';
+}
+
+const ANNEXURE_SLOT = /\{\{\s*salary_annexure\s*\}\}/;
+// Inline wrappers Quill/Word put around a slot that sits alone in its paragraph
+const SLOT_INLINE = '(?:\\s|&nbsp;|<br\\s*/?>|</?(?:span|strong|em|b|i|u|s|font)\\b[^>]*>)*';
+const ANNEXURE_SLOT_PARAGRAPH = new RegExp(
+  '<p\\b[^>]*>' + SLOT_INLINE + ANNEXURE_SLOT.source + SLOT_INLINE + '</p>',
+  'gi',
+);
+// Placeholder block the template editor inserts: <div class="hr-annexure-slot">{{salary_annexure}}</div>
+const ANNEXURE_SLOT_BLOCK = /<div\b[^>]*\bhr-annexure-slot\b[^>]*>[\s\S]*?<\/div>/gi;
+
+/**
+ * Fill the template body. A {{salary_annexure}} placed in the body prints the annexure
+ * right there (put a page break before it to start it on its own page). Templates
+ * without that slot keep the old behaviour: "Append salary annexure" adds it at the end.
+ */
+function fillDocumentBody(template, vars) {
+  let body = String(template.bodyHtml || '');
+  const hasSlot = ANNEXURE_SLOT.test(body) || /\bhr-annexure-slot\b/.test(body);
+  if (hasSlot) {
+    const block = annexureBlock(vars);
+    // A slot alone in its paragraph replaces the whole paragraph, so no <p> wraps the table
+    body = body
+      .replace(ANNEXURE_SLOT_BLOCK, () => block)
+      .replace(ANNEXURE_SLOT_PARAGRAPH, () => block)
+      .replace(new RegExp(ANNEXURE_SLOT.source, 'g'), () => block);
+  }
+  let filled = fillTemplate(body, vars);
+  if (template.includeSalaryAnnexure && !hasSlot) filled += buildAnnexure(vars);
+  return filled;
+}
+
+/** "Append salary annexure": the Annexure "A" salary table on a new page at the end. */
 function buildAnnexure(vars) {
-  return `
-    <div style="page-break-before:always"></div>
-    <h3 style="text-align:center;text-decoration:underline">Annexure A – Compensation Structure</h3>
-    <p>Employee: <b>${vars.employee_name}</b> (${vars.employee_id})</p>
-    <p>Designation: ${vars.designation}</p>
-    <p>Annual CTC: ${vars.annual_ctc}</p>
-    <p>Monthly CTC: ${vars.monthly_ctc}</p>
-    ${vars.salary_table !== BLANK ? vars.salary_table : '<p>Salary breakup not available.</p>'}
-  `;
+  return '<div class="page-break" data-page-break="1"></div>' + annexureBlock(vars);
 }
 
 exports.previewDocument = async (req, res) => {
@@ -1306,10 +1570,7 @@ exports.previewDocument = async (req, res) => {
     const vars = await buildVariableMap(tenantId, employeeId, hrName, issueDate);
     if (!vars) return Helper.response(false, 'Employee not found', {}, res, 404);
 
-    let filled = fillTemplate(template.bodyHtml, vars);
-    if (template.includeSalaryAnnexure) {
-      filled += buildAnnexure(vars);
-    }
+    const filled = fillDocumentBody(template, vars);
 
     const letterheadDataUrl = template.letterheadBlank
       ? null
@@ -1381,8 +1642,7 @@ exports.saveGeneratedDocument = async (req, res) => {
       const vars = await buildVariableMap(tenantId, employeeId, hrName);
       if (!vars) return Helper.response(false, 'Employee not found', {}, res, 404);
       snapshot = vars;
-      let filled = fillTemplate(template.bodyHtml, vars);
-      if (template.includeSalaryAnnexure) filled += buildAnnexure(vars);
+      const filled = fillDocumentBody(template, vars);
       const letterheadDataUrl = template.letterheadBlank
         ? null
         : await getLetterheadBase64(tenantId);

@@ -15,8 +15,37 @@ const Prefix = require("../../models/prefix");
 const RoundType = require("../../models/round_type");
 const InterviewRound = require("../../models/interview_round");
 
+// Latitude/longitude are optional, but when entered they must be plain decimal
+// degrees within range (e.g. 19.1550, 72.8500). Returns { value } or { error }.
+const parseCoordinate = (raw, label, min, max) => {
+  if (raw === undefined || raw === null || String(raw).trim() === "") {
+    return { value: null };
+  }
+  const str = String(raw).trim();
+  if (!/^-?\d+(\.\d+)?$/.test(str)) {
+    return { error: `${label} must be a decimal number (e.g. ${label === "Latitude" ? "19.1550" : "72.8500"})` };
+  }
+  const num = Number(str);
+  if (num < min || num > max) {
+    return { error: `${label} must be between ${min} and ${max}` };
+  }
+  return { value: num };
+};
+
+const validateCoordinates = (latitude, longitude) => {
+  const lat = parseCoordinate(latitude, "Latitude", -90, 90);
+  if (lat.error) return { error: lat.error };
+  const lng = parseCoordinate(longitude, "Longitude", -180, 180);
+  if (lng.error) return { error: lng.error };
+  if ((lat.value === null) !== (lng.value === null)) {
+    return { error: "Please enter both latitude and longitude, or leave both blank" };
+  }
+  return { latitude: lat.value, longitude: lng.value };
+};
+
 exports.createBranch = async (req, res) => {
-  const { name, status, longitude, latitude,description } = req.body;
+  const { status, description } = req.body;
+  const name = req.body.name ? String(req.body.name).trim() : "";
   const tenantId = req.users && req.users.tenantId;
   try {
     if (!tenantId || !name) {
@@ -28,15 +57,11 @@ exports.createBranch = async (req, res) => {
         400,
       );
     }
-    if (!longitude || !latitude) {
-      return Helper.response(
-        false,
-        "longitude and latitude are required",
-        [],
-        res,
-        400,
-      );
+    const coords = validateCoordinates(req.body.latitude, req.body.longitude);
+    if (coords.error) {
+      return Helper.response(false, coords.error, [], res, 400);
     }
+    const { latitude, longitude } = coords;
     const existing = await branch.findOne({ where: { name, tenantId } });
     if (existing) {
       return Helper.response(false, "Branch with this name already exists", [], res, 409);
@@ -72,6 +97,9 @@ exports.createBranch = async (req, res) => {
     );
   } catch (error) {
     console.error("Error creating branch:", error);
+    if (error?.name === "SequelizeDatabaseError" || error?.name === "SequelizeValidationError") {
+      return Helper.response(false, "Invalid branch details. Please check the entered values.", [], res, 400);
+    }
     return Helper.response(false, "Internal server error", [], res, 500);
   }
 };
@@ -152,11 +180,16 @@ exports.updateBranch = async (req, res) => {
       return Helper.response(false, "Branch with this name already exists", [], res, 409);
     }
 
+    const lat = parseCoordinate(latitude, "Latitude", -90, 90);
+    if (lat.error) return Helper.response(false, lat.error, [], res, 400);
+    const lng = parseCoordinate(longitude, "Longitude", -180, 180);
+    if (lng.error) return Helper.response(false, lng.error, [], res, 400);
+
     const imageFile = req.files && req.files.find((f) => f.fieldname == "image");
     const oldBranch = toPlain(branchs);
     branchs.name = name || branchs.name;
-    branchs.latitude = latitude || branchs.latitude;
-    branchs.longitude = longitude || branchs.longitude;
+    branchs.latitude = lat.value ?? branchs.latitude;
+    branchs.longitude = lng.value ?? branchs.longitude;
     branchs.status = status || branchs.status;
     branchs.description = description || branchs.description;
     branchs.image = imageFile ? imageFile.filename  : branchs.image;
@@ -180,6 +213,9 @@ exports.updateBranch = async (req, res) => {
     );
   } catch (error) {
     console.error("Error updating branch:", error);
+    if (error?.name === "SequelizeDatabaseError" || error?.name === "SequelizeValidationError") {
+      return Helper.response(false, "Invalid branch details. Please check the entered values.", [], res, 400);
+    }
     return Helper.response(false, "Internal server error", [], res, 500);
   }
 };
@@ -218,19 +254,28 @@ exports.deleteBranch = async (req, res) => {
   }
 };
 
+// Target branches with a copy currently running; blocks concurrent/double-click
+// copies that would race past the per-record "already exists" checks below.
+const copyInProgress = new Set();
+
 exports.copyBranchMasterData = async (req, res) => {
   const { sourceBranchId, targetBranchId } = req.body;
   const tenantId = req.users && req.users.tenantId;
   const userId = req.users && req.users.id;
 
-  try {
-    if (!sourceBranchId || !targetBranchId) {
-      return Helper.response(false, "sourceBranchId and targetBranchId are required", [], res, 400);
-    }
-    if (sourceBranchId === targetBranchId) {
-      return Helper.response(false, "Source and target branches must be different", [], res, 400);
-    }
+  if (!sourceBranchId || !targetBranchId) {
+    return Helper.response(false, "sourceBranchId and targetBranchId are required", [], res, 400);
+  }
+  if (sourceBranchId === targetBranchId) {
+    return Helper.response(false, "Source and target branches must be different", [], res, 400);
+  }
+  const lockKey = `${tenantId}:${targetBranchId}`;
+  if (copyInProgress.has(lockKey)) {
+    return Helper.response(false, "A master data copy to this branch is already in progress. Please wait.", [], res, 409);
+  }
+  copyInProgress.add(lockKey);
 
+  try {
     const sourceBranch = await branch.findOne({ where: { id: sourceBranchId, tenantId } });
     const targetBranch = await branch.findOne({ where: { id: targetBranchId, tenantId } });
     if (!sourceBranch) return Helper.response(false, "Source branch not found", [], res, 404);
@@ -453,10 +498,28 @@ exports.copyBranchMasterData = async (req, res) => {
     }
     summary.interviewRounds = irCopied;
 
+    const totalCopied = Object.values(summary).reduce((sum, n) => sum + (Number(n) || 0), 0);
+    if (totalCopied === 0) {
+      const sourceTotal = sourceDepts.length + sourceDesigs.length + sourceEmpTypes.length +
+        sourceDocTypes.length + sourceHolidayTypes.length + sourceMC.length + sourceShifts.length +
+        sourceLM.length + sourceCurrencies.length + sourcePrefixes.length + sourceRTs.length + sourceIRs.length;
+      return Helper.response(
+        false,
+        sourceTotal === 0
+          ? `${sourceBranch.name} has no master data to copy.`
+          : `Master data from ${sourceBranch.name} has already been copied to ${targetBranch.name}. No new records to copy.`,
+        { summary, source: sourceBranch.name, target: targetBranch.name },
+        res,
+        409,
+      );
+    }
+
     return Helper.response(true, "Master data copied successfully", { summary, source: sourceBranch.name, target: targetBranch.name }, res, 200);
   } catch (error) {
     console.error("Error copying branch master data:", error);
     return Helper.response(false, "Internal server error", [], res, 500);
+  } finally {
+    copyInProgress.delete(lockKey);
   }
 };
 
@@ -507,7 +570,8 @@ exports.branchDD = async (req, res) => {
           latitude: branch.latitude??null,
           description: branch.description ?? "Central administration and monitoring access.",
         }))
-        .sort((a, b) => (a.name === "Lucknow" ? -1 : 1));
+        // Keep Lucknow pinned first; others stay in the alphabetical DB order
+        .sort((a, b) => (b.name === "Lucknow") - (a.name === "Lucknow"));
 
       return Helper.response(
         true,

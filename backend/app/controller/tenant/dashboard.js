@@ -59,9 +59,32 @@ const parseCheckInMoment = (value, todayDate) => {
   return fallbackMoment.isValid() ? fallbackMoment : null;
 };
 
-const getRangeBounds = (range) => {
+// Rejected self-registration requests are not employees (emp_status may be NULL on legacy rows).
+const NOT_REJECTED = {
+  [Op.or]: [{ emp_status: { [Op.is]: null } }, { emp_status: { [Op.ne]: "rejected" } }],
+};
+
+// An employee counts as present for a day when marked present or checked in
+// (same rule as team-wise attendance).
+const PRESENT_ROW = {
+  [Op.or]: [{ is_present: true }, { check_in_time: { [Op.ne]: null } }],
+};
+
+/**
+ * Dashboard date filter: optional YYYY-MM-DD, defaults to today.
+ * Returns { day } or { error }.
+ */
+const parseDashboardDate = (value) => {
+  if (value == null || value === "") return { day: moment() };
+  const day = moment(String(value), "YYYY-MM-DD", true);
+  if (!day.isValid()) return { error: "Invalid date. Expected format YYYY-MM-DD" };
+  if (day.isAfter(moment(), "day")) return { error: "Date cannot be in the future" };
+  return { day };
+};
+
+const getRangeBounds = (range, referenceDay) => {
   const normalizedRange = String(range || "This Week").toLowerCase();
-  const now = moment();
+  const now = referenceDay ? referenceDay.clone() : moment();
 
   if (normalizedRange == "this month") {
     return {
@@ -78,14 +101,26 @@ const getRangeBounds = (range) => {
   };
 };
 
-const getDashboardBaseData = async (tenantId, branchId, range = "This Week", section = "employee") => {
+const getDashboardBaseData = async (
+  tenantId,
+  branchId,
+  range = "This Week",
+  section = "employee",
+  selectedDay = null,
+  chartRange = "This Week",
+) => {
+  // `today` stays the real date (celebrations, live tracking); attendance
+  // figures use the date chosen in the dashboard date filter.
   const today = moment();
-  const todayMonth = today.month() + 1;
-  const todayYear = today.year();
-  const todayDate = today.format("YYYY-MM-DD");
-  const weekStart = today.clone().startOf("isoWeek").format("YYYY-MM-DD");
-  const weekEnd = today.clone().endOf("isoWeek").format("YYYY-MM-DD");
-  const currentDayName = today.format("dddd");
+  const attendanceDay = selectedDay ? selectedDay.clone() : today.clone();
+  const todayMonth = attendanceDay.month() + 1;
+  const todayYear = attendanceDay.year();
+  const todayDate = attendanceDay.format("YYYY-MM-DD");
+  // Attendance chart period (This Week / This Month) up to the selected date
+  const chartBounds = getRangeBounds(chartRange, attendanceDay);
+  const chartStart = chartBounds.start.format("YYYY-MM-DD");
+  const chartEnd = moment.min(chartBounds.end, attendanceDay).format("YYYY-MM-DD");
+  const currentDayName = attendanceDay.format("dddd");
   const shouldApplyRangeFilter = String(section || "employee").toLowerCase() === "leave" && String(range || "").toLowerCase() !== "all";
   const rangeBounds = getRangeBounds(range);
   const rangeStartDate = rangeBounds.start.format("YYYY-MM-DD");
@@ -95,6 +130,7 @@ const getDashboardBaseData = async (tenantId, branchId, range = "This Week", sec
         tenantId,
         branchId,
         status: "active",
+        ...NOT_REJECTED,
         joiningDate: {
           [Op.between]: [rangeStartDate, rangeEndDate],
         },
@@ -103,6 +139,7 @@ const getDashboardBaseData = async (tenantId, branchId, range = "This Week", sec
         tenantId,
         branchId,
         status: "active",
+        ...NOT_REJECTED,
       };
   const leaveWhere = shouldApplyRangeFilter
     ? {
@@ -137,7 +174,7 @@ const getDashboardBaseData = async (tenantId, branchId, range = "This Week", sec
     birthdayEmployees,
     joiningEmployees,
     leaveMasterList,
-    weekAttendance,
+    rangeAttendance,
     todayLeaves,
     locationEmployees,
     todayLocations,
@@ -145,9 +182,12 @@ const getDashboardBaseData = async (tenantId, branchId, range = "This Week", sec
     todayAttendanceRows,
     shiftRows,
     attendanceSetting,
+    rangeLeaves,
+    branchShifts,
+    rangeHolidays,
   ] = await Promise.all([
-    empPersonal.count({ where: { tenantId, branchId } }),
-    empPersonal.count({ where: { tenantId, branchId, status: "active" } }),
+    empPersonal.count({ where: { tenantId, branchId, ...NOT_REJECTED } }),
+    empPersonal.count({ where: { tenantId, branchId, status: "active", ...NOT_REJECTED } }),
     attendance.count({
       where: {
         tenantId,
@@ -170,7 +210,7 @@ const getDashboardBaseData = async (tenantId, branchId, range = "This Week", sec
       raw: true,
     }),
     empPersonal.findAll({
-      where: { tenantId, branchId, status: "active" },
+      where: { tenantId, branchId, status: "active", ...NOT_REJECTED },
       attributes: [
         "departmentId",
         [Sequelize.fn("COUNT", Sequelize.col("id")), "count"],
@@ -179,7 +219,7 @@ const getDashboardBaseData = async (tenantId, branchId, range = "This Week", sec
       raw: true,
     }),
     empPersonal.findAll({
-      where: { tenantId, branchId, status: "active" },
+      where: { tenantId, branchId, status: "active", ...NOT_REJECTED },
       attributes: ["id", "departmentId", "shift_id", "firstName", "lastName", "empCode"],
       raw: true,
     }),
@@ -212,12 +252,12 @@ const getDashboardBaseData = async (tenantId, branchId, range = "This Week", sec
       raw: true,
     }),
     empPersonal.findAll({
-      where: { tenantId, branchId, status: "active", dateOfBirth: { [Op.ne]: null } },
+      where: { tenantId, branchId, status: "active", dateOfBirth: { [Op.ne]: null }, ...NOT_REJECTED },
       attributes: ["id", "firstName", "lastName", "designationId", "dateOfBirth", "gender", "profileImage"],
       raw: true,
     }),
     empPersonal.findAll({
-      where: { tenantId, branchId, status: "active", joiningDate: { [Op.ne]: null } },
+      where: { tenantId, branchId, status: "active", joiningDate: { [Op.ne]: null }, ...NOT_REJECTED },
       attributes: ["id", "firstName", "lastName", "gender", "designationId", "joiningDate", "profileImage"],
       raw: true,
     }),
@@ -232,10 +272,11 @@ const getDashboardBaseData = async (tenantId, branchId, range = "This Week", sec
         tenantId,
         branchId,
         date: {
-          [Op.between]: [weekStart, weekEnd],
+          [Op.between]: [chartStart, chartEnd],
         },
+        ...PRESENT_ROW,
       },
-      attributes: ["employeeId", "date", "is_present"],
+      attributes: ["employeeId", "date"],
       raw: true,
     }),
     leaveApplication.findAll({
@@ -249,7 +290,7 @@ const getDashboardBaseData = async (tenantId, branchId, range = "This Week", sec
       raw: true,
     }),
     empPersonal.findAll({
-      where: { tenantId, branchId, isLocation: true },
+      where: { tenantId, branchId, isLocation: true, ...NOT_REJECTED },
       attributes: ["id", "firstName", "lastName", "empCode"],
       raw: true,
     }),
@@ -276,7 +317,7 @@ const getDashboardBaseData = async (tenantId, branchId, range = "This Week", sec
         tenantId,
         branchId,
         date: todayDate,
-        check_in_time: { [Op.ne]: null },
+        ...PRESENT_ROW,
       },
       attributes: ["employeeId", "check_in_time", "is_present"],
       raw: true,
@@ -296,10 +337,38 @@ const getDashboardBaseData = async (tenantId, branchId, range = "This Week", sec
       order: [["createdAt", "DESC"]],
       raw: true,
     }),
+    leaveApplication.findAll({
+      where: {
+        tenantId,
+        branchId,
+        fromDate: { [Op.lte]: chartEnd },
+        toDate: { [Op.gte]: chartStart },
+        status: { [Op.in]: ["pending", "approved"] },
+      },
+      attributes: ["employeeId", "fromDate", "toDate", "reason"],
+      raw: true,
+    }),
+    Shift.findAll({
+      where: { tenantId, branchId, status: "active" },
+      attributes: ["day_of_week", "is_week_off"],
+      raw: true,
+    }),
+    holiday.findAll({
+      where: { tenantId, branchId, status: "active", date: { [Op.between]: [chartStart, chartEnd] } },
+      attributes: ["date"],
+      raw: true,
+    }),
   ]);
 
   return {
     today,
+    attendanceDay,
+    chartStart,
+    chartEnd,
+    chartRange: chartBounds.normalizedRange,
+    rangeLeaves,
+    branchShifts,
+    rangeHolidays,
     todayDate,
     totalEmployees,
     activeEmployees,
@@ -314,7 +383,7 @@ const getDashboardBaseData = async (tenantId, branchId, range = "This Week", sec
     birthdayEmployees,
     joiningEmployees,
     leaveMasterList,
-    weekAttendance,
+    rangeAttendance,
     todayLeaves,
     locationEmployees,
     todayLocations,
@@ -328,10 +397,8 @@ const getDashboardBaseData = async (tenantId, branchId, range = "This Week", sec
 
 const getAttendanceMetrics = (baseData) => {
   const {
-    today,
     todayDate,
     activeEmployees,
-    weekAttendance,
     todayLeaves,
     activeEmployeeRecords,
     todayAttendanceRows,
@@ -339,32 +406,32 @@ const getAttendanceMetrics = (baseData) => {
     attendanceSetting,
   } = baseData;
 
-  const weekDaysElapsed = Math.max(today.isoWeekday(), 1);
-  const expectedWeekAttendance = activeEmployees * weekDaysElapsed;
-  const presentEntries = weekAttendance.filter((item) => item.is_present).length;
-  const onLeaveCount = todayLeaves.length;
-  const emergencyCount = todayLeaves.filter((item) =>
-    String(item.reason || "").toLowerCase().match(/urgent|emergency|serious|medical|health/),
-  ).length;
-
-  const presentPercent = expectedWeekAttendance
-    ? Number(((presentEntries / expectedWeekAttendance) * 100).toFixed(0))
-    : 0;
-  const onLeavePercent = activeEmployees
-    ? Number(((onLeaveCount / activeEmployees) * 100).toFixed(0))
-    : 0;
-  const emergencyPercent = activeEmployees
-    ? Number(((emergencyCount / activeEmployees) * 100).toFixed(0))
-    : 0;
-
-  const presentTodayIds = new Set(todayAttendanceRows.map((e) => e.employeeId));
-  const onLeaveIds = new Set(todayLeaves.map((e) => e.employeeId));
+  // All figures for the selected day, over active employees only. Buckets do
+  // not overlap: leave wins over attendance, everyone else is absent.
+  const activeIds = new Set(activeEmployeeRecords.map((e) => e.id));
+  const onLeaveIds = new Set(todayLeaves.map((e) => e.employeeId).filter((id) => activeIds.has(id)));
+  const emergencyIds = new Set(
+    todayLeaves
+      .filter((item) => isEmergencyLeave(item) && activeIds.has(item.employeeId))
+      .map((item) => item.employeeId),
+  );
+  const presentTodayIds = new Set(
+    todayAttendanceRows
+      .map((e) => e.employeeId)
+      .filter((id) => activeIds.has(id) && !onLeaveIds.has(id)),
+  );
+  const onLeaveCount = onLeaveIds.size;
+  const emergencyCount = emergencyIds.size;
+  const presentCount = presentTodayIds.size;
   const absentCount = activeEmployeeRecords.filter(
     (e) => !presentTodayIds.has(e.id) && !onLeaveIds.has(e.id),
   ).length;
-  const absentPercent = activeEmployees
-    ? Number(((absentCount / activeEmployees) * 100).toFixed(0))
-    : 0;
+
+  const pctOfActive = (n) => (activeEmployees ? Number(((n / activeEmployees) * 100).toFixed(0)) : 0);
+  const presentPercent = pctOfActive(presentCount);
+  const onLeavePercent = pctOfActive(onLeaveCount);
+  const emergencyPercent = pctOfActive(emergencyCount);
+  const absentPercent = pctOfActive(absentCount);
 
   const employeeMap = Object.fromEntries(activeEmployeeRecords.map((item) => [item.id, item]));
   const shiftMap = Object.fromEntries(shiftRows.map((item) => [item.shift, item]));
@@ -397,6 +464,7 @@ const getAttendanceMetrics = (baseData) => {
     : 0;
 
   return {
+    presentCount,
     presentPercent,
     onLeavePercent,
     emergencyPercent,
@@ -409,15 +477,70 @@ const getAttendanceMetrics = (baseData) => {
   };
 };
 
+const isEmergencyLeave = (leave) =>
+  /urgent|emergency|serious|medical|health/.test(String(leave?.reason || "").toLowerCase());
+
+/**
+ * Attendance chart for the selected period (This Week / This Month, up to the
+ * selected date): share of employee working-days that were present, on leave,
+ * on emergency leave or absent. Week-off days (shift master) and holidays are
+ * not counted as working days.
+ */
+const getRangeAttendanceCounts = (baseData) => {
+  const { chartStart, chartEnd, activeEmployeeRecords, rangeAttendance, rangeLeaves, branchShifts, rangeHolidays } = baseData;
+
+  // A weekday is a week-off only if every active shift for that weekday is marked week-off
+  const dayShifts = {};
+  for (const s of branchShifts || []) {
+    const key = String(s.day_of_week || "").toLowerCase();
+    if (!key) continue;
+    dayShifts[key] = dayShifts[key] || [];
+    dayShifts[key].push(!!s.is_week_off);
+  }
+  const isWeekOff = (m) => {
+    const flags = dayShifts[m.format("dddd").toLowerCase()];
+    return !!flags && flags.length > 0 && flags.every(Boolean);
+  };
+  const holidayDates = new Set((rangeHolidays || []).map((h) => String(h.date)));
+
+  const presentKeys = new Set((rangeAttendance || []).map((r) => `${r.employeeId}|${r.date}`));
+  const leavesByEmployee = {};
+  for (const l of rangeLeaves || []) {
+    (leavesByEmployee[l.employeeId] = leavesByEmployee[l.employeeId] || []).push(l);
+  }
+  const counts = { present: 0, leave: 0, emergency: 0, absent: 0 };
+
+  for (let d = moment(chartStart); !d.isAfter(moment(chartEnd), "day"); d.add(1, "day")) {
+    const date = d.format("YYYY-MM-DD");
+    if (isWeekOff(d) || holidayDates.has(date)) continue;
+
+    for (const emp of activeEmployeeRecords) {
+      const leave = (leavesByEmployee[emp.id] || []).find(
+        (l) => String(l.fromDate) <= date && String(l.toDate) >= date,
+      );
+      if (leave) {
+        counts[isEmergencyLeave(leave) ? "emergency" : "leave"] += 1;
+      } else if (presentKeys.has(`${emp.id}|${date}`)) {
+        counts.present += 1;
+      } else {
+        counts.absent += 1;
+      }
+    }
+  }
+  return counts;
+};
+
 const buildAttendanceChart = (baseData) => {
   const metrics = getAttendanceMetrics(baseData);
+  const rangeCounts = getRangeAttendanceCounts(baseData);
 
   // Normalize so series always sums to exactly 100
-  const rawSeries = [metrics.presentPercent, metrics.onLeavePercent, metrics.emergencyPercent, metrics.absentPercent];
+  const rawSeries = [rangeCounts.present, rangeCounts.leave, rangeCounts.emergency, rangeCounts.absent];
   const rawTotal = rawSeries.reduce((sum, v) => sum + v, 0);
   let series;
   if (rawTotal === 0) {
-    series = [100, 0, 0, 0];
+    // No working days / employees in the period: nothing to show
+    series = [0, 0, 0, 0];
   } else {
     series = rawSeries.map((v) => Math.floor((v / rawTotal) * 100));
     const remainder = 100 - series.reduce((sum, v) => sum + v, 0);
@@ -426,13 +549,19 @@ const buildAttendanceChart = (baseData) => {
 
   return {
     title: "Attendance Chart",
-    subtitle: "This Week",
+    subtitle: baseData.chartRange || "This Week",
+    date: baseData.todayDate,
     total: `${series[0]}%`,
     labels: ["Present", "On Leave", "On Emergency leave", "Absent"],
     series,
     colors: ["#1ac888", "#ffbf3b", "#ff5b5b", "#a0aec0"],
+    // Selected-day figures (Employee Overview card)
+    presentCount: metrics.presentCount,
+    presentPercent: metrics.presentPercent,
     todayLeaveCount: metrics.onLeaveCount,
+    todayLeavePercent: metrics.onLeavePercent,
     emergencyCount: metrics.emergencyCount,
+    emergencyPercent: metrics.emergencyPercent,
     lateCheckInCount: metrics.lateCheckInCount,
     absentCount: metrics.absentCount,
     absentPercent: metrics.absentPercent,
@@ -447,9 +576,8 @@ const buildAttendanceChart = (baseData) => {
 
 const buildDepartmentAttendanceData = (baseData) => {
   const { activeDepartments, employeesByDepartment, activeEmployeeRecords, todayAttendanceRows } = baseData;
-  const presentEmployeeIds = new Set(
-    todayAttendanceRows.filter((item) => item.is_present).map((item) => item.employeeId),
-  );
+  // todayAttendanceRows already holds only present rows (marked present or checked in)
+  const presentEmployeeIds = new Set(todayAttendanceRows.map((item) => item.employeeId));
 
   return activeDepartments.map((department, index) => {
     const totalEmployees = Number(
@@ -472,16 +600,13 @@ const buildDepartmentAttendanceData = (baseData) => {
 };
 
 const buildDashboardStats = (baseData, trackingList) => {
-  const { totalEmployees, activeEmployees, monthlyAttendance, todayLeaves, todayAttendanceRows } = baseData;
+  const { totalEmployees, activeEmployees, monthlyAttendance } = baseData;
   const metrics = getAttendanceMetrics(baseData);
-  const today = moment();
+  const today = baseData.attendanceDay || moment();
   const workingDaysInMonth = Helper.getWorkingDays(today.year(), today.month() + 1);
 
-  // Exclude on-leave employees from the present count so the two buckets don't overlap
-  const onLeaveTodayIds = new Set((todayLeaves || []).map((l) => l.employeeId));
-  const todayPresentCount = (todayAttendanceRows || []).filter(
-    (r) => !onLeaveTodayIds.has(r.employeeId),
-  ).length;
+  // Present on the selected day (on-leave employees excluded so buckets don't overlap)
+  const todayPresentCount = metrics.presentCount;
 
   let monthlyAttendanceOverview = 0;
   if (monthlyAttendance.length) {
@@ -496,7 +621,7 @@ const buildDashboardStats = (baseData, trackingList) => {
   }
 
   const onlineTrackingCount = trackingList.filter((item) => item.status === "live").length;
-  const presentTodayPercent = totalEmployees ? Number(((todayPresentCount / totalEmployees) * 100).toFixed(0)) : 0;
+  const presentTodayPercent = metrics.presentPercent;
   const activeEmployeePercent = totalEmployees ? Number(((activeEmployees / totalEmployees) * 100).toFixed(0)) : 0;
 
   return [
@@ -727,7 +852,12 @@ exports.getDashboardData = async (req, res) => {
     const { tenantId, branchId } = context;
     const range = req.body?.range || "This Week";
     const section = req.body?.section || "employee";
-    const baseData = await getDashboardBaseData(tenantId, branchId, range, section);
+    const selected = parseDashboardDate(req.body?.date);
+    if (selected.error) {
+      return Helper.response(false, selected.error, {}, res, 400);
+    }
+    const chartRange = req.body?.chartRange || "This Week";
+    const baseData = await getDashboardBaseData(tenantId, branchId, range, section, selected.day, chartRange);
     const attendanceChart = buildAttendanceChart(baseData);
     const attendanceByDepartment = buildDepartmentAttendanceData(baseData);
     const trackingList = buildTrackingList(baseData.locationEmployees, baseData.todayLocations);
@@ -783,7 +913,11 @@ exports.getAttendanceChart = async (req, res) => {
     }
 
     const range = req.body?.range || "This Week";
-    const baseData = await getDashboardBaseData(context.tenantId, context.branchId, range);
+    const selected = parseDashboardDate(req.body?.date);
+    if (selected.error) {
+      return Helper.response(false, selected.error, {}, res, 400);
+    }
+    const baseData = await getDashboardBaseData(context.tenantId, context.branchId, "All", "employee", selected.day, range);
     return Helper.response(true, "Attendance chart data found successfully", buildAttendanceChart(baseData), res, 200);
   } catch (error) {
     return Helper.response(false, error?.message, {}, res, 500);
@@ -798,7 +932,11 @@ exports.getAttendanceByDepartment = async (req, res) => {
     }
 
     const range = req.body?.range || "This Week";
-    const baseData = await getDashboardBaseData(context.tenantId, context.branchId, range);
+    const selected = parseDashboardDate(req.body?.date);
+    if (selected.error) {
+      return Helper.response(false, selected.error, {}, res, 400);
+    }
+    const baseData = await getDashboardBaseData(context.tenantId, context.branchId, range, "employee", selected.day);
     return Helper.response(true, "Attendance by department data found successfully", buildDepartmentAttendanceData(baseData), res, 200);
   } catch (error) {
     return Helper.response(false, error?.message, {}, res, 500);
@@ -845,7 +983,7 @@ exports.getTeamwiseAttendance = async (req, res) => {
         order: [["name", "ASC"]],
       }),
       empPersonal.findAll({
-        where: { tenantId, branchId: { [Op.in]: branchIds }, status: "active" },
+        where: { tenantId, branchId: { [Op.in]: branchIds }, status: "active", ...NOT_REJECTED },
         attributes: ["id", "firstName", "lastName", "empCode", "departmentId", "designationId", "profileImage", "gender", "branchId"],
         raw: true,
       }),
@@ -945,7 +1083,7 @@ exports.todayAttendance = async (req, res) => {
     });
 
     const totalEmployee = await empPersonal.count({
-      where: { tenantId, branchId, status: "active" },
+      where: { tenantId, branchId, status: "active", ...NOT_REJECTED },
     });
 
     const totalPresentEmp = await attendance.count({

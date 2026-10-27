@@ -11,16 +11,16 @@ baseUrl=environment.apiUrl
     constructor(private http: HttpClient) { }
 
 
-    getDashboardData(range: string = 'This Week', section: 'employee' | 'leave' = 'employee'): Observable<any> {
-    return this.http.post(`${this.baseUrl}dashboard`, { range, section });
+    getDashboardData(range: string = 'This Week', section: 'employee' | 'leave' = 'employee', date?: string, chartRange?: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}dashboard`, { range, section, date, chartRange });
   }
 
-  getAttendanceChart(range: string = 'This Week'): Observable<any> {
-    return this.http.post(`${this.baseUrl}dashboard-attendance-chart`, { range });
+  getAttendanceChart(range: string = 'This Week', date?: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}dashboard-attendance-chart`, { range, date });
   }
 
-  getAttendanceByDepartment(range: string = 'This Week'): Observable<any> {
-    return this.http.post(`${this.baseUrl}dashboard-attendance-by-department`, { range });
+  getAttendanceByDepartment(range: string = 'This Week', date?: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}dashboard-attendance-by-department`, { range, date });
   }
 
   getTeamwiseAttendance(date?: string, branchId?: string): Observable<any> {

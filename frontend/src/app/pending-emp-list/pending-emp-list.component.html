@@ -79,25 +79,26 @@
             </div>
             <div class="col-md-3">
               <label class="col-form-label fw-bold">Email
-                <span *ngIf="!updateFlag" style="color: red"> *</span>
+                <span style="color: red"> *</span>
               </label>
 
               <input type="email" class="form-control" placeholder="Enter Email" [(ngModel)]="personalDetails.email"
                 name="email" required #emailRef="ngModel" />
-              <small class="text-danger" *ngIf="updateFlag==false && emailRef.invalid && emailRef.touched">
-                Enter valid Email
+              <small class="text-danger" *ngIf="emailRef.touched && !isValidEmail(personalDetails.email)">
+                {{ personalDetails.email ? 'Enter a valid email (e.g. name@example.com)' : 'Email is required' }}
               </small>
             </div>
             <div class="col-md-3">
               <label class="col-form-label fw-bold">Aadhaar Number
                 <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
               </label>
-              <input type="text" class="form-control" placeholder="Enter Aadhaar Number" maxlength="14"
+              <input type="text" class="form-control" placeholder="Enter Aadhaar Number (optional)" maxlength="14"
                 [(ngModel)]="personalDetails.adhaarNo" name="aadhaarNumber" (input)="onAadhaarInput($event, 'space')"
-                (keypress)="adhaarvalidaiton($event, personalDetails.mobile)" pattern="^\d{4}\s\d{4}\s\d{4}$"
+                (keypress)="adhaarvalidaiton($event, personalDetails.adhaarNo)" pattern="^$|^\d{4}\s\d{4}\s\d{4}$"
                 #aadhaarRef="ngModel" />
-              <small class="text-danger" *ngIf="updateFlag==false && aadhaarRef.invalid && aadhaarRef.touched">
-                Enter valid 12-digit Aadhaar number
+              <small class="text-danger"
+                *ngIf="aadhaarRef.touched && personalDetails.adhaarNo && !isValidAadhaar(personalDetails.adhaarNo)">
+                Enter valid 12-digit Aadhaar number (e.g. 1234 5678 9012)
               </small>
             </div>
 
@@ -105,10 +106,11 @@
               <label class="col-form-label fw-bold">PAN
                 <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
               </label>
-              <input type="text" class="form-control text-uppercase" placeholder="Enter PAN Number"
+              <input type="text" class="form-control text-uppercase" placeholder="Enter PAN Number (optional)"
                 [(ngModel)]="personalDetails.panNo" (ngModelChange)="toUppercase()" name="pan"
-                pattern="^[A-Z]{5}[0-9]{4}[A-Z]{1}$" maxlength="10" #panRef="ngModel" />
-              <small class="text-danger" *ngIf="updateFlag==false && panRef.invalid && panRef.touched">
+                pattern="^$|^[A-Z]{5}[0-9]{4}[A-Z]{1}$" maxlength="10" #panRef="ngModel" />
+              <small class="text-danger"
+                *ngIf="panRef.touched && personalDetails.panNo && !isValidPan(personalDetails.panNo)">
                 Enter valid PAN (e.g., ABCDE1234F)
               </small>
             </div>
@@ -116,11 +118,9 @@
               <label class="col-form-label fw-bold">Blood Group
                 <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
               </label>
-              <input type="text" class="form-control" placeholder="Enter Blood Group"
-                [(ngModel)]="personalDetails.bloodGroup" name="bloodGroup" #bloodGroupRef="ngModel" />
-              <small class="text-danger" *ngIf="updateFlag==false && bloodGroupRef.invalid && bloodGroupRef.touched">
-                Enter valid First Name
-              </small>
+              <ng-select [items]="bloodGroupList" bindLabel="label" bindValue="value"
+                [(ngModel)]="personalDetails.bloodGroup" placeholder="Select Blood Group" name="bloodGroup">
+              </ng-select>
             </div>
             <div class="col-md-3">
               <label class="col-form-label fw-bold">Marital Status
@@ -220,25 +220,27 @@
             </div>
             <div class="col-md-3">
               <label class="col-form-label fw-bold"> Select Branch
-                <span *ngIf="!updateFlag" style="color: red"> *</span>
+                <span style="color: red"> *</span>
               </label>
+              <!-- Multiple branches only for Director / Manager (multi-branch access roles) -->
               <ng-select
                 [items]="branchList"
                 bindLabel="name"
                 bindValue="id"
-                placeholder="Select Branch (multi)"
+                [placeholder]="allowMultiBranch ? 'Select Branch(es)' : 'Select Branch'"
                 class="me-sm-2"
                 name="branch"
                 [multiple]="true"
-                [closeOnSelect]="false"
+                [maxSelectedItems]="allowMultiBranch ? branchList?.length : 1"
+                [closeOnSelect]="!allowMultiBranch"
                 [(ngModel)]="personalDetails['branchIds']"
                 (ngModelChange)="onBranchChange($event)"
                 #branchRef="ngModel"
               >
               </ng-select>
 
-              <small class="text-danger" *ngIf="branchRef.invalid && branchRef.touched">
-                Select at least one Branch
+              <small class="text-danger" *ngIf="branchRef.touched && !personalDetails['branchIds']?.length">
+                Select a Branch
               </small>
             </div>
             <div class="col-md-3">
@@ -291,7 +293,7 @@
                 <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
               </label>
               <ng-select [items]="role" bindLabel="label" bindValue="value" [(ngModel)]="personalDetails['role']"
-                [multiple]="false" placeholder="Select Role" name="role" id="select2Danger">
+                [multiple]="false" placeholder="Select Role" name="role" id="select2Danger" (change)="onRoleChange()">
               </ng-select>
             </div>
             <div class="col-md-3">
@@ -300,7 +302,7 @@
               </label>
               <ng-select [items]="employeeList" bindLabel="label" bindValue="value"
                 [(ngModel)]="personalDetails['reportingPersonId']" [multiple]="false"
-                placeholder="Select Employment Types" name="country" id="select2Danger">
+                placeholder="Select Reporting Person" name="reportingPerson" id="select2Danger">
               </ng-select>
             </div>
 
@@ -486,6 +488,9 @@
                         <i class="fas fa-edit"></i>
                       </button>
                     </td>
+                  </tr>
+                  <tr *ngIf="!filteredDesignation?.length">
+                    <td colspan="5" class="text-center text-muted py-4">No pending employee requests found</td>
                   </tr>
                 </tbody>
               </table>

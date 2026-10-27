@@ -241,9 +241,31 @@ createFlag = false;
     reader.readAsDataURL(file);
   }
 
+  // Latitude/longitude are optional; when entered they must be decimal degrees in range.
+  private validateCoordinates(data: any, requireBoth = true): string | null {
+    const lat = String(data['latitude'] ?? '').trim();
+    const lng = String(data['longitude'] ?? '').trim();
+    const decimal = /^-?\d+(\.\d+)?$/;
+    if (lat && (!decimal.test(lat) || Math.abs(Number(lat)) > 90)) {
+      return 'Latitude must be a decimal number between -90 and 90 (e.g. 19.1550).';
+    }
+    if (lng && (!decimal.test(lng) || Math.abs(Number(lng)) > 180)) {
+      return 'Longitude must be a decimal number between -180 and 180 (e.g. 72.8500).';
+    }
+    if (requireBoth && !!lat !== !!lng) {
+      return 'Please enter both latitude and longitude, or leave both blank.';
+    }
+    return null;
+  }
+
   submitNewBranch() {
     if (!this.newBranch['name']?.trim()) {
       this.notyf.error('Branch name is required.');
+      return;
+    }
+    const coordError = this.validateCoordinates(this.newBranch);
+    if (coordError) {
+      this.notyf.error(coordError);
       return;
     }
     this.addBranchLoading = true;
@@ -314,6 +336,11 @@ createFlag = false;
   submitEditBranch() {
     if (!this.editBranch['name']?.trim()) {
       this.notyf.error('Branch name is required.');
+      return;
+    }
+    const coordError = this.validateCoordinates(this.editBranch, false);
+    if (coordError) {
+      this.notyf.error(coordError);
       return;
     }
     this.editBranchLoading = true;

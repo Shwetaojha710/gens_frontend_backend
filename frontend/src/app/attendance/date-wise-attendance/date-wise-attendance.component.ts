@@ -118,9 +118,12 @@ export class DateWiseAttendanceComponent {
       const year = today.getFullYear();
       const month = (today.getMonth() + 1).toString().padStart(2, '0');
       const day = today.getDate().toString().padStart(2, '0');
+      // Use the date selected in the dashboard date filter, if any
+      const dashboardDate = this.route.snapshot.queryParamMap.get('date') || '';
+      const selectedDay = /^\d{4}-\d{2}-\d{2}$/.test(dashboardDate) ? dashboardDate : `${year}-${month}-${day}`;
 
-      this.obj['startDate'] = `${year}-${month}-${day}`;
-      this.obj['endDate'] = `${year}-${month}-${day}`;
+      this.obj['startDate'] = selectedDay;
+      this.obj['endDate'] = selectedDay;
       this.fetchAttendance();
 
 

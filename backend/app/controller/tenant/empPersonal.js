@@ -4,7 +4,7 @@ const path = require("path");
 const fs = require("fs");
 const EmploymentType = require("../../models/employmentType");
 const Prefix = require("../../models/prefix");
-const { Op } = require("sequelize");
+const { Op, fn, col, where: sqlWhere } = require("sequelize");
 const designation = require("../../models/designation");
 const attendance = require("../../models/attendance");
 const bill = require("../../models/bill");
@@ -88,6 +88,81 @@ async function generateNextEmpCode(tenantId, branchId) {
 
 function isBlankEmpCode(value) {
   return value == null || String(value).trim() === "";
+}
+
+function isBlank(value) {
+  return value == null || String(value).trim() === "";
+}
+
+// Rejected self-registration requests must never be listed as employees.
+// emp_status can be NULL on legacy rows, so only "rejected" is excluded.
+const NOT_REJECTED = {
+  [Op.or]: [{ emp_status: { [Op.is]: null } }, { emp_status: { [Op.ne]: "rejected" } }],
+};
+
+// Exact, case-insensitive email match (no LIKE wildcards).
+const emailEquals = (email) =>
+  sqlWhere(fn("LOWER", col("email")), String(email).trim().toLowerCase());
+
+// Only these roles use multi-branch access (see Helper.isBranchAccessRole).
+const MULTI_BRANCH_ROLES = ["director", "manager"];
+
+/**
+ * Validates optional identity/profile fields: blank is allowed, but an entered
+ * value must be valid. Returns an error message or null.
+ */
+function validateOptionalEmpFields({ email, adhaarNo, panNo, alternateMobile, gender, martialStatus, bloodGroup }) {
+  if (!isBlank(email) && !Helper.isValidEmail(String(email).trim())) {
+    return "Please enter a valid email address";
+  }
+  if (!isBlank(adhaarNo) && !Helper.isValidAadhaar(String(adhaarNo).replace(/\s|-/g, ""))) {
+    return "Please enter a valid 12 digit Aadhaar number";
+  }
+  if (!isBlank(panNo) && !Helper.isValidPAN(String(panNo).trim().toUpperCase())) {
+    return "Please enter a valid PAN (e.g., ABCDE1234F)";
+  }
+  if (!isBlank(alternateMobile) && !Helper.isValidMobile(String(alternateMobile).trim())) {
+    return "Please enter a valid 10 digit alternate mobile number";
+  }
+  const enums = [
+    ["Gender", gender, empPersonal.rawAttributes.gender.values],
+    ["Marital Status", martialStatus, empPersonal.rawAttributes.martialStatus.values],
+    ["Blood Group", bloodGroup, empPersonal.rawAttributes.bloodGroup.values],
+  ];
+  for (const [label, value, allowed] of enums) {
+    if (!isBlank(value) && !allowed.includes(value)) {
+      return `${label} must be one of: ${allowed.join(", ")}`;
+    }
+  }
+  return null;
+}
+
+function multiBranchError(role, branchIds) {
+  if (branchIds.length > 1 && !MULTI_BRANCH_ROLES.includes(String(role || "").toLowerCase())) {
+    return "Only Director or Manager roles can be assigned to multiple branches. Please select a single branch.";
+  }
+  return null;
+}
+
+/** Maps DB-level failures caused by bad input to a clear 400 instead of a 500. */
+function dbErrorMessage(error) {
+  if (error?.name === "SequelizeUniqueConstraintError") {
+    const fields = error?.fields || {};
+    const constraint = String(error?.parent?.constraint || "");
+    if (fields.empCode || constraint.includes("emp_code") || constraint.includes("code")) {
+      return "Employee Code Already Exists";
+    }
+    if (fields.email || constraint.includes("email")) return "Email Already Exists";
+    if (fields.mobile || constraint.includes("mobile")) return "Mobile Already Exists";
+    return "A record with these details already exists";
+  }
+  if (error?.name === "SequelizeValidationError") {
+    return error?.errors?.[0]?.message || "Invalid employee details";
+  }
+  if (error?.name === "SequelizeDatabaseError") {
+    return "Invalid employee details. Please check the entered values.";
+  }
+  return null;
 }
 
 exports.CheckTenant = async (req, res) => {
@@ -294,6 +369,27 @@ exports.createEmp = async (req, res) => {
     return Helper.response(false, "Invalid mobile number format", [], res, 400);
   }
 
+  // email column is NOT NULL + unique, so it is effectively mandatory
+  if (isBlank(email)) {
+    return Helper.response(false, "Email is required", [], res, 400);
+  }
+  if (isBlank(dateOfBirth) || !Helper.isValidDOB(dateOfBirth)) {
+    return Helper.response(false, "Please enter a valid Date of Birth", [], res, 400);
+  }
+  const fieldError = validateOptionalEmpFields({
+    email, adhaarNo, panNo, alternateMobile, gender, martialStatus, bloodGroup,
+  });
+  if (fieldError) {
+    return Helper.response(false, fieldError, [], res, 400);
+  }
+  const branchError = multiBranchError(req.body?.role, branchIds);
+  if (branchError) {
+    return Helper.response(false, branchError, [], res, 400);
+  }
+  email = String(email).trim();
+  adhaarNo = isBlank(adhaarNo) ? null : String(adhaarNo).replace(/\s|-/g, "");
+  panNo = isBlank(panNo) ? null : String(panNo).trim().toUpperCase();
+
   // if (!Helper.isValidDOB(dateOfBirth)) {
   //   return Helper.response(
   //     false,
@@ -377,11 +473,31 @@ exports.createEmp = async (req, res) => {
       empCode = String(empCode).trim();
     }
 
+    // A candidate who self-registered (pending approval, usually no branch yet)
+    // must be approved from the Pending Employee List, not added again.
+    const pendingRegistration = await empPersonal.findOne({
+      where: {
+        tenantId,
+        emp_status: "pending",
+        [Op.or]: [{ mobile }, emailEquals(email)],
+      },
+      attributes: ["id", "firstName", "lastName"],
+      raw: true,
+    });
+    if (pendingRegistration) {
+      return Helper.response(
+        false,
+        `${pendingRegistration.firstName || "This candidate"} ${pendingRegistration.lastName || ""}`.trim() +
+          " has already registered and the request is pending approval. Please approve or reject it from the Pending Employee List.",
+        { pendingEmployeeId: pendingRegistration.id },
+        res,
+        409,
+      );
+    }
+
     const [existsMobile, existsEmail, existsEmpCode] = await Promise.all([
-      empPersonal.findOne({ where: { mobile, tenantId, branchId } }),
-      email
-        ? empPersonal.findOne({ where: { email, tenantId, branchId } })
-        : Promise.resolve(null),
+      empPersonal.findOne({ where: { mobile, tenantId, branchId, ...NOT_REJECTED } }),
+      empPersonal.findOne({ where: { [Op.and]: [emailEquals(email), { tenantId, branchId }, NOT_REJECTED] } }),
       empPersonal.findOne({ where: { empCode, tenantId } }),
     ]);
 
@@ -442,6 +558,7 @@ exports.createEmp = async (req, res) => {
       guarantorAge,
       guarantorRelation,
       guarantorAddress,
+      role: isBlank(req.body?.role) ? null : req.body.role,
       emp_status:'approved',
       deviceId: Helper.getIpAddress(req),
     });
@@ -463,17 +580,9 @@ exports.createEmp = async (req, res) => {
     );
   } catch (error) {
     console.error("Error creating employee:", error);
-    if (error?.name === "SequelizeUniqueConstraintError") {
-      const fields = error?.fields || {};
-      if (fields.empCode || String(error?.parent?.constraint || "").includes("emp_code")) {
-        return Helper.response(false, "Employee Code Already Exists", {}, res, 400);
-      }
-      if (fields.email || String(error?.parent?.constraint || "").includes("email")) {
-        return Helper.response(false, "Email Already Exists", {}, res, 400);
-      }
-      if (fields.mobile || String(error?.parent?.constraint || "").includes("mobile")) {
-        return Helper.response(false, "Mobile Already Exists", {}, res, 400);
-      }
+    const inputError = dbErrorMessage(error);
+    if (inputError) {
+      return Helper.response(false, inputError, {}, res, 400);
     }
     return Helper.response(
       false,
@@ -505,19 +614,20 @@ exports.getEmp = async (req, res) => {
       return Helper.response(false, "branchId is required!", {}, res, 200);
     }
     const totalEmployee = await empPersonal.count({
-      where: { tenantId, branchId },
+      where: { tenantId, branchId, ...NOT_REJECTED },
     });
 
     const ActiveEmployee = await empPersonal.count({
-      where: { tenantId, branchId, status: "active" },
+      where: { tenantId, branchId, status: "active", ...NOT_REJECTED },
     });
 
     const InactiveEmployee = await empPersonal.count({
-      where: { tenantId, branchId, status: "inactive" },
+      where: { tenantId, branchId, status: "inactive", ...NOT_REJECTED },
     });
 
     const newJoiners = await empPersonal.count({
       where: {
+        ...NOT_REJECTED,
         tenantId,
         branchId,
         status: "active",
@@ -564,7 +674,7 @@ exports.getEmp = async (req, res) => {
     } else {
       const ActiveEmps = await empPersonal.findAll({
         raw: true,
-        where: { tenantId, status: "active", branchId },
+        where: { tenantId, status: "active", branchId, ...NOT_REJECTED },
         order: [
           ["firstName", "ASC"],
           ["lastName", "ASC"],
@@ -572,7 +682,7 @@ exports.getEmp = async (req, res) => {
       });
       const emps = await empPersonal.findAll({
         raw: true,
-        where: { tenantId, branchId },
+        where: { tenantId, branchId, ...NOT_REJECTED },
         order: [
           ["firstName", "ASC"],
           ["lastName", "ASC"],
@@ -580,7 +690,7 @@ exports.getEmp = async (req, res) => {
       });
       const Inactivemps = await empPersonal.findAll({
         raw: true,
-        where: { tenantId, status: "inactive", branchId },
+        where: { tenantId, status: "inactive", branchId, ...NOT_REJECTED },
         order: [
           ["firstName", "ASC"],
           ["lastName", "ASC"],
@@ -588,6 +698,7 @@ exports.getEmp = async (req, res) => {
       });
       const newJoinersList = await empPersonal.findAll({
         where: {
+          ...NOT_REJECTED,
           tenantId,
           branchId,
           status: "active",
@@ -595,6 +706,10 @@ exports.getEmp = async (req, res) => {
             [Op.gte]: new Date(new Date().setDate(new Date().getDate() - 30)),
           },
         },
+        order: [
+          ["firstName", "ASC"],
+          ["lastName", "ASC"],
+        ],
         raw: true,
       });
 
@@ -833,6 +948,8 @@ exports.updateEmp = async (req, res) => {
   if (!branchId || branchId == "null") {
     branchId = req.users && req.users.branchId;
   }
+  const isPendingAction = type == "pending_employee";
+  const isRejection = isPendingAction && String(emp_status || "").toLowerCase() === "rejected";
   try {
     if (!tenantId) {
       return Helper.response(false, "Tenant ID is required", [], res, 400);
@@ -840,7 +957,7 @@ exports.updateEmp = async (req, res) => {
     if (!id) {
       return Helper.response(false, "Employee ID is required", [], res, 400);
     }
-    if (!branchId || branchId == "null") {
+    if (!isRejection && (!branchId || branchId == "null")) {
       return Helper.response(false, "branchId is required!", {}, res, 200);
     }
     // const existingEmp = await empPersonal.findOne({ where: { id, tenantId,branchId } });
@@ -860,23 +977,67 @@ exports.updateEmp = async (req, res) => {
       );
     }
 
-    if (email && !Helper.isValidEmail(email)) {
-      return Helper.response(false, "Invalid email format", [], res, 400);
+    // Rejecting a pending request only changes its status. Previously the
+    // header branch was written onto the candidate here, so the rejected
+    // request showed up in that branch's employee list.
+    if (isRejection) {
+      const oldEmp = toPlain(existingEmp);
+      await existingEmp.update({
+        emp_status: "rejected",
+        updatedBy: req.users && req.users.id,
+      });
+      await writeAudit({
+        req,
+        actionType: "EMP_UPDATE",
+        referenceId: existingEmp.id,
+        employeeId: existingEmp.id,
+        oldValue: oldEmp,
+        newValue: toPlain(existingEmp),
+        remarks: "Pending employee request rejected",
+      });
+      return Helper.response(true, "Employee request rejected", existingEmp, res, 200);
     }
 
-    // if (adhaarNo && !Helper.isValidAadhaar(adhaarNo)) {
-    //   return Helper.response(
-    //     false,
-    //     "Invalid Aadhaar number format",
-    //     [],
-    //     res,
-    //     400,
-    //   );
-    // }
+    if (email !== undefined && isBlank(email)) {
+      return Helper.response(false, "Email is required", [], res, 400);
+    }
+    const fieldError = validateOptionalEmpFields({
+      email, adhaarNo, panNo, alternateMobile, gender, martialStatus, bloodGroup,
+    });
+    if (fieldError) {
+      return Helper.response(false, fieldError, [], res, 400);
+    }
+    if (req.body?.branchIds !== undefined) {
+      const branchError = multiBranchError(role !== undefined ? role : existingEmp.role, branchIds);
+      if (branchError) {
+        return Helper.response(false, branchError, [], res, 400);
+      }
+    }
 
-    // if (panNo && !Helper.isValidPAN(panNo)) {
-    //   return Helper.response(false, "Invalid PAN number format", [], res, 400);
-    // }
+    // Approving a pending request: block it when the same person was already
+    // added directly as an employee in the target branch.
+    if (isPendingAction && String(emp_status || "").toLowerCase() === "approved") {
+      const approvedDuplicate = await empPersonal.findOne({
+        where: {
+          tenantId,
+          branchId,
+          id: { [Op.ne]: id },
+          emp_status: "approved",
+          mobile: mobile !== undefined ? mobile : existingEmp.mobile,
+        },
+        attributes: ["id", "empCode"],
+        raw: true,
+      });
+      if (approvedDuplicate) {
+        return Helper.response(
+          false,
+          `An employee with this mobile number already exists in this branch${approvedDuplicate.empCode ? ` (${approvedDuplicate.empCode})` : ""}. Please reject this pending request instead.`,
+          {},
+          res,
+          409,
+        );
+      }
+    }
 
     if (mobile && !Helper.isValidMobile(mobile)) {
       return Helper.response(
@@ -1035,7 +1196,7 @@ exports.updateEmp = async (req, res) => {
 
     updateData.updatedBy = req.users && req.users.id;
     updateData.deviceId = Helper.getIpAddress(req);
-    updateData.role = role;
+    if (role !== undefined) updateData.role = role;
     if (isContractual !== undefined) updateData.isContractual = isContractual;
     if (hourlyRate !== undefined) updateData.hourlyRate = hourlyRate;
     // updateEmp — before save, capture old:
@@ -1072,6 +1233,10 @@ exports.updateEmp = async (req, res) => {
     );
   } catch (error) {
     console.error("Error updating employee:", error);
+    const inputError = dbErrorMessage(error);
+    if (inputError) {
+      return Helper.response(false, inputError, [], res, 400);
+    }
     return Helper.response(false, error?.message, [], res, 500);
   }
 };
@@ -1280,8 +1445,8 @@ exports.employeeList = async (req, res) => {
     const includeInactive = req.body && req.body.includeInactive === true;
 
     const whereClause = includeInactive
-      ? { tenantId, branchId }
-      : { tenantId, branchId, status: "active" };
+      ? { tenantId, branchId, ...NOT_REJECTED }
+      : { tenantId, branchId, status: "active", ...NOT_REJECTED };
 
     const employees = await empPersonal.findAll({
       where: whereClause,
@@ -1329,7 +1494,10 @@ exports.AppemployeeList = async (req, res) => {
         tenantId,
         emp_status: "pending",
       },
-      orders: [["createdAt", "DESC"]],
+      order: [
+        ["firstName", "ASC"],
+        ["lastName", "ASC"],
+      ],
       // attributes: ["id", "firstName", "lastName", "empCode"],
       // order: [["firstName", "ASC"]],
       raw: true,
@@ -1400,8 +1568,14 @@ exports.checkEmpByMobile = async (req, res) => {
       return Helper.response(false, "Valid mobile required", {}, res, 200);
     }
 
+    // Same branch, or a self-registration still pending approval (those have no branch yet)
     const emp = await empPersonal.findOne({
-      where: { mobile, tenantId, branchId },
+      where: {
+        mobile,
+        tenantId,
+        ...NOT_REJECTED,
+        [Op.and]: [{ [Op.or]: branchId ? [{ branchId }, { emp_status: "pending" }] : [{ emp_status: "pending" }] }],
+      },
       // raw: true,  // optional
     });
 

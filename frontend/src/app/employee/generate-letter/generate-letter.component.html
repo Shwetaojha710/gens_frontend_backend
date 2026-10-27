@@ -10,10 +10,10 @@
       <div class="row g-3 align-items-end">
         <div class="col-md-4">
           <label class="form-label fw-bold">Employee</label>
-          <select class="form-select" [(ngModel)]="employeeId">
-            <option value="">Select employee</option>
-            <option *ngFor="let e of employees" [value]="e.id">{{ empLabel(e) }}</option>
-          </select>
+          <ng-select class="emp-select" [items]="employees" bindLabel="label" bindValue="id"
+            [(ngModel)]="employeeId" [searchFn]="searchEmployee" [clearable]="true"
+            placeholder="Search by name or employee code" notFoundText="No employee found">
+          </ng-select>
         </div>
         <div class="col-md-4">
           <label class="form-label fw-bold">Template</label>

@@ -37,6 +37,120 @@ class PageBreakBlot extends BlockEmbed {
   }
 }
 
+/** Token the server replaces with the Annexure "A" salary table. */
+const ANNEXURE_TOKEN = '{{salary_annexure}}';
+
+/** A Salary Components master head shown in the editor's annexure table. */
+interface AnnexureHead {
+  name: string;
+  /** payable | deductible | reimbursable */
+  type: string;
+}
+
+/** Active master heads, loaded once by the component; every annexure block renders from it. */
+let annexureHeads: AnnexureHead[] = [];
+
+/**
+ * Editor preview of the Annexure "A" table: same rows and layout the server prints
+ * (salary heads from the master), with 00,000 where each employee's amounts go.
+ */
+function annexurePreviewTableHtml(heads: AnnexureHead[]): string {
+  const esc = (v: string) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const td = 'border:1px solid #000;padding:2px 6px;';
+  const amt = (bold = false) => {
+    const w = bold ? 'font-weight:bold;' : '';
+    return `<td style="${td}text-align:right;${w}">00,000</td><td style="${td}text-align:right;${w}">00,000</td>`;
+  };
+  const line = (label: string, bold = false) => `<tr><td style="${td}">${label}</td>${amt(bold)}</tr>`;
+  const contribution = (name: string) =>
+    /\b(pf|esi|esic|provident)\b/i.test(name) && !/contribution/i.test(name) ? `${esc(name)} Contribution` : esc(name);
+  const earnings = heads.filter((h) => h.type === 'payable');
+  const benefits = heads.filter((h) => h.type !== 'payable');
+  const rows = heads.length
+    ? line('<b>Gross Remuneration</b>', true) +
+      earnings.map((h) => line(esc(h.name))).join('') +
+      (benefits.length
+        ? `<tr><td style="${td}"><b>Parts of Benefits</b></td><td style="${td}"></td><td style="${td}"></td></tr>` +
+          benefits.map((h) => line(contribution(h.name))).join('')
+        : '') +
+      line('<b>In Hand Remuneration</b>', true) +
+      line('<b>Total Cost to the Company (Annual)</b>', true) +
+      `<tr><td colspan="3" style="${td}"><b>Annual Cost to Company (In Words) – amount in words Only.</b></td></tr>`
+    : `<tr><td colspan="3" style="${td}text-align:center;color:#64748b;">` +
+      'Salary heads load from the Salary Components master…</td></tr>';
+  return (
+    '<table class="hr-doc-table hr-doc-table-bordered" border="1" cellpadding="0" cellspacing="0" ' +
+    'style="width:100%;border-collapse:collapse;">' +
+    `<tr><th style="${td}text-align:center;">Particulars</th>` +
+    `<th style="${td}text-align:center;width:18%;">Annual<br>Remuneration</th>` +
+    `<th style="${td}text-align:center;width:18%;">Monthly<br>Remuneration</th></tr>` +
+    rows +
+    '</table>'
+  );
+}
+
+/**
+ * Look of the annexure block in the editor and the print preview. Only an outline and a
+ * floating label are added (no extra height), so editor page breaks match the real letter.
+ */
+const ANNEXURE_SLOT_CSS = (sel: string): string => `
+  ${sel} {
+    display: block; position: relative; margin: 0; padding: 0;
+    outline: 2px dashed #0d9488; outline-offset: 2px;
+    user-select: none; cursor: default;
+  }
+  ${sel} td, ${sel} th { color: #000; }
+  ${sel}::before {
+    content: 'Salary table \\2014  filled for each employee';
+    position: absolute; top: -9px; right: 6px; z-index: 1; padding: 0 5px;
+    background: #ccfbf1; color: #0f766e; border-radius: 3px; font: 600 10px/16px Arial, sans-serif;
+  }`;
+
+/**
+ * Quill embed marking where the salary annexure table prints. In the editor it shows the
+ * table with the master's salary heads; the server swaps the whole block for the
+ * employee's filled table (data-annexure="table" = table only, headings are normal text).
+ */
+class AnnexureSlotBlot extends BlockEmbed {
+  static blotName = 'annexure';
+  static tagName = 'div';
+  static className = 'hr-annexure-slot';
+
+  static create(): HTMLElement {
+    const node = super.create() as HTMLElement;
+    node.setAttribute('contenteditable', 'false');
+    node.setAttribute('data-annexure', 'table');
+    node.innerHTML = annexurePreviewTableHtml(annexureHeads);
+    return node;
+  }
+
+  static value(): boolean {
+    return true;
+  }
+}
+
+/** Editable heading lines inserted above a new annexure table (Word "Annexure A" layout). */
+const ANNEXURE_HEADING_PATTERNS = [
+  /^annexure\s*[“"']?\s*a\s*[”"']?$/i,
+  /^cost to company details$/i,
+  /^in continuation to our appointment letter/i,
+  /^salary annexure$/i,
+];
+
+function annexureHeadingDelta(): Delta {
+  return new Delta()
+    .insert('Annexure “A”', { bold: true, underline: true })
+    .insert('\n', { align: 'center' })
+    .insert('Cost to Company Details', { underline: true })
+    .insert('\n', { align: 'center' })
+    .insert('In continuation to our appointment letter dated ')
+    .insert('{{joining_date}}', { bold: true })
+    .insert(' mentioned above, please note that the breakup of your salary will be as follows:-')
+    .insert('\n')
+    .insert('Salary Annexure', { bold: true, underline: true })
+    .insert('\n', { align: 'center' });
+}
+
 /**
  * Durable vertical gap (signature blank lines). Survives Quill save/reload —
  * consecutive empty <p><br></p> alone often collapse on paste.
@@ -65,6 +179,181 @@ class VerticalSpaceBlot extends BlockEmbed {
     const m = String(node.getAttribute('style') || '').match(/height\s*:\s*([\d.]+)\s*em/i);
     const h = m ? parseFloat(m[1]) : NaN;
     return !Number.isNaN(h) && h > 0 ? h : 1.85;
+  }
+}
+
+/* ---------- Text boxes (Word-like, movable) ---------- */
+
+/** One box inside a text-box row. Position / size in mm relative to the row. */
+interface TextBoxSpec {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  border: boolean;
+  align: 'left' | 'center' | 'right';
+  html: string;
+}
+
+const TB_ALLOWED_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'S', 'SPAN', 'BR', 'DIV', 'P', 'SUB', 'SUP']);
+const TB_STYLE_PROPS = [
+  'color',
+  'background-color',
+  'font-size',
+  'font-family',
+  'font-weight',
+  'font-style',
+  'text-decoration',
+];
+
+/** Keep only simple text formatting inside a text box (it is stored as raw HTML). */
+function cleanTextBoxHtml(html: string): string {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html;
+  const walk = (parent: Node) => {
+    Array.from(parent.childNodes).forEach((n) => {
+      if (n.nodeType === Node.TEXT_NODE) return;
+      if (n.nodeType !== Node.ELEMENT_NODE) {
+        n.parentNode?.removeChild(n);
+        return;
+      }
+      const el = n as HTMLElement;
+      if (/^(SCRIPT|STYLE|IFRAME|OBJECT|EMBED|TEMPLATE)$/.test(el.tagName)) {
+        el.remove();
+        return;
+      }
+      walk(el);
+      if (!TB_ALLOWED_TAGS.has(el.tagName)) {
+        el.replaceWith(...Array.from(el.childNodes));
+        return;
+      }
+      const keep = TB_STYLE_PROPS.map((p) => [p, el.style.getPropertyValue(p)] as const)
+        .filter(([, v]) => v && !/url\s*\(|expression/i.test(v))
+        .map(([p, v]) => `${p}:${v}`);
+      Array.from(el.attributes).forEach((a) => el.removeAttribute(a.name));
+      if (keep.length) el.setAttribute('style', keep.join(';'));
+    });
+  };
+  walk(tpl.content);
+  return tpl.innerHTML;
+}
+
+function readTextBox(el: HTMLElement): TextBoxSpec {
+  const mm = (v: string, def: number, min: number, max: number) => {
+    const n = parseFloat(v);
+    return Number.isNaN(n) ? def : Math.min(max, Math.max(min, Math.round(n * 2) / 2));
+  };
+  const align = el.style.textAlign;
+  const text = el.querySelector('.hr-tb-text');
+  return {
+    x: mm(el.style.left, 0, 0, 300),
+    y: mm(el.style.top, 0, 0, 300),
+    w: mm(el.style.width, 70, 10, 300),
+    h: mm(el.style.minHeight, 10, 4, 300),
+    border: el.getAttribute('data-border') !== '0',
+    align: align === 'center' || align === 'right' ? align : 'left',
+    html: text ? text.innerHTML : '',
+  };
+}
+
+function readTextBoxes(root: ParentNode): TextBoxSpec[] {
+  return Array.from(root.querySelectorAll<HTMLElement>('.hr-tb')).map(readTextBox);
+}
+
+function textBoxHtml(b: TextBoxSpec): string {
+  return (
+    `<div class="hr-tb" data-border="${b.border ? 1 : 0}" style="position:absolute;left:${b.x}mm;top:${b.y}mm;` +
+    `width:${b.w}mm;min-height:${b.h}mm;box-sizing:border-box;padding:1.5mm 2mm;text-align:${b.align};` +
+    `border:${b.border ? '1px solid #000' : 'none'};">` +
+    `<div class="hr-tb-text" contenteditable="true">${cleanTextBoxHtml(b.html) || '<br>'}</div></div>`
+  );
+}
+
+/** Inner HTML of a text-box row: a relative canvas (fixed height) holding absolutely placed boxes. */
+function textBoxRowInnerHtml(boxes: TextBoxSpec[], heightMm?: number): string {
+  const fit = boxes.reduce((m, b) => Math.max(m, b.y + b.h), 0);
+  const h = Math.max(heightMm ?? 0, fit, 6);
+  return (
+    `<div class="hr-tb-canvas" style="position:relative;height:${h}mm;">` +
+    boxes.map(textBoxHtml).join('') +
+    `</div>`
+  );
+}
+
+const DEFAULT_TEXT_BOX: TextBoxSpec = { x: 0, y: 0, w: 70, h: 10, border: true, align: 'left', html: 'Text box' };
+
+/** Ctrl/Cmd+A inside a text box selects only that box (not the whole letter). */
+function selectAllInBox(e: KeyboardEvent): boolean {
+  if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'a') return false;
+  const text = (e.target as HTMLElement | null)?.closest?.('.hr-tb-text');
+  if (!text) return false;
+  e.preventDefault();
+  const range = document.createRange();
+  range.selectNodeContents(text);
+  const sel = window.getSelection();
+  sel?.removeAllRanges();
+  sel?.addRange(range);
+  return true;
+}
+
+/** Paste into a text box as plain text (never foreign HTML). */
+function pastePlainTextIntoBox(e: ClipboardEvent): void {
+  e.preventDefault();
+  const text = e.clipboardData?.getData('text/plain') || '';
+  document.execCommand('insertText', false, text);
+}
+
+/**
+ * Quill embed holding Word-like text boxes. The row is not editable for Quill; the
+ * text inside each box is a nested editable area whose key/clipboard events are kept
+ * away from Quill's handlers (DOM edits still reach Quill as a text-change).
+ */
+class TextBoxBlot extends BlockEmbed {
+  static blotName = 'textbox';
+  static tagName = 'div';
+  static className = 'hr-tb-row';
+
+  static create(value: unknown): HTMLElement {
+    const node = super.create() as HTMLElement;
+    node.setAttribute('contenteditable', 'false');
+    const tpl = document.createElement('template');
+    tpl.innerHTML = String(value || '');
+    const boxes = readTextBoxes(tpl.content);
+    const canvas = tpl.content.querySelector<HTMLElement>('.hr-tb-canvas');
+    node.innerHTML = textBoxRowInnerHtml(
+      boxes.length ? boxes : [DEFAULT_TEXT_BOX],
+      canvas ? parseFloat(canvas.style.height) || undefined : undefined,
+    );
+    const inBox = (e: Event) => !!(e.target as HTMLElement | null)?.closest?.('.hr-tb-text');
+    [
+      'keydown',
+      'keypress',
+      'keyup',
+      'beforeinput',
+      'copy',
+      'cut',
+      'drop',
+      'compositionstart',
+      'compositionupdate',
+      'compositionend',
+    ].forEach((type) =>
+      node.addEventListener(type, (e) => {
+        if (inBox(e)) e.stopPropagation();
+      }),
+    );
+    node.addEventListener('keydown', (e) => {
+      if (inBox(e)) selectAllInBox(e as KeyboardEvent);
+    });
+    node.addEventListener('paste', (e) => {
+      if (!inBox(e)) return;
+      e.stopPropagation();
+      pastePlainTextIntoBox(e as ClipboardEvent);
+    });
+    return node;
+  }
+
+  static value(node: HTMLElement): string {
+    return node.innerHTML;
   }
 }
 
@@ -131,6 +420,14 @@ const DEFAULT_PARA_SPACING_PT = '5pt';
 try {
   Quill.register(PageBreakBlot, true);
   Quill.register(VerticalSpaceBlot, true);
+  Quill.register(TextBoxBlot, true);
+  Quill.register(AnnexureSlotBlot, true);
+  if (typeof document !== 'undefined' && !document.querySelector('style[data-hr-annexure-slot]')) {
+    const style = document.createElement('style');
+    style.setAttribute('data-hr-annexure-slot', '');
+    style.textContent = ANNEXURE_SLOT_CSS('.ql-editor .hr-annexure-slot');
+    document.head.appendChild(style);
+  }
 
   const SizeStyle = Quill.import('attributors/style/size') as any;
   SizeStyle.whitelist = QUILL_SIZE_WHITELIST;
@@ -330,6 +627,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadCatalog();
+    this.loadAnnexureHeads();
     this.loadList();
     this.loadLetterhead();
     this.loadBranches();
@@ -885,6 +1183,256 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     this.refreshPrintPreview(false);
   }
 
+  /* ---------- Text boxes ---------- */
+
+  /** Box being edited + its outline/toolbar position (px, relative to .editor-frame). */
+  tbActive: HTMLElement | null = null;
+  tbUi: { left: number; top: number; width: number; height: number } | null = null;
+  private tbDrag: {
+    mode: 'move' | 'resize';
+    startX: number;
+    startY: number;
+    spec: TextBoxSpec;
+    pxPerMm: number;
+    canvasWmm: number;
+  } | null = null;
+
+  /** Toolbar "Text Box": insert a movable box on its own row at the cursor. */
+  insertTextBox(): void {
+    const inner = textBoxRowInnerHtml([DEFAULT_TEXT_BOX]);
+    const frame = this.editorFrameEl();
+    const before = new Set(Array.from(frame?.querySelectorAll('.hr-tb-row') || []));
+    if (this.quill && !this.useRichEditor) {
+      const range = this.quill.getSelection(true);
+      const index = range ? range.index : Math.max(0, this.quill.getLength() - 1);
+      this.quill.insertEmbed(index, 'textbox', inner, 'user');
+      this.quill.setSelection(index + 1, 0, 'silent');
+      this.form.bodyHtml = this.quill.root.innerHTML;
+    } else {
+      this.insertHtmlAtCaret(`<div class="hr-tb-row" contenteditable="false">${inner}</div><p><br></p>`);
+    }
+    setTimeout(() => {
+      const row = Array.from(this.editorFrameEl()?.querySelectorAll<HTMLElement>('.hr-tb-row') || []).find(
+        (r) => !before.has(r),
+      );
+      const box = row?.querySelector<HTMLElement>('.hr-tb');
+      const text = box?.querySelector<HTMLElement>('.hr-tb-text');
+      if (!box || !text) return;
+      this.setActiveTb(box);
+      text.focus();
+      const sel = window.getSelection();
+      const r = document.createRange();
+      r.selectNodeContents(text);
+      sel?.removeAllRanges();
+      sel?.addRange(r);
+    }, 0);
+    this.refreshPrintPreview(false);
+  }
+
+  private editorFrameEl(): HTMLElement | null {
+    const root: HTMLElement | undefined = this.useRichEditor ? this.richHost?.nativeElement : this.quill?.root;
+    return (root?.closest('.editor-frame') as HTMLElement | null) ?? null;
+  }
+
+  /** Click on the page: select the text box under the pointer (or clear the selection). */
+  onFramePointerDown(ev: PointerEvent): void {
+    const target = ev.target as HTMLElement | null;
+    if (target?.closest('.dt-tb-ui')) return;
+    this.setActiveTb((target?.closest('.hr-tb') as HTMLElement | null) ?? null);
+  }
+
+  /** Typing inside a box: grow its row and keep the outline on the box. */
+  onFrameInput(ev: Event): void {
+    const box = (ev.target as HTMLElement | null)?.closest?.('.hr-tb') as HTMLElement | null;
+    if (!box) return;
+    this.fitTextBoxRow(box.closest('.hr-tb-row') as HTMLElement | null);
+    this.updateTbUi();
+  }
+
+  /** Rich (Word-import) mode has no blot listeners: keep pastes into boxes as plain text. */
+  onFramePaste(ev: ClipboardEvent): void {
+    if ((ev.target as HTMLElement | null)?.closest?.('.hr-tb-text')) pastePlainTextIntoBox(ev);
+  }
+
+  onFrameKeydown(ev: KeyboardEvent): void {
+    selectAllInBox(ev);
+  }
+
+  private setActiveTb(box: HTMLElement | null): void {
+    if (box === this.tbActive) {
+      this.updateTbUi();
+      return;
+    }
+    this.tbActive = box;
+    this.updateTbUi();
+  }
+
+  private updateTbUi(): void {
+    const box = this.tbActive;
+    const frame = this.editorFrameEl();
+    if (!box || !frame || !box.isConnected) {
+      this.tbActive = null;
+      this.tbUi = null;
+      this.cdr.detectChanges();
+      return;
+    }
+    const f = frame.getBoundingClientRect();
+    const b = box.getBoundingClientRect();
+    this.tbUi = { left: b.left - f.left, top: b.top - f.top, width: b.width, height: b.height };
+    this.cdr.detectChanges();
+  }
+
+  get tbHasBorder(): boolean {
+    return this.tbActive?.getAttribute('data-border') !== '0';
+  }
+
+  get tbAlign(): string {
+    return this.tbActive?.style.textAlign || 'left';
+  }
+
+  /** Row height follows its boxes (top + real height), so text never overlaps the next line. */
+  private fitTextBoxRow(row: HTMLElement | null): void {
+    const canvas = row?.querySelector<HTMLElement>('.hr-tb-canvas');
+    if (!canvas) return;
+    const pxPerMm = this.mmToPx(1);
+    const needMm = Array.from(canvas.querySelectorAll<HTMLElement>('.hr-tb')).reduce(
+      (m, el) => Math.max(m, (parseFloat(el.style.top) || 0) + el.offsetHeight / pxPerMm),
+      6,
+    );
+    const h = `${Math.ceil(needMm)}mm`;
+    if (canvas.style.height !== h) canvas.style.height = h;
+  }
+
+  /** Box geometry changed: refit the row, move the outline, sync the editor. */
+  private afterTextBoxChange(syncNow = true): void {
+    this.fitTextBoxRow(this.tbActive?.closest('.hr-tb-row') as HTMLElement | null);
+    this.updateTbUi();
+    if (!syncNow) return;
+    if (this.quill && !this.useRichEditor) {
+      this.form.bodyHtml = this.quill.root.innerHTML;
+      this.refreshPrintPreview(false);
+    } else {
+      this.syncBodyAndPreview();
+    }
+  }
+
+  private applyTbSpec(box: HTMLElement, spec: Partial<TextBoxSpec>): void {
+    if (spec.x != null) box.style.left = `${spec.x}mm`;
+    if (spec.y != null) box.style.top = `${spec.y}mm`;
+    if (spec.w != null) box.style.width = `${spec.w}mm`;
+    if (spec.h != null) box.style.minHeight = `${spec.h}mm`;
+    if (spec.align) box.style.textAlign = spec.align;
+    if (spec.border != null) {
+      box.setAttribute('data-border', spec.border ? '1' : '0');
+      box.style.border = spec.border ? '1px solid #000' : 'none';
+    }
+  }
+
+  /** Drag the move grip / resize corner; positions snap to 0.5 mm. */
+  startTbDrag(ev: PointerEvent, mode: 'move' | 'resize'): void {
+    const box = this.tbActive;
+    const row = box?.closest('.hr-tb-row') as HTMLElement | null;
+    const canvas = row?.querySelector<HTMLElement>('.hr-tb-canvas');
+    if (!box || !row || !canvas) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    (ev.target as HTMLElement).setPointerCapture?.(ev.pointerId);
+    const pxPerMm = this.mmToPx(1) || 3.7795;
+    this.tbDrag = {
+      mode,
+      startX: ev.clientX,
+      startY: ev.clientY,
+      spec: readTextBox(box),
+      pxPerMm,
+      canvasWmm: canvas.clientWidth / pxPerMm,
+    };
+  }
+
+  moveTbDrag(ev: PointerEvent): void {
+    const d = this.tbDrag;
+    const box = this.tbActive;
+    if (!d || !box) return;
+    const dx = (ev.clientX - d.startX) / d.pxPerMm;
+    const dy = (ev.clientY - d.startY) / d.pxPerMm;
+    const snap = (v: number) => Math.round(v * 2) / 2;
+    if (d.mode === 'move') {
+      this.applyTbSpec(box, {
+        x: snap(Math.min(Math.max(0, d.canvasWmm - d.spec.w), Math.max(0, d.spec.x + dx))),
+        y: snap(Math.max(0, d.spec.y + dy)),
+      });
+    } else {
+      this.applyTbSpec(box, {
+        w: snap(Math.min(d.canvasWmm - d.spec.x, Math.max(15, d.spec.w + dx))),
+        h: snap(Math.max(4, d.spec.h + dy)),
+      });
+    }
+    this.afterTextBoxChange(false);
+  }
+
+  endTbDrag(ev: PointerEvent): void {
+    if (!this.tbDrag) return;
+    (ev.target as HTMLElement).releasePointerCapture?.(ev.pointerId);
+    this.tbDrag = null;
+    this.afterTextBoxChange();
+  }
+
+  setTbAlign(align: 'left' | 'center' | 'right'): void {
+    if (!this.tbActive) return;
+    this.applyTbSpec(this.tbActive, { align });
+    this.afterTextBoxChange();
+  }
+
+  toggleTbBorder(): void {
+    if (!this.tbActive) return;
+    this.applyTbSpec(this.tbActive, { border: !this.tbHasBorder });
+    this.afterTextBoxChange();
+  }
+
+  /** Add another box in the same row, to the right of the last one (e.g. two signatures). */
+  addTbBox(): void {
+    const canvas = this.tbActive?.closest('.hr-tb-canvas') as HTMLElement | null;
+    if (!canvas) return;
+    const boxes = readTextBoxes(canvas);
+    const last = boxes[boxes.length - 1] || DEFAULT_TEXT_BOX;
+    const canvasWmm = canvas.clientWidth / (this.mmToPx(1) || 3.7795);
+    const w = Math.min(last.w, 70);
+    const spec: TextBoxSpec = {
+      ...last,
+      html: 'Text box',
+      w,
+      x: Math.max(0, Math.min(canvasWmm - w, last.x + last.w + 10)),
+    };
+    const tpl = document.createElement('template');
+    tpl.innerHTML = textBoxHtml(spec);
+    const box = tpl.content.firstElementChild as HTMLElement;
+    canvas.appendChild(box);
+    this.setActiveTb(box);
+    this.afterTextBoxChange();
+  }
+
+  /** Delete the selected box; the row goes too when it was the last box. */
+  deleteTb(): void {
+    const box = this.tbActive;
+    const row = box?.closest('.hr-tb-row') as HTMLElement | null;
+    if (!box || !row) return;
+    const others = row.querySelectorAll('.hr-tb').length > 1;
+    this.tbActive = null;
+    if (others) {
+      box.remove();
+      this.fitTextBoxRow(row);
+    } else if (this.quill && !this.useRichEditor) {
+      const blot = Quill.find(row);
+      if (blot && blot !== this.quill) {
+        const index = this.quill.getIndex(blot as any);
+        this.quill.deleteText(index, 1, 'user');
+      }
+    } else {
+      row.remove();
+    }
+    this.updateTbUi();
+    this.afterTextBoxChange();
+  }
+
   insertHorizontalRule(): void {
     this.insertHtmlAtCaret('<hr style="border:none;border-top:1px solid #000;margin:12px 0;" />');
   }
@@ -1186,6 +1734,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     this.autoFrameMinPx = Math.ceil(pages.length * pageH + (pages.length - 1) * gap);
     this.autoLastPageLh = pages[pages.length - 1].classList.contains('page--lh');
     this.cdr.detectChanges();
+    if (this.tbActive) this.updateTbUi(); // page spacing may have moved the selected box
   }
 
   /** Call after any document edit so open print preview stays in sync. */
@@ -1540,7 +2089,8 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
   private buildPrintHtml(bodyHtml: string): string {
     // Always use live editor DOM so print = what user sees
     this.pullBodyFromEditor();
-    const raw = String(bodyHtml || this.form.bodyHtml || '');
+    // Text boxes are editable only in the editor
+    const raw = String(bodyHtml || this.form.bodyHtml || '').replace(/\scontenteditable="(?:true|false)"/gi, '');
     const fromQuill =
       !this.useRichEditor ||
       /class=["'][^"']*\bql-(?:align|size|font|indent|direction)-/i.test(raw);
@@ -1796,6 +2346,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
   .page-break, [data-page-break] {
     display: none !important; height: 0 !important; margin: 0 !important; padding: 0 !important; border: 0 !important;
   }
+  ${ANNEXURE_SLOT_CSS('.hr-annexure-slot')}
   .hr-print-footer {
     display: block !important; margin-top: 14pt !important;
     page-break-inside: avoid !important; break-inside: avoid !important;
@@ -1829,6 +2380,7 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     .hr-print-footer { page-break-inside: avoid !important; break-inside: avoid !important; }
     [class*="ql-indent"] { padding-left: 0 !important; margin-left: 0 !important; }
     .page-body p, .page-body div { margin-left: 0 !important; text-indent: 0 !important; padding-left: 0 !important; }
+    .page-body .hr-tb { padding: 1.5mm 2mm !important; }
   }
 </style></head><body spellcheck="false">
 <div class="sheet-wrap" data-hr-root>${pagesHtml}</div>
@@ -2273,11 +2825,12 @@ ${paginatorScriptTag(paginateCfg)}
               label: 'Shift Timing (e.g. 9:00 AM to 6:30 PM, Monday to Saturday)',
             });
           }
-          this.catalog = {
-            employee: emp,
-            salary: res.data.salary || [],
-            company: res.data.company || [],
-          };
+          // Keep every group the server sends (employee, personal, contact, guarantor, salary, company…)
+          const catalog: any = { employee: emp };
+          Object.keys(res.data).forEach((g) => {
+            if (g !== 'employee' && Array.isArray(res.data[g])) catalog[g] = res.data[g];
+          });
+          this.catalog = catalog;
         }
       },
       error: () => {},
@@ -2538,7 +3091,40 @@ ${paginatorScriptTag(paginateCfg)}
   }
 
   get allVariables(): { key: string; label: string }[] {
-    return ['employee', 'salary', 'company'].flatMap((g) => this.catalog?.[g] || []);
+    return this.variableGroups.flatMap((g) => this.catalog?.[g] || []);
+  }
+
+  get hasFilteredVariables(): boolean {
+    return this.variableGroups.some((g) => this.filteredVariables(g).length > 0);
+  }
+
+  /** Search box above the variable chips (matches key or label). */
+  varFilter = '';
+
+  private static readonly VAR_GROUP_LABELS: Record<string, string> = {
+    employee: 'Employee / Job',
+    personal: 'Personal',
+    contact: 'Contact & Address',
+    guarantor: 'Guarantor',
+    salary: 'Salary',
+    company: 'Company',
+  };
+
+  get variableGroups(): string[] {
+    return Object.keys(this.catalog || {}).filter((g) => Array.isArray(this.catalog[g]));
+  }
+
+  varGroupLabel(group: string): string {
+    return DocumentTemplateComponent.VAR_GROUP_LABELS[group] || group;
+  }
+
+  filteredVariables(group: string): { key: string; label: string }[] {
+    const list: { key: string; label: string }[] = this.catalog?.[group] || [];
+    const q = this.varFilter.trim().toLowerCase().replace(/\s+/g, '_');
+    if (!q) return list;
+    return list.filter(
+      (v) => v.key.toLowerCase().includes(q) || String(v.label || '').toLowerCase().replace(/\s+/g, '_').includes(q),
+    );
   }
 
   setHfAlign(kind: 'header' | 'footer', align: 'left' | 'center' | 'right'): void {
@@ -2813,6 +3399,7 @@ ${paginatorScriptTag(paginateCfg)}
         setTimeout(() => {
           this.initEditor(html);
           this.applyEditorChromeDefaults();
+          this.showAnnexureSlotWhenReady();
           this.scheduleAutoPageBreaks();
         }, 0);
       };
@@ -2836,6 +3423,8 @@ ${paginatorScriptTag(paginateCfg)}
   }
 
   back(): void {
+    this.tbActive = null;
+    this.tbUi = null;
     this.clearAutoPageBreaks(true);
     this.destroyEditor();
     this.createFlag = false;
@@ -2879,12 +3468,15 @@ ${paginatorScriptTag(paginateCfg)}
             [{ list: 'ordered' }, { list: 'bullet' }],
             [{ indent: '-1' }, { indent: '+1' }],
             ['blockquote', 'link', 'image', 'table'],
-            ['pagebreak'],
+            ['pagebreak', 'textbox'],
             ['clean'],
           ],
           handlers: {
             pagebreak() {
               self.insertQuillPageBreak();
+            },
+            textbox() {
+              self.insertTextBox();
             },
             table() {
               self.insertQuillTable();
@@ -3205,6 +3797,9 @@ ${paginatorScriptTag(paginateCfg)}
           if (node?.classList?.contains('page-break') || node?.getAttribute?.('data-page-break')) {
             return new Delta().insert({ pagebreak: true });
           }
+          if (node?.classList?.contains('hr-annexure-slot')) {
+            return new Delta().insert({ annexure: true });
+          }
           if (node?.classList?.contains('ql-spacer') || node?.getAttribute?.('data-vspace')) {
             const em =
               parseFloat(node.getAttribute('data-vspace') || '') ||
@@ -3281,6 +3876,8 @@ ${paginatorScriptTag(paginateCfg)}
     root.addEventListener(
       'paste',
       (ev: ClipboardEvent) => {
+        // Text boxes take plain text (handled by TextBoxBlot)
+        if ((ev.target as HTMLElement | null)?.closest?.('.hr-tb-text')) return;
         const html = ev.clipboardData?.getData('text/html') || '';
         if (!html || !this.looksLikeRichOrWordHtml(html)) return;
 
@@ -3985,7 +4582,186 @@ ${paginatorScriptTag(paginateCfg)}
     return Array.from(found);
   }
 
+  /** Active salary heads from the Salary Components master, for the editor's annexure table. */
+  loadAnnexureHeads(): void {
+    this.master.getComponent().subscribe({
+      next: (res: any) => {
+        const rows: any[] = Array.isArray(res?.data) ? res.data : [];
+        const seen = new Set<string>();
+        annexureHeads = rows
+          .filter((r) => r?.status === 'active' && String(r?.component_name || '').trim())
+          // Same order the server prints: oldest first
+          .sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime())
+          .filter((r) => {
+            const k = String(r.component_name).trim().toLowerCase();
+            if (seen.has(k)) return false;
+            seen.add(k);
+            return true;
+          })
+          .map((r) => ({ name: String(r.component_name).trim(), type: String(r.component_type || 'payable') }));
+        this.refreshAnnexurePreviews();
+      },
+      error: () => {},
+    });
+  }
+
+  /** Re-draw annexure tables already in the editor with the latest master heads. */
+  private refreshAnnexurePreviews(): void {
+    const slots = this.annexureSlots();
+    if (!slots.length) return;
+    const html = annexurePreviewTableHtml(annexureHeads);
+    slots.forEach((slot) => (slot.innerHTML = html));
+    if (this.quill) this.form.bodyHtml = this.quill.root.innerHTML;
+    this.refreshPrintPreview(false);
+  }
+
+  /** Salary annexure table blocks currently in the editor. */
+  private annexureSlots(): HTMLElement[] {
+    const root = this.quill?.root || this.getRichEl();
+    return Array.from(root?.querySelectorAll<HTMLElement>('.hr-annexure-slot') || []);
+  }
+
+  hasAnnexureSlot(): boolean {
+    return this.annexureSlots().length > 0;
+  }
+
+  /**
+   * An annexure in the editor: the table block, the heading lines right above it
+   * (Annexure "A" … Salary Annexure) and the page break before those, if any.
+   */
+  private annexureGroup(slot: HTMLElement): { start: number; body: number; end: number } | null {
+    if (!this.quill) return null;
+    const slotBlot = Quill.find(slot) as any;
+    if (!slotBlot) return null;
+    let first: Element = slot;
+    for (let prev = slot.previousElementSibling; prev; prev = prev.previousElementSibling) {
+      const text = (prev.textContent || '').replace(/\s+/g, ' ').trim();
+      if (!/^(P|H[1-6])$/.test(prev.tagName) || !ANNEXURE_HEADING_PATTERNS.some((re) => re.test(text))) break;
+      first = prev;
+    }
+    const firstBlot = Quill.find(first) as any;
+    const body = this.quill.getIndex(firstBlot || slotBlot);
+    const end = this.quill.getIndex(slotBlot) + 1;
+    const pb = first.previousElementSibling;
+    const start = pb?.classList.contains('page-break') ? body - 1 : body;
+    return { start, body, end };
+  }
+
+  /**
+   * Remove the annexure(s) with their headings and page break. Returns the first one's
+   * headings + table (to re-insert when moving) and where it was.
+   */
+  private removeAnnexureSlots(): { content: Delta; index: number } | null {
+    if (!this.quill) return null;
+    const groups = this.annexureSlots()
+      .map((slot) => this.annexureGroup(slot))
+      .filter((g): g is { start: number; body: number; end: number } => !!g);
+    if (!groups.length) return null;
+    const content = this.quill.getContents(groups[0].body, groups[0].end - groups[0].body);
+    const index = groups[0].start;
+    // Delete from the end so earlier indexes stay valid
+    for (const g of groups.reverse()) this.quill.deleteText(g.start, g.end - g.start, 'user');
+    return { content, index };
+  }
+
+  /**
+   * Put an annexure at `index`, optionally on a new page. `content` is a moved annexure
+   * (headings + table); without it, new editable headings and the table are inserted.
+   */
+  private insertAnnexureSlot(index: number, newPage: boolean, content: Delta | null = null, reveal = true): void {
+    if (!this.quill) return;
+    let at = Math.max(0, Math.min(index, this.quill.getLength() - 1));
+    // Cursor at the end of a line: go after that line instead of splitting it (no stray blank line)
+    const [line, offset] = this.quill.getLine(at) as [any, number];
+    let midLine = offset > 0;
+    if (line && offset > 0 && offset >= line.length() - 1) {
+      const next = this.quill.getIndex(line) + line.length();
+      if (next < this.quill.getLength()) {
+        at = next;
+        midLine = false;
+      }
+    }
+    // One delta keeps the order: page break, headings, table
+    let delta = new Delta().retain(at);
+    if (midLine) delta.insert('\n');
+    if (newPage) delta.insert({ pagebreak: true });
+    delta = delta.concat(content || annexureHeadingDelta().insert({ annexure: true }));
+    this.quill.updateContents(delta, 'user');
+    this.form.bodyHtml = this.quill.root.innerHTML;
+    this.refreshPrintPreview(false);
+    if (!reveal) return;
+    const slot = this.annexureSlots()[0];
+    const slotBlot = slot ? (Quill.find(slot) as any) : null;
+    if (slotBlot) this.quill.setSelection(this.quill.getIndex(slotBlot) + 1, 0, 'silent');
+    setTimeout(() => {
+      const el = this.annexureSlots()[0];
+      const head = el ? this.annexureGroup(el) : null;
+      const top = head && this.quill ? (this.quill.getLeaf(head.body)[0] as any)?.domNode : null;
+      ((top?.nodeType === 1 ? top : top?.parentElement) || el)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  }
+
+  /** Default spot (same as the old "append" output): a new page after the letter. */
+  private addAnnexureSlotAtEnd(reveal = true): void {
+    if (!this.quill || this.hasAnnexureSlot()) return;
+    this.insertAnnexureSlot(this.quill.getLength() - 1, true, null, reveal);
+  }
+
+  /**
+   * Older templates with "Append salary annexure" ticked have no annexure in the body;
+   * show it at its default spot (new page at the end), which prints exactly like before.
+   */
+  private showAnnexureSlotWhenReady(tries = 0): void {
+    if (!this.form.includeSalaryAnnexure || this.useRichEditor) return;
+    if (!this.quill) {
+      if (tries < 40) setTimeout(() => this.showAnnexureSlotWhenReady(tries + 1), 50);
+      return;
+    }
+    if (this.hasAnnexureSlot() || /\{\{\s*salary_annexure\s*\}\}/.test(this.quill.root.innerHTML)) return;
+    this.addAnnexureSlotAtEnd(false);
+  }
+
+  /** Checkbox: show the annexure in the letter, or take it out. */
+  onSalaryAnnexureToggle(on: boolean): void {
+    if (!this.quill) return;
+    if (on) {
+      if (!this.hasAnnexureSlot()) {
+        this.addAnnexureSlotAtEnd();
+        this.notyf.success('Salary annexure added on a new page at the end. Click in the letter and use "Place at cursor" to move it.');
+      }
+    } else if (this.hasAnnexureSlot()) {
+      this.removeAnnexureSlots();
+      this.form.bodyHtml = this.quill.root.innerHTML;
+      this.refreshPrintPreview(false);
+    }
+  }
+
+  /** Move the annexure (headings + table) to where the cursor was last placed in the letter. */
+  placeAnnexureAtCursor(newPage: boolean): void {
+    if (!this.quill) return;
+    const range = this.quill.getSelection(true);
+    if (!range) {
+      this.notyf.error('Click in the letter where the annexure should go, then try again');
+      return;
+    }
+    // Remember the cursor by its line, so removing the old annexure doesn't shift it
+    const [line, offset] = this.quill.getLine(range.index) as [any, number];
+    const lineNode: Element | undefined = line?.domNode;
+    const moved = this.removeAnnexureSlots();
+    let index = range.index;
+    if (line && lineNode?.isConnected) index = this.quill.getIndex(line) + offset;
+    // Cursor was inside the old annexure: put it back where it was
+    else if (moved) index = moved.index;
+    index = Math.min(index, this.quill.getLength() - 1);
+    this.insertAnnexureSlot(index, newPage, moved?.content || null);
+    this.form.includeSalaryAnnexure = true;
+  }
+
   insertVariable(key: string): void {
+    if (key === 'salary_annexure' && this.quill && !this.useRichEditor) {
+      this.placeAnnexureAtCursor(false);
+      return;
+    }
     const token = `{{${key}}}`;
     // Insert as bold so filled letter values stay emphasized
     if (this.useRichEditor) {

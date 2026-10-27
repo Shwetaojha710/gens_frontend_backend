@@ -155,13 +155,17 @@
   background: #ffffff;
   color: #155f56;
   border: 1px solid rgba(26, 128, 117, 0.28);
-  border-radius: 9999px;
-  padding: 6px 10px;
-  font-size: 11px;
+  border-radius: 14px;
+  padding: 8px 14px;
+  font-size: 13px;
   font-weight: 600;
-  max-width: 200px;
+  line-height: 1.35;
+  text-align: center;
+  width: max-content;
+  max-width: 220px;
   box-shadow: 0 6px 18px rgba(11, 43, 58, 0.14);
-  animation: buddyBubble 2.2s ease forwards;
+  /* duration is overridden per bubble from the component (scaled to text length) */
+  animation: buddyBubble 6s ease forwards;
   pointer-events: none;
   z-index: 108;
 }
@@ -174,8 +178,8 @@
 
 @keyframes buddyBubble {
   0% { opacity: 0; transform: translate(-50%, 0) scale(0.88); }
-  15% { opacity: 1; }
-  85% { opacity: 1; }
+  6% { opacity: 1; transform: translate(-50%, -8px) scale(1); }
+  92% { opacity: 1; transform: translate(-50%, -8px) scale(1); }
   100% { opacity: 0; transform: translate(-50%, -56px) scale(1); }
 }
 

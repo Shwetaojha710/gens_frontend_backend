@@ -56,13 +56,9 @@ export class PendingEmpListComponent {
   back() {
     this.personalDetails = {}
     this.createFlag = false
-    this.employeeList = this.employees?.map((item: any) => ({
-      value: item.id,
-      label: `${item.firstName} ${item?.lastName || ''}`
-    }));
+    this.employeeList = []
   }
   applyFilters() {
-    let data = [...this.employees];
     const value = this.searchTerm || '';
     this.searchText = value.trim();
     if (this.searchText === '') {
@@ -75,7 +71,7 @@ export class PendingEmpListComponent {
     // pagination
     const start = (this.currentPage - 1) * this.pageSize;
     const end = start + this.pageSize;
-    this.filteredDesignation = data.slice(start, end);
+    this.filteredDesignation = this.employees.slice(start, end);
   }
 
   employees: any = []
@@ -90,6 +86,8 @@ export class PendingEmpListComponent {
     let obj: any = {}
     obj["branchId"] = this.personalDetails["branchId"]
     this.employmentTypes = [];
+    // Pending requests have no branch until one is chosen; nothing to load yet.
+    if (!obj["branchId"]) return;
     this.master.getEmploymentTypes(obj).subscribe(data => {
       this.employmentTypes = data.data || [];
     },
@@ -132,6 +130,8 @@ export class PendingEmpListComponent {
     this.departmentDD = []
     let obj: any = {}
     obj['branchId'] = this.personalDetails['branchId'] ? this.personalDetails['branchId'] : null
+    // Pending requests have no branch until one is chosen; avoids a "branchId is required" error.
+    if (!obj['branchId']) return;
 
     this.master.Departmentsdd(obj).subscribe({
       next: (response: any) => {
@@ -277,10 +277,6 @@ rejectform() {
         if (this.totalEmpFlag == true) {
           this.employees = response.data || [];
           this.originalList = response.data || [];
-          this.employeeList = response.data?.map((item: any) => ({
-            value: item.id,
-            label: `${item?.empCode}-${item.firstName} ${item?.lastName || ''}`
-          }));
         }
 
         this.employees = this.employees.map((item: any, index: any) => {
@@ -434,7 +430,9 @@ stats:any
   }
   adhaarvalidaiton(event: KeyboardEvent, value: string): void {
     const isDigit = /^[0-9]$/.test(event.key);
-    if (!isDigit || (value && value.length >= 12)) {
+    // count digits only; the formatted value contains spaces
+    const digits = String(value || '').replace(/\D/g, '');
+    if (!isDigit || digits.length >= 12) {
       event.preventDefault();
     }
   }
@@ -484,6 +482,61 @@ stats:any
     this.personalDetails['empType'] = null;
     await this.DepartmentDD();
     await this.getEmploymentTypes();
+    this.loadReportingPersons();
+  }
+
+  /** Reporting person options: active employees of the branch being assigned. */
+  loadReportingPersons() {
+    this.employeeList = [];
+    const branchId = this.personalDetails['branchId'];
+    if (!branchId) return;
+    this.employeeService.getEmp(branchId).subscribe({
+      next: (response: any) => {
+        if (response?.status === true) {
+          this.employeeList = (response.data?.formattedActiveEmps || [])
+            .filter((item: any) => item.id != this.personalDetails.id)
+            .map((item: any) => ({
+              value: item.id,
+              label: `${item?.empCode || ''}-${item.firstName} ${item?.lastName || ''}`
+            }));
+        }
+      },
+      error: (err: any) => console.error('Error loading reporting persons:', err),
+    });
+  }
+
+  bloodGroupList = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(v => ({ value: v, label: v }));
+  readonly multiBranchRoles = ['director', 'manager'];
+
+  /** Multiple branches are only meaningful for roles with multi-branch access. */
+  get allowMultiBranch(): boolean {
+    return this.multiBranchRoles.includes(String(this.personalDetails?.role || '').toLowerCase());
+  }
+
+  onRoleChange() {
+    const ids = this.personalDetails['branchIds'] || [];
+    if (!this.allowMultiBranch && ids.length > 1) {
+      this.syncPrimaryBranch([ids[0]]);
+      this.notyf.error('Only Director or Manager roles can be assigned to multiple branches. Kept the first selected branch.');
+    }
+  }
+
+  isValidEmail(value: any): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+  }
+
+  /** Optional: empty OK; if filled must be 12 digits. */
+  isValidAadhaar(value: any): boolean {
+    const raw = String(value || '').replace(/\D/g, '');
+    if (!raw) return true;
+    return raw.length === 12;
+  }
+
+  /** Optional: empty OK; if filled must match PAN format. */
+  isValidPan(value: any): boolean {
+    const raw = String(value || '').trim().toUpperCase();
+    if (!raw) return true;
+    return /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(raw);
   }
   async update(data: any) {
 
@@ -513,24 +566,52 @@ stats:any
     await this.getcity(this.personalDetails.state);
     await this.DepartmentDD();
     await this.getEmploymentTypes();
-    await this.getDesignation(this.personalDetails.departmentId);
-    this.employeeList = this.employeeList.filter((item: any) => item.value != this.personalDetails.id);
+    if (this.personalDetails.departmentId) {
+      await this.getDesignation(this.personalDetails.departmentId);
+    }
+    this.loadReportingPersons();
     this.createFlag = true;
     this.updateFlag = true;
   }
   updateform() {
-    if (!this.syncPrimaryBranch(this.personalDetails['branchIds'] || this.personalDetails['branchId'])) {
-      this.notyf.error('Please select at least one Branch');
+    const d = this.personalDetails;
+    if (
+      !this.validateField(d.firstName, 'First Name') ||
+      !this.validateField(d.lastName, 'Last Name') ||
+      !this.validateField(d.mobile, 'Mobile Number') ||
+      !this.validateField(d.email, 'Email') ||
+      !this.validateField(d.dateOfBirth, 'Date of Birth')
+    ) {
       return;
     }
-    this.createFlag = false;
-    this.listflag = true;
-    this.updateFlag = false;
+    if (!this.isValidEmail(d.email)) {
+      this.notyf.error('Please enter a valid email address');
+      return;
+    }
+    if (!this.isValidAadhaar(d.adhaarNo)) {
+      this.notyf.error('Please enter a valid 12 digit Aadhaar number');
+      return;
+    }
+    if (!this.isValidPan(d.panNo)) {
+      this.notyf.error('Please enter a valid PAN (e.g., ABCDE1234F)');
+      return;
+    }
+    const selectedBranches = this.personalDetails['branchIds'] || [];
+    if (!this.syncPrimaryBranch(selectedBranches.length ? selectedBranches : this.personalDetails['branchId'])) {
+      this.notyf.error('Please select a Branch before approving');
+      return;
+    }
+    if (!this.allowMultiBranch && (this.personalDetails['branchIds'] || []).length > 1) {
+      this.notyf.error('Only Director or Manager roles can be assigned to multiple branches. Please select a single branch.');
+      return;
+    }
 
     const dob = new Date(this.personalDetails.dateOfBirth);
     const formattedDob = `${dob.getDate().toString().padStart(2, '0')}/${(dob.getMonth() + 1).toString().padStart(2, '0')}/${dob.getFullYear()}`;;
     const obj = Object.assign({}, this.personalDetails);
     obj.dateOfBirth = formattedDob;
+    obj.adhaarNo = obj.adhaarNo ? String(obj.adhaarNo).replace(/\D/g, '') : obj.adhaarNo;
+    obj.panNo = obj.panNo ? String(obj.panNo).trim().toUpperCase() : obj.panNo;
     obj.emp_status='approved'
     obj.type = 'pending_employee'
     obj.branchId = this.personalDetails['branchId'];
@@ -595,7 +676,7 @@ stats:any
   }
 
   onPageSizeChange(size: number) {
-    this.pageSize = size;
+    this.pageSize = Number(size) || 10;
     this.currentPage = 1;
     this.applyFilters();
   }
