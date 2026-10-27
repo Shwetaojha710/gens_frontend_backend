@@ -307,20 +307,15 @@
 
                   <td>{{ item.empCode || 'N/A' }}</td>
 
-               <!-- Designation badge -->
-<td>
-  <span class="emp-badge" [ngClass]="'emp-badge--' + (item.badgeColor || 'primary')">
-    {{ item.badge || item.role || 'N/A' }}
-  </span>
-</td>
+                  <!-- Department -->
+                  <td>{{ item.departmentName || 'N/A' }}</td>
 
-            <!-- Gender badge (optional) -->
-<td>
-  <span class="emp-badge"
-        [ngClass]="item.gender === 'Female' ? 'emp-badge--info' : 'emp-badge--success'">
-    {{ item.gender || '—' }}
-  </span>
-</td>
+                  <!-- Designation badge -->
+                  <td>
+                    <span class="emp-badge" [ngClass]="'emp-badge--' + (item.badgeColor || 'primary')">
+                      {{ item.designationName || item.badge || item.role || 'N/A' }}
+                    </span>
+                  </td>
 
 
                   <td>{{ item.joiningDate || 'NA' }}</td>

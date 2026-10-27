@@ -229,6 +229,7 @@ const getDashboardBaseData = async (
         "id",
         "firstName",
         "lastName",
+        "departmentId",
         "designationId",
         "empCode",
         "gender",
@@ -688,13 +689,16 @@ const buildDashboardStats = (baseData, trackingList) => {
   ];
 };
 
-const mapEmployees = (employees, designations) => {
+const mapEmployees = (employees, designations, departments) => {
   const designationMap = Object.fromEntries(designations.map((item) => [item.id, item.name]));
+  const departmentMap = Object.fromEntries(departments.map((item) => [item.id, item.name]));
 
   return employees.map((employee, index) => ({
     name: `${employee.firstName} ${employee.lastName}`,
     gender: employee.gender || "N/A",
     empCode: employee.empCode || "N/A",
+    designationName: designationMap[employee.designationId] || "N/A",
+    departmentName: departmentMap[employee.departmentId] || "N/A",
     role: designationMap[employee.designationId] || "N/A",
     badge: designationMap[employee.designationId] || "N/A",
     badgeColor: BADGE_COLORS[index % BADGE_COLORS.length],
@@ -863,7 +867,7 @@ exports.getDashboardData = async (req, res) => {
     const trackingList = buildTrackingList(baseData.locationEmployees, baseData.todayLocations);
 
     const [employees, holidays, leaves] = await Promise.all([
-      mapEmployees(baseData.recentEmployees, baseData.allDesignations),
+      mapEmployees(baseData.recentEmployees, baseData.allDesignations, baseData.activeDepartments),
       mapHolidays(baseData.recentHolidays, tenantId, branchId),
       mapLeaves(baseData.recentLeaves, baseData.leaveMasterList, tenantId, branchId),
     ]);
