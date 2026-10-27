@@ -52,9 +52,22 @@
                   </select>
                 </div>
                 <label class="form-check mb-0">
-                  <input type="checkbox" class="form-check-input" [(ngModel)]="form.includeSalaryAnnexure" />
+                  <input type="checkbox" class="form-check-input" [(ngModel)]="form.includeSalaryAnnexure"
+                    (ngModelChange)="onSalaryAnnexureToggle($event)" />
                   Append salary annexure
                 </label>
+                <ng-container *ngIf="form.includeSalaryAnnexure">
+                  <div class="small text-muted mt-1">
+                    The green dashed box in the letter shows where the salary table prints. To move it,
+                    click in the letter where it should go, then:
+                  </div>
+                  <div class="d-flex flex-wrap gap-1 mt-1">
+                    <button type="button" class="btn btn-sm btn-outline-success" (mousedown)="$event.preventDefault()"
+                      (click)="placeAnnexureAtCursor(false)">Place at cursor</button>
+                    <button type="button" class="btn btn-sm btn-outline-success" (mousedown)="$event.preventDefault()"
+                      (click)="placeAnnexureAtCursor(true)">Place at cursor on new page</button>
+                  </div>
+                </ng-container>
               </div>
 
               <!-- Branches -->
@@ -430,20 +443,29 @@
               <!-- Variables -->
               <div class="dt-panel-section">
                 <div class="dt-panel-title">Insert variable</div>
-                <small class="text-muted d-block mb-1">Click to insert at the cursor.</small>
+                <small class="text-muted d-block mb-1">Click to insert at the cursor. Filled from the employee's joining form.</small>
+                <input
+                  type="search"
+                  class="form-control form-control-sm mb-2"
+                  placeholder="Search variables… e.g. phone, address"
+                  [(ngModel)]="varFilter"
+                />
                 <div class="var-groups">
-                  <div class="var-group" *ngFor="let group of ['employee','salary','company']">
-                    <small class="text-muted text-uppercase">{{ group }}</small>
-                    <div class="d-flex flex-wrap gap-1 mt-1">
-                      <button
-                        type="button"
-                        class="btn btn-outline-secondary btn-sm var-chip"
-                        *ngFor="let v of catalog[group]"
-                        (click)="insertVariable(v.key)"
-                        [title]="v.label"
-                      >{{'{{' + v.key + '}}'}}</button>
+                  <ng-container *ngFor="let group of variableGroups">
+                    <div class="var-group" *ngIf="filteredVariables(group).length">
+                      <small class="text-muted text-uppercase">{{ varGroupLabel(group) }}</small>
+                      <div class="d-flex flex-wrap gap-1 mt-1">
+                        <button
+                          type="button"
+                          class="btn btn-outline-secondary btn-sm var-chip"
+                          *ngFor="let v of filteredVariables(group)"
+                          (click)="insertVariable(v.key)"
+                          [title]="v.label"
+                        >{{'{{' + v.key + '}}'}}</button>
+                      </div>
                     </div>
-                  </div>
+                  </ng-container>
+                  <small class="text-muted" *ngIf="varFilter && !hasFilteredVariables">No variables found.</small>
                 </div>
               </div>
             </aside>
@@ -652,6 +674,16 @@
                 ↵ Page Break
               </button>
 
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary"
+                (mousedown)="$event.preventDefault()"
+                (click)="insertTextBox()"
+                title="Insert a text box you can move anywhere on the page"
+              >
+                ▭ Text Box
+              </button>
+
               <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('removeFormat')" title="Clear formatting">Clear</button>
             </div>
 
@@ -782,6 +814,10 @@
                 [style.--dt-page-h]="pageHeightCss"
                 [style.width]="pageWidthCss"
                 [style.min-height.px]="autoFrameMinPx"
+                (pointerdown)="onFramePointerDown($event)"
+                (input)="onFrameInput($event)"
+                (paste)="onFramePaste($event)"
+                (keydown)="onFrameKeydown($event)"
               >
                 <!-- Letterhead header only (clip top of A4 image — avoids mid-page footer overlap) -->
                 <div
@@ -818,6 +854,44 @@
                     ></div>
                     <div *ngIf="b.headHtml" class="dt-seam-hf" [innerHTML]="b.headHtml"></div>
                   </div>
+                </div>
+
+                <!-- Selected text box: outline, mini toolbar, move grip, resize corner -->
+                <div
+                  *ngIf="tbUi"
+                  class="dt-tb-ui"
+                  [style.left.px]="tbUi.left"
+                  [style.top.px]="tbUi.top"
+                  [style.width.px]="tbUi.width"
+                  [style.height.px]="tbUi.height"
+                >
+                  <div class="dt-tb-bar" (mousedown)="$event.preventDefault()">
+                    <button
+                      type="button"
+                      class="dt-tb-move"
+                      title="Drag to move the box"
+                      (pointerdown)="startTbDrag($event, 'move')"
+                      (pointermove)="moveTbDrag($event)"
+                      (pointerup)="endTbDrag($event)"
+                      (pointercancel)="endTbDrag($event)"
+                    ><i class="fa-solid fa-up-down-left-right"></i> Move</button>
+                    <span class="dt-tb-sep"></span>
+                    <button type="button" title="Align left" [class.active]="tbAlign === 'left'" (click)="setTbAlign('left')"><i class="fa-solid fa-align-left"></i></button>
+                    <button type="button" title="Align center" [class.active]="tbAlign === 'center'" (click)="setTbAlign('center')"><i class="fa-solid fa-align-center"></i></button>
+                    <button type="button" title="Align right" [class.active]="tbAlign === 'right'" (click)="setTbAlign('right')"><i class="fa-solid fa-align-right"></i></button>
+                    <span class="dt-tb-sep"></span>
+                    <button type="button" title="Show / hide border" [class.active]="tbHasBorder" (click)="toggleTbBorder()"><i class="fa-regular fa-square"></i> Border</button>
+                    <button type="button" title="Add another box in this row" (click)="addTbBox()"><i class="fa-solid fa-plus"></i> Box</button>
+                    <button type="button" class="dt-tb-del" title="Delete this box" (click)="deleteTb()"><i class="fa-solid fa-trash"></i></button>
+                  </div>
+                  <div
+                    class="dt-tb-resize"
+                    title="Drag to resize"
+                    (pointerdown)="startTbDrag($event, 'resize')"
+                    (pointermove)="moveTbDrag($event)"
+                    (pointerup)="endTbDrag($event)"
+                    (pointercancel)="endTbDrag($event)"
+                  ></div>
                 </div>
 
                 <!-- Custom header / footer preview — click to edit in the left panel -->
