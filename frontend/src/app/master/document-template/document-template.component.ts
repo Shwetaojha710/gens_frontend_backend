@@ -95,7 +95,7 @@ function annexurePreviewTableHtml(heads: AnnexureHead[]): string {
  */
 const ANNEXURE_SLOT_CSS = (sel: string): string => `
   ${sel} {
-    display: block; position: relative; margin: 0; padding: 0;
+    display: block; position: relative; margin: 0 0 4px; padding: 0;
     outline: 2px dashed #0d9488; outline-offset: 2px;
     user-select: none; cursor: default;
   }
@@ -145,7 +145,8 @@ function annexureHeadingDelta(): Delta {
     .insert('\n', { align: 'center' })
     .insert('In continuation to our appointment letter dated ')
     .insert('{{joining_date}}', { bold: true })
-    .insert(' mentioned above, please note that the breakup of your salary will be as follows:-')
+    // Non-breaking space: print cleanup drops a plain leading space after bold text
+    .insert(' mentioned above, please note that the breakup of your salary will be as follows:-')
     .insert('\n')
     .insert('Salary Annexure', { bold: true, underline: true })
     .insert('\n', { align: 'center' });

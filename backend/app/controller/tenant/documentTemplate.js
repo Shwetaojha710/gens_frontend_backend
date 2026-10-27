@@ -215,8 +215,11 @@ function amountInWords(amount) {
   return n > 0 ? words(n) : 'Zero';
 }
 
-/** Annexure "A" salary table, laid out like the Appointment Letter annexure. */
-function salaryAnnexureHtml(structure, letterDate) {
+/**
+ * Annexure "A" salary table, laid out like the Appointment Letter annexure. With
+ * tableOnly the headings are left out (the template editor keeps them as normal text).
+ */
+function salaryAnnexureHtml(structure, letterDate, tableOnly = false) {
   const esc = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const num = (n) => Math.round(Number(n) || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
   const td = 'border:1px solid #000;padding:2px 6px;';
@@ -231,8 +234,9 @@ function salaryAnnexureHtml(structure, letterDate) {
   const benefitTotal = benefits.filter((r) => r.reducesInHand).reduce((s, r) => s + r.annual, 0);
   const ctc = structure.ctc || gross;
 
-  const head =
-    '<p style="text-align:center;"><b><u>Annexure “A”</u></b></p>' +
+  const head = tableOnly
+    ? ''
+    : '<p style="text-align:center;"><b><u>Annexure “A”</u></b></p>' +
     '<p style="text-align:center;"><u>Cost to Company Details</u></p>' +
     `<p>In continuation to our appointment letter dated <b>${esc(letterDate)}</b>&nbsp;mentioned above, ` +
     'please note that the breakup of your salary will be as follows:-</p>' +
@@ -763,6 +767,7 @@ async function buildVariableMap(tenantId, employeeId, hrName, issueDate) {
     salary_table: salaryTable,
     ctc_in_words: annualCtc ? `${amountInWords(annualCtc)} Only` : BLANK,
     salary_annexure: salaryAnnexureHtml(structure, fmtDate(emp.joiningDate)),
+    salary_annexure_table: salaryAnnexureHtml(structure, fmtDate(emp.joiningDate), true),
     company_name: tenant?.companyName || BLANK,
     company_address: tenant?.companyAddress || BLANK,
     hr_name: hrName || BLANK,
@@ -1527,7 +1532,8 @@ const ANNEXURE_SLOT_PARAGRAPH = new RegExp(
   '<p\\b[^>]*>' + SLOT_INLINE + ANNEXURE_SLOT.source + SLOT_INLINE + '</p>',
   'gi',
 );
-// Placeholder block the template editor inserts: <div class="hr-annexure-slot">{{salary_annexure}}</div>
+// Block the template editor inserts: <div class="hr-annexure-slot" data-annexure="table"><table>preview</table></div>
+// (its preview table has no <div>, so the first </div> closes it)
 const ANNEXURE_SLOT_BLOCK = /<div\b[^>]*\bhr-annexure-slot\b[^>]*>[\s\S]*?<\/div>/gi;
 
 /**
@@ -1542,7 +1548,10 @@ function fillDocumentBody(template, vars) {
     const block = annexureBlock(vars);
     // A slot alone in its paragraph replaces the whole paragraph, so no <p> wraps the table
     body = body
-      .replace(ANNEXURE_SLOT_BLOCK, () => block)
+      // Editor block: data-annexure="table" is the table alone (its headings are template text)
+      .replace(ANNEXURE_SLOT_BLOCK, (tag) =>
+        /data-annexure\s*=\s*["']?table/i.test(tag) && vars.salary_annexure_table ? vars.salary_annexure_table : block,
+      )
       .replace(ANNEXURE_SLOT_PARAGRAPH, () => block)
       .replace(new RegExp(ANNEXURE_SLOT.source, 'g'), () => block);
   }
