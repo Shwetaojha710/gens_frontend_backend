@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { Router, NavigationStart } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
@@ -29,7 +29,7 @@ export class BranchwiseComponent implements OnInit, OnDestroy {
   modalSearchText: string = ''
   modalFilteredBranches: any = []
   sliderIndex = 0;
-  readonly slidesVisible = 4;
+  slidesVisible = this.getSlidesVisible();
   obj: any = {};
   stats: any = []
   tenantDetails: any = {}
@@ -440,12 +440,39 @@ createFlag = false;
     this.notyf.success('Colors reset to defaults.');
   }
 
+  // Slide width is bound inline from this value, so no CSS breakpoints to keep in sync
+  private getSlidesVisible(): number {
+    const w = typeof window !== 'undefined' ? window.innerWidth : 1200;
+    if (w <= 575) return 1;
+    if (w <= 767) return 2;
+    if (w <= 1024) return 3;
+    return 4;
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.slidesVisible = this.getSlidesVisible();
+    if (this.sliderIndex > this.maxSliderIndex) this.sliderIndex = this.maxSliderIndex;
+  }
+
   get maxSliderIndex(): number {
     return Math.max(0, this.allBranchList.length - this.slidesVisible);
   }
 
   get sliderTranslate(): string {
     return `translateX(-${this.sliderIndex * (100 / this.slidesVisible)}%)`;
+  }
+
+  private touchStartX = 0;
+
+  onSliderTouchStart(e: TouchEvent): void {
+    this.touchStartX = e.changedTouches[0].clientX;
+  }
+
+  onSliderTouchEnd(e: TouchEvent): void {
+    const dx = e.changedTouches[0].clientX - this.touchStartX;
+    if (Math.abs(dx) < 40) return;
+    dx < 0 ? this.nextSlide() : this.prevSlide();
   }
 
   prevSlide(): void {

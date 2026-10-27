@@ -381,7 +381,7 @@
 
 
 <!-- ─── Main branchwise page ─── -->
-<div class="authentication-wrapper authentication-basic container-p-y p-4 p-sm-0"
+<div class="authentication-wrapper authentication-basic bw-page"
   style="background:
     radial-gradient(ellipse 60% 50% at 15% 20%, rgba(0, 180, 166, 0.16) 0%, transparent 60%),
     radial-gradient(ellipse 55% 45% at 85% 15%, rgba(255, 140, 66, 0.14) 0%, transparent 60%),
@@ -389,7 +389,7 @@
     linear-gradient(180deg, #eaf6f5 0%, #f7fbfa 100%);
   background-size: cover;background-repeat: no-repeat;">
   <div class="bg-1">
-<div class="col-12 text-end d-flex gap-2 justify-content-end">
+<div class="col-12 text-end d-flex flex-wrap gap-2 justify-content-end bw-top-actions">
               <button type="button" class="btn btn-outline-primary bg-white waves-effect waves-light"
                 data-bs-toggle="modal" data-bs-target="#addBranchModal" (click)="openAddBranchModal()">
                 <i class="bx bx-plus"></i>&nbsp;Add Branch
@@ -629,10 +629,10 @@
               </div>
             </div>
 
-    <div class="py-6">
+    <div class="pt-4">
       <div class="bg-2">
         <!-- Login -->
-        <div class="container p-md-7 p-1">
+        <div class="bw-container">
 
           <div class="row mb-6">
 
@@ -650,7 +650,7 @@
                   {{tenantDetails?.companyName}}
                   <!-- Quaere ETechnologies Pvt. Ltd. -->
                 </h4>
-                <p>
+                <p class="company-address">
                   {{tenantDetails?.companyAddress}}
                   <!-- 7th Floor, Cyber Tower, Pickup Road, Vibhuti Khand, Gomti Nagar, Lucknow-226010 (Uttar Pradesh) -->
                 </p>
@@ -662,21 +662,17 @@
 
 
             <!-- Grid layout: 4 or fewer branches -->
-            <div class="row g-3 mb-8 justify-content-center" *ngIf="allBranchList.length <= 4">
-              <div class="col-md-12">
-                <div class="row justify-content-center g-3">
-                  <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-xs-12 text-center"
-                    *ngFor="let branch of allBranchList">
-                    <div class="card-wrapper" style="position:relative;">
-                      <div class="city-card"
-                        [ngStyle]="{'background-image': 'url(' + getCardImageUrl(branch) + ')', 'background-size': 'cover', 'background-position': 'center'}">
-                        <div class="overlay">
-                          <h2 class="text-white text-uppercase city">{{ branch.name }}</h2>
-                          <h4 class="text-white office">OFFICE</h4>
-                          <p class="text-uppercase sub-line">{{ branch.description || 'Central administration and monitoring access.' }}</p>
-                          <button class="btn-dashboard" (click)="goToDashboard(branch)">Go To Dashboard</button>
-                        </div>
-                      </div>
+            <div class="col-12 mb-4" *ngIf="allBranchList.length <= 4">
+              <div class="bw-branch-grid">
+                <div class="card-wrapper text-center" style="position:relative;"
+                  *ngFor="let branch of allBranchList">
+                  <div class="city-card"
+                    [ngStyle]="{'background-image': 'url(' + getCardImageUrl(branch) + ')', 'background-size': 'cover', 'background-position': 'center'}">
+                    <div class="overlay">
+                      <h2 class="text-white text-uppercase city">{{ branch.name }}</h2>
+                      <h4 class="text-white office">OFFICE</h4>
+                      <p class="text-uppercase sub-line">{{ branch.description || 'Central administration and monitoring access.' }}</p>
+                      <button class="btn-dashboard" (click)="goToDashboard(branch)">Go To Dashboard</button>
                     </div>
                   </div>
                 </div>
@@ -684,8 +680,10 @@
             </div>
 
             <!-- Slider layout: more than 4 branches -->
-            <div class="bw-slider-section mb-8" *ngIf="allBranchList.length > 4">
-              <div class="bw-slider-wrapper">
+            <div class="bw-slider-section mb-4" *ngIf="allBranchList.length > 4">
+              <div class="bw-slider-wrapper"
+                (touchstart)="onSliderTouchStart($event)"
+                (touchend)="onSliderTouchEnd($event)">
 
                 <!-- Prev button -->
                 <button class="bw-slider-btn bw-slider-btn--prev"
@@ -700,7 +698,8 @@
                   <div class="bw-slider-track"
                     [style.transform]="sliderTranslate"
                     [style.transition]="'transform 0.4s ease'">
-                    <div class="bw-slider-item" *ngFor="let branch of allBranchList">
+                    <div class="bw-slider-item" *ngFor="let branch of allBranchList"
+                      [style.flex]="'0 0 ' + (100 / slidesVisible) + '%'">
                       <div class="city-card"
                         [ngStyle]="{'background-image': 'url(' + getCardImageUrl(branch) + ')', 'background-size': 'cover', 'background-position': 'center'}">
                         <div class="overlay">
