@@ -93,6 +93,7 @@ function hrPaginate(root, cfg) {
   function isBlankBlock(n) {
     if (n.nodeType === 3) return !/\S/.test(n.nodeValue);
     if (n.nodeType !== 1) return true;
+    if (/(^|\s)hr-tb-row(\s|$)/.test(n.className)) return false;
     if (/^(IMG|TABLE|HR|SVG|CANVAS)$/.test(n.tagName)) return false;
     if (n.querySelector && n.querySelector('img,table,hr,svg,canvas')) return false;
     return !/\S/.test((n.textContent || '').replace(/ /g, ' '));
@@ -100,6 +101,7 @@ function hrPaginate(root, cfg) {
 
   function splittable(n) {
     if (n.nodeType !== 1 || !/^(DIV|SECTION|ARTICLE|MAIN|BLOCKQUOTE)$/.test(n.tagName)) return false;
+    if (/(^|\s)hr-tb/.test(n.className)) return false; // text boxes are placed absolutely
     var c = 0;
     for (var k = 0; k < n.childNodes.length; k++) if (meaningful(n.childNodes[k])) c++;
     return c > 1;
