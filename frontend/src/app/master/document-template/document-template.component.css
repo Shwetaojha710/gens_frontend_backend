@@ -855,7 +855,8 @@
 }
 :host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label::before,
 :host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item::before {
-  content: 'Font';
+  content: 'Times New Roman';
+  font-family: 'Times New Roman', Times, serif;
 }
 :host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-label[data-value='Arial']::before,
 :host ::ng-deep .ql-snow .ql-picker.ql-font .ql-picker-item[data-value='Arial']::before { content: 'Arial'; font-family: Arial, sans-serif; }

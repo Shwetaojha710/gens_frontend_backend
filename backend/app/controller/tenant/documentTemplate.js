@@ -1711,16 +1711,18 @@ exports.saveGeneratedDocument = async (req, res) => {
 exports.listGeneratedDocuments = async (req, res) => {
   try {
     const tenantId = req.users?.tenantId;
-    const { employeeId } = req.body;
+    const { employeeId, limit } = req.body;
     if (!tenantId) return Helper.response(false, 'Unauthorized', {}, res, 401);
 
     const where = { tenantId };
     if (employeeId) where.employeeId = employeeId;
 
+    const cap = Math.min(Math.max(parseInt(limit, 10) || 2000, 1), 5000);
+
     const rows = await GeneratedDocument.findAll({
       where,
       order: [['createdAt', 'DESC']],
-      limit: 100,
+      limit: cap,
       attributes: { exclude: ['filledHtml'] },
     });
     return Helper.response(true, 'Generated documents', rows, res, 200);

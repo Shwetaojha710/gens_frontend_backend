@@ -364,6 +364,8 @@ const QUILL_SIZE_WHITELIST = [
   '8px', '9px', '10px', '11px', '12px', '13px', '14px', '15px', '16px', '18px', '20px', '22px', '24px', '28px', '32px', '36px', '48px', '64px', '72px',
 ];
 const QUILL_FONT_WHITELIST = [
+  'Times New Roman',
+  'Times',
   'Arial',
   'Arial Black',
   'Arial Narrow',
@@ -394,8 +396,6 @@ const QUILL_FONT_WHITELIST = [
   'Rockwell',
   'Segoe UI',
   'Tahoma',
-  'Times',
-  'Times New Roman',
   'Trebuchet MS',
   'Verdana',
 ];
@@ -1786,33 +1786,18 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       return;
     }
     try {
-      const html2pdfMod: any = await import('html2pdf.js');
-      const html2pdf = html2pdfMod.default ?? html2pdfMod;
+      const { downloadHtmlAsPdf } = await import('../../shared/utils/html-to-pdf.util');
       const dims = this.pageDims;
-      const host = document.createElement('div');
-      host.className = 'hr-pdf-host';
-      host.style.cssText = `position:fixed;left:-10000px;top:0;width:${dims.wMm}mm;`;
-      host.innerHTML = html; // <script> doesn't run via innerHTML — paginate here instead
-      document.body.appendChild(host);
-      await Promise.all(
-        Array.from(host.querySelectorAll('img')).map((img) =>
-          img.complete ? Promise.resolve() : img.decode().catch(() => undefined),
-        ),
-      );
-      hrPaginate(host.querySelector('[data-hr-root]'), this.lastPaginateCfg || {});
       const name = (this.form.name || 'document').replace(/[^\w\-]+/g, '_').slice(0, 60);
-      await html2pdf()
-        .set({
-          margin: 0,
-          filename: `${name}.pdf`,
-          image: { type: 'jpeg', quality: 0.95 },
-          html2canvas: { scale: 2, useCORS: true, logging: false },
-          jsPDF: { unit: 'mm', format: [dims.wMm, dims.hMm], orientation: 'portrait' },
-          pagebreak: { mode: ['css', 'legacy'], before: '.page-break' },
-        })
-        .from(host)
-        .save();
-      document.body.removeChild(host);
+      await downloadHtmlAsPdf({
+        html,
+        filename: `${name}.pdf`,
+        widthMm: dims.wMm,
+        heightMm: dims.hMm,
+        prepare: (doc) => {
+          hrPaginate(doc.querySelector('[data-hr-root]'), this.lastPaginateCfg || {});
+        },
+      });
       this.notyf.success('PDF downloaded');
     } catch (err) {
       console.error('exportAsPdf', err);
@@ -3297,6 +3282,39 @@ ${paginatorScriptTag(paginateCfg)}
       this.quill.root.style.fontFamily = fam;
       this.quill.root.style.fontSize = size;
     }
+    this.syncQuillToolbarFontLabel(fam);
+  }
+
+  /**
+   * Quill font picker shows Arial when selection has no inline font.
+   * Mirror template default (usually Times New Roman) on the picker label.
+   */
+  private syncQuillToolbarFontLabel(fam?: string): void {
+    const font = fam || this.form?.defaultFontFamily || 'Times New Roman';
+    const root =
+      this.quillToolbarHost?.nativeElement ||
+      (document.querySelector('app-document-template .ql-toolbar') as HTMLElement | null);
+    if (!root) return;
+    const label = root.querySelector(
+      '.ql-picker.ql-font .ql-picker-label',
+    ) as HTMLElement | null;
+    if (!label) return;
+    label.setAttribute('data-value', font);
+  }
+
+  /** Keep Quill font picker in sync with caret formats. */
+  private syncFontUiFromSelection(): void {
+    if (!this.quill) return;
+    const range = this.quill.getSelection();
+    const fmt = range ? this.quill.getFormat(range) : this.quill.getFormat();
+    const raw = (fmt as any)?.font;
+    if (!raw) {
+      // No inline font → show template default (Times New Roman), not Arial
+      this.syncQuillToolbarFontLabel(this.form?.defaultFontFamily || 'Times New Roman');
+      return;
+    }
+    const fam = this.normalizeFontFamily(raw) || String(raw);
+    this.syncQuillToolbarFontLabel(fam);
   }
 
   /** Max page index count that should show letterhead (Infinity = all). */
@@ -3527,6 +3545,9 @@ ${paginatorScriptTag(paginateCfg)}
       this.form.bodyHtml = this.quill?.root.innerHTML || '';
       this.refreshPrintPreview(false);
     });
+    this.quill.on('selection-change', (range: any) => {
+      if (range) this.syncFontUiFromSelection();
+    });
   }
 
   /** Move Quill's .ql-toolbar into the sticky header slot above .a4-stage. */
@@ -3622,13 +3643,17 @@ ${paginatorScriptTag(paginateCfg)}
       this.quill.setSelection(idx, 0, 'silent');
       range = this.quill.getSelection(true);
     }
-    // No selection length → set document default; with selection → format selected text
-    if (!range || range.length === 0) {
-      this.applyEditorChromeDefaults();
-    } else {
+    // With selection → format selected text; no selection → whole-doc default + chrome
+    if (range && range.length > 0) {
       this.quill.format('font', fam, 'user');
       this.form.bodyHtml = this.quill.root.innerHTML;
+    } else {
+      // Apply to all text so picker + body both show Times (not leftover Arial spans)
+      this.quill.formatText(0, this.quill.getLength(), 'font', fam, 'user');
+      this.form.bodyHtml = this.quill.root.innerHTML;
+      this.applyEditorChromeDefaults();
     }
+    this.syncQuillToolbarFontLabel(fam);
     this.refreshPrintPreview(false);
   }
 

@@ -383,6 +383,9 @@ export class MasterService {
   listHrGenerated(body: any = {}): Observable<any> {
     return this.http.post(`${this.baseUrl}hr-template-generated-list`, body);
   }
+  getHrGenerated(id: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}hr-template-generated-get`, { id });
+  }
 
   getLetterhead(): Observable<any> {
     return this.http.post(`${this.baseUrl}get-letterhead`, {});

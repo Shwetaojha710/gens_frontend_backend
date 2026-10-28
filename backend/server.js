@@ -27,8 +27,8 @@ UserPermission.sync({ alter: false }).catch(err =>
   console.error('UserPermission sync error:', err)
 );
 
-// alter:true so new columns (e.g. branchIds) are added without manual migration
-DocumentTemplate.sync({ alter: true }).catch(err =>
+// alter:false — alter:true exhausts Postgres locks (53200 out of shared memory)
+DocumentTemplate.sync({ alter: false }).catch(err =>
   console.error('DocumentTemplate sync error:', err)
 );
 GeneratedDocument.sync({ alter: false }).catch(err =>

@@ -1,50 +1,185 @@
-<div class="container-fluid mt-4">
-  <div class="card mb-3">
-    <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-      <span>Generate HR Letter</span>
-      <a class="btn btn-sm btn-outline-primary" routerLink="/layout/master/document-templates">
+<div class="container-fluid py-4 gl-page">
+  <!-- Page header -->
+  <div class="gl-header mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h4 class="gl-title mb-0">Generate HR Letter</h4>
+      <p class="gl-subtitle mb-0">Assigned documents list · naya letter ke liye Add use karo</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <button type="button" class="btn btn-primary gl-btn" (click)="openAddForm()" *ngIf="!showAddForm">
+        + Add Letter
+      </button>
+      <button type="button" class="btn btn-outline-secondary gl-btn" (click)="closeAddForm()" *ngIf="showAddForm">
+        Cancel
+      </button>
+      <a class="btn btn-outline-primary gl-btn" routerLink="/layout/master/document-templates">
         Manage Templates
       </a>
-    </h5>
-    <div class="card-body">
+    </div>
+  </div>
+
+  <!-- Add Letter panel -->
+  <div class="gl-panel gl-panel--add mb-3" *ngIf="showAddForm">
+    <div class="gl-panel__head">
+      <div>
+        <div class="gl-panel__title">Add Letter</div>
+        <div class="gl-panel__hint">Employee + template select → Preview → Save</div>
+      </div>
+      <button type="button" class="btn-close" aria-label="Close" (click)="closeAddForm()"></button>
+    </div>
+    <div class="gl-panel__body">
       <div class="row g-3 align-items-end">
-        <div class="col-md-4">
-          <label class="form-label fw-bold">Employee</label>
-          <ng-select class="emp-select" [items]="employees" bindLabel="label" bindValue="id"
-            [(ngModel)]="employeeId" [searchFn]="searchEmployee" [clearable]="true"
-            placeholder="Search by name or employee code" notFoundText="No employee found">
+        <div class="col-lg-4 col-md-6">
+          <label class="gl-label">Employee</label>
+          <ng-select
+            class="emp-select"
+            [items]="employees"
+            bindLabel="label"
+            bindValue="id"
+            [(ngModel)]="employeeId"
+            [searchFn]="searchEmployee"
+            [clearable]="true"
+            appendTo="body"
+            placeholder="Search name or emp code"
+            notFoundText="No employee found"
+            (ngModelChange)="onEmployeeChange()"
+          >
           </ng-select>
         </div>
-        <div class="col-md-4">
-          <label class="form-label fw-bold">Template</label>
-          <select class="form-select" [(ngModel)]="templateId">
+        <div class="col-lg-4 col-md-6">
+          <label class="gl-label">Template</label>
+          <select class="form-select gl-control" [(ngModel)]="templateId">
             <option value="">Select template</option>
-            <option *ngFor="let t of templates" [value]="t.id">{{ t.name }} ({{ t.category }})</option>
+            <option *ngFor="let t of templates" [value]="t.id">{{ t.name }}</option>
           </select>
         </div>
-        <div class="col-md-2">
-          <label class="form-label fw-bold">Issue Date</label>
-          <input type="date" class="form-control" [(ngModel)]="issueDate" />
+        <div class="col-lg-2 col-md-6">
+          <label class="gl-label">Issue Date</label>
+          <input type="date" class="form-control gl-control" [(ngModel)]="issueDate" />
         </div>
-        <div class="col-md-2 d-flex gap-2">
-          <button type="button" class="btn btn-primary btn-sm" [disabled]="loading" (click)="preview()">
+        <div class="col-lg-2 col-md-6">
+          <label class="gl-label d-none d-lg-block">&nbsp;</label>
+          <button type="button" class="btn btn-primary w-100 gl-btn-preview" [disabled]="loading" (click)="preview()">
             {{ loading ? 'Loading…' : 'Preview' }}
           </button>
         </div>
       </div>
     </div>
+
+    <!-- Preview nested in same panel -->
+    <div class="gl-preview" *ngIf="previewUrl">
+      <div class="gl-preview__bar">
+        <span class="gl-preview__title">Preview</span>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="print()">Print</button>
+          <button type="button" class="btn btn-sm btn-success" (click)="saveGenerated()">Save</button>
+        </div>
+      </div>
+      <iframe class="preview-iframe" [src]="previewUrl" title="Letter preview"></iframe>
+    </div>
   </div>
 
-  <div class="card" *ngIf="previewUrl">
-    <h5 class="card-header d-flex justify-content-between align-items-center">
-      <span>Preview</span>
-      <div class="d-flex gap-2">
-        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="print()">Print</button>
-        <button type="button" class="btn btn-sm btn-success" (click)="saveGenerated()">Save</button>
+  <!-- Assigned letters -->
+  <div class="gl-panel">
+    <div class="gl-panel__head gl-panel__head--list">
+      <div class="d-flex align-items-center flex-wrap gap-3">
+        <div>
+          <div class="gl-panel__title">Assigned Letters</div>
+          <div class="gl-panel__hint">View · Print · PDF · Word download</div>
+        </div>
+        <div class="gl-chips">
+          <span class="gl-chip"><b>{{ totalDocs }}</b> docs</span>
+          <span class="gl-chip gl-chip--teal"><b>{{ uniqueEmployees }}</b> employees</span>
+          <span class="gl-chip gl-chip--blue"><b>{{ filteredList.length }}</b> showing</span>
+        </div>
       </div>
-    </h5>
-    <div class="card-body p-0">
-      <iframe class="preview-iframe" [src]="previewUrl" title="Letter preview"></iframe>
+      <button
+        type="button"
+        class="btn btn-sm btn-outline-secondary"
+        [disabled]="listLoading"
+        (click)="loadGeneratedList()"
+      >
+        {{ listLoading ? '…' : 'Refresh' }}
+      </button>
+    </div>
+
+    <div class="gl-panel__body">
+      <div class="gl-toolbar mb-3">
+        <input
+          type="search"
+          class="form-control gl-search"
+          placeholder="Search employee, code, or template…"
+          [(ngModel)]="listSearch"
+          (ngModelChange)="applyListFilter()"
+        />
+        <label class="gl-check mb-0">
+          <input
+            type="checkbox"
+            [(ngModel)]="listFilterEmployeeOnly"
+            (ngModelChange)="loadGeneratedList()"
+          />
+          Only selected employee
+        </label>
+      </div>
+
+      <div class="table-responsive gl-table-wrap" *ngIf="!listLoading; else listBusy">
+        <table class="table table-hover align-middle mb-0 gl-table" *ngIf="pagedList.length; else listEmpty">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Document</th>
+              <th>Issue date</th>
+              <th>Saved at</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of pagedList">
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="gl-avatar">{{ initials(row.employeeLabel || '?') }}</span>
+                  <div class="min-w-0">
+                    <div class="fw-semibold text-truncate">{{ row.employeeLabel }}</div>
+                    <div class="text-muted small" *ngIf="row.employeeCode">{{ row.employeeCode }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="gl-doc-pill" [title]="row.templateName">{{ row.templateName }}</span>
+              </td>
+              <td class="text-nowrap">{{ row.issueDate || '—' }}</td>
+              <td class="text-muted small text-nowrap">{{ formatSavedAt(row.createdAt) }}</td>
+              <td class="text-end">
+                <div class="gl-actions">
+                  <button type="button" class="btn btn-xs gl-act gl-act--view" [disabled]="row.busy" (click)="viewSaved(row)">View</button>
+                  <button type="button" class="btn btn-xs gl-act gl-act--print" [disabled]="row.busy" (click)="printSaved(row)">Print</button>
+                  <button type="button" class="btn btn-xs gl-act gl-act--pdf" [disabled]="row.busy" (click)="downloadPdf(row)">PDF</button>
+                  <button type="button" class="btn btn-xs gl-act gl-act--word" [disabled]="row.busy" (click)="downloadWord(row)">Word</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="gl-pager" *ngIf="filteredList.length">
+        <small class="text-muted">Page {{ currentPage }} / {{ totalPages }} · {{ filteredList.length }} records</small>
+        <div class="btn-group btn-group-sm">
+          <button type="button" class="btn btn-outline-secondary" [disabled]="currentPage <= 1" (click)="goPage(currentPage - 1)">Prev</button>
+          <button type="button" class="btn btn-outline-secondary" [disabled]="currentPage >= totalPages" (click)="goPage(currentPage + 1)">Next</button>
+        </div>
+      </div>
+
+      <ng-template #listEmpty>
+        <div class="gl-empty">
+          <div class="gl-empty__title">No assigned letters yet</div>
+          <p class="text-muted mb-3 small">Add Letter → Preview → Save ke baad yahan dikhenge.</p>
+          <button type="button" class="btn btn-primary btn-sm" (click)="openAddForm()">+ Add Letter</button>
+        </div>
+      </ng-template>
+      <ng-template #listBusy>
+        <div class="gl-empty text-muted">Loading documents…</div>
+      </ng-template>
     </div>
   </div>
 </div>

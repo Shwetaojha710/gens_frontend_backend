@@ -713,102 +713,70 @@ exports.getEmp = async (req, res) => {
         raw: true,
       });
 
-      const formattedEmps = await Promise.all(
-        emps.map(async (emp, i) => {
-          const emptypes = await EmploymentType.findOne({
-            where: { id: emp.empType, tenantId, branchId },
-          });
-          let designationName = null;
-          let departmentName = null;
-          if (emp.designationId) {
-            const designationData = await designation.findOne({
-              where: { id: emp.designationId, tenantId, branchId },
-              attributes: ["name"],
+      /**
+       * Batch-load empType / designation / department once.
+       * Per-employee findOne + Promise.all exhausted Postgres locks
+       * (53200 out of shared memory / max_locks_per_transaction).
+       */
+      const allEmpRows = [...emps, ...ActiveEmps, ...Inactivemps, ...newJoinersList];
+      const empTypeIds = [
+        ...new Set(allEmpRows.map((e) => e.empType).filter(Boolean)),
+      ];
+      const desigIds = [
+        ...new Set(allEmpRows.map((e) => e.designationId).filter(Boolean)),
+      ];
+      const deptIds = [
+        ...new Set(allEmpRows.map((e) => e.departmentId).filter(Boolean)),
+      ];
+
+      const [empTypeRows, desigRows, deptRows] = await Promise.all([
+        empTypeIds.length
+          ? EmploymentType.findAll({
+              where: { id: { [Op.in]: empTypeIds }, tenantId, branchId },
+              attributes: ["id", "name"],
               raw: true,
-            });
-
-            designationName = designationData?.name || null;
-          }
-          if (emp.departmentId) {
-            const departmentData = await Department.findOne({
-              where: { id: emp.departmentId, tenantId, branchId },
-              attributes: ["name"],
+            })
+          : Promise.resolve([]),
+        desigIds.length
+          ? designation.findAll({
+              where: { id: { [Op.in]: desigIds }, tenantId, branchId },
+              attributes: ["id", "name"],
               raw: true,
-            });
+            })
+          : Promise.resolve([]),
+        deptIds.length
+          ? Department.findAll({
+              where: { id: { [Op.in]: deptIds }, tenantId, branchId },
+              attributes: ["id", "name"],
+              raw: true,
+            })
+          : Promise.resolve([]),
+      ]);
 
-            departmentName = departmentData?.name || null;
-          }
-          //   if (emp.designationId) {  
-          //   designationName = departmentName?.name || null;
+      const empTypeById = Object.fromEntries(
+        (empTypeRows || []).map((r) => [r.id, r.name]),
+      );
+      const desigById = Object.fromEntries(
+        (desigRows || []).map((r) => [r.id, r.name]),
+      );
+      const deptById = Object.fromEntries(
+        (deptRows || []).map((r) => [r.id, r.name]),
+      );
 
-          // }
+      const formatEmpRow = (emp) => ({
+        ...emp,
+        createdAt: Helper.formatToIST(emp.createdAt, "YYYY-MM-DD HH:mm:ss"),
+        emptypename: emp.empType ? empTypeById[emp.empType] || null : null,
+        designation: emp.designationId
+          ? desigById[emp.designationId] || null
+          : null,
+        department: emp.departmentId ? deptById[emp.departmentId] || null : null,
+      });
 
-          return {
-            ...emp,
-            createdAt: Helper.formatToIST(emp.createdAt, "YYYY-MM-DD HH:mm:ss"),
-            emptypename: emptypes ? emptypes.name : null,
-            designation: emp.designationId ? designationName : null,
-            department: emp.departmentId ? departmentName : null,
-          };
-        }),
-      );
-      const formattedActiveEmps = await Promise.all(
-        ActiveEmps.map(async (emp, i) => {
-          const emptypes = await EmploymentType.findOne({
-            where: { id: emp.empType, tenantId, branchId },
-          });
-          return {
-            ...emp,
-            createdAt: Helper.formatToIST(emp.createdAt, "YYYY-MM-DD HH:mm:ss"),
-            emptypename: emptypes ? emptypes.name : null,
-            designation: emp.designationId
-              ? await designation.findOne({
-                  where: { id: emp.designationId, tenantId, branchId },
-                  attributes: ["name"],
-                  raw: true,
-                })?.name
-              : null,
-          };
-        }),
-      );
-      const formattedInactivemps = await Promise.all(
-        Inactivemps.map(async (emp, i) => {
-          const emptypes = await EmploymentType.findOne({
-            where: { id: emp.empType, tenantId, branchId },
-          });
-          return {
-            ...emp,
-            createdAt: Helper.formatToIST(emp.createdAt, "YYYY-MM-DD HH:mm:ss"),
-            emptypename: emptypes ? emptypes.name : null,
-            designation: emp.designationId
-              ? await designation.findOne({
-                  where: { id: emp.designationId, tenantId, branchId },
-                  attributes: ["name"],
-                  raw: true,
-                })?.name
-              : null,
-          };
-        }),
-      );
-      const formattednewJoinermps = await Promise.all(
-        newJoinersList.map(async (emp, i) => {
-          const emptypes = await EmploymentType.findOne({
-            where: { id: emp.empType, tenantId, branchId },
-          });
-          return {
-            ...emp,
-            createdAt: Helper.formatToIST(emp.createdAt, "YYYY-MM-DD HH:mm:ss"),
-            emptypename: emptypes ? emptypes.name : null,
-            designation: emp.designationId
-              ? await designation.findOne({
-                  where: { id: emp.designationId, tenantId, branchId },
-                  attributes: ["name"],
-                  raw: true,
-                })?.name
-              : null,
-          };
-        }),
-      );
+      const formattedEmps = emps.map(formatEmpRow);
+      const formattedActiveEmps = ActiveEmps.map(formatEmpRow);
+      const formattedInactivemps = Inactivemps.map(formatEmpRow);
+      const formattednewJoinermps = newJoinersList.map(formatEmpRow);
 
       return Helper.response(
         true,
