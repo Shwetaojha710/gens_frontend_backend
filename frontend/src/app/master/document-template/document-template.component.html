@@ -684,6 +684,26 @@
                 ▭ Text Box
               </button>
 
+              <select
+                class="form-select form-select-sm dt-format-select dt-w-date-var"
+                title="Which date to insert"
+                [(ngModel)]="selectedDateVariable"
+                (mousedown)="saveRichSelection(); $event.stopPropagation()"
+                (focus)="saveRichSelection()"
+              >
+                <option *ngFor="let v of dateVariableOptions" [ngValue]="v.id">{{ v.label }}</option>
+              </select>
+              <select
+                class="form-select form-select-sm dt-format-select dt-w-date"
+                title="Insert selected date variable in this format"
+                (mousedown)="saveRichSelection(); $event.stopPropagation()"
+                (focus)="saveRichSelection()"
+                (change)="insertDateFormatted($any($event.target).value); $any($event.target).value = ''"
+              >
+                <option value="">Date format</option>
+                <option *ngFor="let d of dateFormatOptions" [value]="d.id">{{ d.label }}</option>
+              </select>
+
               <button type="button" class="btn btn-sm btn-outline-secondary" (mousedown)="$event.preventDefault()" (click)="richCmd('removeFormat')" title="Clear formatting">Clear</button>
             </div>
 
@@ -754,6 +774,23 @@
                   <option value="14pt">14 pt</option>
                   <option value="18pt">18 pt</option>
                   <option value="24pt">24 pt</option>
+                </select>
+                <select
+                  class="form-select form-select-sm dt-format-select dt-w-date-var"
+                  title="Which date to insert (Issue / Joining / DOB / Today)"
+                  [(ngModel)]="selectedDateVariable"
+                  (mousedown)="$event.stopPropagation()"
+                >
+                  <option *ngFor="let v of dateVariableOptions" [ngValue]="v.id">{{ v.label }}</option>
+                </select>
+                <select
+                  class="form-select form-select-sm dt-format-select dt-w-date"
+                  title="Insert selected date variable in this format at cursor"
+                  (mousedown)="$event.stopPropagation()"
+                  (change)="insertDateFormatted($any($event.target).value); $any($event.target).value = ''"
+                >
+                  <option value="">Date format</option>
+                  <option *ngFor="let d of dateFormatOptions" [value]="d.id">{{ d.label }}</option>
                 </select>
               </div>
               <div class="dt-tool-group">

@@ -592,6 +592,31 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
   fontFamilyOptions = QUILL_FONT_WHITELIST;
   fontSizeOptions = QUILL_SIZE_WHITELIST.filter((s) => s.endsWith('pt'));
 
+  /**
+   * Date variable for Date format tool.
+   * `today` = insert fixed today's date; others insert {{key:format}} filled on Generate Letter.
+   */
+  dateVariableOptions: { id: string; label: string }[] = [
+    { id: 'issue_date', label: 'Issue Date' },
+    { id: 'joining_date', label: 'Joining Date' },
+    { id: 'date_of_birth', label: 'Date of Birth' },
+    { id: 'today', label: "Today (fixed text)" },
+  ];
+  /** Selected date variable for the Format / Quill Date tool (default Issue Date). */
+  selectedDateVariable = 'issue_date';
+
+  /** Format patterns for the Date tool (applied to selectedDateVariable). */
+  dateFormatOptions: { id: string; label: string }[] = [
+    { id: 'dd/MM/yyyy', label: 'DD/MM/YYYY' },
+    { id: 'dd-MM-yyyy', label: 'DD-MM-YYYY' },
+    { id: 'dd MMM yyyy', label: 'DD MMM YYYY' },
+    { id: 'dd MMMM yyyy', label: 'DD MMMM YYYY' },
+    { id: 'd MMMM yyyy', label: 'D MMMM YYYY' },
+    { id: 'yyyy-MM-dd', label: 'YYYY-MM-DD' },
+    { id: 'MM/dd/yyyy', label: 'MM/DD/YYYY' },
+    { id: 'MMMM d, yyyy', label: 'Month D, YYYY' },
+  ];
+
   /** All tenant branches for assign multi-select */
   branchList: { id: string; name: string }[] = [];
 
@@ -3488,6 +3513,7 @@ ${paginatorScriptTag(paginateCfg)}
             [{ indent: '-1' }, { indent: '+1' }],
             ['blockquote', 'link', 'image', 'table'],
             ['pagebreak', 'textbox'],
+            [{ dateformat: self.dateFormatOptions.map((d) => d.id) }],
             ['clean'],
           ],
           handlers: {
@@ -3496,6 +3522,10 @@ ${paginatorScriptTag(paginateCfg)}
             },
             textbox() {
               self.insertTextBox();
+            },
+            dateformat(value: string) {
+              // Uses selectedDateVariable (Issue / Joining / DOB / Today)
+              if (value) self.insertDateFormatted(value);
             },
             table() {
               self.insertQuillTable();
@@ -4810,6 +4840,95 @@ ${paginatorScriptTag(paginateCfg)}
     this.quill.setSelection(index + token.length, 0, 'user');
     this.form.bodyHtml = this.quill.root.innerHTML;
     this.refreshPrintPreview(false);
+  }
+
+  /**
+   * Toolbar Date format — insert at caret:
+   * - variable (issue_date / joining_date / date_of_birth) → {{key:format}} (or {{key}} for default)
+   * - today → fixed formatted date text
+   */
+  insertDateFormatted(formatId: string): void {
+    if (!formatId) return;
+    const variable = this.selectedDateVariable || 'issue_date';
+
+    // Dynamic placeholder filled on Generate Letter
+    if (variable !== 'today') {
+      const token =
+        formatId === 'dd/MM/yyyy' ? `{{${variable}}}` : `{{${variable}:${formatId}}}`;
+      this.insertDateToken(token);
+      return;
+    }
+
+    // Fixed "today" text
+    const text = this.formatDateValue(new Date(), formatId);
+    if (!text) return;
+    this.insertDateToken(text, false);
+  }
+
+  /** Insert a date token/text (bold for variables) at the editor caret. */
+  private insertDateToken(text: string, asVariable = true): void {
+    const html = asVariable
+      ? `<strong>${this.escapeHtml(text)}</strong>&nbsp;`
+      : this.escapeHtml(text);
+
+    if (this.useRichEditor) {
+      const el = this.getRichEl();
+      if (!el) {
+        this.form.bodyHtml = (this.form.bodyHtml || '') + (asVariable ? `<strong>${this.escapeHtml(text)}</strong>` : this.escapeHtml(text));
+        return;
+      }
+      this.saveRichSelection();
+      this.insertHtmlAtCaret(html);
+      return;
+    }
+    if (!this.quill) {
+      this.form.bodyHtml = (this.form.bodyHtml || '') + (asVariable ? `<strong>${this.escapeHtml(text)}</strong>` : this.escapeHtml(text));
+      this.refreshPrintPreview(false);
+      return;
+    }
+    const range = this.quill.getSelection(true);
+    const index = range ? range.index : Math.max(0, this.quill.getLength() - 1);
+    if (asVariable) {
+      this.quill.insertText(index, text, { bold: true }, 'user');
+    } else {
+      this.quill.insertText(index, text, 'user');
+    }
+    this.quill.setSelection(index + text.length, 0, 'user');
+    this.form.bodyHtml = this.quill.root.innerHTML;
+    this.refreshPrintPreview(false);
+  }
+
+  /** Format a Date with tokens: dd, d, MM, MMM, MMMM, yyyy, yy */
+  private formatDateValue(date: Date, pattern: string): string {
+    const d = date instanceof Date && !Number.isNaN(date.getTime()) ? date : new Date();
+    const day = d.getDate();
+    const month = d.getMonth(); // 0-based
+    const year = d.getFullYear();
+    const monthsShort = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    const monthsLong = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    const pad2 = (n: number) => String(n).padStart(2, '0');
+    return String(pattern)
+      .replace(/yyyy/g, String(year))
+      .replace(/yy/g, String(year).slice(-2))
+      .replace(/MMMM/g, monthsLong[month])
+      .replace(/MMM/g, monthsShort[month])
+      .replace(/MM/g, pad2(month + 1))
+      .replace(/dd/g, pad2(day))
+      .replace(/\bd\b/g, String(day));
+  }
+
+  private escapeHtml(s: string): string {
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   onLetterheadFile(event: Event): void {
