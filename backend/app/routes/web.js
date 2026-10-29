@@ -16,7 +16,7 @@ router.post('/AIlogin',AIlogin)
 router.post('/logout',Admin,logout)
 router.post('/app-logout',AppAdmin,Applogout)
 router.post('/snap-to-roads',Admin,snapToRoads)
-router.post('/company-register',logoUpload('image'), Companyregistration)
+router.post('/company-register',logoUpload(['image', 'imageDark']), Companyregistration)
 router.post('/send-otp',interViewerlogin)
 router.post('/verify-otp-login',InterviewerverifyOtp)
 module.exports = router

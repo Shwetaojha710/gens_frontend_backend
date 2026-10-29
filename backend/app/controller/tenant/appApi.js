@@ -3926,10 +3926,11 @@ exports.PrintBill = async (req, res) => {
     // Company logo (Tenant.image) when it is PNG/JPG (pdfmake formats), else the default logo
     let logoPath = path.join(__dirname, "../../../logo-quaere.png");
     const logoTenant = tenantId
-      ? await Tenant.findByPk(tenantId, { attributes: ["image"], raw: true })
+      ? await Tenant.findByPk(tenantId, { attributes: ["image", "imageDark"], raw: true })
       : null;
-    if (logoTenant?.image && /\.(png|jpe?g)$/i.test(logoTenant.image)) {
-      const companyLogoPath = path.join(__dirname, "../../../upload", path.basename(logoTenant.image));
+    const logoFile = Tenant.lightLogoFile(logoTenant);
+    if (logoFile && /\.(png|jpe?g)$/i.test(logoFile)) {
+      const companyLogoPath = path.join(__dirname, "../../../upload", path.basename(logoFile));
       if (fs.existsSync(companyLogoPath)) logoPath = companyLogoPath;
     }
     // Read and convert to base64

@@ -7,12 +7,24 @@
           <i class="ri ri-arrow-left-line" aria-hidden="true"></i>
           <span>All companies</span>
         </button>
+        <button
+          type="button"
+          class="btn btn-sm sa-co-back"
+          *ngIf="snapshot?.tenant && !loading"
+          (click)="openEdit()"
+        >
+          <i class="ri ri-edit-2-line" aria-hidden="true"></i>
+          <span>Edit company</span>
+        </button>
       </div>
 
       <div class="sa-co-hero-main">
         <div class="sa-co-hero-copy">
           <p class="sa-hero-kicker">Tenant overview</p>
-          <h1 class="sa-co-title" *ngIf="snapshot?.tenant as t; else titleLoad">{{ t.companyName }}</h1>
+          <h1 class="sa-co-title" *ngIf="snapshot?.tenant as t; else titleLoad">
+            <img *ngIf="t.logo" [src]="t.logo" alt="" class="sa-co-title-logo" />
+            {{ t.companyName }}
+          </h1>
           <ng-template #titleLoad>
             <h1 class="sa-co-title sa-co-title--ghost">{{ loading ? 'Loading workspace…' : 'Company' }}</h1>
           </ng-template>
@@ -23,7 +35,14 @@
               {{ t.companyCode }}
             </span>
             <span [class]="tenantStatusClass(t.status)">{{ t.status }}</span>
+            <span class="sa-co-chip" *ngIf="t.adminEmail">
+              <i class="ri ri-mail-line" aria-hidden="true"></i>
+              {{ t.adminEmail }}
+            </span>
           </div>
+          <p class="sa-co-address" *ngIf="snapshot?.tenant?.companyAddress as addr">
+            <i class="ri ri-map-pin-line" aria-hidden="true"></i> {{ addr }}
+          </p>
           <p class="sa-co-lede" *ngIf="snapshot && !loading">
             Read-only snapshot of HR data for support and monitoring. Lists are capped for performance.
           </p>
@@ -459,5 +478,96 @@
         </div>
       </div>
     </section>
+  </div>
+</div>
+<!-- Edit company dialog -->
+<div class="sa-co-modal-backdrop" *ngIf="editOpen" (click)="closeEdit()">
+  <div class="sa-co-modal card" role="dialog" aria-modal="true" aria-labelledby="saCoEditTitle" (click)="$event.stopPropagation()">
+    <div class="card-body">
+      <div class="sa-co-modal-head">
+        <h5 id="saCoEditTitle" class="mb-0">Edit company</h5>
+        <button type="button" class="btn btn-sm btn-light" (click)="closeEdit()" [disabled]="editSaving" aria-label="Close">
+          <i class="ri ri-close-line"></i>
+        </button>
+      </div>
+
+      <form (ngSubmit)="saveEdit()" novalidate>
+        <div class="mb-3">
+          <label class="form-label" for="saCoEditName">Company name</label>
+          <input
+            id="saCoEditName"
+            name="companyName"
+            type="text"
+            class="form-control"
+            maxlength="60"
+            [(ngModel)]="editForm.companyName"
+            [class.is-invalid]="editSubmitted && editNameError"
+          />
+          <div class="invalid-feedback">{{ editNameError }}</div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="saCoEditCode">Company code</label>
+          <input id="saCoEditCode" type="text" class="form-control" [value]="snapshot?.tenant?.companyCode || ''" disabled />
+          <small class="text-muted">Read-only. Users sign in with this code.</small>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="saCoEditEmail">Admin email</label>
+          <input
+            id="saCoEditEmail"
+            name="adminEmail"
+            type="email"
+            class="form-control"
+            [(ngModel)]="editForm.adminEmail"
+            [class.is-invalid]="editSubmitted && editEmailError"
+          />
+          <div class="invalid-feedback">{{ editEmailError }}</div>
+          <small class="text-muted">The company admin signs in with this email.</small>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="saCoEditAddress">Company address</label>
+          <textarea
+            id="saCoEditAddress"
+            name="companyAddress"
+            rows="3"
+            class="form-control"
+            maxlength="500"
+            [(ngModel)]="editForm.companyAddress"
+            [class.is-invalid]="editSubmitted && editAddressError"
+          ></textarea>
+          <div class="invalid-feedback">{{ editAddressError }}</div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label d-block">Company logo</label>
+          <div class="sa-co-logo-row">
+            <div class="sa-co-logo-box">
+              <img *ngIf="editLogoShown as logo; else noLogo" [src]="logo" alt="Company logo" />
+              <ng-template #noLogo><span class="text-muted small">No logo</span></ng-template>
+            </div>
+            <div class="d-flex flex-column gap-2">
+              <button type="button" class="btn btn-sm btn-outline-primary" (click)="logoInput.click()" [disabled]="editSaving">
+                <i class="ri ri-upload-2-line me-1"></i>{{ editLogoShown ? 'Change logo' : 'Upload logo' }}
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-danger" *ngIf="editLogoShown" (click)="removeEditLogo()" [disabled]="editSaving">
+                <i class="ri ri-delete-bin-line me-1"></i>Remove logo
+              </button>
+              <input #logoInput type="file" class="d-none" accept="image/png,image/jpeg,image/jpg" (change)="onEditLogoChange($event)" />
+            </div>
+          </div>
+          <small class="text-muted d-block mt-1">PNG or JPG, max 2 MB</small>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+          <button type="button" class="btn btn-outline-secondary" (click)="closeEdit()" [disabled]="editSaving">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="editSaving">
+            <span *ngIf="!editSaving">Save changes</span>
+            <span *ngIf="editSaving">Saving…</span>
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>

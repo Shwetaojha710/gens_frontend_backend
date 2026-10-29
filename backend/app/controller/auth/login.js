@@ -183,7 +183,7 @@ exports.login = async (req, res) => {
     return Helper.response(
       true,
       "You have Logged In Successfully!",
-      { baseUrl, token, user, PORT, webcamtoken, currencyList, tenant, branch, customPermissions, companyLogo: Tenant.logoUrl(tenant.image) },
+      { baseUrl, token, user, PORT, webcamtoken, currencyList, tenant, branch, customPermissions, companyLogo: Tenant.logoUrl(tenant.image), companyLogoDark: Tenant.logoUrl(tenant.imageDark) },
       res,
       200
     );

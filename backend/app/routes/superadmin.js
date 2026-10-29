@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const { SuperAdmin } = require("../middleware/auth");
+const logoUpload = require("../middleware/logoUpload");
 const {
   login,
   forgotPassword,
@@ -19,6 +20,7 @@ const {
   updateUser,
   getAnalytics,
   getTenantCompanySnapshot,
+  updateTenantDetails,
   getLandingContent,
   saveLandingContent,
   listContactMessages,
@@ -34,6 +36,7 @@ router.put("/superadmin/plans/:planId", SuperAdmin, updatePlan);
 router.patch("/superadmin/plans/:planId/status", SuperAdmin, togglePlanStatus);
 router.get("/superadmin/tenants", SuperAdmin, listTenants);
 router.patch("/superadmin/tenants/:tenantId/status", SuperAdmin, updateTenantStatus);
+router.put("/superadmin/tenants/:tenantId", SuperAdmin, logoUpload(["logo", "logoDark"]), updateTenantDetails);
 router.put("/superadmin/tenants/:tenantId/subscription", SuperAdmin, upsertSubscription);
 router.get("/superadmin/tenants/:tenantId/company-snapshot", SuperAdmin, getTenantCompanySnapshot);
 router.get("/superadmin/tenants/:tenantId/subscriptions", SuperAdmin, subscriptionHistory);

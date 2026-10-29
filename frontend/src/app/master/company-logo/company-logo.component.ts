@@ -1,8 +1,19 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Notyf } from 'notyf';
 import { MasterService } from '../../services/master.service';
-import { CompanyLogoService, DEFAULT_COMPANY_LOGO } from '../../services/company-logo.service';
+import { CompanyLogoService, CompanyLogoVariant, DEFAULT_COMPANY_LOGO } from '../../services/company-logo.service';
+
+interface LogoSlot {
+  variant: CompanyLogoVariant;
+  title: string;
+  hint: string;
+  currentUrl: string | null;
+  previewUrl: string | null;
+  selectedFile: File | null;
+  saving: boolean;
+  removing: boolean;
+}
 
 @Component({
   selector: 'app-company-logo',
@@ -16,15 +27,25 @@ export class CompanyLogoComponent implements OnInit {
   readonly maxSize = 2 * 1024 * 1024; // 2MB
   readonly allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
 
-  currentUrl: string | null = null;
-  previewUrl: string | null = null;
-  selectedFile: File | null = null;
   loading = false;
-  saving = false;
-  removing = false;
   private notyf = new Notyf();
 
-  @ViewChild('fileInput') fileInput?: ElementRef<HTMLInputElement>;
+  slots: Record<CompanyLogoVariant, LogoSlot> = {
+    light: {
+      variant: 'light',
+      title: 'Company Logo',
+      hint: 'Used on white backgrounds: letters, payslips, PDFs and the profile avatar.',
+      currentUrl: null, previewUrl: null, selectedFile: null, saving: false, removing: false,
+    },
+    dark: {
+      variant: 'dark',
+      title: 'Logo for Dark Backgrounds',
+      hint: 'Optional. Used on the dark sidebar (e.g. a white logo). If not set, the company logo is used.',
+      currentUrl: null, previewUrl: null, selectedFile: null, saving: false, removing: false,
+    },
+  };
+
+  readonly slotOrder: CompanyLogoVariant[] = ['light', 'dark'];
 
   constructor(private master: MasterService, private companyLogo: CompanyLogoService) {}
 
@@ -32,17 +53,28 @@ export class CompanyLogoComponent implements OnInit {
     this.loading = true;
     this.master.getCompanyLogo().subscribe({
       next: (res: any) => {
-        if (res?.status === true) {
-          this.currentUrl = res?.data?.url || null;
-          this.companyLogo.set(this.currentUrl);
-        }
+        if (res?.status === true) this.applyServerLogos(res.data);
         this.loading = false;
       },
       error: () => { this.loading = false; }
     });
   }
 
-  onFileChange(event: Event): void {
+  /** What each preview shows: new pick, saved logo, or what the app falls back to. */
+  shownLogo(slot: LogoSlot): string {
+    if (slot.previewUrl) return slot.previewUrl;
+    if (slot.currentUrl) return slot.currentUrl;
+    return this.otherSlot(slot).currentUrl || this.defaultLogo;
+  }
+
+  fallbackLabel(slot: LogoSlot): string {
+    if (this.otherSlot(slot).currentUrl) {
+      return slot.variant === 'light' ? 'Using dark logo' : 'Using company logo';
+    }
+    return 'Default logo';
+  }
+
+  onFileChange(event: Event, slot: LogoSlot): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
@@ -56,65 +88,73 @@ export class CompanyLogoComponent implements OnInit {
       input.value = '';
       return;
     }
-    this.selectedFile = file;
+    slot.selectedFile = file;
     const reader = new FileReader();
-    reader.onload = (e) => { this.previewUrl = e.target?.result as string; };
+    reader.onload = (e) => { slot.previewUrl = e.target?.result as string; };
     reader.readAsDataURL(file);
+    input.value = '';
   }
 
-  save(): void {
-    if (!this.selectedFile) {
+  save(slot: LogoSlot): void {
+    if (!slot.selectedFile) {
       this.notyf.error('Please select an image first.');
       return;
     }
-    this.saving = true;
-    this.master.uploadCompanyLogo(this.selectedFile).subscribe({
+    slot.saving = true;
+    this.master.uploadCompanyLogo(slot.selectedFile, slot.variant).subscribe({
       next: (res: any) => {
-        this.saving = false;
+        slot.saving = false;
         if (res?.status === true) {
-          this.currentUrl = res.data?.url || null;
-          this.companyLogo.set(this.currentUrl);
-          this.clearSelection();
-          this.notyf.success('Company logo saved successfully.');
+          this.applyServerLogos(res.data);
+          this.clearSelection(slot);
+          this.notyf.success('Logo saved successfully.');
         } else {
           this.notyf.error(res?.message || 'Upload failed.');
         }
       },
       error: (err) => {
-        this.saving = false;
+        slot.saving = false;
         this.notyf.error(err?.error?.message || 'Failed to upload. Please try again.');
       }
     });
   }
 
-  removeLogo(): void {
-    if (!this.currentUrl) return;
-    this.removing = true;
-    this.master.removeCompanyLogo().subscribe({
+  removeLogo(slot: LogoSlot): void {
+    if (!slot.currentUrl) return;
+    slot.removing = true;
+    this.master.removeCompanyLogo(slot.variant).subscribe({
       next: (res: any) => {
-        this.removing = false;
+        slot.removing = false;
         if (res?.status === true) {
-          this.currentUrl = null;
-          this.companyLogo.set(null);
-          this.notyf.success('Company logo removed. The default logo will be shown.');
+          this.applyServerLogos(res.data);
+          this.notyf.success('Logo removed.');
         } else {
           this.notyf.error(res?.message || 'Could not remove logo.');
         }
       },
       error: () => {
-        this.removing = false;
+        slot.removing = false;
         this.notyf.error('Could not remove logo. Please try again.');
       }
     });
   }
 
-  clearSelection(): void {
-    this.previewUrl = null;
-    this.selectedFile = null;
-    if (this.fileInput) this.fileInput.nativeElement.value = '';
+  clearSelection(slot: LogoSlot): void {
+    slot.previewUrl = null;
+    slot.selectedFile = null;
   }
 
   onImgError(event: Event): void {
     this.companyLogo.onImgError(event);
+  }
+
+  private otherSlot(slot: LogoSlot): LogoSlot {
+    return this.slots[slot.variant === 'light' ? 'dark' : 'light'];
+  }
+
+  private applyServerLogos(data: any): void {
+    this.slots.light.currentUrl = data?.url || null;
+    this.slots.dark.currentUrl = data?.darkUrl || null;
+    this.companyLogo.setLogos({ light: this.slots.light.currentUrl, dark: this.slots.dark.currentUrl });
   }
 }

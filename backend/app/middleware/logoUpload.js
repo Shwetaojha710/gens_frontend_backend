@@ -32,9 +32,15 @@ const upload = multer({
     limits: { fileSize: LOGO_MAX_SIZE }
 });
 
-/** Returns middleware for a single logo field; rejects bad files with a 400 response. */
-const logoUpload = (fieldName) => (req, res, next) => {
-    upload.single(fieldName)(req, res, (err) => {
+/**
+ * Returns middleware for one logo field (req.file) or several (req.files[name][0]);
+ * rejects bad files with a 400 response.
+ */
+const logoUpload = (fieldNames) => (req, res, next) => {
+    const handler = Array.isArray(fieldNames)
+        ? upload.fields(fieldNames.map((name) => ({ name, maxCount: 1 })))
+        : upload.single(fieldNames);
+    handler(req, res, (err) => {
         if (!err) return next();
         const message = err.code === 'LIMIT_FILE_SIZE'
             ? 'Logo must be 2 MB or smaller'
@@ -42,5 +48,17 @@ const logoUpload = (fieldName) => (req, res, next) => {
         return Helper.response(false, message, {}, res, 400);
     });
 };
+
+/** Uploaded file for a field, whichever of single()/fields() was used. */
+logoUpload.fileOf = (req, fieldName) => {
+    if (req.file && req.file.fieldname === fieldName) return req.file;
+    return req.files?.[fieldName]?.[0] || null;
+};
+
+/** Every file uploaded on this request. */
+logoUpload.allFiles = (req) => [
+    ...(req.file ? [req.file] : []),
+    ...Object.values(req.files || {}).flat(),
+];
 
 module.exports = logoUpload;

@@ -3,6 +3,10 @@ const Helper = require('../../helper/helper');
 const { writeAudit } = require('../../helper/auditLog');
 const path = require('path');
 const fs = require('fs');
+const logoUpload = require('../../middleware/logoUpload');
+
+/** Request field / body variant → Tenant column. */
+const LOGO_COLUMNS = { logo: 'image', logoDark: 'imageDark' };
 
 exports.getBrandColors = async (req, res) => {
   try {
@@ -254,12 +258,14 @@ exports.getCompanyLogo = async (req, res) => {
     const tenantId = req.users?.tenantId;
     if (!tenantId) return Helper.response(false, 'User Not Found', {}, res, 404);
 
-    const tenant = await Tenant.findByPk(tenantId, { attributes: ['companyName', 'image'], raw: true });
+    const tenant = await Tenant.findByPk(tenantId, { attributes: ['companyName', 'image', 'imageDark'], raw: true });
     if (!tenant) return Helper.response(false, 'Tenant not found', {}, res, 404);
 
     return Helper.response(true, 'Company logo fetched', {
       url: Tenant.logoUrl(tenant.image),
       filename: tenant.image || null,
+      darkUrl: Tenant.logoUrl(tenant.imageDark),
+      darkFilename: tenant.imageDark || null,
       companyName: tenant.companyName || '',
     }, res, 200);
   } catch (error) {
@@ -272,34 +278,47 @@ exports.uploadCompanyLogo = async (req, res) => {
   try {
     const tenantId = req.users?.tenantId;
     if (!tenantId) return Helper.response(false, 'User Not Found', {}, res, 404);
-    if (!req.file) return Helper.response(false, 'No file uploaded', {}, res, 400);
+    const uploads = logoUpload.allFiles(req);
+    if (!uploads.length) return Helper.response(false, 'No file uploaded', {}, res, 400);
 
-    const existing = await Tenant.findByPk(tenantId, { attributes: ['image'], raw: true });
+    const existing = await Tenant.findByPk(tenantId, { attributes: ['image', 'imageDark'], raw: true });
     if (!existing) {
-      try { fs.unlinkSync(req.file.path); } catch (_) {}
+      for (const f of uploads) { try { fs.unlinkSync(f.path); } catch (_) {} }
       return Helper.response(false, 'Tenant not found', {}, res, 404);
     }
 
-    const filename = req.file.filename;
-    const oldImage = existing.image || null;
-    await Tenant.update({ image: filename }, { where: { id: tenantId } });
+    const patch = {};
+    for (const [field, column] of Object.entries(LOGO_COLUMNS)) {
+      const file = logoUpload.fileOf(req, field);
+      if (file) patch[column] = file.filename;
+    }
+    const oldValue = { image: existing.image || null, imageDark: existing.imageDark || null };
+    await Tenant.update(patch, { where: { id: tenantId } });
 
-    // Delete old logo file only after the new one is saved
-    if (oldImage && oldImage !== filename) {
-      const oldPath = path.join(__dirname, '../../../upload', oldImage);
-      try { fs.unlinkSync(oldPath); } catch (_) {}
+    // Delete replaced logo files only after the new ones are saved
+    for (const column of Object.keys(patch)) {
+      const old = oldValue[column];
+      if (old && old !== patch[column]) {
+        try { fs.unlinkSync(path.join(__dirname, '../../../upload', old)); } catch (_) {}
+      }
     }
 
+    const newValue = { ...oldValue, ...patch };
     await writeAudit({
       req,
       actionType: 'COMPANY_LOGO_UPLOAD',
       referenceId: tenantId,
-      oldValue: { image: oldImage },
-      newValue: { image: filename },
+      oldValue,
+      newValue,
       remarks: 'Company logo uploaded',
     });
 
-    return Helper.response(true, 'Company logo uploaded successfully', { url: Tenant.logoUrl(filename), filename }, res, 200);
+    return Helper.response(true, 'Company logo uploaded successfully', {
+      url: Tenant.logoUrl(newValue.image),
+      filename: newValue.image,
+      darkUrl: Tenant.logoUrl(newValue.imageDark),
+      darkFilename: newValue.imageDark,
+    }, res, 200);
   } catch (error) {
     console.error('uploadCompanyLogo error:', error);
     return Helper.response(false, error.message, {}, res, 500);
@@ -311,25 +330,32 @@ exports.removeCompanyLogo = async (req, res) => {
     const tenantId = req.users?.tenantId;
     if (!tenantId) return Helper.response(false, 'User Not Found', {}, res, 404);
 
-    const existing = await Tenant.findByPk(tenantId, { attributes: ['image'], raw: true });
+    const column = req.body?.variant === 'dark' ? 'imageDark' : 'image';
+    const existing = await Tenant.findByPk(tenantId, { attributes: ['image', 'imageDark'], raw: true });
     if (!existing) return Helper.response(false, 'Tenant not found', {}, res, 404);
 
-    const oldImage = existing.image;
-    if (oldImage) {
-      await Tenant.update({ image: null }, { where: { id: tenantId } });
-      const oldPath = path.join(__dirname, '../../../upload', oldImage);
+    const oldFile = existing[column];
+    if (oldFile) {
+      await Tenant.update({ [column]: null }, { where: { id: tenantId } });
+      const oldPath = path.join(__dirname, '../../../upload', oldFile);
       try { fs.unlinkSync(oldPath); } catch (_) {}
       await writeAudit({
         req,
         actionType: 'COMPANY_LOGO_REMOVE',
         referenceId: tenantId,
-        oldValue: { image: oldImage },
-        newValue: { image: null },
-        remarks: 'Company logo removed',
+        oldValue: { [column]: oldFile },
+        newValue: { [column]: null },
+        remarks: column === 'imageDark' ? 'Dark company logo removed' : 'Company logo removed',
       });
     }
 
-    return Helper.response(true, 'Company logo removed', { url: null, filename: null }, res, 200);
+    const after = { ...existing, [column]: null };
+    return Helper.response(true, 'Company logo removed', {
+      url: Tenant.logoUrl(after.image),
+      filename: after.image || null,
+      darkUrl: Tenant.logoUrl(after.imageDark),
+      darkFilename: after.imageDark || null,
+    }, res, 200);
   } catch (error) {
     console.error('removeCompanyLogo error:', error);
     return Helper.response(false, error.message, {}, res, 500);

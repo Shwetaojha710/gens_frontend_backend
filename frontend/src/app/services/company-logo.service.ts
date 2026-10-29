@@ -9,9 +9,18 @@ export const DEFAULT_COMPANY_LOGO = 'assets/img/logo/image.png';
 /** 'admin' = HR/admin panel session, 'portal' = employee portal session. */
 export type CompanyLogoScope = 'admin' | 'portal';
 
-const STORAGE_KEYS: Record<CompanyLogoScope, string> = {
-  admin: 'companyLogo',
-  portal: 'empPortalCompanyLogo',
+/** 'light' = for white/light surfaces (letters, PDFs), 'dark' = for dark surfaces (sidebar). */
+export type CompanyLogoVariant = 'light' | 'dark';
+
+/** Uploaded logo URLs (Tenant.image / Tenant.imageDark); null when not set. */
+export interface CompanyLogos {
+  light: string | null;
+  dark: string | null;
+}
+
+const STORAGE_KEYS: Record<CompanyLogoScope, Record<CompanyLogoVariant, string>> = {
+  admin: { light: 'companyLogo', dark: 'companyLogoDark' },
+  portal: { light: 'empPortalCompanyLogo', dark: 'empPortalCompanyLogoDark' },
 };
 
 const ENDPOINTS: Record<CompanyLogoScope, string> = {
@@ -19,46 +28,60 @@ const ENDPOINTS: Record<CompanyLogoScope, string> = {
   portal: 'get-app-company-logo',
 };
 
+/** Wanted variant first, then the other one (a single uploaded logo is used everywhere). */
+function pick(logos: CompanyLogos, variant: CompanyLogoVariant): string | null {
+  return variant === 'dark' ? logos.dark || logos.light : logos.light || logos.dark;
+}
+
 /**
- * Holds the logged-in company's logo URL (Tenant.image on the backend).
- * Login stores it; layouts subscribe and fall back to DEFAULT_COMPANY_LOGO.
+ * Holds the logged-in company's logos. Login stores them; layouts subscribe
+ * and fall back to DEFAULT_COMPANY_LOGO when the company has none.
  */
 @Injectable({ providedIn: 'root' })
 export class CompanyLogoService {
   private readonly base = environment.apiUrl;
-  private readonly logos: Record<CompanyLogoScope, BehaviorSubject<string | null>> = {
-    admin: new BehaviorSubject<string | null>(this.read('admin')),
-    portal: new BehaviorSubject<string | null>(this.read('portal')),
+  private readonly logos: Record<CompanyLogoScope, BehaviorSubject<CompanyLogos>> = {
+    admin: new BehaviorSubject<CompanyLogos>(this.read('admin')),
+    portal: new BehaviorSubject<CompanyLogos>(this.read('portal')),
   };
 
   constructor(private http: HttpClient) {}
 
-  /** Company logo URL, or the default logo when none is set. */
-  logo$(scope: CompanyLogoScope = 'admin'): Observable<string> {
-    return this.logos[scope].pipe(map((url) => url || DEFAULT_COMPANY_LOGO));
+  /** Logo URL for a surface, or the default logo when the company has none. */
+  logo$(scope: CompanyLogoScope = 'admin', variant: CompanyLogoVariant = 'light'): Observable<string> {
+    return this.logos[scope].pipe(map((logos) => pick(logos, variant) || DEFAULT_COMPANY_LOGO));
   }
 
-  /** Company logo URL, or null when the company has none. */
-  current(scope: CompanyLogoScope = 'admin'): string | null {
-    return this.logos[scope].value;
+  /** Logo URL for a surface, or null when the company has none. */
+  current(scope: CompanyLogoScope = 'admin', variant: CompanyLogoVariant = 'light'): string | null {
+    return pick(this.logos[scope].value, variant);
   }
 
-  set(url: string | null | undefined, scope: CompanyLogoScope = 'admin'): void {
-    const value = url ? String(url) : null;
+  /** Replaces both stored logos (missing ones are cleared). */
+  setLogos(logos: Partial<CompanyLogos>, scope: CompanyLogoScope = 'admin'): void {
+    const value: CompanyLogos = {
+      light: logos.light ? String(logos.light) : null,
+      dark: logos.dark ? String(logos.dark) : null,
+    };
     try {
-      if (value) localStorage.setItem(STORAGE_KEYS[scope], value);
-      else localStorage.removeItem(STORAGE_KEYS[scope]);
+      (['light', 'dark'] as CompanyLogoVariant[]).forEach((variant) => {
+        const key = STORAGE_KEYS[scope][variant];
+        if (value[variant]) localStorage.setItem(key, value[variant] as string);
+        else localStorage.removeItem(key);
+      });
     } catch { /* storage unavailable */ }
     this.logos[scope].next(value);
   }
 
-  /** Re-reads the logo from the server (e.g. sessions that logged in before logos existed). */
+  /** Re-reads the logos from the server (e.g. sessions that logged in before logos existed). */
   refresh(scope: CompanyLogoScope = 'admin'): void {
     this.http.post<any>(`${this.base}${ENDPOINTS[scope]}`, {}).subscribe({
       next: (res) => {
-        if (res?.status === true) this.set(res?.data?.url || null, scope);
+        if (res?.status === true) {
+          this.setLogos({ light: res?.data?.url || null, dark: res?.data?.darkUrl || null }, scope);
+        }
       },
-      error: () => { /* keep the cached logo */ },
+      error: () => { /* keep the cached logos */ },
     });
   }
 
@@ -68,11 +91,14 @@ export class CompanyLogoService {
     if (img && !img.src.endsWith(fallback)) img.src = fallback;
   }
 
-  private read(scope: CompanyLogoScope): string | null {
+  private read(scope: CompanyLogoScope): CompanyLogos {
     try {
-      return localStorage.getItem(STORAGE_KEYS[scope]) || null;
+      return {
+        light: localStorage.getItem(STORAGE_KEYS[scope].light) || null,
+        dark: localStorage.getItem(STORAGE_KEYS[scope].dark) || null,
+      };
     } catch {
-      return null;
+      return { light: null, dark: null };
     }
   }
 }

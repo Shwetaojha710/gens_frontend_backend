@@ -5,6 +5,22 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Notyf } from 'notyf';
 import { SuperadminService } from '../superadmin.service';
 
+interface SaTenantDetails {
+  id?: string;
+  companyName?: string;
+  companyCode?: string;
+  status?: string;
+  companyAddress?: string;
+  logo?: string | null;
+  adminEmail?: string;
+}
+
+/** Same rules as the company registration form. */
+const COMPANY_NAME_RE = /^[a-zA-Z0-9\s.\-&']+$/;
+const ADMIN_EMAIL_RE = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
+const LOGO_MAX_SIZE = 2 * 1024 * 1024; // 2MB
+
 @Component({
   selector: 'app-superadmin-company-dashboard',
   standalone: true,
@@ -17,7 +33,7 @@ export class SuperadminCompanyDashboardComponent implements OnInit {
   loading = true;
   tenantId = '';
   snapshot: {
-    tenant?: { companyName?: string; companyCode?: string; status?: string };
+    tenant?: SaTenantDetails;
     counts?: { employeesActive?: number; employeesTotal?: number };
     branches?: { id: string; name: string; status?: string }[];
     employees?: any[];
@@ -46,6 +62,15 @@ export class SuperadminCompanyDashboardComponent implements OnInit {
   holSearch = '';
   holPage = 0;
   holPageSize = 10;
+
+  /* ----- Edit company ----- */
+  editOpen = false;
+  editSaving = false;
+  editSubmitted = false;
+  editForm = { companyName: '', companyAddress: '', adminEmail: '' };
+  editLogoFile: File | null = null;
+  editLogoPreview: string | null = null;
+  editRemoveLogo = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -106,6 +131,116 @@ export class SuperadminCompanyDashboardComponent implements OnInit {
 
   backToCompanies(): void {
     this.router.navigate(['/superadmin/companies']);
+  }
+
+  openEdit(): void {
+    const t = this.snapshot?.tenant;
+    if (!t) return;
+    this.editForm = {
+      companyName: t.companyName || '',
+      companyAddress: t.companyAddress || '',
+      adminEmail: t.adminEmail || '',
+    };
+    this.editLogoFile = null;
+    this.editLogoPreview = null;
+    this.editRemoveLogo = false;
+    this.editSubmitted = false;
+    this.editOpen = true;
+  }
+
+  closeEdit(): void {
+    if (this.editSaving) return;
+    this.editOpen = false;
+  }
+
+  get editNameError(): string | null {
+    const v = this.editForm.companyName.trim();
+    if (!v) return 'Company name is required.';
+    if (v.length > 60) return 'Company name cannot exceed 60 characters.';
+    if (!COMPANY_NAME_RE.test(v)) return "Special characters are not allowed. Only letters, numbers, spaces, . - & ' are permitted.";
+    return null;
+  }
+
+  get editEmailError(): string | null {
+    const v = this.editForm.adminEmail.trim();
+    if (!this.snapshot?.tenant?.adminEmail && !v) return null; // no admin user to update
+    if (!v) return 'Email is required.';
+    if (!ADMIN_EMAIL_RE.test(v)) return 'Enter a valid email address.';
+    return null;
+  }
+
+  get editAddressError(): string | null {
+    return this.editForm.companyAddress.trim().length > 500 ? 'Address cannot exceed 500 characters.' : null;
+  }
+
+  /** Logo shown in the edit dialog: new pick, else current (unless removed). */
+  get editLogoShown(): string | null {
+    if (this.editLogoPreview) return this.editLogoPreview;
+    if (this.editRemoveLogo) return null;
+    return this.snapshot?.tenant?.logo || null;
+  }
+
+  onEditLogoChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    if (!LOGO_TYPES.includes(file.type)) {
+      this.notyf.error('Only JPG, JPEG, and PNG formats are allowed.');
+      input.value = '';
+      return;
+    }
+    if (file.size > LOGO_MAX_SIZE) {
+      this.notyf.error('Maximum allowed file size is 2MB.');
+      input.value = '';
+      return;
+    }
+    this.editLogoFile = file;
+    this.editRemoveLogo = false;
+    const reader = new FileReader();
+    reader.onload = () => (this.editLogoPreview = reader.result as string);
+    reader.readAsDataURL(file);
+    input.value = '';
+  }
+
+  removeEditLogo(): void {
+    this.editLogoFile = null;
+    this.editLogoPreview = null;
+    this.editRemoveLogo = true;
+  }
+
+  saveEdit(): void {
+    this.editSubmitted = true;
+    if (this.editNameError || this.editEmailError || this.editAddressError) return;
+
+    const fd = new FormData();
+    fd.append('companyName', this.editForm.companyName.trim());
+    fd.append('companyAddress', this.editForm.companyAddress.trim());
+    if (this.editForm.adminEmail.trim()) fd.append('adminEmail', this.editForm.adminEmail.trim());
+    if (this.editLogoFile) fd.append('logo', this.editLogoFile, this.editLogoFile.name);
+    else if (this.editRemoveLogo) fd.append('removeLogo', 'true');
+
+    this.editSaving = true;
+    this.api.updateTenantDetails(this.tenantId, fd).subscribe({
+      next: (res) => {
+        this.editSaving = false;
+        const data = JSON.parse(res);
+        if (!data.status) {
+          this.notyf.error(data.message || 'Could not update company.');
+          return;
+        }
+        if (this.snapshot) this.snapshot.tenant = { ...this.snapshot.tenant, ...(data.data || {}) };
+        this.editOpen = false;
+        this.notyf.success(data.message || 'Company details updated.');
+      },
+      error: (err) => {
+        this.editSaving = false;
+        let msg = 'Server error. Please try again.';
+        try {
+          msg = JSON.parse(err?.error)?.message || msg;
+        } catch {}
+        this.notyf.error(msg);
+      },
+    });
   }
 
   get branchesList(): { id: string; name: string; status?: string }[] {

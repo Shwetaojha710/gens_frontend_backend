@@ -203,6 +203,7 @@ exports.verifyEmployeePortalOtp = async (req, res) => {
               companyName: tenant.companyName,
               companyCode: tenant.companyCode,
               logo: Tenant.logoUrl(tenant.image),
+              logoDark: Tenant.logoUrl(tenant.imageDark),
             }
           : null,
         branch,

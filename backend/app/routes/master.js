@@ -34,7 +34,7 @@ router.post('/get-company-profile', AppAdmin, getCompanyProfile);
 
 // ── Company logo ─────────────────────────────────────────────────────────
 router.post('/get-company-logo', Admin, getCompanyLogo)
-router.post('/upload-company-logo', Admin, logoUpload('logo'), uploadCompanyLogo)
+router.post('/upload-company-logo', Admin, logoUpload(['logo', 'logoDark']), uploadCompanyLogo)
 router.post('/remove-company-logo', Admin, removeCompanyLogo)
 router.post('/get-app-company-logo', AppAdmin, getCompanyLogo)
 module.exports = router
