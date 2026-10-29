@@ -1557,3 +1557,50 @@ exports.checkEmpByMobile = async (req, res) => {
     return Helper.response(false, error?.message || "Server error", {}, res, 500);
   }
 };
+/**
+ * Employee List "Assign Branches": set the branches a Director / Manager can access
+ * (branchIds). `all: true` assigns every branch of the tenant. The home branch
+ * (branchId) is always kept, so the employee stays in their branch's lists.
+ */
+exports.assignBranches = async (req, res) => {
+  try {
+    const tenantId = req.users && req.users.tenantId;
+    const { employeeId, all } = req.body || {};
+    if (!tenantId || !employeeId) {
+      return Helper.response(false, "employeeId is required", [], res, 400);
+    }
+    const emp = await empPersonal.findOne({ where: { id: employeeId, tenantId } });
+    if (!emp) return Helper.response(false, "Employee not found", [], res, 404);
+
+    const Branch = require("../../models/branch");
+    const tenantBranches = await Branch.findAll({ where: { tenantId }, attributes: ["id"], raw: true });
+    const validIds = new Set(tenantBranches.map((b) => String(b.id)));
+    const requested = all
+      ? [...validIds]
+      : Helper.normalizeBranchIds(req.body?.branchIds, null).filter((id) => validIds.has(id));
+
+    const home = emp.branchId ? String(emp.branchId) : null;
+    const branchIds = [...new Set([...(home ? [home] : []), ...requested])];
+    if (!branchIds.length) {
+      return Helper.response(false, "Select at least one branch", [], res, 400);
+    }
+    const branchError = multiBranchError(emp.role, branchIds);
+    if (branchError) return Helper.response(false, branchError, [], res, 400);
+
+    const oldEmp = toPlain(emp);
+    await emp.update({ branchIds, updatedBy: req.users && req.users.id });
+    await writeAudit({
+      req,
+      actionType: "EMP_UPDATE",
+      referenceId: emp.id,
+      employeeId: emp.id,
+      oldValue: oldEmp,
+      newValue: toPlain(emp),
+      remarks: `Branches assigned (${branchIds.length})`,
+    });
+    return Helper.response(true, "Branches assigned", { id: emp.id, branchIds }, res, 200);
+  } catch (error) {
+    console.error("assignBranches", error);
+    return Helper.response(false, error?.message || "Server error", [], res, 500);
+  }
+};

@@ -68,6 +68,9 @@ Tenant.associate = models => {
     }
 };
 
+/** Public URL of the company logo (stored in `image`), or null when none is set. */
+Tenant.logoUrl = filename => (filename ? `${process.env.BASE_URL}/upload/${filename}` : null);
+
 // Disabled: sync({ alter: true }) exhausts Postgres locks (53200 out of shared memory)
 // Tenant.sync({ alter: true }).then(() => {
 //     console.log('Tenant model synced successfully');
@@ -75,5 +78,24 @@ Tenant.associate = models => {
 //     console.error('Error syncing Tenant model:', error);
 // });
 
+// Only add the logo column (image) when it is missing.
+(async () => {
+    try {
+        const qi = sequelize.getQueryInterface();
+        const desc = await qi.describeTable("tenants");
+        if (!desc.image) {
+            await qi.addColumn("tenants", "image", {
+                type: DataTypes.STRING,
+                allowNull: true,
+            });
+            console.log("tenant.image column added");
+        }
+    } catch (error) {
+        console.error(
+            "Error ensuring tenant.image:",
+            error?.parent?.message || error?.message || error,
+        );
+    }
+})();
 
 module.exports = Tenant;

@@ -134,6 +134,7 @@ export const APP_MENU_ITEMS: MenuItem[] = [
       { title: 'Currency',          icon: 'ri-copper-coin-line',       link: '/layout/master/currency',           permKey: 'set.currency' },
       { title: 'Company Prefix',    icon: 'ri-info-card-line',         link: '/layout/master/prefix',             permKey: 'set.prefix' },
       { title: 'Brand & Colors',    icon: 'ri-palette-line',           link: '/layout/master/brand-colors',       permKey: 'set.brand' },
+      { title: 'Company Logo',      icon: 'ri-image-line',             link: '/layout/master/company-logo',       permKey: 'set.brand' },
       { title: 'Company Letterhead', icon: 'ri-file-paper-line',       link: '/layout/master/letterhead',         permKey: 'set.brand' },
       { title: 'Employee Handbook', icon: 'ri-book-2-line',            link: '/layout/master/handbook',           permKey: 'set.handbook' },
       { title: 'Role Permissions',  icon: 'ri-shield-keyhole-line', link: '/layout/master/role-permission', permKey: 'set.roleperm' },

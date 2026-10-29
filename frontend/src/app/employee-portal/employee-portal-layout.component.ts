@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { EmployeePortalService } from './services/employee-portal.service';
+import { CompanyLogoService, DEFAULT_COMPANY_LOGO } from '../services/company-logo.service';
 
 interface LeaveNotificationItem {
   id: string;
@@ -64,9 +65,14 @@ export class EmployeePortalLayoutComponent implements OnInit, OnDestroy {
     'escalate',
   ]);
 
+  /** Company logo (Tenant.image) or the default logo */
+  companyLogo = DEFAULT_COMPANY_LOGO;
+  private logoSub?: Subscription;
+
   constructor(
     private empApi: EmployeePortalService,
     private router: Router,
+    private companyLogoSvc: CompanyLogoService,
   ) {
     try {
       const raw = localStorage.getItem('empPortalUser');
@@ -80,6 +86,8 @@ export class EmployeePortalLayoutComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.logoSub = this.companyLogoSvc.logo$('portal').subscribe((url) => (this.companyLogo = url));
+    this.companyLogoSvc.refresh('portal');
     this.loadNotificationSummary();
     this.routerSub = this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd && window.innerWidth < 992) {
@@ -90,6 +98,7 @@ export class EmployeePortalLayoutComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.routerSub.unsubscribe();
+    this.logoSub?.unsubscribe();
     document.body.style.overflow = '';
   }
 
@@ -290,8 +299,8 @@ export class EmployeePortalLayoutComponent implements OnInit, OnDestroy {
     this.sidebarCollapsed = !this.sidebarCollapsed;
   }
 
-  get companyLogo(): string {
-    return 'assets/img/logo/image.png';
+  onLogoError(event: Event): void {
+    this.companyLogoSvc.onImgError(event);
   }
 
   logout(): void {

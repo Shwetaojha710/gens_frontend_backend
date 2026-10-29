@@ -126,7 +126,10 @@ export class CompanyRegComponent implements OnInit {
     uploadData.append('tenantName', this.form.value.tenantName);
     uploadData.append('email', this.form.value.email);
     uploadData.append('password', this.form.value.password);
-    uploadData.append('image', this.selectedFile as Blob);
+    // Company logo is optional
+    if (this.selectedFile) {
+      uploadData.append('image', this.selectedFile, this.selectedFile.name);
+    }
     if (this.planId) {
       uploadData.append('planId', this.planId);
     }
@@ -255,18 +258,6 @@ export class CompanyRegComponent implements OnInit {
       return;
     }
 
-    if (!this.selectedFile) {
-      Swal.fire({
-        toast: true,
-        position: "top",
-        showConfirmButton: false,
-        icon: "warning",
-        timer: 3000,
-        title: "Please select a company logo",
-      });
-      return;
-    }
-
     if (this.planId) {
       if (this.planLoading) {
         this.notyf.error('Plan details are still loading. Please wait.');
@@ -303,6 +294,7 @@ export class CompanyRegComponent implements OnInit {
 
     if (!file) {
       this.selectedFile = null;
+      this.previewUrl = null;
       return;
     }
 
@@ -317,6 +309,7 @@ export class CompanyRegComponent implements OnInit {
       });
       event.target.value = ''; // Clear the file input
       this.selectedFile = null;
+      this.previewUrl = null;
       return;
     }
 
@@ -329,6 +322,7 @@ export class CompanyRegComponent implements OnInit {
       this.notyf.error('Maximum allowed file size is 2MB.');
       event.target.value = ''; // Clear the file input
       this.selectedFile = null;
+      this.previewUrl = null;
       return;
     }
 

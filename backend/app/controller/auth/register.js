@@ -13,8 +13,15 @@ function hashPassword(password) {
     return cryptoJs.SHA256(password).toString();
 }
 
+/** Remove an uploaded logo when registration does not go through. */
+function removeUploadedFile(file) {
+    if (!file?.path) return;
+    try { fs.unlinkSync(file.path); } catch (_) {}
+}
+
 exports.Companyregistration = async (req, res) => {
   const t = await sequelize.transaction();
+  let registered = false;
   try {
     const { tenantId, email, password, tenantName } = req.body;
 
@@ -92,6 +99,7 @@ exports.Companyregistration = async (req, res) => {
     );
 
     await t.commit();
+    registered = true;
 
     return Helper.response(
       true,
@@ -99,6 +107,7 @@ exports.Companyregistration = async (req, res) => {
       {
         tenantId: tenant.id,
         adminEmail: adminUser.email,
+        logo: Tenant.logoUrl(tenant.image),
       },
       res,
       201
@@ -114,6 +123,8 @@ exports.Companyregistration = async (req, res) => {
       res,
       500
     );
+  } finally {
+    if (!registered) removeUploadedFile(req.file);
   }
 };
 

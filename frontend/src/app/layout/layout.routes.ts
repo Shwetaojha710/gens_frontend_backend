@@ -509,6 +509,15 @@ export const layoutRoutes: Routes = [
           ),
       },
       {
+        path: 'master/company-logo',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'set.brand' },
+        loadComponent: () =>
+          import('../master/company-logo/company-logo.component').then(
+            (m) => m.CompanyLogoComponent,
+          ),
+      },
+      {
         path: 'master/letterhead',
         canActivate: [PermissionGuard],
         data: { permKey: 'set.brand' },

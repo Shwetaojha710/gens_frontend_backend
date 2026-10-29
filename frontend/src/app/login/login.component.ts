@@ -7,6 +7,7 @@ import {
   FormControl
 } from '@angular/forms';
 import { AuthService } from '../services/auth.service';
+import { CompanyLogoService } from '../services/company-logo.service';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { Notyf } from 'notyf';
@@ -32,7 +33,8 @@ export class LoginComponent {
   constructor(
     private fb: FormBuilder,
     private auth: AuthService,
-    private router: Router
+    private router: Router,
+    private companyLogo: CompanyLogoService
   ) {
     this.form = this.fb.group({
       tenantId: ['', Validators.required],
@@ -83,6 +85,7 @@ export class LoginComponent {
           localStorage.setItem('tenant', JSON.stringify(data.data.tenant));
           localStorage.setItem('branch', JSON.stringify(data.data.branch));
           localStorage.setItem('currency', JSON.stringify(data.data.currencyList));
+          this.companyLogo.set(data.data.companyLogo || null);
           // Save user-specific custom permissions if set by admin (null = use role defaults)
           if (data.data.customPermissions) {
             localStorage.setItem('custom_user_permissions', JSON.stringify(data.data.customPermissions));

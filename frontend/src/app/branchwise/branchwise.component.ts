@@ -258,12 +258,21 @@ createFlag = false;
     return null;
   }
 
+  // Range is optional; when entered it must be whole metres from 1 to 100000.
+  private validateRange(data: any): string | null {
+    const range = String(data['range'] ?? '').trim();
+    if (range && (!/^\d+$/.test(range) || Number(range) < 1 || Number(range) > 100000)) {
+      return 'Range must be a whole number of metres between 1 and 100000 (e.g. 100).';
+    }
+    return null;
+  }
+
   submitNewBranch() {
     if (!this.newBranch['name']?.trim()) {
       this.notyf.error('Branch name is required.');
       return;
     }
-    const coordError = this.validateCoordinates(this.newBranch);
+    const coordError = this.validateCoordinates(this.newBranch) || this.validateRange(this.newBranch);
     if (coordError) {
       this.notyf.error(coordError);
       return;
@@ -274,6 +283,7 @@ createFlag = false;
     if (this.newBranch['description']) formData.append('description', this.newBranch['description']);
     if (this.newBranch['latitude']) formData.append('latitude', this.newBranch['latitude']);
     if (this.newBranch['longitude']) formData.append('longitude', this.newBranch['longitude']);
+    if (String(this.newBranch['range'] ?? '').trim()) formData.append('range', String(this.newBranch['range']).trim());
     if (this.selectedImage) formData.append('image', this.selectedImage);
 
     this.masterService.addBranchWithImage(formData).subscribe({
@@ -338,7 +348,7 @@ createFlag = false;
       this.notyf.error('Branch name is required.');
       return;
     }
-    const coordError = this.validateCoordinates(this.editBranch, false);
+    const coordError = this.validateCoordinates(this.editBranch, false) || this.validateRange(this.editBranch);
     if (coordError) {
       this.notyf.error(coordError);
       return;
@@ -350,6 +360,8 @@ createFlag = false;
     if (this.editBranch['description']) formData.append('description', this.editBranch['description']);
     if (this.editBranch['latitude']) formData.append('latitude', this.editBranch['latitude']);
     if (this.editBranch['longitude']) formData.append('longitude', this.editBranch['longitude']);
+    // Always sent so clearing the box removes the range
+    formData.append('range', String(this.editBranch['range'] ?? '').trim());
     if (this.editBranch['status']) formData.append('status', this.editBranch['status']);
     if (this.editSelectedImage) formData.append('image', this.editSelectedImage);
 

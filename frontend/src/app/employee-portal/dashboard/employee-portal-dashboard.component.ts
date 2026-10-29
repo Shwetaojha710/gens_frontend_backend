@@ -18,6 +18,7 @@ import {
 } from 'ng-apexcharts';
 import { Notyf } from 'notyf';
 import { EmployeePortalService } from '../services/employee-portal.service';
+import { LocationsService } from '../../services/locations.service';
 import { environment } from '../../../environments/environment';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 type EpDonutOptions = Partial<{
@@ -434,7 +435,12 @@ export class EmployeePortalDashboardComponent implements OnInit, AfterViewChecke
   }
   // ─────────────────────────────────────────────────────────────────────────
 
-  constructor(private api: EmployeePortalService, private http: HttpClient, private sanitizer: DomSanitizer) {}
+  constructor(
+    private api: EmployeePortalService,
+    private http: HttpClient,
+    private sanitizer: DomSanitizer,
+    private location: LocationsService,
+  ) {}
 
   /** Branch IDs this user may see (director multi-branch / primary). */
   private accessibleBranchIds: string[] = [];
@@ -1500,17 +1506,26 @@ export class EmployeePortalDashboardComponent implements OnInit, AfterViewChecke
     if (el) (window as any).bootstrap.Modal.getInstance(el)?.hide();
   }
 
-  mark(): void {
+  async mark(): Promise<void> {
     this.marking = true;
-    this.api.markAttendance().subscribe({
+    // Branches with a range check the distance; without location the server decides
+    // (branches with no range accept it, like before)
+    let coords: { latitude: number; longitude: number } | null = null;
+    try {
+      coords = await this.location.getCurrentLocation();
+    } catch {
+      coords = null;
+    }
+    this.api.markAttendance(coords?.latitude, coords?.longitude).subscribe({
       next: () => {
         this.marking = false;
         this.notyf.success('Attendance updated.');
         this.refresh();
       },
-      error: (err: Error) => {
+      error: (err: any) => {
         this.marking = false;
-        this.notyf.error(err.message || 'Could not mark attendance.');
+        // HTTP errors (e.g. 403 out of range) carry the server message in err.error
+        this.notyf.error(err?.error?.message || err?.message || 'Could not mark attendance.');
       },
     });
   }

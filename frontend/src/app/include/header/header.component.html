@@ -137,7 +137,7 @@
       <div class="profile-shell" (click)="toggleshow()">
         <button type="button" class="profile-trigger">
           <div class="profile-avatar">
-            <img src="assets/img/logo/quaere_logo_1.PNG" alt="avatar" class="rounded-circle" />
+            <img [src]="companyLogoUrl || defaultAvatarLogo" alt="avatar" class="rounded-circle" (error)="companyLogoSvc.onImgError($event, defaultAvatarLogo)" />
             <span class="profile-status"></span>
           </div>
         </button>
@@ -145,7 +145,7 @@
         <div class="profile-dropdown" [class.show]="isDropdownOpen">
           <div class="profile-dropdown-head">
             <div class="profile-avatar large">
-              <img src="assets/img/logo/quaere_logo_1.PNG" alt="alt" class="rounded-circle" />
+              <img [src]="companyLogoUrl || defaultAvatarLogo" alt="alt" class="rounded-circle" (error)="companyLogoSvc.onImgError($event, defaultAvatarLogo)" />
               <span class="profile-status"></span>
             </div>
             <div class="profile-meta">

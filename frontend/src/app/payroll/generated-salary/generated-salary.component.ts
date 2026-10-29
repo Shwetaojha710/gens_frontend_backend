@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 import { INotyfNotificationOptions, Notyf } from 'notyf';
 import { firstValueFrom } from 'rxjs';
 import { MasterService } from '../../services/master.service';
+import { CompanyLogoService } from '../../services/company-logo.service';
 import { PayrollService } from '../../services/payroll.service';
 import { StatusService } from '../../services/status.service';
 declare let bootstrap: any;
@@ -49,7 +50,7 @@ export class GeneratedSalaryComponent {
   yearList: any = [];
   notyf: Notyf;
   obj: any = {}
-  constructor(private master: MasterService, private router: Router, private payroll: PayrollService, private statusService: StatusService) {
+  constructor(private master: MasterService, private router: Router, private payroll: PayrollService, private statusService: StatusService, private companyLogoSvc: CompanyLogoService) {
     this.notyf = new Notyf();
   }
   currency: any
@@ -655,11 +656,11 @@ export class GeneratedSalaryComponent {
     let logoBase64 = '';
     try {
       const base = (this.master.getBaseUrl() || '').replace(/\/+$/, '');
-      const logoPath = tenant.image
+      const logoPath = this.companyLogoSvc.current('admin') || (tenant.image
         ? (String(tenant.image).startsWith('http')
           ? tenant.image
           : `${base}/upload/${String(tenant.image).replace(/^\/+/, '').replace(/^upload\//, '')}`)
-        : 'assets/img/logo/quaere_logo_1.PNG';
+        : 'assets/img/logo/quaere_logo_1.PNG');
       logoBase64 = await this.getBase64ImageFromURL(logoPath);
     } catch {
       logoBase64 = await this.getBase64ImageFromURL('assets/img/logo/quaere_logo_1.PNG');

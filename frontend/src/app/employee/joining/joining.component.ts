@@ -946,6 +946,84 @@ stats:any
 
   }
 
+  /** Employee List "Assign Branches" dialog state (null = closed). */
+  branchAssign: {
+    id: string;
+    name: string;
+    roleLabel: string;
+    homeId: string | null;
+    multi: boolean;
+    selected: string[];
+    saving: boolean;
+  } | null = null;
+
+  openAssignBranches(item: any): void {
+    const homeId = item?.branchId ? String(item.branchId) : null;
+    let saved: any = item?.branchIds;
+    if (typeof saved === 'string') {
+      try { saved = JSON.parse(saved); } catch { saved = [saved]; }
+    }
+    const selected = [...new Set([...(homeId ? [homeId] : []), ...(Array.isArray(saved) ? saved.map(String) : [])])];
+    const role = String(item?.role || '');
+    this.branchAssign = {
+      id: item.id,
+      name: `${item.firstName || ''} ${item.lastName || ''}`.trim() || 'Employee',
+      roleLabel: (this.role || []).find((r: any) => r.value === role)?.label || role || 'No role',
+      homeId,
+      multi: this.multiBranchRoles.includes(role.toLowerCase()),
+      selected,
+      saving: false,
+    };
+  }
+
+  closeAssignBranches(): void {
+    if (!this.branchAssign?.saving) this.branchAssign = null;
+  }
+
+  get allBranchesAssigned(): boolean {
+    const all = (this.branchList || []).map((b: any) => String(b.id));
+    return !!this.branchAssign && all.length > 0 && all.every((id: string) => this.branchAssign!.selected.includes(id));
+  }
+
+  toggleAllBranches(on: boolean): void {
+    if (!this.branchAssign) return;
+    const home = this.branchAssign.homeId;
+    this.branchAssign.selected = on
+      ? (this.branchList || []).map((b: any) => String(b.id))
+      : home ? [home] : [];
+  }
+
+  toggleBranch(id: string, on: boolean): void {
+    if (!this.branchAssign || id === this.branchAssign.homeId) return;
+    const rest = this.branchAssign.selected.filter((x) => x !== id);
+    this.branchAssign.selected = on ? [...rest, id] : rest;
+  }
+
+  saveAssignBranches(): void {
+    const a = this.branchAssign;
+    if (!a || a.saving) return;
+    a.saving = true;
+    const body = this.allBranchesAssigned
+      ? { employeeId: a.id, all: true }
+      : { employeeId: a.id, branchIds: a.selected };
+    this.employeeService.assignBranches(body).subscribe({
+      next: (res: any) => {
+        a.saving = false;
+        if (res?.status === true) {
+          this.notyf.success(`${res.data?.branchIds?.length || a.selected.length} branch(es) assigned to ${a.name}`);
+          this.branchAssign = null;
+          this.loadEmployees();
+        } else {
+          this.notyf.error(res?.message || 'Could not assign branches');
+        }
+      },
+      error: (err: any) => {
+        a.saving = false;
+        this.notyf.error(err?.error?.message || 'Could not assign branches');
+      },
+    });
+  }
+
   view(data: any) {
     console.log(data, "objectsss")
     // Save object

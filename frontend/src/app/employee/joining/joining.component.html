@@ -672,6 +672,9 @@
                       <i class="fas fa-location"></i></button>&nbsp;
                     <button type="button" class="badge badge-center bg-label-secondary"  title="View Details" (click)="view(item)">
                       <i class="far fa-eye"></i></button>&nbsp;
+                    <button type="button" class="badge badge-center bg-label-dark" title="Assign Branches"
+                      (click)="openAssignBranches(item)">
+                      <i class="fas fa-code-branch"></i></button>&nbsp;
                     <button type="button" class="badge badge-center bg-label-info"  title="Update" (click)="update(item)">
                       <i class="fas fa-edit"></i>
                     </button>
@@ -754,6 +757,50 @@
           </table>
         </app-search-pagination> -->
 
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Branches (Employee List action) -->
+<div class="ab-backdrop" *ngIf="branchAssign" (click)="closeAssignBranches()">
+  <div class="ab-dialog" role="dialog" aria-modal="true" aria-labelledby="ab-title" (click)="$event.stopPropagation()">
+    <div class="ab-head">
+      <div>
+        <h5 id="ab-title" class="mb-0">Assign Branches</h5>
+        <small class="text-muted">{{ branchAssign.name }} · {{ branchAssign.roleLabel }}</small>
+      </div>
+      <button type="button" class="btn-close" aria-label="Close" (click)="closeAssignBranches()"></button>
+    </div>
+
+    <div class="ab-body">
+      <div class="alert alert-warning py-2 small mb-2" *ngIf="!branchAssign.multi">
+        Only Director or Manager roles can have more than one branch. Change the role with Update to assign more.
+      </div>
+      <label class="ab-all" *ngIf="branchAssign.multi">
+        <input type="checkbox" class="form-check-input" [checked]="allBranchesAssigned"
+          (change)="toggleAllBranches($any($event.target).checked)" />
+        <span><b>All branches</b> <small class="text-muted">({{ branchList?.length || 0 }})</small></span>
+      </label>
+      <div class="ab-grid">
+        <label class="ab-item" *ngFor="let b of branchList"
+          [class.ab-item--home]="b.id === branchAssign.homeId">
+          <input type="checkbox" class="form-check-input"
+            [checked]="branchAssign.selected.includes(b.id)"
+            [disabled]="b.id === branchAssign.homeId || !branchAssign.multi"
+            (change)="toggleBranch(b.id, $any($event.target).checked)" />
+          <span>{{ b.name }} <small *ngIf="b.id === branchAssign.homeId" class="text-muted">(home)</small></span>
+        </label>
+      </div>
+      <small class="text-muted d-block mt-2">The home branch always stays assigned.</small>
+    </div>
+
+    <div class="ab-foot">
+      <span class="small text-muted">{{ branchAssign.selected.length }} selected</span>
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="closeAssignBranches()">Cancel</button>
+        <button type="button" class="btn btn-sm btn-primary" [disabled]="branchAssign.saving || !branchAssign.multi"
+          (click)="saveAssignBranches()">{{ branchAssign.saving ? 'Saving…' : 'Save' }}</button>
       </div>
     </div>
   </div>

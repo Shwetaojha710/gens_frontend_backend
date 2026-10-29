@@ -521,6 +521,14 @@
                         </button>
                       </div>
 
+                      <!-- Range (metres) around the branch location -->
+                      <div class="col-12">
+                        <label class="form-label">Range (metres)</label>
+                        <input type="number" class="form-control" min="1" max="100000" step="1"
+                          placeholder="Range in metres (e.g. 100)" [(ngModel)]="newBranch['range']" />
+                        <small class="text-muted">Allowed distance from the latitude / longitude above.</small>
+                      </div>
+
                       <!-- Image Upload -->
                       <div class="col-12">
                         <label class="form-label">Branch Image</label>
@@ -591,6 +599,14 @@
                           (click)="fetchLocationForEdit()">
                           <i class="bx bx-current-location"></i>&nbsp;Use My Current Location
                         </button>
+                      </div>
+
+                      <!-- Range (metres) around the branch location -->
+                      <div class="col-12">
+                        <label class="form-label">Range (metres)</label>
+                        <input type="number" class="form-control" min="1" max="100000" step="1"
+                          placeholder="Range in metres (e.g. 100)" [(ngModel)]="editBranch['range']" />
+                        <small class="text-muted">Allowed distance from the latitude / longitude above.</small>
                       </div>
 
                       <!-- Status -->

@@ -248,6 +248,94 @@ exports.uploadInsurancePolicy = async (req, res) => {
   }
 };
 
+// ── Company logo (stored in Tenant.image) ───────────────────────────────────
+exports.getCompanyLogo = async (req, res) => {
+  try {
+    const tenantId = req.users?.tenantId;
+    if (!tenantId) return Helper.response(false, 'User Not Found', {}, res, 404);
+
+    const tenant = await Tenant.findByPk(tenantId, { attributes: ['companyName', 'image'], raw: true });
+    if (!tenant) return Helper.response(false, 'Tenant not found', {}, res, 404);
+
+    return Helper.response(true, 'Company logo fetched', {
+      url: Tenant.logoUrl(tenant.image),
+      filename: tenant.image || null,
+      companyName: tenant.companyName || '',
+    }, res, 200);
+  } catch (error) {
+    console.error('getCompanyLogo error:', error);
+    return Helper.response(false, error.message, {}, res, 500);
+  }
+};
+
+exports.uploadCompanyLogo = async (req, res) => {
+  try {
+    const tenantId = req.users?.tenantId;
+    if (!tenantId) return Helper.response(false, 'User Not Found', {}, res, 404);
+    if (!req.file) return Helper.response(false, 'No file uploaded', {}, res, 400);
+
+    const existing = await Tenant.findByPk(tenantId, { attributes: ['image'], raw: true });
+    if (!existing) {
+      try { fs.unlinkSync(req.file.path); } catch (_) {}
+      return Helper.response(false, 'Tenant not found', {}, res, 404);
+    }
+
+    const filename = req.file.filename;
+    const oldImage = existing.image || null;
+    await Tenant.update({ image: filename }, { where: { id: tenantId } });
+
+    // Delete old logo file only after the new one is saved
+    if (oldImage && oldImage !== filename) {
+      const oldPath = path.join(__dirname, '../../../upload', oldImage);
+      try { fs.unlinkSync(oldPath); } catch (_) {}
+    }
+
+    await writeAudit({
+      req,
+      actionType: 'COMPANY_LOGO_UPLOAD',
+      referenceId: tenantId,
+      oldValue: { image: oldImage },
+      newValue: { image: filename },
+      remarks: 'Company logo uploaded',
+    });
+
+    return Helper.response(true, 'Company logo uploaded successfully', { url: Tenant.logoUrl(filename), filename }, res, 200);
+  } catch (error) {
+    console.error('uploadCompanyLogo error:', error);
+    return Helper.response(false, error.message, {}, res, 500);
+  }
+};
+
+exports.removeCompanyLogo = async (req, res) => {
+  try {
+    const tenantId = req.users?.tenantId;
+    if (!tenantId) return Helper.response(false, 'User Not Found', {}, res, 404);
+
+    const existing = await Tenant.findByPk(tenantId, { attributes: ['image'], raw: true });
+    if (!existing) return Helper.response(false, 'Tenant not found', {}, res, 404);
+
+    const oldImage = existing.image;
+    if (oldImage) {
+      await Tenant.update({ image: null }, { where: { id: tenantId } });
+      const oldPath = path.join(__dirname, '../../../upload', oldImage);
+      try { fs.unlinkSync(oldPath); } catch (_) {}
+      await writeAudit({
+        req,
+        actionType: 'COMPANY_LOGO_REMOVE',
+        referenceId: tenantId,
+        oldValue: { image: oldImage },
+        newValue: { image: null },
+        remarks: 'Company logo removed',
+      });
+    }
+
+    return Helper.response(true, 'Company logo removed', { url: null, filename: null }, res, 200);
+  } catch (error) {
+    console.error('removeCompanyLogo error:', error);
+    return Helper.response(false, error.message, {}, res, 500);
+  }
+};
+
 exports.getCompanyProfile = async (req, res) => {
   try {
     const tenantId = req.users?.tenantId;

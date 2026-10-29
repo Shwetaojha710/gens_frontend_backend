@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { Notyf } from 'notyf';
 import { EmployeeService } from '../../../services/employee.service';
 import { MasterService } from '../../../services/master.service';
+import { CompanyLogoService, DEFAULT_COMPANY_LOGO } from '../../../services/company-logo.service';
 @Component({
   selector: 'app-releving-letter',
   imports: [CommonModule, FormsModule, DatePipe],
@@ -26,7 +27,7 @@ export class RelevingLetterComponent implements OnInit {
   addressState: string = '';
   addressPinCode: string = '';
 
-  constructor(private router: Router, private employeeService: EmployeeService, private masterService: MasterService) {
+  constructor(private router: Router, private employeeService: EmployeeService, private masterService: MasterService, private companyLogoSvc: CompanyLogoService) {
     this.notyf = new Notyf();
     this.personalDetails = JSON.parse(localStorage.getItem('employeeId') || '{}');
     this.tenant = JSON.parse(localStorage.getItem('tenant') || '{}');
@@ -281,7 +282,13 @@ ${content}
   }
 
   downloadDoc() {
-    const logoPromise = this.getBase64FromSrc('/assets/img/logo/image.png').catch(() => '');
+    // Company logo when set, else the default logo
+    const defaultLogo = '/' + DEFAULT_COMPANY_LOGO;
+    const companyLogoUrl = this.companyLogoSvc.current('admin');
+    const logoPromise = (companyLogoUrl
+      ? this.getBase64FromSrc(companyLogoUrl).catch(() => this.getBase64FromSrc(defaultLogo))
+      : this.getBase64FromSrc(defaultLogo)
+    ).catch(() => '');
     const badge1Promise = this.getBase64FromSrc('/assets/img/logo/Picture1.jpg').catch(() => '');
     const badge2Promise = this.getBase64FromSrc('/assets/img/logo/Picture2.png').catch(() => '');
 

@@ -43,6 +43,18 @@ const validateCoordinates = (latitude, longitude) => {
   return { latitude: lat.value, longitude: lng.value };
 };
 
+// Range (metres) is optional; when entered it must be a whole number from 1 to 100000.
+const parseRange = (raw) => {
+  if (raw === undefined || raw === null || String(raw).trim() === "" || String(raw).trim() === "null") {
+    return { value: null };
+  }
+  const str = String(raw).trim();
+  if (!/^\d+$/.test(str) || Number(str) < 1 || Number(str) > 100000) {
+    return { error: "Range must be a whole number of metres between 1 and 100000 (e.g. 100)" };
+  }
+  return { value: Number(str) };
+};
+
 exports.createBranch = async (req, res) => {
   const { status, description } = req.body;
   const name = req.body.name ? String(req.body.name).trim() : "";
@@ -62,6 +74,10 @@ exports.createBranch = async (req, res) => {
       return Helper.response(false, coords.error, [], res, 400);
     }
     const { latitude, longitude } = coords;
+    const range = parseRange(req.body.range);
+    if (range.error) {
+      return Helper.response(false, range.error, [], res, 400);
+    }
     const existing = await branch.findOne({ where: { name, tenantId } });
     if (existing) {
       return Helper.response(false, "Branch with this name already exists", [], res, 409);
@@ -74,6 +90,7 @@ exports.createBranch = async (req, res) => {
       name,
       latitude,
       longitude,
+      range: range.value,
       image,
       description:description || null,
       status: status || "active",
@@ -184,12 +201,16 @@ exports.updateBranch = async (req, res) => {
     if (lat.error) return Helper.response(false, lat.error, [], res, 400);
     const lng = parseCoordinate(longitude, "Longitude", -180, 180);
     if (lng.error) return Helper.response(false, lng.error, [], res, 400);
+    const range = parseRange(req.body.range);
+    if (range.error) return Helper.response(false, range.error, [], res, 400);
 
     const imageFile = req.files && req.files.find((f) => f.fieldname == "image");
     const oldBranch = toPlain(branchs);
     branchs.name = name || branchs.name;
     branchs.latitude = lat.value ?? branchs.latitude;
     branchs.longitude = lng.value ?? branchs.longitude;
+    // Sent blank = clear the range; not sent = keep it
+    if (req.body.range !== undefined) branchs.range = range.value;
     branchs.status = status || branchs.status;
     branchs.description = description || branchs.description;
     branchs.image = imageFile ? imageFile.filename  : branchs.image;
@@ -568,6 +589,7 @@ exports.branchDD = async (req, res) => {
           image: branch.image??null,
           longitude: branch.longitude??null,
           latitude: branch.latitude??null,
+          range: branch.range ?? null,
           description: branch.description ?? "Central administration and monitoring access.",
         }))
         // Keep Lucknow pinned first; others stay in the alphabetical DB order

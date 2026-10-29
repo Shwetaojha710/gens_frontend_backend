@@ -387,6 +387,20 @@ export class MasterService {
     return this.http.post(`${this.baseUrl}hr-template-generated-get`, { id });
   }
 
+  getCompanyLogo(): Observable<any> {
+    return this.http.post(`${this.baseUrl}get-company-logo`, {});
+  }
+
+  uploadCompanyLogo(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('logo', file);
+    return this.http.post(`${this.baseUrl}upload-company-logo`, formData);
+  }
+
+  removeCompanyLogo(): Observable<any> {
+    return this.http.post(`${this.baseUrl}remove-company-logo`, {});
+  }
+
   getLetterhead(): Observable<any> {
     return this.http.post(`${this.baseUrl}get-letterhead`, {});
   }
