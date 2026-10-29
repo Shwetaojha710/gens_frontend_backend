@@ -48,7 +48,7 @@
         </div>
         <div class="col-lg-4 col-md-6">
           <label class="gl-label">Template</label>
-          <select class="form-select gl-control" [(ngModel)]="templateId">
+          <select class="form-select gl-control" [(ngModel)]="templateId" (ngModelChange)="onTemplateChange()">
             <option value="">Select template</option>
             <option *ngFor="let t of templates" [value]="t.id">{{ t.name }}</option>
           </select>
@@ -62,6 +62,20 @@
           <button type="button" class="btn btn-primary w-100 gl-btn-preview" [disabled]="loading" (click)="preview()">
             {{ loading ? 'Loading…' : 'Preview' }}
           </button>
+        </div>
+      </div>
+
+      <!-- Input fields added in the template editor ({{field:Name}}) -->
+      <div class="row g-3 mt-0" *ngIf="templateFields.length">
+        <div class="col-lg-3 col-md-6" *ngFor="let name of templateFields">
+          <label class="gl-label">{{ name }}</label>
+          <input
+            type="text"
+            class="form-control gl-control"
+            [(ngModel)]="fieldValues[name]"
+            [placeholder]="'Enter ' + name"
+            maxlength="500"
+          />
         </div>
       </div>
     </div>

@@ -1153,6 +1153,28 @@
   display: none;
 }
 
+/* Quill toolbar — Input Field (named blank filled when generating a letter) */
+:host ::ng-deep .ql-snow .ql-toolbar button.ql-inputfield,
+:host ::ng-deep .ql-snow.ql-toolbar button.ql-inputfield {
+  width: auto !important;
+  min-width: 82px;
+  padding: 0 8px !important;
+}
+
+:host ::ng-deep .ql-snow .ql-toolbar button.ql-inputfield::before,
+:host ::ng-deep .ql-snow.ql-toolbar button.ql-inputfield::before {
+  content: '⌨ Input Field';
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #334155;
+  white-space: nowrap;
+}
+
+:host ::ng-deep .ql-snow .ql-toolbar button.ql-inputfield svg {
+  display: none;
+}
+
 /* Quill toolbar — Date format picker (insert at caret) */
 :host ::ng-deep .ql-snow .ql-picker.ql-dateformat {
   width: 118px;
@@ -1194,6 +1216,14 @@
 :host ::ng-deep .ql-snow .ql-picker.ql-dateformat .ql-picker-label[data-value='MMMM d, yyyy']::before,
 :host ::ng-deep .ql-snow .ql-picker.ql-dateformat .ql-picker-item[data-value='MMMM d, yyyy']::before {
   content: 'Month D, YYYY';
+}
+:host ::ng-deep .ql-snow .ql-picker.ql-dateformat .ql-picker-label[data-value='do MMMM, yyyy']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-dateformat .ql-picker-item[data-value='do MMMM, yyyy']::before {
+  content: '15th Month, YYYY';
+}
+:host ::ng-deep .ql-snow .ql-picker.ql-dateformat .ql-picker-label[data-value='do MMMM yyyy']::before,
+:host ::ng-deep .ql-snow .ql-picker.ql-dateformat .ql-picker-item[data-value='do MMMM yyyy']::before {
+  content: '15th Month YYYY';
 }
 :host ::ng-deep .ql-snow .ql-picker.ql-dateformat .ql-picker-options {
   width: 160px;

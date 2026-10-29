@@ -42,6 +42,10 @@ export class GenerateLetterComponent implements OnInit, OnDestroy {
   loading = false;
   lastVariables: any = null;
 
+  /** Values typed for the selected template's input fields ({{field:Name}}), by field name. */
+  fieldValues: Record<string, string> = {};
+  private fieldsCache: { template: any; names: string[] } | null = null;
+
   /** Add panel: Employee / Template / Issue Date / Preview */
   showAddForm = false;
 
@@ -73,6 +77,26 @@ export class GenerateLetterComponent implements OnInit, OnDestroy {
 
   get totalDocs(): number {
     return this.generatedList.length;
+  }
+
+  /** Input field names in the selected template (body, header and footer), in order of appearance. */
+  get templateFields(): string[] {
+    const template = this.templates.find((t) => String(t.id) === String(this.templateId)) || null;
+    if (this.fieldsCache?.template === template) return this.fieldsCache.names;
+    const text = template ? `${template.bodyHtml || ''} ${JSON.stringify(template.headerFooter || {})}` : '';
+    const names: string[] = [];
+    for (const m of text.matchAll(/\{\{\s*field:([^}]+?)\s*\}\}/g)) {
+      const name = m[1].replace(/\s+/g, ' ').trim();
+      if (name && !names.includes(name)) names.push(name);
+    }
+    this.fieldsCache = { template, names };
+    return names;
+  }
+
+  /** New template: keep values for fields it shares with the last one, drop the rest. */
+  onTemplateChange(): void {
+    const keep = this.templateFields;
+    this.fieldValues = Object.fromEntries(Object.entries(this.fieldValues).filter(([k]) => keep.includes(k)));
   }
 
   get uniqueEmployees(): number {
@@ -299,6 +323,7 @@ export class GenerateLetterComponent implements OnInit, OnDestroy {
         templateId: this.templateId,
         employeeId: this.employeeId,
         issueDate: this.issueDate,
+        fieldValues: Object.fromEntries(this.templateFields.map((name) => [name, this.fieldValues[name] || ''])),
       })
       .subscribe({
         next: (res: any) => {

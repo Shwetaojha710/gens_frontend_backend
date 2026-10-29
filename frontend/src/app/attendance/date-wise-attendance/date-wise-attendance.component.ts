@@ -225,7 +225,10 @@ export class DateWiseAttendanceComponent {
         };
         this.AttendanceMasterList = this.AttendanceMasterList.map((item: any) => ({
           ...item,
-          status: statusMap[item.status] || item.status
+          status: statusMap[item.status] || item.status,
+          // UI shows HH:mm only (no seconds)
+          checkIn: this.toTimeWithoutSeconds(item.checkIn),
+          checkOut: this.toTimeWithoutSeconds(item.checkOut),
         }));
 
         // When navigating from dashboard with a status filter, keep only matching rows
@@ -458,6 +461,16 @@ export class DateWiseAttendanceComponent {
 
   }
 
+
+  /** Display / bind as HH:mm (drop seconds for type=time step=60). */
+  toTimeWithoutSeconds(time: string | null | undefined): string {
+    if (!time || time === '--') return '';
+    const raw = String(time).trim();
+    // "YYYY-MM-DD HH:mm:ss" or "HH:mm:ss" / "HH:mm"
+    const m = raw.match(/(?:^|\s)(\d{1,2}):(\d{2})(?::\d{2})?/);
+    if (!m) return raw;
+    return `${m[1].padStart(2, '0')}:${m[2]}`;
+  }
 
   /** Build "YYYY-MM-DD HH:mm:ss" (adds :00 if seconds missing). */
   toDateTimeWithSeconds(date: string, time: string | null | undefined): string | null {

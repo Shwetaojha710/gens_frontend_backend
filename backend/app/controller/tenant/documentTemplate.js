@@ -125,9 +125,19 @@ const parseDateValue = (value) => {
   return Number.isNaN(d.getTime()) ? null : d;
 };
 
+/** 1 -> "st", 2 -> "nd", 3 -> "rd", 11/12/13 -> "th", 21 -> "st", 22 -> "nd"… */
+const ordinalSuffix = (day) => {
+  if (day % 100 >= 11 && day % 100 <= 13) return 'th';
+  return { 1: 'st', 2: 'nd', 3: 'rd' }[day % 10] || 'th';
+};
+
+// fmtDate wraps an ordinal suffix in these markers; fillTemplate turns them into <sup> after escaping
+const SUP_OPEN = '\u0001';
+const SUP_CLOSE = '\u0002';
+
 /**
  * Format a date. Default pattern: dd/MM/yyyy.
- * Tokens: yyyy, yy, MMMM, MMM, MM, dd, d
+ * Tokens: yyyy, yy, MMMM, MMM, MM, dd, d, do (ordinal day: 15th, suffix raised)
  */
 const fmtDate = (value, pattern = 'dd/MM/yyyy') => {
   const d = parseDateValue(value);
@@ -143,6 +153,7 @@ const fmtDate = (value, pattern = 'dd/MM/yyyy') => {
   const year = d.getFullYear();
   const pad2 = (n) => String(n).padStart(2, '0');
   return String(pattern || 'dd/MM/yyyy')
+    .replace(/\bdo\b/g, `${day}${SUP_OPEN}${ordinalSuffix(day)}${SUP_CLOSE}`)
     .replace(/yyyy/g, String(year))
     .replace(/yy/g, String(year).slice(-2))
     .replace(/MMMM/g, MONTHS_LONG[month])
@@ -823,16 +834,28 @@ async function buildVariableMap(tenantId, employeeId, hrName, issueDate) {
 
 function escapeTemplateValue(raw) {
   return String(raw)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
 }
 
 /**
  * Replace {{key}} and {{key:datePattern}} placeholders.
  * Date keys (joining_date, issue_date, date_of_birth) format via pattern (default dd/MM/yyyy).
  */
+/** Values for {{field:Name}} input fields: { 'Ref No': 'QT/104' } with trimmed text values. */
+function normalizeFieldValues(input) {
+  const out = {};
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return out;
+  for (const [name, value] of Object.entries(input).slice(0, 50)) {
+    const key = String(name).replace(/\s+/g, ' ').trim();
+    const text = value == null ? '' : String(value).trim().slice(0, 500);
+    if (key && text) out[key] = text;
+  }
+  return out;
+}
+
 function fillTemplate(bodyHtml, vars) {
   return String(bodyHtml || '').replace(
     /\{\{\s*([a-zA-Z0-9_]+)(?::([^}]+))?\s*\}\}/g,
@@ -842,9 +865,18 @@ function fillTemplate(bodyHtml, vars) {
         const raw = vars[key] != null && vars[key] !== '' ? String(vars[key]) : BLANK;
         return raw;
       }
+      // {{field:Ref No}} — value typed on the Generate HR Letter page
+      if (key === 'field') {
+        const value = (vars.input_fields || {})[String(pattern || '').replace(/\s+/g, ' ').trim()];
+        return value ? escapeTemplateValue(value) : BLANK;
+      }
       if (DATE_VAR_KEYS.has(key)) {
         const formatted = fmtDate(vars[key], (pattern || 'dd/MM/yyyy').trim());
-        return escapeTemplateValue(formatted);
+        // &nbsp; after </sup>: print cleanup drops a plain leading space after an inline tag
+        return escapeTemplateValue(formatted)
+          .split(SUP_OPEN).join('<sup>')
+          .split(`${SUP_CLOSE} `).join('</sup>&nbsp;')
+          .split(SUP_CLOSE).join('</sup>');
       }
       const raw = vars[key] != null && vars[key] !== '' ? String(vars[key]) : BLANK;
       return escapeTemplateValue(raw);
@@ -1632,7 +1664,7 @@ function buildAnnexure(vars) {
 exports.previewDocument = async (req, res) => {
   try {
     const tenantId = req.users?.tenantId;
-    const { templateId, employeeId, hrName, issueDate } = req.body;
+    const { templateId, employeeId, hrName, issueDate, fieldValues } = req.body;
     if (!tenantId || !templateId || !employeeId) {
       return Helper.response(false, 'templateId and employeeId are required', {}, res, 400);
     }
@@ -1642,6 +1674,7 @@ exports.previewDocument = async (req, res) => {
 
     const vars = await buildVariableMap(tenantId, employeeId, hrName, issueDate);
     if (!vars) return Helper.response(false, 'Employee not found', {}, res, 404);
+    vars.input_fields = normalizeFieldValues(fieldValues);
 
     const filled = fillDocumentBody(template, vars);
 
@@ -1701,7 +1734,7 @@ exports.saveGeneratedDocument = async (req, res) => {
   try {
     const tenantId = req.users?.tenantId;
     const branchId = req.body?.branchId || req.users?.branchId || null;
-    const { templateId, employeeId, filledHtml, variables, hrName } = req.body;
+    const { templateId, employeeId, filledHtml, variables, hrName, fieldValues } = req.body;
     if (!tenantId || !templateId || !employeeId) {
       return Helper.response(false, 'templateId and employeeId are required', {}, res, 400);
     }
@@ -1714,6 +1747,7 @@ exports.saveGeneratedDocument = async (req, res) => {
     if (!html) {
       const vars = await buildVariableMap(tenantId, employeeId, hrName);
       if (!vars) return Helper.response(false, 'Employee not found', {}, res, 404);
+      vars.input_fields = normalizeFieldValues(fieldValues);
       snapshot = vars;
       const filled = fillDocumentBody(template, vars);
       const letterheadDataUrl = template.letterheadBlank
