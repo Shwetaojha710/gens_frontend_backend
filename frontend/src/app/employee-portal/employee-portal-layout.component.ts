@@ -65,7 +65,7 @@ export class EmployeePortalLayoutComponent implements OnInit, OnDestroy {
     'escalate',
   ]);
 
-  /** Company logo (Tenant.image) or the default logo */
+  /** Dark-background company logo (falls back to the normal one, then the default) */
   companyLogo = DEFAULT_COMPANY_LOGO;
   private logoSub?: Subscription;
 
@@ -86,7 +86,7 @@ export class EmployeePortalLayoutComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.logoSub = this.companyLogoSvc.logo$('portal').subscribe((url) => (this.companyLogo = url));
+    this.logoSub = this.companyLogoSvc.logo$('portal', 'dark').subscribe((url) => (this.companyLogo = url));
     this.companyLogoSvc.refresh('portal');
     this.loadNotificationSummary();
     this.routerSub = this.router.events.subscribe((event) => {

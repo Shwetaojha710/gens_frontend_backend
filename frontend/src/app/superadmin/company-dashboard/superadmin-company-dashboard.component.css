@@ -857,6 +857,20 @@
   overflow: hidden;
 }
 
+.sa-co-logo-box--dark {
+  background: linear-gradient(180deg, #003b5c 0%, #008e9b 100%);
+  border-color: #003b5c;
+}
+
+.sa-co-logo-box-empty {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.sa-co-title-logo--dark {
+  background: transparent;
+  padding: 0;
+}
+
 .sa-co-logo-box img {
   max-width: 100%;
   max-height: 100%;

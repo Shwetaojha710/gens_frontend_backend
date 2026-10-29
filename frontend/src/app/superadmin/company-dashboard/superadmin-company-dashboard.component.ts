@@ -12,6 +12,7 @@ interface SaTenantDetails {
   status?: string;
   companyAddress?: string;
   logo?: string | null;
+  logoDark?: string | null;
   adminEmail?: string;
 }
 
@@ -71,6 +72,9 @@ export class SuperadminCompanyDashboardComponent implements OnInit {
   editLogoFile: File | null = null;
   editLogoPreview: string | null = null;
   editRemoveLogo = false;
+  editLogoDarkFile: File | null = null;
+  editLogoDarkPreview: string | null = null;
+  editRemoveLogoDark = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -144,6 +148,9 @@ export class SuperadminCompanyDashboardComponent implements OnInit {
     this.editLogoFile = null;
     this.editLogoPreview = null;
     this.editRemoveLogo = false;
+    this.editLogoDarkFile = null;
+    this.editLogoDarkPreview = null;
+    this.editRemoveLogoDark = false;
     this.editSubmitted = false;
     this.editOpen = true;
   }
@@ -180,7 +187,13 @@ export class SuperadminCompanyDashboardComponent implements OnInit {
     return this.snapshot?.tenant?.logo || null;
   }
 
-  onEditLogoChange(event: Event): void {
+  get editLogoDarkShown(): string | null {
+    if (this.editLogoDarkPreview) return this.editLogoDarkPreview;
+    if (this.editRemoveLogoDark) return null;
+    return this.snapshot?.tenant?.logoDark || null;
+  }
+
+  onEditLogoChange(event: Event, variant: 'light' | 'dark' = 'light'): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
@@ -194,15 +207,27 @@ export class SuperadminCompanyDashboardComponent implements OnInit {
       input.value = '';
       return;
     }
-    this.editLogoFile = file;
-    this.editRemoveLogo = false;
     const reader = new FileReader();
-    reader.onload = () => (this.editLogoPreview = reader.result as string);
+    if (variant === 'dark') {
+      this.editLogoDarkFile = file;
+      this.editRemoveLogoDark = false;
+      reader.onload = () => (this.editLogoDarkPreview = reader.result as string);
+    } else {
+      this.editLogoFile = file;
+      this.editRemoveLogo = false;
+      reader.onload = () => (this.editLogoPreview = reader.result as string);
+    }
     reader.readAsDataURL(file);
     input.value = '';
   }
 
-  removeEditLogo(): void {
+  removeEditLogo(variant: 'light' | 'dark' = 'light'): void {
+    if (variant === 'dark') {
+      this.editLogoDarkFile = null;
+      this.editLogoDarkPreview = null;
+      this.editRemoveLogoDark = true;
+      return;
+    }
     this.editLogoFile = null;
     this.editLogoPreview = null;
     this.editRemoveLogo = true;
@@ -218,6 +243,8 @@ export class SuperadminCompanyDashboardComponent implements OnInit {
     if (this.editForm.adminEmail.trim()) fd.append('adminEmail', this.editForm.adminEmail.trim());
     if (this.editLogoFile) fd.append('logo', this.editLogoFile, this.editLogoFile.name);
     else if (this.editRemoveLogo) fd.append('removeLogo', 'true');
+    if (this.editLogoDarkFile) fd.append('logoDark', this.editLogoDarkFile, this.editLogoDarkFile.name);
+    else if (this.editRemoveLogoDark) fd.append('removeLogoDark', 'true');
 
     this.editSaving = true;
     this.api.updateTenantDetails(this.tenantId, fd).subscribe({

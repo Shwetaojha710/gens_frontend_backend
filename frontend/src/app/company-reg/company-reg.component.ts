@@ -130,6 +130,9 @@ export class CompanyRegComponent implements OnInit {
     if (this.selectedFile) {
       uploadData.append('image', this.selectedFile, this.selectedFile.name);
     }
+    if (this.selectedDarkFile) {
+      uploadData.append('imageDark', this.selectedDarkFile, this.selectedDarkFile.name);
+    }
     if (this.planId) {
       uploadData.append('planId', this.planId);
     }
@@ -289,6 +292,41 @@ export class CompanyRegComponent implements OnInit {
   isFileInvalid: boolean = false;
   selectedFile: File | null = null;
   previewUrl: string | null = null;
+  /** Optional logo for dark backgrounds (e.g. white logo for the sidebar) */
+  selectedDarkFile: File | null = null;
+  darkPreviewUrl: string | null = null;
+
+  onDarkFileChange(event: any): void {
+    const file: File = event.target.files[0];
+    this.selectedDarkFile = null;
+    this.darkPreviewUrl = null;
+    if (!file) return;
+
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    const maxSize = 2 * 1024 * 1024; // 2MB
+
+    if (!allowedTypes.includes(file.type)) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Invalid File Type',
+        text: 'Only JPG, JPEG, and PNG formats are allowed.',
+      });
+      event.target.value = '';
+      return;
+    }
+    if (file.size > maxSize) {
+      this.notyf.error('Maximum allowed file size is 2MB.');
+      event.target.value = '';
+      return;
+    }
+
+    this.selectedDarkFile = file;
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.darkPreviewUrl = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
   onFileChange(event: any): void {
     const file: File = event.target.files[0];
 

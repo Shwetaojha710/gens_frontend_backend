@@ -22,7 +22,8 @@
         <div class="sa-co-hero-copy">
           <p class="sa-hero-kicker">Tenant overview</p>
           <h1 class="sa-co-title" *ngIf="snapshot?.tenant as t; else titleLoad">
-            <img *ngIf="t.logo" [src]="t.logo" alt="" class="sa-co-title-logo" />
+            <img *ngIf="t.logoDark" [src]="t.logoDark" alt="" class="sa-co-title-logo sa-co-title-logo--dark" />
+            <img *ngIf="!t.logoDark && t.logo" [src]="t.logo" alt="" class="sa-co-title-logo" />
             {{ t.companyName }}
           </h1>
           <ng-template #titleLoad>
@@ -541,7 +542,7 @@
         </div>
 
         <div class="mb-3">
-          <label class="form-label d-block">Company logo</label>
+          <label class="form-label d-block">Company logo <span class="text-muted small">(white backgrounds)</span></label>
           <div class="sa-co-logo-row">
             <div class="sa-co-logo-box">
               <img *ngIf="editLogoShown as logo; else noLogo" [src]="logo" alt="Company logo" />
@@ -558,6 +559,26 @@
             </div>
           </div>
           <small class="text-muted d-block mt-1">PNG or JPG, max 2 MB</small>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label d-block">Logo for dark backgrounds <span class="text-muted small">(optional, sidebar)</span></label>
+          <div class="sa-co-logo-row">
+            <div class="sa-co-logo-box sa-co-logo-box--dark">
+              <img *ngIf="editLogoDarkShown as logoDark; else noLogoDark" [src]="logoDark" alt="Dark background logo" />
+              <ng-template #noLogoDark><span class="small sa-co-logo-box-empty">Uses company logo</span></ng-template>
+            </div>
+            <div class="d-flex flex-column gap-2">
+              <button type="button" class="btn btn-sm btn-outline-primary" (click)="logoDarkInput.click()" [disabled]="editSaving">
+                <i class="ri ri-upload-2-line me-1"></i>{{ editLogoDarkShown ? 'Change logo' : 'Upload logo' }}
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-danger" *ngIf="editLogoDarkShown" (click)="removeEditLogo('dark')" [disabled]="editSaving">
+                <i class="ri ri-delete-bin-line me-1"></i>Remove logo
+              </button>
+              <input #logoDarkInput type="file" class="d-none" accept="image/png,image/jpeg,image/jpg" (change)="onEditLogoChange($event, 'dark')" />
+            </div>
+          </div>
+          <small class="text-muted d-block mt-1">PNG or JPG, max 2 MB. For example a white logo.</small>
         </div>
 
         <div class="d-flex justify-content-end gap-2 pt-2 border-top">

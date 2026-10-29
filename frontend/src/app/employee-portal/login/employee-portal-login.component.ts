@@ -134,7 +134,7 @@ export class EmployeePortalLoginComponent {
           | {
               token: string;
               user: { id: string; branchId?: string };
-              tenant?: { id: string; companyName: string; companyCode: string; logo?: string | null };
+              tenant?: { id: string; companyName: string; companyCode: string; logo?: string | null; logoDark?: string | null };
               currencyList?: unknown;
               baseUrl?: string;
               PORT?: string;
@@ -153,7 +153,7 @@ export class EmployeePortalLoginComponent {
         if (d.tenant) localStorage.setItem('empPortalTenant', JSON.stringify(d.tenant));
         if (d.currencyList) localStorage.setItem('empPortalCurrency', JSON.stringify(d.currencyList));
         if (d.baseUrl) localStorage.setItem('empPortalBaseUrl', String(d.baseUrl));
-        this.companyLogo.set(d.tenant?.logo || null, 'portal');
+        this.companyLogo.setLogos({ light: d.tenant?.logo, dark: d.tenant?.logoDark }, 'portal');
 
         this.notyf.success(String(res['message'] || 'Welcome!'));
         void this.router.navigate(['/employee-portal/dashboard']);

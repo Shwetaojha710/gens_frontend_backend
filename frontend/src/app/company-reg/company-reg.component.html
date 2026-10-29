@@ -179,6 +179,21 @@
                 </div>
               </div>
 
+              <div class="mb-4">
+                <label class="form-label small text-muted mb-2 d-block">Logo for dark backgrounds (optional)</label>
+                <input
+                  class="form-control"
+                  type="file"
+                  id="formFileDark"
+                  accept="image/png,image/jpeg,image/jpg"
+                  (change)="onDarkFileChange($event)"
+                />
+                <small class="text-muted d-block mt-1">For example a white logo, shown on the dark sidebar. If you skip it, the company logo is used.</small>
+                <div *ngIf="darkPreviewUrl" class="mt-2 text-center">
+                  <img [src]="darkPreviewUrl" alt="Dark logo preview" class="creg-preview img-thumbnail creg-preview--dark" />
+                </div>
+              </div>
+
               <button
                 type="submit"
                 class="btn btn-primary d-grid w-100"

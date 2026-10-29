@@ -85,7 +85,7 @@ export class LoginComponent {
           localStorage.setItem('tenant', JSON.stringify(data.data.tenant));
           localStorage.setItem('branch', JSON.stringify(data.data.branch));
           localStorage.setItem('currency', JSON.stringify(data.data.currencyList));
-          this.companyLogo.set(data.data.companyLogo || null);
+          this.companyLogo.setLogos({ light: data.data.companyLogo, dark: data.data.companyLogoDark });
           // Save user-specific custom permissions if set by admin (null = use role defaults)
           if (data.data.customPermissions) {
             localStorage.setItem('custom_user_permissions', JSON.stringify(data.data.customPermissions));

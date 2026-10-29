@@ -391,14 +391,15 @@ export class MasterService {
     return this.http.post(`${this.baseUrl}get-company-logo`, {});
   }
 
-  uploadCompanyLogo(file: File): Observable<any> {
+  /** variant 'dark' = logo for dark backgrounds */
+  uploadCompanyLogo(file: File, variant: 'light' | 'dark' = 'light'): Observable<any> {
     const formData = new FormData();
-    formData.append('logo', file);
+    formData.append(variant === 'dark' ? 'logoDark' : 'logo', file);
     return this.http.post(`${this.baseUrl}upload-company-logo`, formData);
   }
 
-  removeCompanyLogo(): Observable<any> {
-    return this.http.post(`${this.baseUrl}remove-company-logo`, {});
+  removeCompanyLogo(variant: 'light' | 'dark' = 'light'): Observable<any> {
+    return this.http.post(`${this.baseUrl}remove-company-logo`, { variant });
   }
 
   getLetterhead(): Observable<any> {

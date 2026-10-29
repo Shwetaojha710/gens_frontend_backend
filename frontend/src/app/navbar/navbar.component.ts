@@ -19,7 +19,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   isCollapsed = false;
   isMobileOpen = false;
   menuItems: MenuItem[] = [];
-  /** Company logo (Tenant.image) or the default logo */
+  /** Dark-background company logo (falls back to the normal one, then the default) */
   companyLogo = DEFAULT_COMPANY_LOGO;
 
   private userRole: UserRole = 'hr';
@@ -88,7 +88,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.setActiveMenuItem(this.router.url);
 
     this.sub.add(
-      this.companyLogoSvc.logo$('admin').subscribe(url => (this.companyLogo = url))
+      this.companyLogoSvc.logo$('admin', 'dark').subscribe(url => (this.companyLogo = url))
     );
     this.companyLogoSvc.refresh('admin');
   }
