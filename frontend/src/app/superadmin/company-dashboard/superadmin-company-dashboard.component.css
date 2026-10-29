@@ -18,26 +18,35 @@
 }
 
 /* ========== Hero ========== */
-.sa-co-hero.sa-hero {
+.sa-co-hero.sa-hero,
+.sa-co-hero.card {
   border-radius: 1rem !important;
   box-shadow: 0 16px 48px rgba(2, 90, 157, 0.3);
   position: relative;
   overflow: hidden;
   margin-bottom: 1.5rem;
   border: 0 !important;
-  background: linear-gradient(89.79deg, #209af7 0.92%, #025a9d 99.82%);
+  /* Force solid brand gradient — avoid washed / frosted white card */
+  background: linear-gradient(89.79deg, #209af7 0.92%, #025a9d 99.82%) !important;
+  background-color: #025a9d !important;
+  color: #fff !important;
+  opacity: 1 !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
-.sa-co-hero.sa-hero::before {
+.sa-co-hero.sa-hero::before,
+.sa-co-hero.card::before {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /* Light accents only — keep text readable */
   background:
-    radial-gradient(900px 380px at 15% 15%, rgba(255, 255, 255, 0.24), transparent 55%),
-    radial-gradient(760px 340px at 90% 0%, rgba(255, 255, 255, 0.18), transparent 52%),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.08), transparent 55%);
-  opacity: 0.95;
+    radial-gradient(700px 280px at 12% 0%, rgba(255, 255, 255, 0.14), transparent 55%),
+    radial-gradient(520px 240px at 100% 0%, rgba(255, 255, 255, 0.1), transparent 50%);
+  opacity: 1;
 }
 
 .sa-co-hero::after {
@@ -53,6 +62,9 @@
   position: relative;
   z-index: 1;
   padding: 1.25rem 1.5rem 1.35rem;
+  background: transparent !important;
+  color: #fff !important;
+  opacity: 1 !important;
 }
 
 .sa-co-hero-top {
@@ -99,8 +111,46 @@
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.72);
-  margin: 0 0 0.35rem;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0 0 0.5rem;
+}
+
+.sa-co-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.sa-co-logo-mark {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 8px 24px rgba(2, 90, 157, 0.28);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 6px;
+}
+
+.sa-co-logo-mark img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.sa-co-logo-mark--initials {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #025a9d;
+  padding: 0;
 }
 
 .sa-co-title {
@@ -108,13 +158,14 @@
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.2;
-  color: #fff;
+  color: #fff !important;
   margin: 0;
-  text-shadow: 0 10px 28px rgba(2, 90, 157, 0.35);
+  text-shadow: 0 2px 12px rgba(2, 40, 80, 0.35);
+  min-width: 0;
 }
 
 .sa-co-title--ghost {
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
 .sa-co-meta {
@@ -795,41 +846,91 @@
   flex-wrap: wrap;
 }
 
-.sa-co-title-logo {
-  height: 1.6em;
-  max-width: 6em;
-  object-fit: contain;
-  vertical-align: middle;
-  margin-right: 0.4rem;
-  background: #fff;
-  border-radius: 6px;
-  padding: 2px 4px;
-}
-
 .sa-co-address {
   margin: 0.5rem 0 0;
   font-size: 0.85rem;
-  opacity: 0.9;
+  color: rgba(255, 255, 255, 0.92) !important;
+  opacity: 1;
 }
 
+.sa-co-address i {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Content panels stay solid white with dark text (readable) */
+.sa-co-content {
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+.sa-co-content .sa-co-panel {
+  background: #fff !important;
+  color: #0f172a;
+  opacity: 1 !important;
+}
+
+/* Modal must sit above sticky tables / layout drawers (sa-content overflow traps lower z). */
 .sa-co-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1060;
-  background: rgba(15, 23, 42, 0.5);
+  z-index: 2000;
+  background: rgba(15, 23, 42, 0.72);
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 4vh 16px;
+  padding: 4vh 16px 6vh;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  isolation: isolate;
+  /* Fully opaque scrim — no backdrop-filter bleed from page content */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .sa-co-modal {
   width: 100%;
   max-width: 520px;
-  border: none;
-  border-radius: 12px;
-  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+  margin: 0 auto;
+  border: none !important;
+  border-radius: 14px !important;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.35) !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  opacity: 1 !important;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.sa-co-modal > .card-body {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  opacity: 1 !important;
+  position: relative;
+  z-index: 1;
+  padding: 1.25rem 1.35rem 1.35rem;
+}
+
+.sa-co-modal .form-label,
+.sa-co-modal .form-control,
+.sa-co-modal .text-muted,
+.sa-co-modal small {
+  position: relative;
+  z-index: 1;
+}
+
+.sa-co-modal .form-control,
+.sa-co-modal textarea.form-control {
+  background-color: #fff !important;
+  color: #0f172a !important;
+}
+
+.sa-co-modal .form-control:disabled,
+.sa-co-modal .form-control[disabled] {
+  background-color: #f1f5f9 !important;
+  color: #475569 !important;
+  opacity: 1;
 }
 
 .sa-co-modal-head {
@@ -837,6 +938,26 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 1rem;
+  gap: 0.75rem;
+}
+
+.sa-co-modal-head h5 {
+  color: #0f172a !important;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.sa-co-modal .sa-co-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #64748b !important;
+}
+
+.sa-co-modal .sa-co-logo-row {
+  background: #fff;
+  position: relative;
+  z-index: 1;
 }
 
 .sa-co-logo-row {

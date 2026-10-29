@@ -20,12 +20,16 @@
 
       <div class="sa-co-hero-main">
         <div class="sa-co-hero-copy">
-          <p class="sa-hero-kicker">Tenant overview</p>
-          <h1 class="sa-co-title" *ngIf="snapshot?.tenant as t; else titleLoad">
-            <img *ngIf="t.logoDark" [src]="t.logoDark" alt="" class="sa-co-title-logo sa-co-title-logo--dark" />
-            <img *ngIf="!t.logoDark && t.logo" [src]="t.logo" alt="" class="sa-co-title-logo" />
-            {{ t.companyName }}
-          </h1>
+          <p class="sa-co-kicker">Tenant overview</p>
+          <div class="sa-co-brand" *ngIf="snapshot?.tenant as t; else titleLoad">
+            <div class="sa-co-logo-mark" *ngIf="heroLogoSrc as logoSrc">
+              <img [src]="logoSrc" [alt]="t.companyName || 'Company logo'" (error)="onHeroLogoError()" />
+            </div>
+            <div class="sa-co-logo-mark sa-co-logo-mark--initials" *ngIf="!heroLogoSrc" aria-hidden="true">
+              {{ companyInitials(t.companyName) }}
+            </div>
+            <h1 class="sa-co-title">{{ t.companyName }}</h1>
+          </div>
           <ng-template #titleLoad>
             <h1 class="sa-co-title sa-co-title--ghost">{{ loading ? 'Loading workspace…' : 'Company' }}</h1>
           </ng-template>
@@ -481,8 +485,13 @@
     </section>
   </div>
 </div>
-<!-- Edit company dialog -->
-<div class="sa-co-modal-backdrop" *ngIf="editOpen" (click)="closeEdit()">
+<!-- Edit company dialog (moved to document.body via ViewChild so page content cannot bleed through) -->
+<div
+  #editBackdrop
+  class="sa-co-modal-backdrop"
+  *ngIf="editOpen"
+  (click)="closeEdit()"
+>
   <div class="sa-co-modal card" role="dialog" aria-modal="true" aria-labelledby="saCoEditTitle" (click)="$event.stopPropagation()">
     <div class="card-body">
       <div class="sa-co-modal-head">
@@ -510,7 +519,7 @@
         <div class="mb-3">
           <label class="form-label" for="saCoEditCode">Company code</label>
           <input id="saCoEditCode" type="text" class="form-control" [value]="snapshot?.tenant?.companyCode || ''" disabled />
-          <small class="text-muted">Read-only. Users sign in with this code.</small>
+          <small class="sa-co-hint">Read-only. Users sign in with this code.</small>
         </div>
 
         <div class="mb-3">

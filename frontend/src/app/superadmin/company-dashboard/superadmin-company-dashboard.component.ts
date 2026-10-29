@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Notyf } from 'notyf';
@@ -29,7 +29,7 @@ const LOGO_MAX_SIZE = 2 * 1024 * 1024; // 2MB
   templateUrl: './superadmin-company-dashboard.component.html',
   styleUrl: './superadmin-company-dashboard.component.css',
 })
-export class SuperadminCompanyDashboardComponent implements OnInit {
+export class SuperadminCompanyDashboardComponent implements OnInit, OnDestroy {
   notyf = new Notyf();
   loading = true;
   tenantId = '';
@@ -76,11 +76,48 @@ export class SuperadminCompanyDashboardComponent implements OnInit {
   editLogoDarkPreview: string | null = null;
   editRemoveLogoDark = false;
 
+  /** When the hero <img> fails, fall back to initials. */
+  private heroLogoBroken = false;
+
+  /**
+   * Park edit dialog on document.body so sticky tables / sa-content overflow
+   * cannot paint through or over the modal.
+   */
+  @ViewChild('editBackdrop')
+  set editBackdrop(ref: ElementRef<HTMLElement> | undefined) {
+    const el = ref?.nativeElement;
+    if (el && el.parentElement !== document.body) {
+      document.body.appendChild(el);
+    }
+  }
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private api: SuperadminService,
   ) {}
+
+  /** Prefer light logo (white chip on blue); else dark logo. */
+  get heroLogoSrc(): string | null {
+    if (this.heroLogoBroken) return null;
+    const t = this.snapshot?.tenant;
+    if (!t) return null;
+    return t.logo || t.logoDark || null;
+  }
+
+  onHeroLogoError(): void {
+    this.heroLogoBroken = true;
+  }
+
+  companyInitials(name?: string | null): string {
+    const parts = String(name || '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (!parts.length) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
 
   ngOnInit(): void {
     this.route.paramMap.subscribe((pm) => {
@@ -114,6 +151,7 @@ export class SuperadminCompanyDashboardComponent implements OnInit {
   load(tenantId: string): void {
     this.loading = true;
     this.snapshot = null;
+    this.heroLogoBroken = false;
     this.api.getTenantCompanySnapshot(tenantId).subscribe({
       next: (res) => {
         const data = JSON.parse(res);
@@ -123,6 +161,7 @@ export class SuperadminCompanyDashboardComponent implements OnInit {
           return;
         }
         this.snapshot = data.data || {};
+        this.heroLogoBroken = false;
         this.resetTableUi();
       },
       error: () => {
@@ -153,11 +192,13 @@ export class SuperadminCompanyDashboardComponent implements OnInit {
     this.editRemoveLogoDark = false;
     this.editSubmitted = false;
     this.editOpen = true;
+    document.body.style.overflow = 'hidden';
   }
 
   closeEdit(): void {
     if (this.editSaving) return;
     this.editOpen = false;
+    document.body.style.overflow = '';
   }
 
   get editNameError(): string | null {
@@ -256,7 +297,7 @@ export class SuperadminCompanyDashboardComponent implements OnInit {
           return;
         }
         if (this.snapshot) this.snapshot.tenant = { ...this.snapshot.tenant, ...(data.data || {}) };
-        this.editOpen = false;
+        this.closeEdit();
         this.notyf.success(data.message || 'Company details updated.');
       },
       error: (err) => {
@@ -268,6 +309,10 @@ export class SuperadminCompanyDashboardComponent implements OnInit {
         this.notyf.error(msg);
       },
     });
+  }
+
+  ngOnDestroy(): void {
+    document.body.style.overflow = '';
   }
 
   get branchesList(): { id: string; name: string; status?: string }[] {

@@ -73,8 +73,19 @@ Tenant.associate = models => {
     }
 };
 
-/** Public URL of the company logo (stored in `image`), or null when none is set. */
-Tenant.logoUrl = filename => (filename ? `${process.env.BASE_URL}/upload/${filename}` : null);
+/**
+ * Public URL of the company logo (stored in `image` / `imageDark`), or null when none is set.
+ * Prefer IMG_BASE_URL (e.g. https://host/api/upload) so logos resolve when API runs
+ * against a remote DB whose files live on the public upload host.
+ */
+Tenant.logoUrl = filename => {
+  if (!filename) return null;
+  const name = String(filename).replace(/^\/+/, '');
+  const imgBase = String(process.env.IMG_BASE_URL || '').replace(/\/+$/, '');
+  if (imgBase) return `${imgBase}/${name}`;
+  const base = String(process.env.BASE_URL || '').replace(/\/+$/, '');
+  return `${base}/upload/${name}`;
+};
 
 /** Logo file for light surfaces (letters, PDFs): normal logo, else the dark one. */
 Tenant.lightLogoFile = tenant => tenant?.image || tenant?.imageDark || null;
