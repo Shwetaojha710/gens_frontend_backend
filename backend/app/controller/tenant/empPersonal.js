@@ -26,6 +26,7 @@ const { writeAudit, toPlain } = require("../../helper/auditLog");
 const {
   resolveProfileImagePath,
   mirrorProfileImageToUpload,
+  renameProfileImageToEmpId,
   unlinkProfileImage,
   faceDataPublicUrl,
 } = require("../../helper/faceData");
@@ -333,8 +334,6 @@ exports.RegisterAppEmp = async (req, res) => {
       }
     }
 
-    if (profileImage) mirrorProfileImageToUpload(req.file?.path || profileImage);
-
     const dob = parseRegisterDob(dateOfBirth);
     if (!dob) {
       cleanupUpload();
@@ -366,9 +365,22 @@ exports.RegisterAppEmp = async (req, res) => {
       dateOfBirth: dob,
       age: Number.isFinite(ageNum) && ageNum > 0 ? Math.round(ageNum) : ageFromDob,
       gender: gender || null,
-      profileImage: profileImage || null,
+      profileImage: null,
       profileImageHash: profileImageHash || null,
     });
+
+    // Face file name = empPersonal UUID only (e.g. {id}.jpg)
+    let finalImage = null;
+    if (req.file?.path || profileImage) {
+      finalImage = renameProfileImageToEmpId(
+        req.file?.path || profileImage,
+        newEmp.id,
+      );
+      if (finalImage) {
+        newEmp.profileImage = finalImage;
+        await newEmp.save();
+      }
+    }
 
     const plain = newEmp?.toJSON ? newEmp.toJSON() : newEmp;
     if (plain?.profileImage) {
@@ -685,7 +697,7 @@ exports.createEmp = async (req, res) => {
       status: status || "active",
       createdBy: req.users && req.users.id,
       updatedBy: req.users && req.users.id,
-      profileImage: image,
+      profileImage: null,
       empType: empType,
       shift_id,
       branchId,
@@ -698,7 +710,16 @@ exports.createEmp = async (req, res) => {
       emp_status:'approved',
       deviceId: Helper.getIpAddress(req),
     });
-    if (image) mirrorProfileImageToUpload(image);
+    if (image || req.file?.path) {
+      const finalImage = renameProfileImageToEmpId(
+        req.file?.path || image,
+        newEmp.id,
+      );
+      if (finalImage) {
+        newEmp.profileImage = finalImage;
+        await newEmp.save();
+      }
+    }
     await writeAudit({
       req,
       actionType: "EMP_CREATE",
@@ -1463,13 +1484,18 @@ exports.uploadImage = async (req, res) => {
       }
     }
 
-    if (emp.profileImage) {
+    const finalName = renameProfileImageToEmpId(uploadedPath || image, id);
+    if (!finalName) {
+      unlinkProfileImage(uploadedPath || image);
+      return Helper.response(false, "Failed to save profile image", [], res, 500);
+    }
+
+    // Old file if it was a different name than {empId}.ext
+    if (emp.profileImage && emp.profileImage !== finalName) {
       unlinkProfileImage(emp.profileImage);
     }
 
-    mirrorProfileImageToUpload(uploadedPath || image);
-
-    emp.profileImage = image;
+    emp.profileImage = finalName;
     if (profileImageHash) emp.profileImageHash = profileImageHash;
     emp.updatedBy = req.users && req.users.id;
     await emp.save();
@@ -1489,7 +1515,7 @@ exports.uploadImage = async (req, res) => {
   } catch (error) {
     console.error("Error uploading profile image:", error);
 
-    if (image) unlinkProfileImage(image);
+    if (uploadedPath || image) unlinkProfileImage(uploadedPath || image);
     return Helper.response(false, "Internal server error", [], res, 500);
   }
 };

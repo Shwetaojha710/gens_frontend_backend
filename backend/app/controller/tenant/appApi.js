@@ -57,6 +57,7 @@ const fs = require("fs");
 const {
   resolveProfileImagePath,
   mirrorProfileImageToUpload,
+  renameProfileImageToEmpId,
   unlinkProfileImage,
 } = require("../../helper/faceData");
 const leave_balance = require("../../models/leaveBalance");
@@ -7145,13 +7146,20 @@ exports.uploadEmpImage = async (req, res) => {
       return Helper.response(false, "Employee not found", [], res, 404);
     }
 
-    if (emp?.profileImage) {
+    const finalName = renameProfileImageToEmpId(
+      req.file?.path || image,
+      employeeId,
+    );
+    if (!finalName) {
+      unlinkProfileImage(req.file?.path || image);
+      return Helper.response(false, "Failed to save profile image", [], res, 500);
+    }
+
+    if (emp?.profileImage && emp.profileImage !== finalName) {
       unlinkProfileImage(emp.profileImage);
     }
 
-    mirrorProfileImageToUpload(image);
-
-    emp.profileImage = image;
+    emp.profileImage = finalName;
     emp.updatedBy = req.users && req.users.id;
     await emp.save();
 
@@ -7165,7 +7173,7 @@ exports.uploadEmpImage = async (req, res) => {
   } catch (error) {
     console.error("Error uploading profile image:", error);
 
-    if (image) unlinkProfileImage(image);
+    if (image) unlinkProfileImage(req.file?.path || image);
     return Helper.response(false, "Internal server error", [], res, 500);
   }
 };
