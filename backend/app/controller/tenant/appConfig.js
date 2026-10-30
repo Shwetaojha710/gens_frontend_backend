@@ -95,37 +95,64 @@ async function migrateLegacyImageQuality(tenantId, userId) {
   }
 }
 
-/** POST /get-app-config — fields from DB + tenant values */
+async function buildConfigPayload(tenantId, userId) {
+  await migrateLegacyImageQuality(tenantId, userId);
+
+  const fieldRows = await loadActiveFields();
+  const valueRows = await AppConfigValue.findAll({
+    where: { tenantId },
+    raw: true,
+  });
+  const valueMap = Object.fromEntries(valueRows.map((r) => [r.fieldKey, r.value]));
+
+  const fields = fieldRows.map(shapeField);
+  const values = {};
+  /** Typed map for mobile apps (numbers/booleans coerced). */
+  const config = {};
+  for (const f of fields) {
+    const str = coerceValue(f, valueMap[f.key] != null ? valueMap[f.key] : f.defaultValue);
+    values[f.key] = str;
+    if (f.fieldType === 'range' || f.fieldType === 'number') {
+      const n = Number(str);
+      config[f.key] = Number.isFinite(n) ? n : null;
+    } else if (f.fieldType === 'boolean') {
+      config[f.key] = str === 'true';
+    } else {
+      config[f.key] = str;
+    }
+  }
+  return { fields, values, config };
+}
+
+/** POST /get-app-config — Admin (web settings) */
 exports.getAppConfig = async (req, res) => {
   try {
     const tenantId = req.users?.tenantId;
     const userId = req.users?.id;
     if (!tenantId) return Helper.response(false, 'User Not Found', {}, res, 404);
 
-    await migrateLegacyImageQuality(tenantId, userId);
-
-    const fieldRows = await loadActiveFields();
-    const valueRows = await AppConfigValue.findAll({
-      where: { tenantId },
-      raw: true,
-    });
-    const valueMap = Object.fromEntries(valueRows.map((r) => [r.fieldKey, r.value]));
-
-    const fields = fieldRows.map(shapeField);
-    const values = {};
-    for (const f of fields) {
-      values[f.key] = coerceValue(f, valueMap[f.key] != null ? valueMap[f.key] : f.defaultValue);
-    }
-
-    return Helper.response(
-      true,
-      'App config fetched',
-      { fields, values },
-      res,
-      200
-    );
+    const payload = await buildConfigPayload(tenantId, userId);
+    return Helper.response(true, 'App config fetched', payload, res, 200);
   } catch (error) {
     console.error('getAppConfig error:', error);
+    return Helper.response(false, error.message || 'Server error', {}, res, 500);
+  }
+};
+
+/**
+ * GET|POST /get-emp-app-config — Employee / mobile app (AppAdmin).
+ * Returns fields + string values + typed `config` map (e.g. config.imageQuality = 80).
+ */
+exports.getEmpAppConfig = async (req, res) => {
+  try {
+    const tenantId = req.users?.tenantId;
+    const userId = req.users?.id;
+    if (!tenantId) return Helper.response(false, 'User Not Found', {}, res, 404);
+
+    const payload = await buildConfigPayload(tenantId, userId);
+    return Helper.response(true, 'App config fetched', payload, res, 200);
+  } catch (error) {
+    console.error('getEmpAppConfig error:', error);
     return Helper.response(false, error.message || 'Server error', {}, res, 500);
   }
 };

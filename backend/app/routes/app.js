@@ -7,8 +7,13 @@ const { generateAllLettersPdf } = require('../controller/tenant/letter_data');
 const upload = require('../middleware/upload');
 const excel_pdf_upload = require('../middleware/excel_pdf_upload');
 const { branchDD } = require('../controller/tenant/branch');
+const { getEmpAppConfig } = require('../controller/tenant/appConfig');
 
 router.get('/get-Emp-Details', AppAdmin, EmployeeDetails);
+
+// App Config (image quality & dynamic fields — read-only for mobile)
+router.get('/get-emp-app-config', AppAdmin, getEmpAppConfig);
+router.post('/get-emp-app-config', AppAdmin, getEmpAppConfig);
 
 //attendance
 router.post('/get-daily-attendance', AppAdmin, getDailyAttendance);
