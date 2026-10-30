@@ -167,6 +167,11 @@ const empPersonal = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    /** SHA-256 of profile image bytes — blocks duplicate photo registration per tenant */
+    profileImageHash: {
+      type: DataTypes.STRING(64),
+      allowNull: true,
+    },
     empCode: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -253,9 +258,16 @@ const empPersonal = sequelize.define(
       });
       console.log("empPersonal.branchIds column added");
     }
+    if (!desc.profileImageHash) {
+      await qi.addColumn("empPersonals", "profileImageHash", {
+        type: DataTypes.STRING(64),
+        allowNull: true,
+      });
+      console.log("empPersonal.profileImageHash column added");
+    }
   } catch (error) {
     console.error(
-      "Error ensuring empPersonal.branchIds:",
+      "Error ensuring empPersonal columns:",
       error?.parent?.message || error?.message || error,
     );
   }

@@ -246,6 +246,16 @@
   line-height: 1.35;
 }
 
+.epr-camera__tip--ok {
+  color: #0f766e;
+  font-weight: 600;
+}
+
+.epr-camera__tip--warn {
+  color: #b45309;
+  font-weight: 600;
+}
+
 .epr-camera__actions {
   display: flex;
   justify-content: center;

@@ -44,15 +44,24 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
   cameraStarting = false;
   cameraReady = false;
   cameraError = '';
+  /** Live sensor tip under the preview (brightness / blur / face). */
+  sensorHint = 'Align your face inside the oval, then tap Capture';
+  sensorOk = false;
   /** After Capture: show still + Submit before applying to form. */
   captureReview = false;
   pendingPreview: string | null = null;
   private pendingFile: File | null = null;
+  private pendingPhotoHash: string | null = null;
+  private profilePhotoHash: string | null = null;
   private stream: MediaStream | null = null;
   /** Stable ref — ViewChild can lag behind *ngIf. */
   private videoEl: HTMLVideoElement | null = null;
   capturing = false;
+  private sensorTimer: ReturnType<typeof setInterval> | null = null;
   private readonly photoCaptureMinBytes = 5 * 1024;
+  private readonly SENSOR_BRIGHT_MIN = 45;
+  private readonly SENSOR_BRIGHT_MAX = 210;
+  private readonly SENSOR_SHARP_MIN = 18;
 
   private notyf = new Notyf();
   private subs = new Subscription();
@@ -104,8 +113,177 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.stopSensorLoop();
     this.stopCamera();
     this.subs.unsubscribe();
+  }
+
+  private startSensorLoop(): void {
+    this.stopSensorLoop();
+    this.sensorTimer = setInterval(() => {
+      if (!this.cameraOpen || this.captureReview || this.cameraStarting) return;
+      void this.refreshSensorFromVideo();
+    }, 450);
+  }
+
+  private stopSensorLoop(): void {
+    if (this.sensorTimer) {
+      clearInterval(this.sensorTimer);
+      this.sensorTimer = null;
+    }
+  }
+
+  private async refreshSensorFromVideo(): Promise<void> {
+    const video = this.videoEl || this.cameraVideo?.nativeElement;
+    if (!video || video.videoWidth < 2) return;
+    const probe = document.createElement('canvas');
+    const w = 160;
+    const h = Math.round((w * video.videoHeight) / video.videoWidth) || 160;
+    probe.width = w;
+    probe.height = h;
+    const ctx = probe.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, w, h);
+    const result = await this.analyzeCaptureQuality(probe);
+    this.sensorOk = result.ok;
+    this.sensorHint = result.hint;
+    this.cdr.detectChanges();
+  }
+
+  /** Brightness + sharpness + face (FaceDetector when available). */
+  private async analyzeCaptureQuality(
+    canvas: HTMLCanvasElement,
+  ): Promise<{ ok: boolean; hint: string }> {
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return { ok: false, hint: 'Could not analyze camera frame.' };
+
+    const { width, height } = canvas;
+    const data = ctx.getImageData(0, 0, width, height).data;
+
+    // Prefer center oval region (passport framing)
+    const x0 = Math.floor(width * 0.18);
+    const y0 = Math.floor(height * 0.12);
+    const x1 = Math.floor(width * 0.82);
+    const y1 = Math.floor(height * 0.88);
+
+    let sum = 0;
+    let n = 0;
+    let lapSum = 0;
+    let lapN = 0;
+    const gray = new Float32Array(width * height);
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const i = (y * width + x) * 4;
+        const g = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        gray[y * width + x] = g;
+        if (x >= x0 && x < x1 && y >= y0 && y < y1) {
+          sum += g;
+          n++;
+        }
+      }
+    }
+    const brightness = n ? sum / n : 0;
+
+    for (let y = y0 + 1; y < y1 - 1; y++) {
+      for (let x = x0 + 1; x < x1 - 1; x++) {
+        const c = gray[y * width + x];
+        const lap =
+          -4 * c +
+          gray[y * width + (x - 1)] +
+          gray[y * width + (x + 1)] +
+          gray[(y - 1) * width + x] +
+          gray[(y + 1) * width + x];
+        lapSum += lap * lap;
+        lapN++;
+      }
+    }
+    const sharpness = lapN ? Math.sqrt(lapSum / lapN) : 0;
+
+    if (brightness < this.SENSOR_BRIGHT_MIN) {
+      return { ok: false, hint: 'Too dark — move to better light.' };
+    }
+    if (brightness > this.SENSOR_BRIGHT_MAX) {
+      return { ok: false, hint: 'Too bright — reduce glare / backlight.' };
+    }
+    if (sharpness < this.SENSOR_SHARP_MIN) {
+      return { ok: false, hint: 'Image is blurry — hold still and tap Capture.' };
+    }
+
+    const FaceDetectorCtor = (
+      window as unknown as {
+        FaceDetector?: new (opts?: {
+          fastMode?: boolean;
+          maxDetectedFaces?: number;
+        }) => { detect: (src: CanvasImageSource) => Promise<Array<{ boundingBox: DOMRectReadOnly }>> };
+      }
+    ).FaceDetector;
+
+    if (FaceDetectorCtor) {
+      try {
+        const detector = new FaceDetectorCtor({ fastMode: true, maxDetectedFaces: 3 });
+        const faces = await detector.detect(canvas);
+        if (!faces.length) {
+          return { ok: false, hint: 'No face detected — center your face in the oval.' };
+        }
+        if (faces.length > 1) {
+          return { ok: false, hint: 'Multiple faces detected — only one person in frame.' };
+        }
+        const box = faces[0].boundingBox;
+        const cx = box.x + box.width / 2;
+        const cy = box.y + box.height / 2;
+        const inOval =
+          cx > width * 0.2 &&
+          cx < width * 0.8 &&
+          cy > height * 0.15 &&
+          cy < height * 0.85 &&
+          box.width > width * 0.18;
+        if (!inOval) {
+          return { ok: false, hint: 'Move closer and center your face in the oval.' };
+        }
+      } catch {
+        /* FaceDetector may throw — fall through */
+      }
+    } else {
+      // Soft face proxy: center region should not be flat / extreme
+      const midVar = sharpness;
+      if (midVar < this.SENSOR_SHARP_MIN * 1.1) {
+        return { ok: false, hint: 'Face not clear — center yourself and improve light.' };
+      }
+    }
+
+    return { ok: true, hint: 'Looking good — tap Capture.' };
+  }
+
+  private async sha256Hex(blob: Blob): Promise<string> {
+    const buf = await blob.arrayBuffer();
+    const hash = await crypto.subtle.digest('SHA-256', buf);
+    return Array.from(new Uint8Array(hash))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
+  private isDuplicatePhotoLocal(hash: string): boolean {
+    try {
+      const raw = sessionStorage.getItem('epr_photo_hashes') || '[]';
+      const list = JSON.parse(raw) as string[];
+      return Array.isArray(list) && list.includes(hash);
+    } catch {
+      return false;
+    }
+  }
+
+  private rememberPhotoHashLocal(hash: string): void {
+    try {
+      const raw = sessionStorage.getItem('epr_photo_hashes') || '[]';
+      const list = (JSON.parse(raw) as string[]) || [];
+      if (!list.includes(hash)) {
+        list.push(hash);
+        sessionStorage.setItem('epr_photo_hashes', JSON.stringify(list.slice(-40)));
+      }
+    } catch {
+      /* ignore */
+    }
   }
 
   isInvalid(name: string): boolean {
@@ -244,6 +422,10 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
 
       this.cameraStarting = false;
       this.cameraReady = true;
+      this.sensorOk = false;
+      this.sensorHint = 'Checking light and face…';
+      this.startSensorLoop();
+      await this.refreshSensorFromVideo();
       this.cdr.detectChanges();
     } catch (err: unknown) {
       this.cameraStarting = false;
@@ -316,6 +498,7 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
   private clearPendingCapture(): void {
     this.pendingFile = null;
     this.pendingPreview = null;
+    this.pendingPhotoHash = null;
     this.captureReview = false;
   }
 
@@ -332,6 +515,7 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
   }
 
   private stopCamera(): void {
+    this.stopSensorLoop();
     this.stopCameraTracksOnly();
     this.videoEl = null;
     this.cameraOpen = false;
@@ -339,6 +523,7 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
     this.cameraReady = false;
     this.capturing = false;
     this.captureReview = false;
+    this.sensorOk = false;
   }
 
   async capturePhoto(event?: Event): Promise<void> {
@@ -414,6 +599,15 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
         }
       }
 
+      // Quality sensors before accepting the still
+      const quality = await this.analyzeCaptureQuality(canvas);
+      if (!quality.ok) {
+        this.notyf.error(quality.hint);
+        this.sensorHint = quality.hint;
+        this.sensorOk = false;
+        return;
+      }
+
       const blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.88),
       );
@@ -433,6 +627,12 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
         return;
       }
 
+      const photoHash = await this.sha256Hex(blob);
+      if (this.isDuplicatePhotoLocal(photoHash) || photoHash === this.profilePhotoHash) {
+        this.notyf.error('Duplicate photo. Please capture a new live photo.');
+        return;
+      }
+
       const file = new File([blob], `live-photo-${Date.now()}.jpg`, {
         type: 'image/jpeg',
       });
@@ -445,7 +645,9 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
 
       this.pendingFile = file;
       this.pendingPreview = dataUrl;
+      this.pendingPhotoHash = photoHash;
       this.captureReview = true;
+      this.stopSensorLoop();
       this.stopCameraTracksOnly();
       this.cameraReady = false;
       this.cdr.detectChanges();
@@ -460,12 +662,17 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
 
   /** Confirm captured photo and close camera panel. */
   submitCapturedPhoto(): void {
-    if (!this.pendingFile || !this.pendingPreview) {
+    if (!this.pendingFile || !this.pendingPreview || !this.pendingPhotoHash) {
       this.notyf.error('No photo to submit. Capture again.');
+      return;
+    }
+    if (this.isDuplicatePhotoLocal(this.pendingPhotoHash)) {
+      this.notyf.error('Duplicate photo. Please capture a new live photo.');
       return;
     }
     this.profileFile = this.pendingFile;
     this.profilePreview = this.pendingPreview;
+    this.profilePhotoHash = this.pendingPhotoHash;
     this.clearPendingCapture();
     this.cameraOpen = false;
     this.cameraStarting = false;
@@ -481,6 +688,7 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
   clearProfile(): void {
     this.profileFile = null;
     this.profilePreview = null;
+    this.profilePhotoHash = null;
   }
 
   submit(): void {
@@ -494,8 +702,12 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
       this.notyf.error('Please verify a valid company code first.');
       return;
     }
-    if (!this.profileFile) {
+    if (!this.profileFile || !this.profilePhotoHash) {
       this.notyf.error('Please capture a live photo for your profile.');
+      return;
+    }
+    if (this.isDuplicatePhotoLocal(this.profilePhotoHash)) {
+      this.notyf.error('Duplicate photo. Please capture a new live photo.');
       return;
     }
 
@@ -509,6 +721,7 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
     fd.append('dateOfBirth', this.toAppDate(String(raw.dateOfBirth || '')));
     fd.append('age', String(raw.age || this.ageFromDob(raw.dateOfBirth) || 18));
     fd.append('gender', String(raw.gender || '').trim());
+    fd.append('photoHash', this.profilePhotoHash);
     fd.append('profileImage', this.profileFile, this.profileFile.name);
 
     this.loading = true;
@@ -516,6 +729,7 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
       next: (res) => {
         this.loading = false;
         if (res?.status === true || res?.status === 'success') {
+          if (this.profilePhotoHash) this.rememberPhotoHashLocal(this.profilePhotoHash);
           this.notyf.success(res.message || 'Registration successful.');
           this.router.navigate(['/employee-portal/login']);
         } else {

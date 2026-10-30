@@ -2,6 +2,7 @@ const empPersonal = require("../../models/empPersonal");
 const Helper = require("../../helper/helper");
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
 const EmploymentType = require("../../models/employmentType");
 const Prefix = require("../../models/prefix");
 const { Op, fn, col, where: sqlWhere } = require("sequelize");
@@ -210,7 +211,7 @@ function parseRegisterDob(raw) {
 
 /**
  * Mobile / Employee Portal self-registration.
- * multipart/form-data: firstName, lastName, mobile, email, dateOfBirth, age, gender, companyCode, profileImage?
+ * multipart/form-data: firstName, lastName, mobile, email, dateOfBirth, age, gender, companyCode, profileImage?, photoHash?
  */
 exports.RegisterAppEmp = async (req, res) => {
   let {
@@ -222,19 +223,20 @@ exports.RegisterAppEmp = async (req, res) => {
     age,
     gender,
     companyCode,
+    photoHash,
   } = req.body || {};
 
   const profileImage = req.file ? req.file.filename : null;
+  const uploadPath = profileImage
+    ? path.join(__dirname, "../../../upload", profileImage)
+    : null;
 
   const cleanupUpload = () => {
-    if (!profileImage) return;
-    const filePath = path.join(__dirname, "../../../upload", profileImage);
-    if (fs.existsSync(filePath)) {
-      try {
-        fs.unlinkSync(filePath);
-      } catch (_) {
-        /* ignore */
-      }
+    if (!uploadPath || !fs.existsSync(uploadPath)) return;
+    try {
+      fs.unlinkSync(uploadPath);
+    } catch (_) {
+      /* ignore */
     }
   };
 
@@ -244,6 +246,7 @@ exports.RegisterAppEmp = async (req, res) => {
   email = email != null ? String(email).trim() : "";
   companyCode = companyCode != null ? String(companyCode).trim() : "";
   gender = gender != null ? String(gender).trim() : "";
+  photoHash = photoHash != null ? String(photoHash).trim().toLowerCase() : "";
 
   const tenant = await Tenant.findOne({
     where: { companyCode },
@@ -266,6 +269,31 @@ exports.RegisterAppEmp = async (req, res) => {
   }
 
   try {
+    let profileImageHash = null;
+    if (uploadPath && fs.existsSync(uploadPath)) {
+      const buf = fs.readFileSync(uploadPath);
+      profileImageHash = crypto.createHash("sha256").update(buf).digest("hex");
+      if (photoHash && photoHash !== profileImageHash) {
+        // Client hash is advisory; trust server hash for storage/dupe check
+      }
+    }
+
+    if (profileImageHash) {
+      const dupPhoto = await empPersonal.findOne({
+        where: { tenantId, profileImageHash },
+      });
+      if (dupPhoto) {
+        cleanupUpload();
+        return Helper.response(
+          false,
+          "This photo was already used for another employee. Please capture a new live photo.",
+          {},
+          res,
+          400,
+        );
+      }
+    }
+
     const existsMobile = await empPersonal.findOne({ where: { mobile, tenantId } });
     if (existsMobile) {
       cleanupUpload();
@@ -291,12 +319,14 @@ exports.RegisterAppEmp = async (req, res) => {
       age: Number.isFinite(ageNum) && ageNum > 0 ? Math.round(ageNum) : 18,
       gender: gender || null,
       profileImage: profileImage || null,
+      profileImageHash: profileImageHash || null,
     });
 
     const plain = newEmp?.toJSON ? newEmp.toJSON() : newEmp;
     if (plain?.profileImage) {
       plain.profileImageUrl = `${process.env.IMG_BASE_URL || `${String(process.env.BASE_URL || "").replace(/\/+$/, "")}/upload`}/${plain.profileImage}`;
     }
+    if (plain?.profileImageHash) delete plain.profileImageHash;
 
     return Helper.response(
       true,
@@ -1024,8 +1054,10 @@ exports.updateEmp = async (req, res) => {
       return Helper.response(true, "Employee request rejected", existingEmp, res, 200);
     }
 
-    if (email !== undefined && isBlank(email)) {
-      return Helper.response(false, "Email is required", [], res, 400);
+    if (isPendingAction || email !== undefined) {
+      if (isBlank(email)) {
+        return Helper.response(false, "Email is required", [], res, 400);
+      }
     }
     const fieldError = validateOptionalEmpFields({
       email, adhaarNo, panNo, alternateMobile, gender, martialStatus, bloodGroup,
@@ -1327,15 +1359,14 @@ exports.uploadImage = async (req, res) => {
   const { id } = req.body;
   const tenantId = req.users && req.users.tenantId;
   const image = req.file ? req.file.filename : null;
-  const branchId = req.users && req.users.branchId;
-  if (!tenantId || !id || !branchId) {
+  if (!tenantId || !id) {
     if (image) {
       const filePath = path.join(__dirname, "../../../upload", image);
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
     return Helper.response(
       false,
-      "Branch Id ,Tenant ID and Employee ID are required",
+      "Tenant ID and Employee ID are required",
       [],
       res,
       400,
@@ -1347,13 +1378,42 @@ exports.uploadImage = async (req, res) => {
   }
 
   try {
+    // Pending employees may not have branchId yet — match by tenant + id only
     const emp = await empPersonal.findOne({
-      where: { id, tenantId, branchId },
+      where: { id, tenantId },
     });
     if (!emp) {
       const filePath = path.join(__dirname, "../../../upload", image);
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
       return Helper.response(false, "Employee not found", [], res, 404);
+    }
+
+    const newPath = path.join(__dirname, "../../../upload", image);
+    let profileImageHash = null;
+    if (fs.existsSync(newPath)) {
+      profileImageHash = crypto
+        .createHash("sha256")
+        .update(fs.readFileSync(newPath))
+        .digest("hex");
+      const dup = await empPersonal.findOne({
+        where: {
+          tenantId,
+          profileImageHash,
+          id: { [Op.ne]: id },
+        },
+      });
+      if (dup) {
+        try {
+          fs.unlinkSync(newPath);
+        } catch (_) {}
+        return Helper.response(
+          false,
+          "This photo was already used for another employee. Please choose a different image.",
+          {},
+          res,
+          400,
+        );
+      }
     }
 
     if (emp.profileImage) {
@@ -1372,13 +1432,19 @@ exports.uploadImage = async (req, res) => {
     }
 
     emp.profileImage = image;
+    if (profileImageHash) emp.profileImageHash = profileImageHash;
     emp.updatedBy = req.users && req.users.id;
     await emp.save();
+
+    const plain = emp?.toJSON ? emp.toJSON() : emp;
+    if (plain?.profileImage) {
+      plain.profileImageUrl = `${process.env.IMG_BASE_URL || `${String(process.env.BASE_URL || "").replace(/\/+$/, "")}/upload`}/${plain.profileImage}`;
+    }
 
     return Helper.response(
       true,
       "Profile image updated successfully",
-      emp,
+      plain,
       res,
       200,
     );

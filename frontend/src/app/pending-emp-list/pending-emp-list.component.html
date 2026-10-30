@@ -11,6 +11,39 @@
 
 
         <div class="card-body">
+          <div class="row mb-3 align-items-center" *ngIf="updateFlag">
+            <div class="col-auto">
+              <div class="pending-photo-preview">
+                <img
+                  [src]="profileImagePreview || defaultPendingAvatar"
+                  alt="Employee photo"
+                  (error)="onProfileImgError($event)"
+                />
+              </div>
+            </div>
+            <div class="col">
+              <label class="col-form-label fw-bold d-block mb-1">Employee photo</label>
+              <label class="btn btn-sm btn-outline-primary mb-0">
+                Change photo
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg"
+                  hidden
+                  (change)="onProfilePhotoPick($event)"
+                />
+              </label>
+              <button
+                type="button"
+                class="btn btn-sm btn-link text-danger"
+                *ngIf="selectedProfileFile"
+                (click)="clearProfilePhotoPick()"
+              >
+                Undo change
+              </button>
+              <small class="d-block text-muted mt-1">JPG / PNG, max 2 MB. Admin can replace before approve.</small>
+            </div>
+          </div>
+
           <div class="row">
             <div class="col-md-3">
               <div class="form-group">
@@ -79,11 +112,19 @@
             </div>
             <div class="col-md-3">
               <label class="col-form-label fw-bold">Email
-                <span style="color: red"> *</span>
+                <span style="color: red">*</span>
               </label>
 
-              <input type="email" class="form-control" placeholder="Enter Email" [(ngModel)]="personalDetails.email"
-                name="email" required #emailRef="ngModel" />
+              <input
+                type="email"
+                class="form-control"
+                placeholder="Enter Email"
+                [(ngModel)]="personalDetails.email"
+                name="email"
+                required
+                #emailRef="ngModel"
+                [class.is-invalid]="emailRef.touched && !isValidEmail(personalDetails.email)"
+              />
               <small class="text-danger" *ngIf="emailRef.touched && !isValidEmail(personalDetails.email)">
                 {{ personalDetails.email ? 'Enter a valid email (e.g. name@example.com)' : 'Email is required' }}
               </small>

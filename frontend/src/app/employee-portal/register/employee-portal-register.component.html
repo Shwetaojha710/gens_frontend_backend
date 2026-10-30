@@ -107,10 +107,15 @@
               </div>
 
               <p class="epr-camera__tip" *ngIf="!captureReview && cameraStarting">Starting camera…</p>
-              <p class="epr-camera__tip" *ngIf="!captureReview && !cameraStarting">
-                Align your face inside the oval, then tap Capture
+              <p
+                class="epr-camera__tip"
+                [class.epr-camera__tip--ok]="sensorOk"
+                [class.epr-camera__tip--warn]="!sensorOk"
+                *ngIf="!captureReview && !cameraStarting"
+              >
+                {{ sensorHint }}
               </p>
-              <p class="epr-camera__tip" *ngIf="captureReview">
+              <p class="epr-camera__tip epr-camera__tip--ok" *ngIf="captureReview">
                 Looking good? Submit photo or retake
               </p>
 
@@ -122,7 +127,7 @@
                   type="button"
                   class="epr-cam-btn epr-cam-btn--primary"
                   (click)="capturePhoto($event)"
-                  [disabled]="cameraStarting || !cameraReady || capturing"
+                  [disabled]="cameraStarting || !cameraReady || capturing || !sensorOk"
                 >
                   <i class="ri ri-camera-fill"></i>
                   {{
@@ -130,7 +135,9 @@
                       ? 'Capturing…'
                       : cameraStarting || !cameraReady
                         ? 'Preparing…'
-                        : 'Capture'
+                        : !sensorOk
+                          ? 'Fix lighting / face'
+                          : 'Capture'
                   }}
                 </button>
               </div>
