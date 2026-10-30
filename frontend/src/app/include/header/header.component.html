@@ -142,7 +142,7 @@
           </div>
         </button>
 
-        <div class="profile-dropdown" [class.show]="isDropdownOpen">
+        <div class="profile-dropdown" [class.show]="isDropdownOpen" (click)="$event.stopPropagation()">
           <div class="profile-dropdown-head">
             <div class="profile-avatar large">
               <img [src]="companyLogoUrl || defaultAvatarLogo" alt="alt" class="rounded-circle" (error)="companyLogoSvc.onImgError($event, defaultAvatarLogo)" />
@@ -155,6 +155,11 @@
             </div>
           </div>
 
+          <button type="button" class="profile-edit-btn" (click)="openEditProfile($event)">
+            <i class="ri ri-user-settings-line"></i>
+            <span>Edit company profile</span>
+          </button>
+
           <button type="button" class="profile-logout-btn" (click)="logout()">
             <span>Logout</span>
             <i class="ri ri-logout-box-r-line"></i>
@@ -164,3 +169,65 @@
     </div>
   </div>
 </header>
+
+<!-- Edit company profile modal -->
+<div class="cp-modal-backdrop" *ngIf="editProfileOpen" (click)="closeEditProfile()"></div>
+<div class="cp-modal" *ngIf="editProfileOpen" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+  <div class="cp-modal__head">
+    <h3>Edit company profile</h3>
+    <button type="button" class="cp-modal__close" (click)="closeEditProfile()" aria-label="Close">
+      <i class="ri ri-close-line"></i>
+    </button>
+  </div>
+
+  <form class="cp-modal__body" (ngSubmit)="saveCompanyProfile()" novalidate>
+    <div class="cp-logo-row">
+      <div class="cp-logo-preview">
+        <img [src]="editLogoPreview || companyLogoUrl || defaultAvatarLogo" alt="Company logo" (error)="companyLogoSvc.onImgError($event, defaultAvatarLogo)" />
+      </div>
+      <div class="cp-logo-actions">
+        <label class="cp-file-btn">
+          Change image
+          <input type="file" accept="image/png,image/jpeg,image/jpg" hidden (change)="onEditLogoPick($event)" />
+        </label>
+        <small>PNG or JPG, max 2 MB</small>
+      </div>
+    </div>
+
+    <label class="cp-field">
+      <span>Company name</span>
+      <input type="text" [(ngModel)]="editForm.companyName" name="companyName" maxlength="120" required />
+    </label>
+
+    <label class="cp-field">
+      <span>Admin name</span>
+      <input type="text" [(ngModel)]="editForm.name" name="adminName" maxlength="80" required />
+    </label>
+
+    <div class="cp-section-label">Change password <em>(optional)</em></div>
+
+    <label class="cp-field">
+      <span>Current password</span>
+      <input type="password" [(ngModel)]="editForm.currentPassword" name="currentPassword" autocomplete="current-password" />
+    </label>
+
+    <label class="cp-field">
+      <span>New password</span>
+      <input type="password" [(ngModel)]="editForm.newPassword" name="newPassword" autocomplete="new-password" minlength="6" />
+    </label>
+
+    <label class="cp-field">
+      <span>Confirm new password</span>
+      <input type="password" [(ngModel)]="editForm.confirmPassword" name="confirmPassword" autocomplete="new-password" />
+    </label>
+
+    <div class="cp-modal__foot">
+      <button type="button" class="cp-btn cp-btn--ghost" (click)="closeEditProfile()" [disabled]="editSaving">
+        Cancel
+      </button>
+      <button type="submit" class="cp-btn cp-btn--primary" [disabled]="editSaving">
+        {{ editSaving ? 'Saving…' : 'Save changes' }}
+      </button>
+    </div>
+  </form>
+</div>

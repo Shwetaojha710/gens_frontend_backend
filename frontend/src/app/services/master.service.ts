@@ -405,6 +405,14 @@ export class MasterService {
     return this.http.post(`${this.baseUrl}get-company-logo`, {});
   }
 
+  /**
+   * Header profile edit: companyName, name, optional password + logo file.
+   * FormData keys: companyName, name, currentPassword?, newPassword?, logo?
+   */
+  updateCompanyProfile(formData: FormData): Observable<any> {
+    return this.http.post(`${this.baseUrl}update-company-profile`, formData);
+  }
+
   /** variant 'dark' = logo for dark backgrounds */
   uploadCompanyLogo(file: File, variant: 'light' | 'dark' = 'light'): Observable<any> {
     const formData = new FormData();

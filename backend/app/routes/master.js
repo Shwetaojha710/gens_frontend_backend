@@ -1,7 +1,7 @@
 const express = require('express');
 const {Admin, AppAdmin} = require('../middleware/auth');
 const { createComponent, updateComponent, listComponents, deleteComponent } = require('../controller/tenant/component');
-const { getBrandColors, saveBrandColors, getLetterhead, uploadLetterhead, getHandbook, uploadHandbook, getInsurancePolicy, uploadInsurancePolicy, getCompanyProfile, getCompanyLogo, uploadCompanyLogo, removeCompanyLogo } = require('../controller/tenant/setting');
+const { getBrandColors, saveBrandColors, getLetterhead, uploadLetterhead, getHandbook, uploadHandbook, getInsurancePolicy, uploadInsurancePolicy, getCompanyProfile, updateCompanyProfile, getCompanyLogo, uploadCompanyLogo, removeCompanyLogo } = require('../controller/tenant/setting');
 const { getAppConfig, saveAppConfig } = require('../controller/tenant/appConfig');
 const { getTenantUsers, saveUserPermission, getUserPermission, deleteUserPermission } = require('../controller/tenant/userPermission');
 const upload = require('../middleware/upload');
@@ -35,6 +35,7 @@ router.post('/get-user-permission', Admin, getUserPermission)
 router.post('/delete-user-permission', Admin, deleteUserPermission)
 
 router.post('/get-company-profile', AppAdmin, getCompanyProfile);
+router.post('/update-company-profile', Admin, logoUpload(['logo']), updateCompanyProfile);
 
 // ── Company logo ─────────────────────────────────────────────────────────
 router.post('/get-company-logo', Admin, getCompanyLogo)

@@ -170,47 +170,70 @@
 
 .epr-camera__frame {
   position: relative;
-  width: 100%;
-  max-width: 200px;
-  margin: 0 auto;
+  z-index: 1;
+  display: grid;
+  width: 200px;
+  max-width: 72vw;
+  /* Keep real box size so <video> gets non-zero layout (needed for videoWidth) */
   aspect-ratio: 35 / 45;
+  min-height: 220px;
+  margin: 0 auto;
   border-radius: 14px;
   overflow: hidden;
-  background: #0f172a;
+  background: #111827;
   border: 2px solid #20b2aa;
 }
 
 .epr-camera__frame.is-review {
-  max-width: 220px;
+  width: 220px;
+  min-height: 240px;
   box-shadow: 0 0 0 3px rgba(32, 178, 170, 0.2);
 }
 
 .epr-camera__video,
-.epr-camera__still {
+.epr-camera__still,
+.epr-camera__guide {
+  grid-area: 1 / 1;
   width: 100%;
   height: 100%;
+  min-height: 220px;
+}
+
+.epr-camera__video,
+.epr-camera__still {
   object-fit: cover;
   display: block;
+  background: #111827;
 }
 
 .epr-camera__video {
   transform: scaleX(-1);
+  position: relative;
+  z-index: 1;
 }
 
 .epr-camera__video.is-hidden {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  pointer-events: none;
+  visibility: hidden;
+}
+
+.epr-camera__still {
+  position: relative;
+  z-index: 2;
 }
 
 .epr-camera__guide {
   pointer-events: none;
-  position: absolute;
-  inset: 12%;
-  border: 2px dashed rgba(255, 255, 255, 0.85);
+  position: relative;
+  z-index: 3;
+  box-sizing: border-box;
+  border: 2px dashed rgba(255, 255, 255, 0.9);
   border-radius: 50% / 42%;
-  box-shadow: 0 0 0 999px rgba(15, 23, 42, 0.35);
+  width: 72%;
+  height: 72%;
+  min-height: 0;
+  margin: auto;
+  align-self: center;
+  justify-self: center;
 }
 
 .epr-camera__tip {
@@ -505,9 +528,19 @@
     padding: 12px 10px 10px;
   }
 
-  .epr-camera__frame,
+  .epr-camera__frame {
+    width: min(200px, 72vw);
+    min-height: 240px;
+  }
+
   .epr-camera__frame.is-review {
-    max-width: min(190px, 58vw);
+    width: min(220px, 78vw);
+    min-height: 260px;
+  }
+
+  .epr-camera__video,
+  .epr-camera__still {
+    min-height: 240px;
   }
 
   .epr-cam-btn {

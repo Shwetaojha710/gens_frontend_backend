@@ -49,6 +49,10 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
   pendingPreview: string | null = null;
   private pendingFile: File | null = null;
   private stream: MediaStream | null = null;
+  /** Stable ref — ViewChild can lag behind *ngIf. */
+  private videoEl: HTMLVideoElement | null = null;
+  capturing = false;
+  private readonly photoCaptureMinBytes = 5 * 1024;
 
   private notyf = new Notyf();
   private subs = new Subscription();
@@ -195,10 +199,16 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
       this.notyf.error('Camera is not supported in this browser.');
       return;
     }
+    if (!window.isSecureContext && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+      this.notyf.error('Camera needs HTTPS (or localhost). Open the app securely and try again.');
+      return;
+    }
+
     this.cameraError = '';
     this.clearPendingCapture();
     this.captureReview = false;
     this.cameraReady = false;
+    this.capturing = false;
     this.cameraOpen = true;
     this.cameraStarting = true;
     this.cdr.detectChanges();
@@ -208,13 +218,28 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
       this.stream = await this.requestCameraStream();
 
       const video = await this.waitForVideoEl();
+      this.videoEl = video;
       video.muted = true;
+      video.autoplay = true;
       video.playsInline = true;
       video.setAttribute('playsinline', 'true');
       video.setAttribute('webkit-playsinline', 'true');
       video.srcObject = this.stream;
 
-      await video.play().catch(() => undefined);
+      // Play after metadata — more reliable on mobile Chrome/WebView
+      await new Promise<void>((resolve) => {
+        const go = () => resolve();
+        if (video.readyState >= 1) go();
+        else video.addEventListener('loadedmetadata', go, { once: true });
+        setTimeout(go, 1500);
+      });
+
+      try {
+        await video.play();
+      } catch {
+        /* autoplay policies — muted + playsinline usually OK */
+      }
+
       await this.waitForVideoFrame(video);
 
       this.cameraStarting = false;
@@ -229,6 +254,8 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
         this.cameraError = 'Camera permission denied. Please allow camera access to continue.';
       } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
         this.cameraError = 'No camera found on this device.';
+      } else if (String((err as Error)?.message || '').includes('secure')) {
+        this.cameraError = 'Camera needs HTTPS. Please use a secure link.';
       } else {
         this.cameraError = 'Could not open camera. Please try again.';
       }
@@ -238,16 +265,16 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
 
   private async requestCameraStream(): Promise<MediaStream> {
     const attempts: MediaStreamConstraints[] = [
+      { audio: false, video: true },
+      { audio: false, video: { facingMode: 'user' } },
       {
         audio: false,
         video: {
           facingMode: { ideal: 'user' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+          width: { ideal: 640 },
+          height: { ideal: 480 },
         },
       },
-      { audio: false, video: { facingMode: 'user' } },
-      { audio: false, video: true },
     ];
     let lastErr: unknown;
     for (const constraints of attempts) {
@@ -260,52 +287,25 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
     throw lastErr || new Error('getUserMedia failed');
   }
 
-  private async waitForVideoEl(timeoutMs = 3000): Promise<HTMLVideoElement> {
+  private async waitForVideoEl(timeoutMs = 4000): Promise<HTMLVideoElement> {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
       this.cdr.detectChanges();
       const el = this.cameraVideo?.nativeElement;
       if (el) return el;
-      await new Promise((r) => setTimeout(r, 40));
+      await new Promise((r) => setTimeout(r, 50));
     }
     throw new Error('Camera view not ready');
   }
 
-  private waitForVideoFrame(video: HTMLVideoElement, timeoutMs = 8000): Promise<void> {
-    if (video.videoWidth > 0 && video.videoHeight > 0) {
-      return Promise.resolve();
+  private async waitForVideoFrame(video: HTMLVideoElement, timeoutMs = 10000): Promise<void> {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      if (video.videoWidth >= 2 && video.videoHeight >= 2) return;
+      await new Promise((r) => setTimeout(r, 100));
     }
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        cleanup();
-        if (video.videoWidth > 0 && video.videoHeight > 0) {
-          resolve();
-        } else {
-          reject(new Error('Camera frame timeout'));
-        }
-      }, timeoutMs);
-
-      const onReady = () => {
-        if (video.videoWidth > 0 && video.videoHeight > 0) {
-          cleanup();
-          resolve();
-        }
-      };
-
-      const cleanup = () => {
-        clearTimeout(timer);
-        video.removeEventListener('loadedmetadata', onReady);
-        video.removeEventListener('loadeddata', onReady);
-        video.removeEventListener('playing', onReady);
-        video.removeEventListener('canplay', onReady);
-      };
-
-      video.addEventListener('loadedmetadata', onReady);
-      video.addEventListener('loadeddata', onReady);
-      video.addEventListener('playing', onReady);
-      video.addEventListener('canplay', onReady);
-      onReady();
-    });
+    // Don't hard-fail — Capture will wait / use ImageCapture fallback
+    console.warn('video dimensions still 0 after wait; enabling capture anyway');
   }
 
   closeCamera(): void {
@@ -322,82 +322,140 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
   private stopCameraTracksOnly(): void {
     this.stream?.getTracks().forEach((t) => t.stop());
     this.stream = null;
+    if (this.videoEl) {
+      this.videoEl.srcObject = null;
+    }
     const video = this.cameraVideo?.nativeElement;
-    if (video) {
+    if (video && video !== this.videoEl) {
       video.srcObject = null;
     }
   }
 
   private stopCamera(): void {
     this.stopCameraTracksOnly();
+    this.videoEl = null;
     this.cameraOpen = false;
     this.cameraStarting = false;
     this.cameraReady = false;
+    this.capturing = false;
     this.captureReview = false;
   }
 
-  capturePhoto(): void {
-    const video = this.cameraVideo?.nativeElement;
-    const liveTrack = this.stream
-      ?.getVideoTracks()
-      .some((t) => t.readyState === 'live');
-    const vw = video?.videoWidth || 0;
-    const vh = video?.videoHeight || 0;
+  async capturePhoto(event?: Event): Promise<void> {
+    event?.preventDefault();
+    event?.stopPropagation();
+    if (this.capturing) return;
 
-    if (!video || (!liveTrack && !this.cameraReady) || vw < 2 || vh < 2) {
-      this.notyf.error('Camera is not ready yet. Please wait a moment.');
-      return;
-    }
+    this.capturing = true;
+    this.cdr.detectChanges();
 
-    let cropW = vw;
-    let cropH = Math.round(cropW / this.passportRatio);
-    if (cropH > vh) {
-      cropH = vh;
-      cropW = Math.round(cropH * this.passportRatio);
-    }
-    const sx = Math.floor((vw - cropW) / 2);
-    const sy = Math.floor((vh - cropH) / 2);
+    try {
+      const video = this.videoEl || this.cameraVideo?.nativeElement;
+      if (!video || !this.stream) {
+        this.notyf.error('Camera is not ready yet. Please wait a moment.');
+        return;
+      }
 
-    const canvas = document.createElement('canvas');
-    canvas.width = this.captureOutW;
-    canvas.height = this.captureOutH;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      this.notyf.error('Could not capture photo.');
-      return;
-    }
-    ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
+      // Poll briefly — dimensions often appear a beat after UI says ready
+      let vw = video.videoWidth;
+      let vh = video.videoHeight;
+      for (let i = 0; i < 25 && (vw < 2 || vh < 2); i++) {
+        await new Promise((r) => setTimeout(r, 80));
+        vw = video.videoWidth;
+        vh = video.videoHeight;
+      }
 
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) {
-          this.notyf.error('Could not capture photo. Try again.');
-          return;
+      const canvas = document.createElement('canvas');
+      canvas.width = this.captureOutW;
+      canvas.height = this.captureOutH;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        this.notyf.error('Could not capture photo.');
+        return;
+      }
+
+      if (vw >= 2 && vh >= 2) {
+        let cropW = vw;
+        let cropH = Math.round(cropW / this.passportRatio);
+        if (cropH > vh) {
+          cropH = vh;
+          cropW = Math.round(cropH * this.passportRatio);
         }
-        if (blob.size < this.photoMinBytes) {
-          this.notyf.error('Photo quality is too low. Improve lighting and capture again.');
-          return;
+        const sx = Math.max(0, Math.floor((vw - cropW) / 2));
+        const sy = Math.max(0, Math.floor((vh - cropH) / 2));
+        cropW = Math.max(1, Math.min(cropW, vw - sx));
+        cropH = Math.max(1, Math.min(cropH, vh - sy));
+        ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
+      } else {
+        // Fallback: ImageCapture API / full-element draw
+        const track = this.stream.getVideoTracks()[0];
+        const IC = (window as unknown as { ImageCapture?: new (t: MediaStreamTrack) => { grabFrame: () => Promise<ImageBitmap> } }).ImageCapture;
+        if (track && IC) {
+          try {
+            const bitmap = await new IC(track).grabFrame();
+            const bw = bitmap.width;
+            const bh = bitmap.height;
+            let cropW = bw;
+            let cropH = Math.round(cropW / this.passportRatio);
+            if (cropH > bh) {
+              cropH = bh;
+              cropW = Math.round(cropH * this.passportRatio);
+            }
+            const sx = Math.max(0, Math.floor((bw - cropW) / 2));
+            const sy = Math.max(0, Math.floor((bh - cropH) / 2));
+            ctx.drawImage(bitmap, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
+            bitmap.close?.();
+          } catch {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          }
+        } else {
+          // Last resort — may be blank but avoids hard "not ready" dead-end
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         }
-        if (blob.size > this.photoMaxBytes) {
-          this.notyf.error('Captured photo is too large. Try again.');
-          return;
-        }
-        const file = new File([blob], `live-photo-${Date.now()}.jpg`, {
-          type: 'image/jpeg',
-        });
+      }
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.88),
+      );
+
+      if (!blob) {
+        this.notyf.error('Could not capture photo. Try again.');
+        return;
+      }
+      if (blob.size < this.photoCaptureMinBytes) {
+        this.notyf.error(
+          'Camera feed looks blank. Allow camera permission, use HTTPS/localhost, then try again.',
+        );
+        return;
+      }
+      if (blob.size > this.photoMaxBytes) {
+        this.notyf.error('Captured photo is too large. Try again.');
+        return;
+      }
+
+      const file = new File([blob], `live-photo-${Date.now()}.jpg`, {
+        type: 'image/jpeg',
+      });
+      const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => {
-          this.pendingFile = file;
-          this.pendingPreview = reader.result as string;
-          this.captureReview = true;
-          // Freeze live feed; keep panel open so user sees image + Submit
-          this.stopCameraTracksOnly();
-        };
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error);
         reader.readAsDataURL(blob);
-      },
-      'image/jpeg',
-      0.88,
-    );
+      });
+
+      this.pendingFile = file;
+      this.pendingPreview = dataUrl;
+      this.captureReview = true;
+      this.stopCameraTracksOnly();
+      this.cameraReady = false;
+      this.cdr.detectChanges();
+    } catch (e) {
+      console.error('capturePhoto failed', e);
+      this.notyf.error('Could not capture photo. Please try again.');
+    } finally {
+      this.capturing = false;
+      this.cdr.detectChanges();
+    }
   }
 
   /** Confirm captured photo and close camera panel. */

@@ -84,7 +84,11 @@
                 {{ captureReview ? 'Review your photo' : 'Live photo' }}
               </p>
 
-              <div class="epr-camera__frame" [class.is-review]="captureReview">
+              <div
+                class="epr-camera__frame"
+                [class.is-review]="captureReview"
+                (click)="$event.preventDefault(); $event.stopPropagation()"
+              >
                 <video
                   #cameraVideo
                   autoplay
@@ -117,11 +121,17 @@
                 <button
                   type="button"
                   class="epr-cam-btn epr-cam-btn--primary"
-                  (click)="capturePhoto()"
-                  [disabled]="cameraStarting || !cameraReady"
+                  (click)="capturePhoto($event)"
+                  [disabled]="cameraStarting || !cameraReady || capturing"
                 >
                   <i class="ri ri-camera-fill"></i>
-                  {{ cameraStarting || !cameraReady ? 'Preparing…' : 'Capture' }}
+                  {{
+                    capturing
+                      ? 'Capturing…'
+                      : cameraStarting || !cameraReady
+                        ? 'Preparing…'
+                        : 'Capture'
+                  }}
                 </button>
               </div>
 

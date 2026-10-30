@@ -1,12 +1,18 @@
 const Tenant = require('../../models/tenant');
+const User = require('../../models/users');
 const Helper = require('../../helper/helper');
 const { writeAudit } = require('../../helper/auditLog');
 const path = require('path');
 const fs = require('fs');
+const cryptoJs = require('crypto-js');
 const logoUpload = require('../../middleware/logoUpload');
 
 /** Request field / body variant → Tenant column. */
 const LOGO_COLUMNS = { logo: 'image', logoDark: 'imageDark' };
+
+function hashPassword(password) {
+  return cryptoJs.SHA256(String(password)).toString();
+}
 
 exports.getBrandColors = async (req, res) => {
   try {
@@ -387,6 +393,132 @@ exports.getCompanyProfile = async (req, res) => {
 
     return Helper.response(true, 'Company profile fetched', data, res, 200);
   } catch (error) {
+    return Helper.response(false, error.message, {}, res, 500);
+  }
+};
+
+/**
+ * Admin header: update company name, login password, and/or company logo.
+ * multipart optional: logo (PNG/JPG). Body: companyName?, name?, currentPassword?, newPassword?
+ */
+exports.updateCompanyProfile = async (req, res) => {
+  try {
+    const tenantId = req.users?.tenantId;
+    const userId = req.users?.id;
+    if (!tenantId || !userId) {
+      return Helper.response(false, 'User Not Found', {}, res, 404);
+    }
+
+    const companyName =
+      req.body?.companyName != null ? String(req.body.companyName).trim() : undefined;
+    const name = req.body?.name != null ? String(req.body.name).trim() : undefined;
+    const currentPassword =
+      req.body?.currentPassword != null ? String(req.body.currentPassword) : '';
+    const newPassword =
+      req.body?.newPassword != null ? String(req.body.newPassword) : '';
+
+    const tenant = await Tenant.findByPk(tenantId);
+    if (!tenant) return Helper.response(false, 'Tenant not found', {}, res, 404);
+
+    const user = await User.findOne({
+      where: { id: userId, tenantId, status: 'active' },
+    });
+    if (!user) return Helper.response(false, 'User not found', {}, res, 404);
+
+    const tenantPatch = {};
+    const userPatch = {};
+    const oldValue = {
+      companyName: tenant.companyName,
+      name: user.name,
+      image: tenant.image || null,
+    };
+
+    if (companyName !== undefined) {
+      if (!companyName) {
+        return Helper.response(false, 'Company name is required', {}, res, 400);
+      }
+      if (companyName.length > 120) {
+        return Helper.response(false, 'Company name is too long', {}, res, 400);
+      }
+      tenantPatch.companyName = companyName;
+    }
+
+    if (name !== undefined) {
+      if (!name) {
+        return Helper.response(false, 'Name is required', {}, res, 400);
+      }
+      if (name.length > 80) {
+        return Helper.response(false, 'Name is too long', {}, res, 400);
+      }
+      userPatch.name = name;
+    }
+
+    if (newPassword) {
+      if (newPassword.length < 6) {
+        return Helper.response(false, 'New password must be at least 6 characters', {}, res, 400);
+      }
+      if (!currentPassword) {
+        return Helper.response(false, 'Current password is required to set a new password', {}, res, 400);
+      }
+      const currentHash = hashPassword(currentPassword);
+      if (user.password !== currentHash) {
+        return Helper.response(false, 'Current password is incorrect', {}, res, 400);
+      }
+      userPatch.password = hashPassword(newPassword);
+    }
+
+    const logoFile = logoUpload.fileOf(req, 'logo');
+    if (logoFile) {
+      tenantPatch.image = logoFile.filename;
+    }
+
+    if (!Object.keys(tenantPatch).length && !Object.keys(userPatch).length) {
+      return Helper.response(false, 'Nothing to update', {}, res, 400);
+    }
+
+    if (Object.keys(tenantPatch).length) {
+      await tenant.update(tenantPatch);
+    }
+    if (Object.keys(userPatch).length) {
+      await user.update(userPatch);
+    }
+
+    if (logoFile && oldValue.image && oldValue.image !== logoFile.filename) {
+      try {
+        fs.unlinkSync(path.join(__dirname, '../../../upload', oldValue.image));
+      } catch (_) {}
+    }
+
+    await writeAudit({
+      req,
+      actionType: 'COMPANY_PROFILE_UPDATE',
+      referenceId: tenantId,
+      oldValue,
+      newValue: {
+        companyName: tenant.companyName,
+        name: user.name,
+        image: tenant.image || null,
+        passwordChanged: !!userPatch.password,
+      },
+      remarks: 'Company profile updated from header',
+    });
+
+    return Helper.response(
+      true,
+      'Profile updated successfully',
+      {
+        companyName: tenant.companyName,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        url: Tenant.logoUrl(tenant.image),
+        darkUrl: Tenant.logoUrl(tenant.imageDark),
+      },
+      res,
+      200,
+    );
+  } catch (error) {
+    console.error('updateCompanyProfile error:', error);
     return Helper.response(false, error.message, {}, res, 500);
   }
 };
