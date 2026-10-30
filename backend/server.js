@@ -72,6 +72,15 @@ app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'upload')));
 app.use('/upload', express.static(path.join(__dirname, 'upload')));
 
+// Employee face / profile photos (attendance facedata)
+try {
+  const { faceDataDir } = require('./app/helper/faceData');
+  const faceDir = faceDataDir();
+  app.use('/attendance/facedata', express.static(faceDir));
+} catch (e) {
+  console.error('faceData static mount failed:', e?.message || e);
+}
+
 
 app.use((req, res, next) => {
   console.log('Incoming Content-Length:', req.headers['content-length']);

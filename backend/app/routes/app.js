@@ -73,7 +73,7 @@ router.post('/get-app-letter-pdfs', AppAdmin, generateAllLettersPdf)
 router.get('/get-app-handbook', AppAdmin, getAppHandbook)
 router.get('/get-app-insurance-policy', AppAdmin, getAppInsurancePolicy)
 
-router.post('/uploadEmpImage', Admin, upload.single('profileImage'), uploadEmpImage);
+router.post('/uploadEmpImage', Admin, require('../middleware/faceUpload').single('profileImage'), uploadEmpImage);
 router.post('/getEmployeeUploadedImage', Admin,getEmployeeUploadedImage );
 
 router.post('/mark-notifications-read', AppAdmin, markNotificationsRead);

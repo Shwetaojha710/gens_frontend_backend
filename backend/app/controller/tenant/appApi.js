@@ -54,6 +54,11 @@ const fonts = {
 
 const printer = new PdfPrinter(fonts);
 const fs = require("fs");
+const {
+  resolveProfileImagePath,
+  mirrorProfileImageToUpload,
+  unlinkProfileImage,
+} = require("../../helper/faceData");
 const leave_balance = require("../../models/leaveBalance");
 
 const AttendanceRegularization = require("../../models/attendance_regularization");
@@ -7117,10 +7122,7 @@ exports.uploadEmpImage = async (req, res) => {
   const image = req.file ? req.file.filename : null;
   const branchId = req.users && req.users.branchId;
   if (!tenantId || !branchId) {
-    if (image) {
-      const filePath = path.join(__dirname, "../../../upload", image);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    }
+    if (image) unlinkProfileImage(image);
     return Helper.response(
       false,
       "Branch Id ,Tenant ID and Employee ID are required",
@@ -7139,25 +7141,15 @@ exports.uploadEmpImage = async (req, res) => {
       where: { id:employeeId},
     });
     if (!emp) {
-      const filePath = path.join(__dirname, "../../../upload", image);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      unlinkProfileImage(image);
       return Helper.response(false, "Employee not found", [], res, 404);
     }
 
-    if (emp) {
-      const oldImagePath = path.join(
-        __dirname,
-        "../../../upload",
-        emp.profileImage,
-      );
-      if (fs.existsSync(oldImagePath)) {
-        try {
-          fs.unlinkSync(oldImagePath);
-        } catch (err) {
-          /* ignore */
-        }
-      }
+    if (emp?.profileImage) {
+      unlinkProfileImage(emp.profileImage);
     }
+
+    mirrorProfileImageToUpload(image);
 
     emp.profileImage = image;
     emp.updatedBy = req.users && req.users.id;
@@ -7173,10 +7165,7 @@ exports.uploadEmpImage = async (req, res) => {
   } catch (error) {
     console.error("Error uploading profile image:", error);
 
-    if (image) {
-      const filePath = path.join(__dirname, "../../../upload", image);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    }
+    if (image) unlinkProfileImage(image);
     return Helper.response(false, "Internal server error", [], res, 500);
   }
 };
@@ -7213,8 +7202,8 @@ exports.getEmployeeUploadedImage = async (req, res) => {
       );
     }
 
-    const imagePath = path.join(__dirname, "../../../upload", emp.profileImage);
-    if (fs.existsSync(imagePath)) {
+    const imagePath = resolveProfileImagePath(emp.profileImage);
+    if (imagePath && fs.existsSync(imagePath)) {
       return Helper.response(
         true,
         "Profile image fetched successfully",

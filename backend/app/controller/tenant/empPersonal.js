@@ -23,6 +23,12 @@ const Subscription = require("../../models/subscription");
 const pin_code_master = require("../../models/pin_code_master");
 const Department = require("../../models/department");
 const { writeAudit, toPlain } = require("../../helper/auditLog");
+const {
+  resolveProfileImagePath,
+  mirrorProfileImageToUpload,
+  unlinkProfileImage,
+  faceDataPublicUrl,
+} = require("../../helper/faceData");
 
 /**
  * Generate next empCode for tenant+branch using Prefix master.
@@ -228,16 +234,11 @@ exports.RegisterAppEmp = async (req, res) => {
 
   const profileImage = req.file ? req.file.filename : null;
   const uploadPath = profileImage
-    ? path.join(__dirname, "../../../upload", profileImage)
+    ? resolveProfileImagePath(profileImage)
     : null;
 
   const cleanupUpload = () => {
-    if (!uploadPath || !fs.existsSync(uploadPath)) return;
-    try {
-      fs.unlinkSync(uploadPath);
-    } catch (_) {
-      /* ignore */
-    }
+    if (profileImage) unlinkProfileImage(profileImage);
   };
 
   firstName = firstName != null ? String(firstName).trim() : "";
@@ -307,6 +308,8 @@ exports.RegisterAppEmp = async (req, res) => {
       }
     }
 
+    if (profileImage) mirrorProfileImageToUpload(profileImage);
+
     const dob = parseRegisterDob(dateOfBirth) || new Date("1970-01-01");
     const ageNum = Number(age);
     const newEmp = await empPersonal.create({
@@ -324,7 +327,7 @@ exports.RegisterAppEmp = async (req, res) => {
 
     const plain = newEmp?.toJSON ? newEmp.toJSON() : newEmp;
     if (plain?.profileImage) {
-      plain.profileImageUrl = `${process.env.IMG_BASE_URL || `${String(process.env.BASE_URL || "").replace(/\/+$/, "")}/upload`}/${plain.profileImage}`;
+      plain.profileImageUrl = faceDataPublicUrl(plain.profileImage);
     }
     if (plain?.profileImageHash) delete plain.profileImageHash;
 
@@ -650,6 +653,7 @@ exports.createEmp = async (req, res) => {
       emp_status:'approved',
       deviceId: Helper.getIpAddress(req),
     });
+    if (image) mirrorProfileImageToUpload(image);
     await writeAudit({
       req,
       actionType: "EMP_CREATE",
@@ -1360,10 +1364,7 @@ exports.uploadImage = async (req, res) => {
   const tenantId = req.users && req.users.tenantId;
   const image = req.file ? req.file.filename : null;
   if (!tenantId || !id) {
-    if (image) {
-      const filePath = path.join(__dirname, "../../../upload", image);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    }
+    if (image) unlinkProfileImage(image);
     return Helper.response(
       false,
       "Tenant ID and Employee ID are required",
@@ -1383,14 +1384,13 @@ exports.uploadImage = async (req, res) => {
       where: { id, tenantId },
     });
     if (!emp) {
-      const filePath = path.join(__dirname, "../../../upload", image);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      unlinkProfileImage(image);
       return Helper.response(false, "Employee not found", [], res, 404);
     }
 
-    const newPath = path.join(__dirname, "../../../upload", image);
+    const newPath = resolveProfileImagePath(image);
     let profileImageHash = null;
-    if (fs.existsSync(newPath)) {
+    if (newPath && fs.existsSync(newPath)) {
       profileImageHash = crypto
         .createHash("sha256")
         .update(fs.readFileSync(newPath))
@@ -1403,9 +1403,7 @@ exports.uploadImage = async (req, res) => {
         },
       });
       if (dup) {
-        try {
-          fs.unlinkSync(newPath);
-        } catch (_) {}
+        unlinkProfileImage(image);
         return Helper.response(
           false,
           "This photo was already used for another employee. Please choose a different image.",
@@ -1417,19 +1415,10 @@ exports.uploadImage = async (req, res) => {
     }
 
     if (emp.profileImage) {
-      const oldImagePath = path.join(
-        __dirname,
-        "../../../upload",
-        emp.profileImage,
-      );
-      if (fs.existsSync(oldImagePath)) {
-        try {
-          fs.unlinkSync(oldImagePath);
-        } catch (err) {
-          /* ignore */
-        }
-      }
+      unlinkProfileImage(emp.profileImage);
     }
+
+    mirrorProfileImageToUpload(image);
 
     emp.profileImage = image;
     if (profileImageHash) emp.profileImageHash = profileImageHash;
@@ -1438,7 +1427,7 @@ exports.uploadImage = async (req, res) => {
 
     const plain = emp?.toJSON ? emp.toJSON() : emp;
     if (plain?.profileImage) {
-      plain.profileImageUrl = `${process.env.IMG_BASE_URL || `${String(process.env.BASE_URL || "").replace(/\/+$/, "")}/upload`}/${plain.profileImage}`;
+      plain.profileImageUrl = faceDataPublicUrl(plain.profileImage);
     }
 
     return Helper.response(
@@ -1451,10 +1440,7 @@ exports.uploadImage = async (req, res) => {
   } catch (error) {
     console.error("Error uploading profile image:", error);
 
-    if (image) {
-      const filePath = path.join(__dirname, "../../../upload", image);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    }
+    if (image) unlinkProfileImage(image);
     return Helper.response(false, "Internal server error", [], res, 500);
   }
 };
@@ -1491,8 +1477,8 @@ exports.getUploadedImage = async (req, res) => {
       );
     }
 
-    const imagePath = path.join(__dirname, "../../../upload", emp.profileImage);
-    if (fs.existsSync(imagePath)) {
+    const imagePath = resolveProfileImagePath(emp.profileImage);
+    if (imagePath && fs.existsSync(imagePath)) {
       return Helper.response(
         true,
         "Profile image fetched successfully",
