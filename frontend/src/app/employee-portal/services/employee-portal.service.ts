@@ -53,6 +53,32 @@ export class EmployeePortalService {
     });
   }
 
+  /** Verify active company by company code (public, same as mobile). */
+  checkTenant(
+    companyCode: string,
+  ): Observable<{
+    status: unknown;
+    message?: string;
+    data?: { tenantId?: string; companyName?: string };
+  }> {
+    return this.http.post<{
+      status: unknown;
+      message?: string;
+      data?: { tenantId?: string; companyName?: string };
+    }>(`${this.base}check-tenant`, { companyCode: String(companyCode || '').trim() });
+  }
+
+  /**
+   * Self-registration (same fields as mobile RegisterAppEmp).
+   * multipart: firstName, lastName, mobile, email, dateOfBirth, age, gender, companyCode, profileImage?
+   */
+  registerAppEmp(formData: FormData): Observable<{ status: unknown; message?: string; data?: unknown }> {
+    return this.http.post<{ status: unknown; message?: string; data?: unknown }>(
+      `${this.base}RegisterAppEmp`,
+      formData,
+    );
+  }
+
   getEmpDetails(): Observable<unknown> {
     return this.unwrap(this.http.get<{ status: unknown; data: unknown }>(`${this.base}get-Emp-Details`));
   }

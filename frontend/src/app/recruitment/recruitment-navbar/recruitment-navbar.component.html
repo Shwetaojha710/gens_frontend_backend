@@ -6,9 +6,10 @@
     <a class="brand-wrap" routerLink="/landing-home">
       <img
         [src]="companyLogo"
-        alt="Quaere"
+        alt="Company logo"
         class="brand-logo"
         [class.brand-logo-collapsed]="isCollapsed"
+        (error)="onLogoError($event)"
       />
     </a>
 

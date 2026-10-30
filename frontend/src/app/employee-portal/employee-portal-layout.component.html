@@ -7,9 +7,10 @@
       <a class="ep-brand" routerLink="/employee-portal/dashboard">
         <img
           [src]="companyLogo"
-          alt="Quaere"
+          alt="Company logo"
           class="ep-brand__logo"
           [class.ep-brand__logo--collapsed]="sidebarCollapsed"
+          (error)="onLogoError($event)"
         />
       </a>
       <!-- Desktop collapse toggle -->

@@ -7,8 +7,13 @@ const { generateAllLettersPdf } = require('../controller/tenant/letter_data');
 const upload = require('../middleware/upload');
 const excel_pdf_upload = require('../middleware/excel_pdf_upload');
 const { branchDD } = require('../controller/tenant/branch');
+const { getEmpAppConfig } = require('../controller/tenant/appConfig');
 
 router.get('/get-Emp-Details', AppAdmin, EmployeeDetails);
+
+// App Config (image quality & dynamic fields — read-only for mobile)
+router.get('/get-emp-app-config', AppAdmin, getEmpAppConfig);
+router.post('/get-emp-app-config', AppAdmin, getEmpAppConfig);
 
 //attendance
 router.post('/get-daily-attendance', AppAdmin, getDailyAttendance);
@@ -68,7 +73,7 @@ router.post('/get-app-letter-pdfs', AppAdmin, generateAllLettersPdf)
 router.get('/get-app-handbook', AppAdmin, getAppHandbook)
 router.get('/get-app-insurance-policy', AppAdmin, getAppInsurancePolicy)
 
-router.post('/uploadEmpImage', Admin, upload.single('profileImage'), uploadEmpImage);
+router.post('/uploadEmpImage', Admin, require('../middleware/faceUpload').single('profileImage'), uploadEmpImage);
 router.post('/getEmployeeUploadedImage', Admin,getEmployeeUploadedImage );
 
 router.post('/mark-notifications-read', AppAdmin, markNotificationsRead);

@@ -1,0 +1,72 @@
+/* Assign Branches dialog (Employee List action) */
+.ab-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1080;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.45);
+}
+.ab-dialog {
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+}
+.ab-head,
+.ab-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+}
+.ab-head {
+  border-bottom: 1px solid #e2e8f0;
+}
+.ab-foot {
+  border-top: 1px solid #e2e8f0;
+}
+.ab-body {
+  padding: 14px 18px;
+  overflow-y: auto;
+}
+.ab-all,
+.ab-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  cursor: pointer;
+}
+.ab-all {
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  background: #f1f5f9;
+}
+.ab-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px 12px;
+}
+.ab-item {
+  padding: 6px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+.ab-item--home {
+  background: #f0fdfa;
+  border-color: #99f6e4;
+}
+.ab-all .form-check-input,
+.ab-item .form-check-input {
+  margin: 0;
+  flex-shrink: 0;
+}

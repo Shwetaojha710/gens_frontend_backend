@@ -18,6 +18,11 @@ const Tenant = sequelize.define('tenant', {
         type: DataTypes.STRING,
         allowNull: true
     },
+    /** Optional logo for dark backgrounds (e.g. a white logo for the dark sidebar) */
+    imageDark: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
     letterhead: {
         type: DataTypes.STRING,
         allowNull: true
@@ -68,6 +73,26 @@ Tenant.associate = models => {
     }
 };
 
+/**
+ * Public URL of the company logo (stored in `image` / `imageDark`), or null when none is set.
+ * Prefer IMG_BASE_URL (e.g. https://host/api/upload) so logos resolve when API runs
+ * against a remote DB whose files live on the public upload host.
+ */
+Tenant.logoUrl = filename => {
+  if (!filename) return null;
+  const name = String(filename).replace(/^\/+/, '');
+  const imgBase = String(process.env.IMG_BASE_URL || '').replace(/\/+$/, '');
+  if (imgBase) return `${imgBase}/${name}`;
+  const base = String(process.env.BASE_URL || '').replace(/\/+$/, '');
+  return `${base}/upload/${name}`;
+};
+
+/** Logo file for light surfaces (letters, PDFs): normal logo, else the dark one. */
+Tenant.lightLogoFile = tenant => tenant?.image || tenant?.imageDark || null;
+
+/** Logo file for dark surfaces (sidebar): dark logo, else the normal one. */
+Tenant.darkLogoFile = tenant => tenant?.imageDark || tenant?.image || null;
+
 // Disabled: sync({ alter: true }) exhausts Postgres locks (53200 out of shared memory)
 // Tenant.sync({ alter: true }).then(() => {
 //     console.log('Tenant model synced successfully');
@@ -75,5 +100,26 @@ Tenant.associate = models => {
 //     console.error('Error syncing Tenant model:', error);
 // });
 
+// Only add the logo columns (image, imageDark) when they are missing.
+(async () => {
+    try {
+        const qi = sequelize.getQueryInterface();
+        const desc = await qi.describeTable("tenants");
+        for (const column of ["image", "imageDark"]) {
+            if (!desc[column]) {
+                await qi.addColumn("tenants", column, {
+                    type: DataTypes.STRING,
+                    allowNull: true,
+                });
+                console.log(`tenant.${column} column added`);
+            }
+        }
+    } catch (error) {
+        console.error(
+            "Error ensuring tenant logo columns:",
+            error?.parent?.message || error?.message || error,
+        );
+    }
+})();
 
 module.exports = Tenant;

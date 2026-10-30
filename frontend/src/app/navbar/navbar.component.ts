@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 import { MenuItem, UserRole, APP_MENU_ITEMS } from './navigation';
 import { MobileMenuService } from '../services/mobile-menu.service';
 import { PermissionService } from '../services/permission.service';
+import { CompanyLogoService, DEFAULT_COMPANY_LOGO } from '../services/company-logo.service';
 
 @Component({
   selector: 'app-navbar',
@@ -18,6 +19,8 @@ export class NavbarComponent implements OnInit, OnDestroy {
   isCollapsed = false;
   isMobileOpen = false;
   menuItems: MenuItem[] = [];
+  /** Dark-background company logo (falls back to the normal one, then the default) */
+  companyLogo = DEFAULT_COMPANY_LOGO;
 
   private userRole: UserRole = 'hr';
   private sub = new Subscription();
@@ -50,7 +53,8 @@ export class NavbarComponent implements OnInit, OnDestroy {
     private router: Router,
     private elRef: ElementRef,
     private mobileMenu: MobileMenuService,
-    private permSvc: PermissionService
+    private permSvc: PermissionService,
+    private companyLogoSvc: CompanyLogoService
   ) {}
 
   ngOnInit(): void {
@@ -82,6 +86,11 @@ export class NavbarComponent implements OnInit, OnDestroy {
     );
 
     this.setActiveMenuItem(this.router.url);
+
+    this.sub.add(
+      this.companyLogoSvc.logo$('admin', 'dark').subscribe(url => (this.companyLogo = url))
+    );
+    this.companyLogoSvc.refresh('admin');
   }
 
   ngOnDestroy(): void {
@@ -120,8 +129,8 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.router.navigate(['/login']);
   }
 
-  get companyLogo(): string {
-    return 'assets/img/logo/image.png';
+  onLogoError(event: Event): void {
+    this.companyLogoSvc.onImgError(event);
   }
 
   toggleItem(menu: MenuItem): void {

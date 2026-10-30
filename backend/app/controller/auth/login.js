@@ -183,7 +183,7 @@ exports.login = async (req, res) => {
     return Helper.response(
       true,
       "You have Logged In Successfully!",
-      { baseUrl, token, user, PORT, webcamtoken, currencyList, tenant, branch, customPermissions },
+      { baseUrl, token, user, PORT, webcamtoken, currencyList, tenant, branch, customPermissions, companyLogo: Tenant.logoUrl(tenant.image), companyLogoDark: Tenant.logoUrl(tenant.imageDark) },
       res,
       200
     );
@@ -397,7 +397,7 @@ exports.Applogin = async (req, res) => {
       otps.otp = Math.floor(1000 + Math.random() * 9000);
     }
     const templateId = "1107164267135286674";
-    otps.otp = 1234;
+    // otps.otp = 1234;
     otps.phone = data.mobile;
 
     otps.ip = Helper.getLocalIP();

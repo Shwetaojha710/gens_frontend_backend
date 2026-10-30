@@ -21,8 +21,8 @@ checkEmpByMobile(data: any): Observable<any> {
   return this.http.post(`${this.baseUrl}checkEmpByMobile`, data);
 }
 
-getEmp(): Observable<any[]> {
-  const branchId = localStorage.getItem('branchId') || '';
+getEmp(forBranchId?: string): Observable<any[]> {
+  const branchId = forBranchId || localStorage.getItem('branchId') || '';
   return this.http.post<any[]>(`${this.baseUrl}getEmp`, { branchId });
 }
 
@@ -59,6 +59,10 @@ pythonregister(data: any): Observable<any> {
 
 getUploadImage(data: any): Observable<any> {
   return this.http.post(`${this.baseUrl}getUploadImage`, data);
+}
+/** Employee List: branches a Director / Manager can access ({ employeeId, branchIds } or { employeeId, all: true }) */
+assignBranches(data: { employeeId: string; branchIds?: string[]; all?: boolean }): Observable<any> {
+  return this.http.post(`${this.baseUrl}assign-branches`, data);
 }
 deleteEmp(id: string): Observable<any> {
   return this.http.post(`${this.baseUrl}deleteEmp`, id);

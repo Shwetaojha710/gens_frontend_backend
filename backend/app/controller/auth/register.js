@@ -8,13 +8,23 @@ const { v4: uuidv4 } = require('uuid');
 const path = require("path");
 const fs = require("fs");
 const sequelize = require("../../connection/connection");
+const logoUpload = require("../../middleware/logoUpload");
 
 function hashPassword(password) {
     return cryptoJs.SHA256(password).toString();
 }
 
+/** Remove uploaded logos when registration does not go through. */
+function removeUploadedFiles(files) {
+    for (const file of files) {
+        if (!file?.path) continue;
+        try { fs.unlinkSync(file.path); } catch (_) {}
+    }
+}
+
 exports.Companyregistration = async (req, res) => {
   const t = await sequelize.transaction();
+  let registered = false;
   try {
     const { tenantId, email, password, tenantName } = req.body;
 
@@ -31,7 +41,8 @@ exports.Companyregistration = async (req, res) => {
       return Helper.response(false, "Company Name is required", {}, res, 400);
     }
 
-    const image = req.file ? req.file.filename : null;
+    const image = logoUpload.fileOf(req, "image")?.filename || null;
+    const imageDark = logoUpload.fileOf(req, "imageDark")?.filename || null;
 
     /* Check if tenant already exists */
     const existingTenant = await Tenant.findOne({
@@ -74,6 +85,7 @@ exports.Companyregistration = async (req, res) => {
         companyCode: tenantId,
         plan: "basic",
         image,
+        imageDark,
       },
       { transaction: t }
     );
@@ -92,6 +104,7 @@ exports.Companyregistration = async (req, res) => {
     );
 
     await t.commit();
+    registered = true;
 
     return Helper.response(
       true,
@@ -99,6 +112,8 @@ exports.Companyregistration = async (req, res) => {
       {
         tenantId: tenant.id,
         adminEmail: adminUser.email,
+        logo: Tenant.logoUrl(tenant.image),
+        logoDark: Tenant.logoUrl(tenant.imageDark),
       },
       res,
       201
@@ -114,6 +129,8 @@ exports.Companyregistration = async (req, res) => {
       res,
       500
     );
+  } finally {
+    if (!registered) removeUploadedFiles(logoUpload.allFiles(req));
   }
 };
 

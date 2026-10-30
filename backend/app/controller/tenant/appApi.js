@@ -54,6 +54,11 @@ const fonts = {
 
 const printer = new PdfPrinter(fonts);
 const fs = require("fs");
+const {
+  resolveProfileImagePath,
+  mirrorProfileImageToUpload,
+  unlinkProfileImage,
+} = require("../../helper/faceData");
 const leave_balance = require("../../models/leaveBalance");
 
 const AttendanceRegularization = require("../../models/attendance_regularization");
@@ -3923,10 +3928,19 @@ exports.PrintBill = async (req, res) => {
     if (!branchId || branchId == "null") {
       return Helper.response(false, "branchId is required!", {}, res, 200);
     }
+    // Company logo (Tenant.image) when it is PNG/JPG (pdfmake formats), else the default logo
+    let logoPath = path.join(__dirname, "../../../logo-quaere.png");
+    const logoTenant = tenantId
+      ? await Tenant.findByPk(tenantId, { attributes: ["image", "imageDark"], raw: true })
+      : null;
+    const logoFile = Tenant.lightLogoFile(logoTenant);
+    if (logoFile && /\.(png|jpe?g)$/i.test(logoFile)) {
+      const companyLogoPath = path.join(__dirname, "../../../upload", path.basename(logoFile));
+      if (fs.existsSync(companyLogoPath)) logoPath = companyLogoPath;
+    }
     // Read and convert to base64
-    const logoPath = path.join(__dirname, "../../../logo-quaere.png");
     const logoBase64 = fs.readFileSync(logoPath).toString("base64");
-    const logo = "data:image/png;base64," + logoBase64;
+    const logo = (/\.jpe?g$/i.test(logoPath) ? "data:image/jpeg;base64," : "data:image/png;base64,") + logoBase64;
     if (!tenantId) {
       return Helper.response(false, "TenantId is required", [], res, 400);
     }
@@ -6214,6 +6228,46 @@ exports.updateRegularizationStatus = async (req, res) => {
   }
 };
 
+/** Distance in metres between two lat/lng points (haversine). */
+const distanceMetres = (lat1, lng1, lat2, lng2) => {
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.sqrt(a));
+};
+
+/**
+ * Branch range check for self check-in / check-out. Returns an error message, or null
+ * when allowed. Only applies when the branch has a range and coordinates; employees
+ * with live location tracking (field staff, isLocation) are not restricted.
+ */
+const branchRangeError = async (tenantId, branchId, emp, latitude, longitude) => {
+  if (!branchId || emp?.isLocation) return null;
+  const b = await branch.findOne({
+    where: { id: branchId, tenantId },
+    attributes: ["name", "latitude", "longitude", "range"],
+    raw: true,
+  });
+  const range = Number(b?.range);
+  const bLat = Number(b?.latitude);
+  const bLng = Number(b?.longitude);
+  if (!b || !(range > 0) || b.latitude == null || b.longitude == null || !Number.isFinite(bLat) || !Number.isFinite(bLng)) {
+    return null;
+  }
+  const lat = Number(latitude);
+  const lng = Number(longitude);
+  if (latitude == null || longitude == null || String(latitude).trim() === "" || String(longitude).trim() === "" ||
+      !Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return "Your location is required to mark attendance. Please turn on location and try again.";
+  }
+  const away = Math.round(distanceMetres(lat, lng, bLat, bLng));
+  if (away <= range) return null;
+  return `You are ${away} m away from ${b.name} branch. Attendance is allowed within ${range} m.`;
+};
+
 exports.markattendance = async (req, res) => {
   try {
     const { tenantId, id: employeeId } = req.users;
@@ -6225,7 +6279,7 @@ exports.markattendance = async (req, res) => {
 
     const emp = await empPersonal.findOne({
       where: { id: employeeId, tenantId, status: "active" },
-      attributes: ["id", "isofflineAtt", "isofflineAllTimeAtt", "shift_id", "branchId"],
+      attributes: ["id", "isofflineAtt", "isofflineAllTimeAtt", "shift_id", "branchId", "isLocation"],
       raw: true,
     });
     
@@ -6263,6 +6317,18 @@ exports.markattendance = async (req, res) => {
     let attendanceRecord = await attendance.findOne({
       where: { tenantId, employeeId, date },
     });
+
+    // Branch range: check against the branch this attendance belongs to
+    const rangeError = await branchRangeError(
+      tenantId,
+      attendanceRecord?.branchId || branchId || emp.branchId,
+      emp,
+      req.body?.latitude,
+      req.body?.longitude,
+    );
+    if (rangeError) {
+      return Helper.response(false, rangeError, {}, res, 403);
+    }
 
     if (!attendanceRecord) {
       attendanceRecord = await attendance.create({
@@ -7056,10 +7122,7 @@ exports.uploadEmpImage = async (req, res) => {
   const image = req.file ? req.file.filename : null;
   const branchId = req.users && req.users.branchId;
   if (!tenantId || !branchId) {
-    if (image) {
-      const filePath = path.join(__dirname, "../../../upload", image);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    }
+    if (image) unlinkProfileImage(image);
     return Helper.response(
       false,
       "Branch Id ,Tenant ID and Employee ID are required",
@@ -7078,25 +7141,15 @@ exports.uploadEmpImage = async (req, res) => {
       where: { id:employeeId},
     });
     if (!emp) {
-      const filePath = path.join(__dirname, "../../../upload", image);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      unlinkProfileImage(image);
       return Helper.response(false, "Employee not found", [], res, 404);
     }
 
-    if (emp) {
-      const oldImagePath = path.join(
-        __dirname,
-        "../../../upload",
-        emp.profileImage,
-      );
-      if (fs.existsSync(oldImagePath)) {
-        try {
-          fs.unlinkSync(oldImagePath);
-        } catch (err) {
-          /* ignore */
-        }
-      }
+    if (emp?.profileImage) {
+      unlinkProfileImage(emp.profileImage);
     }
+
+    mirrorProfileImageToUpload(image);
 
     emp.profileImage = image;
     emp.updatedBy = req.users && req.users.id;
@@ -7112,10 +7165,7 @@ exports.uploadEmpImage = async (req, res) => {
   } catch (error) {
     console.error("Error uploading profile image:", error);
 
-    if (image) {
-      const filePath = path.join(__dirname, "../../../upload", image);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    }
+    if (image) unlinkProfileImage(image);
     return Helper.response(false, "Internal server error", [], res, 500);
   }
 };
@@ -7152,8 +7202,8 @@ exports.getEmployeeUploadedImage = async (req, res) => {
       );
     }
 
-    const imagePath = path.join(__dirname, "../../../upload", emp.profileImage);
-    if (fs.existsSync(imagePath)) {
+    const imagePath = resolveProfileImagePath(emp.profileImage);
+    if (imagePath && fs.existsSync(imagePath)) {
       return Helper.response(
         true,
         "Profile image fetched successfully",

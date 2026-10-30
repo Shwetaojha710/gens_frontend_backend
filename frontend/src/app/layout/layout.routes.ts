@@ -509,6 +509,15 @@ export const layoutRoutes: Routes = [
           ),
       },
       {
+        path: 'master/company-logo',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'set.brand' },
+        loadComponent: () =>
+          import('../master/company-logo/company-logo.component').then(
+            (m) => m.CompanyLogoComponent,
+          ),
+      },
+      {
         path: 'master/letterhead',
         canActivate: [PermissionGuard],
         data: { permKey: 'set.brand' },
@@ -524,6 +533,15 @@ export const layoutRoutes: Routes = [
         loadComponent: () =>
           import('../master/handbook/handbook.component').then(
             (m) => m.HandbookComponent,
+          ),
+      },
+      {
+        path: 'master/app-config',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'set.appconfig' },
+        loadComponent: () =>
+          import('../master/app-config/app-config.component').then(
+            (m) => m.AppConfigComponent,
           ),
       },
       {

@@ -1,0 +1,42 @@
+.pending-photo-preview {
+  width: 96px;
+  height: 120px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  display: grid;
+  place-items: center;
+}
+
+.pending-photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pending-camera-panel {
+  max-width: 360px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.pending-camera-frame {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  max-height: 280px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0f172a;
+  margin-bottom: 10px;
+}
+
+.pending-camera-frame video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transform: scaleX(-1);
+}

@@ -320,17 +320,15 @@ export class HolidayComponent {
         }
 
         else {
-           this.selectedFile=null
-          this.fileInput.nativeElement.value = '';
+          // Keep the chosen image so the user can correct the form and resubmit
           this.notyf.error(message)
         }
 
       },
       error: (err) => {
         console.error('Error:', err);
-         this.selectedFile=null
-        this.fileInput.nativeElement.value = '';
-        this.notyf.error(err)
+        // Show the server's reason (e.g. duplicate holiday) and keep the chosen image
+        this.notyf.error(err?.error?.message || 'Unable to add holiday. Please try again.')
       }
     });
 
@@ -393,14 +391,11 @@ export class HolidayComponent {
           this.router.navigate(["login"]);
         }
         else {
-            this.selectedFile=null
-          this.fileInput.nativeElement.value = '';
+          // Keep the chosen image so the user can correct the form and resubmit
           this.notyf.error(message)
         }
       },
       error: (err) => {
-          this.selectedFile=null
-        this.fileInput.nativeElement.value = '';
         console.error('Error:', err);
         this.notyf.error(err?.error?.message || 'An error occurred')
       }

@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, HostBinding } from '@angular/core';
 import { NavigationEnd, Params, Router, RouterModule } from '@angular/router';
+import { CompanyLogoService, DEFAULT_COMPANY_LOGO } from '../../services/company-logo.service';
 
 interface InterviewerMenuItem {
   title: string;
@@ -62,10 +63,22 @@ export class InterviewerNavbarComponent {
     // }
   ];
 
-  constructor(private router: Router) {}
+  /** Dark-background company logo from the panel login's tenant, else the default */
+  companyLogo = DEFAULT_COMPANY_LOGO;
 
-  get companyLogo(): string {
-    return 'assets/img/logo/image.png';
+  constructor(private router: Router, private companyLogoSvc: CompanyLogoService) {
+    try {
+      const tenant = JSON.parse(localStorage.getItem('tenant') || '{}');
+      const file = tenant?.imageDark || tenant?.image;
+      const base = (localStorage.getItem('base_url') || '').replace(/["\\,]/g, '').replace(/\/+$/, '');
+      if (file && base) this.companyLogo = `${base}/upload/${String(file).replace(/^\/+/, '')}`;
+    } catch {
+      this.companyLogo = DEFAULT_COMPANY_LOGO;
+    }
+  }
+
+  onLogoError(event: Event): void {
+    this.companyLogoSvc.onImgError(event);
   }
 
   ngOnInit(): void {

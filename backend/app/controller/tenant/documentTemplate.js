@@ -94,17 +94,73 @@ function formatShiftTiming(shiftRows) {
   return dayLabel ? `${start} to ${end}, ${dayLabel}.` : `${start} to ${end}.`;
 }
 
-const fmtDate = (value) => {
-  if (!value) return BLANK;
-  const d = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(d.getTime())) {
-    // already DD/MM/YYYY style
-    if (typeof value === 'string' && value.includes('/')) return value;
+/** Date keys that support {{key}} / {{key:dd MMM yyyy}} in templates. */
+const DATE_VAR_KEYS = new Set(['joining_date', 'date_of_birth', 'issue_date']);
+
+const MONTHS_SHORT = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+const MONTHS_LONG = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+/** Parse Date, ISO, or DD/MM/YYYY → Date | null */
+const parseDateValue = (value) => {
+  if (!value && value !== 0) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+  if (typeof value === 'string') {
+    const s = value.trim();
+    // DD/MM/YYYY or DD-MM-YYYY
+    const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (m) {
+      const d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+  }
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+/** 1 -> "st", 2 -> "nd", 3 -> "rd", 11/12/13 -> "th", 21 -> "st", 22 -> "nd"… */
+const ordinalSuffix = (day) => {
+  if (day % 100 >= 11 && day % 100 <= 13) return 'th';
+  return { 1: 'st', 2: 'nd', 3: 'rd' }[day % 10] || 'th';
+};
+
+// fmtDate wraps an ordinal suffix in these markers; fillTemplate turns them into <sup> after escaping
+const SUP_OPEN = '\u0001';
+const SUP_CLOSE = '\u0002';
+
+/**
+ * Format a date. Default pattern: dd/MM/yyyy.
+ * Tokens: yyyy, yy, MMMM, MMM, MM, dd, d, do (ordinal day: 15th, suffix raised)
+ */
+const fmtDate = (value, pattern = 'dd/MM/yyyy') => {
+  const d = parseDateValue(value);
+  if (!d) {
+    // already a display string we cannot re-parse — return as-is if no custom pattern
+    if (typeof value === 'string' && value.includes('/') && (!pattern || pattern === 'dd/MM/yyyy')) {
+      return value;
+    }
     return BLANK;
   }
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  return `${dd}/${mm}/${d.getFullYear()}`;
+  const day = d.getDate();
+  const month = d.getMonth();
+  const year = d.getFullYear();
+  const pad2 = (n) => String(n).padStart(2, '0');
+  return String(pattern || 'dd/MM/yyyy')
+    .replace(/\bdo\b/g, `${day}${SUP_OPEN}${ordinalSuffix(day)}${SUP_CLOSE}`)
+    .replace(/yyyy/g, String(year))
+    .replace(/yy/g, String(year).slice(-2))
+    .replace(/MMMM/g, MONTHS_LONG[month])
+    .replace(/MMM/g, MONTHS_SHORT[month])
+    .replace(/MM/g, pad2(month + 1))
+    .replace(/dd/g, pad2(day))
+    .replace(/\bd\b/g, String(day));
 };
 
 const fmtMoney = (n) => {
@@ -722,7 +778,8 @@ async function buildVariableMap(tenantId, employeeId, hrName, issueDate) {
     employee_id: emp.empCode || BLANK,
     designation: designationName,
     department: departmentName,
-    joining_date: fmtDate(emp.joiningDate),
+    // Keep raw values for date keys so {{joining_date:dd MMM yyyy}} can re-format.
+    joining_date: emp.joiningDate || null,
     employment_type: employmentTypeName,
     contractual: emp.isContractual ? 'Yes' : 'No',
     role: emp.role ? ROLE_LABELS[emp.role] || emp.role : BLANK,
@@ -736,7 +793,7 @@ async function buildVariableMap(tenantId, employeeId, hrName, issueDate) {
     relation: isMale ? 'S/O' : 'D/O',
     father_name: emp.fatherName || BLANK,
     mother_name: val(emp.motherName),
-    date_of_birth: fmtDate(emp.dateOfBirth),
+    date_of_birth: emp.dateOfBirth || null,
     age: val(age),
     blood_group: val(emp.bloodGroup),
     marital_status: val(emp.martialStatus),
@@ -771,21 +828,60 @@ async function buildVariableMap(tenantId, employeeId, hrName, issueDate) {
     company_name: tenant?.companyName || BLANK,
     company_address: tenant?.companyAddress || BLANK,
     hr_name: hrName || BLANK,
-    issue_date: fmtDate(issueDate || new Date()),
+    issue_date: issueDate || new Date(),
   };
 }
 
-function fillTemplate(bodyHtml, vars) {
-  return String(bodyHtml || '').replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key) => {
-    const raw = vars[key] != null && vars[key] !== '' ? String(vars[key]) : BLANK;
-    // salary_table is intentional HTML; escape everything else so layout markup stays intact
-    if (key === 'salary_table') return raw;
-    return raw
+function escapeTemplateValue(raw) {
+  return String(raw)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
-  });
+}
+
+/**
+ * Replace {{key}} and {{key:datePattern}} placeholders.
+ * Date keys (joining_date, issue_date, date_of_birth) format via pattern (default dd/MM/yyyy).
+ */
+/** Values for {{field:Name}} input fields: { 'Ref No': 'QT/104' } with trimmed text values. */
+function normalizeFieldValues(input) {
+  const out = {};
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return out;
+  for (const [name, value] of Object.entries(input).slice(0, 50)) {
+    const key = String(name).replace(/\s+/g, ' ').trim();
+    const text = value == null ? '' : String(value).trim().slice(0, 500);
+    if (key && text) out[key] = text;
+  }
+  return out;
+}
+
+function fillTemplate(bodyHtml, vars) {
+  return String(bodyHtml || '').replace(
+    /\{\{\s*([a-zA-Z0-9_]+)(?::([^}]+))?\s*\}\}/g,
+    (_, key, pattern) => {
+      // salary_table / annexure are intentional HTML
+      if (key === 'salary_table' || key === 'salary_annexure' || key === 'salary_annexure_table') {
+        const raw = vars[key] != null && vars[key] !== '' ? String(vars[key]) : BLANK;
+        return raw;
+      }
+      // {{field:Ref No}} — value typed on the Generate HR Letter page
+      if (key === 'field') {
+        const value = (vars.input_fields || {})[String(pattern || '').replace(/\s+/g, ' ').trim()];
+        return value ? escapeTemplateValue(value) : BLANK;
+      }
+      if (DATE_VAR_KEYS.has(key)) {
+        const formatted = fmtDate(vars[key], (pattern || 'dd/MM/yyyy').trim());
+        // &nbsp; after </sup>: print cleanup drops a plain leading space after an inline tag
+        return escapeTemplateValue(formatted)
+          .split(SUP_OPEN).join('<sup>')
+          .split(`${SUP_CLOSE} `).join('</sup>&nbsp;')
+          .split(SUP_CLOSE).join('</sup>');
+      }
+      const raw = vars[key] != null && vars[key] !== '' ? String(vars[key]) : BLANK;
+      return escapeTemplateValue(raw);
+    }
+  );
 }
 
 async function getLetterheadBase64(tenantId) {
@@ -1568,7 +1664,7 @@ function buildAnnexure(vars) {
 exports.previewDocument = async (req, res) => {
   try {
     const tenantId = req.users?.tenantId;
-    const { templateId, employeeId, hrName, issueDate } = req.body;
+    const { templateId, employeeId, hrName, issueDate, fieldValues } = req.body;
     if (!tenantId || !templateId || !employeeId) {
       return Helper.response(false, 'templateId and employeeId are required', {}, res, 400);
     }
@@ -1578,6 +1674,7 @@ exports.previewDocument = async (req, res) => {
 
     const vars = await buildVariableMap(tenantId, employeeId, hrName, issueDate);
     if (!vars) return Helper.response(false, 'Employee not found', {}, res, 404);
+    vars.input_fields = normalizeFieldValues(fieldValues);
 
     const filled = fillDocumentBody(template, vars);
 
@@ -1637,7 +1734,7 @@ exports.saveGeneratedDocument = async (req, res) => {
   try {
     const tenantId = req.users?.tenantId;
     const branchId = req.body?.branchId || req.users?.branchId || null;
-    const { templateId, employeeId, filledHtml, variables, hrName } = req.body;
+    const { templateId, employeeId, filledHtml, variables, hrName, fieldValues } = req.body;
     if (!tenantId || !templateId || !employeeId) {
       return Helper.response(false, 'templateId and employeeId are required', {}, res, 400);
     }
@@ -1650,6 +1747,7 @@ exports.saveGeneratedDocument = async (req, res) => {
     if (!html) {
       const vars = await buildVariableMap(tenantId, employeeId, hrName);
       if (!vars) return Helper.response(false, 'Employee not found', {}, res, 404);
+      vars.input_fields = normalizeFieldValues(fieldValues);
       snapshot = vars;
       const filled = fillDocumentBody(template, vars);
       const letterheadDataUrl = template.letterheadBlank
@@ -1711,16 +1809,18 @@ exports.saveGeneratedDocument = async (req, res) => {
 exports.listGeneratedDocuments = async (req, res) => {
   try {
     const tenantId = req.users?.tenantId;
-    const { employeeId } = req.body;
+    const { employeeId, limit } = req.body;
     if (!tenantId) return Helper.response(false, 'Unauthorized', {}, res, 401);
 
     const where = { tenantId };
     if (employeeId) where.employeeId = employeeId;
 
+    const cap = Math.min(Math.max(parseInt(limit, 10) || 2000, 1), 5000);
+
     const rows = await GeneratedDocument.findAll({
       where,
       order: [['createdAt', 'DESC']],
-      limit: 100,
+      limit: cap,
       attributes: { exclude: ['filledHtml'] },
     });
     return Helper.response(true, 'Generated documents', rows, res, 200);

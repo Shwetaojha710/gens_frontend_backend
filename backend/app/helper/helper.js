@@ -81,7 +81,18 @@ Helper.validateAccountNumber = (accountNumber) => {
   return accountRegex.test(accountNumber);
 };
 
-Helper.isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+Helper.isValidEmail = (email) =>
+  /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)+$/.test(
+    String(email || "").trim(),
+  );
+
+/** Person name: letters, spaces, apostrophe, hyphen; min 2 chars; no digits. */
+Helper.isValidPersonName = (name) => {
+  const v = String(name || "").trim();
+  if (v.length < 2 || v.length > 60) return false;
+  if (/\d/.test(v)) return false;
+  return /^[\p{L}](?:[\p{L}\s'.-]{0,58}[\p{L}])?$/u.test(v);
+};
 Helper.isValidAadhaar = (aadhaar) => /^\d{12}$/.test(aadhaar);
 Helper.isValidPAN = (pan) => /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan);
 Helper.isValidMobile = (mobile) => /^[6-9]\d{9}$/.test(mobile);

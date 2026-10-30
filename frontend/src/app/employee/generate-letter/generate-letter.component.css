@@ -1,8 +1,332 @@
+/* Full-width — match All Letters / other employee pages */
+.gl-page {
+  width: 100%;
+  max-width: none;
+}
+
+.gl-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+.gl-subtitle {
+  margin-top: 0.2rem;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.gl-btn {
+  font-weight: 600;
+  font-size: 0.82rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 8px;
+}
+
+/* Panels */
+.gl-panel {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+  overflow: visible;
+  position: relative;
+  z-index: 1;
+}
+.gl-panel--add {
+  z-index: 40;
+  border-color: #99f6e4;
+  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.1);
+}
+.gl-panel__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.9rem 1.15rem;
+  border-bottom: 1px solid #eef2f7;
+  background: #fafbfc;
+  border-radius: 12px 12px 0 0;
+}
+.gl-panel__head--list {
+  background: #fff;
+}
+.gl-panel__title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+.gl-panel__hint {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 0.1rem;
+}
+.gl-panel__body {
+  padding: 1rem 1.15rem 1.15rem;
+}
+
+.gl-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin-bottom: 0.35rem;
+}
+.gl-control {
+  min-height: 38px;
+  border-radius: 8px;
+  border-color: #dbe3ec;
+}
+.gl-btn-preview {
+  min-height: 38px;
+  font-weight: 700;
+  border-radius: 8px;
+}
+
+/* Compact chips instead of big stat cards */
+.gl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.gl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.gl-chip b {
+  font-size: 0.85rem;
+  color: #0f172a;
+}
+.gl-chip--teal {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+.gl-chip--teal b {
+  color: #0f766e;
+}
+.gl-chip--blue {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+.gl-chip--blue b {
+  color: #0369a1;
+}
+
+/* Toolbar */
+.gl-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+}
+.gl-search {
+  flex: 1 1 240px;
+  max-width: 360px;
+  border-radius: 8px;
+  min-height: 38px;
+}
+.gl-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: #475569;
+  cursor: pointer;
+  user-select: none;
+}
+.gl-check input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #00b4a6;
+}
+
+/* Table */
+.gl-table-wrap {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: auto;
+  max-height: min(520px, 55vh);
+}
+.gl-table {
+  margin: 0;
+  font-size: 0.9rem;
+}
+.gl-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  white-space: nowrap;
+  padding: 0.7rem 0.9rem;
+}
+.gl-table tbody td {
+  padding: 0.75rem 0.9rem;
+  border-color: #f1f5f9;
+  vertical-align: middle;
+}
+.gl-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.gl-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #0081c9, #00d2b4);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.gl-doc-pill {
+  display: inline-block;
+  max-width: 260px;
+  padding: 0.18rem 0.55rem;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+.gl-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  justify-content: flex-end;
+}
+.btn-xs {
+  font-size: 0.7rem;
+  padding: 0.22rem 0.5rem;
+  line-height: 1.3;
+  border-radius: 6px;
+}
+.gl-act {
+  font-weight: 600;
+  border: 1px solid;
+  background: #fff;
+}
+.gl-act--view {
+  color: #0369a1;
+  border-color: #7dd3fc;
+}
+.gl-act--view:hover {
+  background: #e0f2fe;
+}
+.gl-act--print {
+  color: #475569;
+  border-color: #cbd5e1;
+}
+.gl-act--print:hover {
+  background: #f1f5f9;
+}
+.gl-act--pdf {
+  color: #b91c1c;
+  border-color: #fca5a5;
+}
+.gl-act--pdf:hover {
+  background: #fef2f2;
+}
+.gl-act--word {
+  color: #15803d;
+  border-color: #86efac;
+}
+.gl-act--word:hover {
+  background: #f0fdf4;
+}
+
+.gl-pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}
+
+.gl-empty {
+  text-align: center;
+  padding: 2.5rem 1rem;
+}
+.gl-empty__title {
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 0.35rem;
+}
+
+/* Preview inside Add panel */
+.gl-preview {
+  border-top: 1px solid #e2e8f0;
+}
+.gl-preview__bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 1.15rem;
+  background: #f8fafc;
+}
+.gl-preview__title {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #0f172a;
+}
 .preview-iframe {
   width: 100%;
-  min-height: 80vh;
+  min-height: 70vh;
   border: 0;
   background: #e8eaed;
+  display: block;
+  border-radius: 0 0 12px 12px;
+}
+
+:host ::ng-deep .emp-select {
+  position: relative;
+  z-index: 40;
+}
+:host ::ng-deep .emp-select .ng-select-container {
+  min-height: 38px;
+  border-color: #dbe3ec;
+  border-radius: 8px;
+}
+:host ::ng-deep .emp-select.ng-select-focused:not(.ng-select-opened) > .ng-select-container {
+  border-color: #00b4a6;
+  box-shadow: 0 0 0 0.2rem rgba(0, 180, 166, 0.2);
+}
+
+@media (max-width: 768px) {
+  .gl-actions {
+    justify-content: flex-start;
+  }
+  .gl-doc-pill {
+    max-width: 140px;
+  }
+  .gl-search {
+    max-width: none;
+  }
 }
 
 /* Searchable employee picker, sized like the Bootstrap fields beside it */

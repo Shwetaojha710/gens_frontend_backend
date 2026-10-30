@@ -504,12 +504,12 @@
                       <!-- Latitude & Longitude -->
                       <div class="col-6">
                         <label class="form-label">Latitude</label>
-                        <input type="text" class="form-control" placeholder="Latitude"
+                        <input type="text" class="form-control" placeholder="Latitude (e.g. 19.1550)"
                           [(ngModel)]="newBranch['latitude']" />
                       </div>
                       <div class="col-6">
                         <label class="form-label">Longitude</label>
-                        <input type="text" class="form-control" placeholder="Longitude"
+                        <input type="text" class="form-control" placeholder="Longitude (e.g. 72.8500)"
                           [(ngModel)]="newBranch['longitude']" />
                       </div>
 
@@ -519,6 +519,14 @@
                           (click)="fetchLocation()">
                           <i class="bx bx-current-location"></i>&nbsp;Use My Current Location
                         </button>
+                      </div>
+
+                      <!-- Range (metres) around the branch location -->
+                      <div class="col-12">
+                        <label class="form-label">Range (metres)</label>
+                        <input type="number" class="form-control" min="1" max="100000" step="1"
+                          placeholder="Range in metres (e.g. 100)" [(ngModel)]="newBranch['range']" />
+                        <small class="text-muted">Allowed distance from the latitude / longitude above.</small>
                       </div>
 
                       <!-- Image Upload -->
@@ -576,12 +584,12 @@
                       <!-- Latitude & Longitude -->
                       <div class="col-6">
                         <label class="form-label">Latitude</label>
-                        <input type="text" class="form-control" placeholder="Latitude"
+                        <input type="text" class="form-control" placeholder="Latitude (e.g. 19.1550)"
                           [(ngModel)]="editBranch['latitude']" />
                       </div>
                       <div class="col-6">
                         <label class="form-label">Longitude</label>
-                        <input type="text" class="form-control" placeholder="Longitude"
+                        <input type="text" class="form-control" placeholder="Longitude (e.g. 72.8500)"
                           [(ngModel)]="editBranch['longitude']" />
                       </div>
 
@@ -591,6 +599,14 @@
                           (click)="fetchLocationForEdit()">
                           <i class="bx bx-current-location"></i>&nbsp;Use My Current Location
                         </button>
+                      </div>
+
+                      <!-- Range (metres) around the branch location -->
+                      <div class="col-12">
+                        <label class="form-label">Range (metres)</label>
+                        <input type="number" class="form-control" min="1" max="100000" step="1"
+                          placeholder="Range in metres (e.g. 100)" [(ngModel)]="editBranch['range']" />
+                        <small class="text-muted">Allowed distance from the latitude / longitude above.</small>
                       </div>
 
                       <!-- Status -->

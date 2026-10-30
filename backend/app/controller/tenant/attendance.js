@@ -4,6 +4,7 @@ const attendance = require("../../models/attendance");
 const attendanceSetting = require("../../models/attendanceSetting");
 const deduction = require("../../models/deductions");
 const moment = require("moment");
+const momentTz = require("moment-timezone");
 const Shift = require("../../models/shift");
 const empPersonal = require("../../models/empPersonal");
 const ContractualDayApproval = require("../../models/contractual_day_approval");
@@ -872,6 +873,36 @@ exports.getLateAttendance = async (req, res) => {
   }
 };
 
+/**
+ * Normalises a stored check-in/out value to "HH:mm:ss" for <input type="time" step="1">.
+ * Handles "YYYY-MM-DD H:mm[:ss]", "H:mm[:ss]", 12-hour "h:mm AM", and ISO /
+ * Date values (shown in IST). Returns null when the value cannot be read.
+ */
+const formatClockTime = (raw) => {
+  if (raw == null || raw === "" || raw === "--") return null;
+  const pad = (n) => String(n).padStart(2, "0");
+
+  if (!(raw instanceof Date)) {
+    const s = String(raw).trim();
+    const m = s.match(/^(?:\d{4}-\d{2}-\d{2}\s+)?(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?\s*([AaPp][Mm])?$/);
+    if (m) {
+      let h = Number(m[1]);
+      const ampm = m[4] && m[4].toLowerCase();
+      if (ampm === "pm" && h < 12) h += 12;
+      if (ampm === "am" && h === 12) h = 0;
+      if (h > 23 || Number(m[2]) > 59 || Number(m[3] || 0) > 59) return null;
+      return `${pad(h)}:${m[2]}:${m[3] || "00"}`;
+    }
+    // ISO without offset is IST wall-clock time; with Z/offset convert to IST
+    const iso = /[zZ]|[+-]\d{2}:?\d{2}$/.test(s)
+      ? momentTz(s, momentTz.ISO_8601).tz("Asia/Kolkata")
+      : momentTz.tz(s, momentTz.ISO_8601, "Asia/Kolkata");
+    return iso.isValid() ? iso.format("HH:mm:ss") : null;
+  }
+  const d = momentTz(raw).tz("Asia/Kolkata");
+  return d.isValid() ? d.format("HH:mm:ss") : null;
+};
+
 exports.getDateWiseAttendance = async (req, res) => {
   const { emp_id, startDate, endDate } = req.body;
   const tenantId = req.users && req.users.tenantId;
@@ -896,28 +927,7 @@ exports.getDateWiseAttendance = async (req, res) => {
     const toStr = end.format("YYYY-MM-DD");
     const monthEnd = new Date(endDate);
 
-    const formatTime = (raw) => {
-      if (!raw) return "--";
-      const s = String(raw).trim();
-      // Prefer HH:mm:ss for time inputs (step=1)
-      if (s.includes(" ")) {
-        const part = s.split(" ")[1] || "";
-        if (part.length >= 8) return part.slice(0, 8);
-        if (part.length >= 5) return `${part.slice(0, 5)}:00`;
-      }
-      if (/^\d{2}:\d{2}:\d{2}/.test(s)) return s.slice(0, 8);
-      if (/^\d{2}:\d{2}$/.test(s)) return `${s}:00`;
-      try {
-        return new Date(raw).toLocaleTimeString("en-IN", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          hour12: false,
-        });
-      } catch {
-        return "--";
-      }
-    };
+    const formatTime = (raw) => formatClockTime(raw) || "--";
 
     const holidayLabel = (typeName) => {
       const n = String(typeName || "").toLowerCase();
@@ -935,8 +945,14 @@ exports.getDateWiseAttendance = async (req, res) => {
           branchId,
           status: "active",
           joiningDate: { [Op.lte]: monthEnd },
+          // rejected self-registration requests are not employees
+          [Op.or]: [{ emp_status: { [Op.is]: null } }, { emp_status: { [Op.ne]: "rejected" } }],
         },
         attributes: ["id", "firstName", "lastName", "shift_id"],
+        order: [
+          ["firstName", "ASC"],
+          ["lastName", "ASC"],
+        ],
         raw: true,
       });
       records = await attendance.findAll({
@@ -1106,7 +1122,9 @@ exports.getDateWiseAttendance = async (req, res) => {
         id: r.id,
         checkIn: r.check_in_time || null,
         checkOut: r.check_out_time || null,
-        status: r.check_in_time ? "Present" : "Absent",
+        // Marked present (e.g. by admin) or checked in — same rule as the dashboard
+        isPresent: !!r.is_present || !!r.check_in_time,
+        status: r.check_in_time || r.is_present ? "Present" : "Absent",
       };
     });
 
@@ -1133,7 +1151,7 @@ exports.getDateWiseAttendance = async (req, res) => {
         // Leave first (First Half / Second Half / Full Day Leave)
         if (leaveStatus) {
           status = leaveStatus;
-        } else if (entry?.checkIn) {
+        } else if (entry?.isPresent) {
           status = "Present";
         } else if (hol) {
           status = hol.statusLabel; // Restricted Holiday | Gazetted Holiday
@@ -1658,17 +1676,24 @@ exports.addHoliday = async (req, res) => {
       );
     }
 
+    // Duplicate = same type, name (case-insensitive) and date in this branch
     const existingHoliday = await Holiday.findOne({
-      where: { tenantId, holiday_type, branchId, holiday_name, date },
+      where: {
+        tenantId,
+        holiday_type,
+        branchId,
+        date,
+        [Op.and]: [where(fn("LOWER", col("holiday_name")), String(holiday_name).trim().toLowerCase())],
+      },
     });
     if (existingHoliday) {
       Helper.deleteUploadedFiles(req.files);
       return Helper.response(
         false,
-        "Holiday already exists for this tenant.",
+        `Holiday "${String(holiday_name).trim()}" already exists on this date. Duplicate records are not allowed.`,
         [],
         res,
-        400,
+        409,
       );
     }
 
@@ -1811,6 +1836,27 @@ exports.updateHoliday = async (req, res) => {
     if (!holidayExists) {
       Helper.deleteUploadedFiles(req.files);
       return Helper.response(false, "Holiday not found", null, res, 404);
+    }
+
+    const duplicateHoliday = await Holiday.findOne({
+      where: {
+        tenantId,
+        holiday_type,
+        branchId,
+        date,
+        id: { [Op.ne]: id },
+        [Op.and]: [where(fn("LOWER", col("holiday_name")), String(holiday_name).trim().toLowerCase())],
+      },
+    });
+    if (duplicateHoliday) {
+      Helper.deleteUploadedFiles(req.files);
+      return Helper.response(
+        false,
+        `Holiday "${String(holiday_name).trim()}" already exists on this date. Duplicate records are not allowed.`,
+        null,
+        res,
+        409,
+      );
     }
 
     const oldHoliday = toPlain(holidayExists);

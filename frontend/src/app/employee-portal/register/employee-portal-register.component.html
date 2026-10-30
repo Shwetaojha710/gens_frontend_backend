@@ -1,0 +1,306 @@
+<div class="gens-login">
+  <div class="gens-login__wave" aria-hidden="true"></div>
+  <div class="gens-login__shell">
+    <aside class="gens-login__left">
+      <div class="gens-login__intro">
+        <p class="gens-login__welcome">Join your company on</p>
+        <h1>
+          <span class="gens-login__brand-dark">GENS</span>
+          <span class="gens-login__brand-teal"> Employee Portal</span>
+        </h1>
+        <p class="gens-login__tagline">
+          Register with the same details as the mobile app — company code, profile photo, and personal info.
+        </p>
+      </div>
+
+      <ul class="gens-login__features">
+        <li>
+          <span class="gens-login__feat-icon"><i class="ri ri-user-add-line"></i></span>
+          <div>
+            <strong>Quick registration</strong>
+            <small>Same fields as the GENS mobile app</small>
+          </div>
+        </li>
+        <li>
+          <span class="gens-login__feat-icon"><i class="ri ri-image-line"></i></span>
+          <div>
+            <strong>Live photo</strong>
+            <small>Capture passport-size photo from camera</small>
+          </div>
+        </li>
+        <li>
+          <span class="gens-login__feat-icon"><i class="ri ri-smartphone-line"></i></span>
+          <div>
+            <strong>OTP login next</strong>
+            <small>After register, sign in with company code &amp; mobile</small>
+          </div>
+        </li>
+      </ul>
+    </aside>
+
+    <div class="gens-login__center epr-hide-md">
+      <div class="gens-login__hero-wrap">
+        <img class="gens-login__hero-img" src="assets/img/bg-login/Hero.png" alt="" />
+      </div>
+    </div>
+
+    <main class="gens-login__right">
+      <div class="gens-login__card epr-card">
+        <div class="gens-login__card-logo">
+          <img src="assets/img/marketing/gens-logo.png" alt="GENS.Ai" />
+        </div>
+
+        <h2>Employee registration</h2>
+        <p class="gens-login__sub">Create your profile to access the employee portal</p>
+
+        <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="epr-form">
+          <div class="epr-photo-block">
+            <div class="epr-photo-panel" *ngIf="!cameraOpen">
+              <div class="epr-photo-preview" [class.has-photo]="!!profilePreview">
+                <img *ngIf="profilePreview" [src]="profilePreview" alt="Profile preview" />
+                <span *ngIf="!profilePreview" class="epr-photo-placeholder">
+                  <i class="ri ri-camera-line"></i>
+                </span>
+              </div>
+              <div class="epr-photo-actions">
+                <div class="epr-photo-btns">
+                  <button
+                    type="button"
+                    class="gens-btn gens-btn--primary"
+                    (click)="openCamera()"
+                  >
+                    <i class="ri ri-camera-line"></i>
+                    {{ profileFile ? 'Retake photo' : 'Take live photo' }}
+                  </button>
+                </div>
+                <small class="epr-photo-hint">
+                  Clear face photo only — not bottles, bags, or other objects.
+                </small>
+              </div>
+            </div>
+
+            <div class="epr-camera" *ngIf="cameraOpen">
+              <p class="epr-camera__title">
+                {{ captureReview ? 'Review your photo' : 'Live photo' }}
+              </p>
+
+              <div
+                class="epr-camera__frame"
+                [class.is-review]="captureReview"
+                (click)="$event.preventDefault(); $event.stopPropagation()"
+              >
+                <video
+                  #cameraVideo
+                  autoplay
+                  playsinline
+                  muted
+                  class="epr-camera__video"
+                  [class.is-hidden]="captureReview"
+                ></video>
+                <img
+                  *ngIf="captureReview && pendingPreview"
+                  class="epr-camera__still"
+                  [src]="pendingPreview"
+                  alt="Captured photo"
+                />
+                <div class="epr-camera__guide" *ngIf="!captureReview" aria-hidden="true"></div>
+              </div>
+
+              <p class="epr-camera__tip" *ngIf="!captureReview && cameraStarting">Starting camera…</p>
+              <p
+                class="epr-camera__tip"
+                [class.epr-camera__tip--ok]="sensorOk"
+                [class.epr-camera__tip--warn]="!sensorOk"
+                *ngIf="!captureReview && !cameraStarting"
+              >
+                {{ sensorHint }}
+              </p>
+              <p class="epr-camera__tip epr-camera__tip--ok" *ngIf="captureReview">
+                Looking good? Submit photo or retake
+              </p>
+
+              <div class="epr-camera__actions" *ngIf="!captureReview">
+                <button type="button" class="epr-cam-btn epr-cam-btn--ghost" (click)="closeCamera()">
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  class="epr-cam-btn epr-cam-btn--primary"
+                  (click)="capturePhoto($event)"
+                  [disabled]="cameraStarting || !cameraReady || capturing || !sensorOk"
+                >
+                  <i class="ri ri-camera-fill"></i>
+                  {{
+                    capturing
+                      ? 'Capturing…'
+                      : cameraStarting || !cameraReady
+                        ? 'Preparing…'
+                        : !sensorOk
+                          ? 'Fix lighting / face'
+                          : 'Capture'
+                  }}
+                </button>
+              </div>
+
+              <div class="epr-camera__actions" *ngIf="captureReview">
+                <button type="button" class="epr-cam-btn epr-cam-btn--ghost" (click)="retakePhoto()">
+                  Retake
+                </button>
+                <button type="button" class="epr-cam-btn epr-cam-btn--primary" (click)="submitCapturedPhoto()">
+                  <i class="ri ri-check-line"></i> Submit photo
+                </button>
+              </div>
+              <p class="epr-camera__err" *ngIf="cameraError">{{ cameraError }}</p>
+            </div>
+          </div>
+
+          <div class="gens-field epr-company">
+            <span>Company Code <em>*</em></span>
+            <div class="epr-company-row">
+              <div
+                class="gens-field__control"
+                [class.is-invalid]="isInvalid('companyCode') || !!tenantError"
+                [class.is-valid]="tenantVerified"
+              >
+                <i class="ri ri-building-line"></i>
+                <input
+                  type="text"
+                  formControlName="companyCode"
+                  placeholder="Company code"
+                  autocomplete="organization"
+                  (blur)="onCompanyCodeBlur()"
+                  (keydown.enter)="$event.preventDefault(); verifyCompanyCode()"
+                />
+              </div>
+              <button
+                type="button"
+                class="epr-verify-btn"
+                (click)="verifyCompanyCode()"
+                [disabled]="verifyingTenant"
+              >
+                {{ verifyingTenant ? '…' : 'Verify' }}
+              </button>
+            </div>
+            <small class="gens-field__ok" *ngIf="tenantVerified && verifiedCompanyName">
+              <i class="ri ri-checkbox-circle-fill"></i> {{ verifiedCompanyName }}
+            </small>
+            <small class="gens-field__error" *ngIf="tenantError">{{ tenantError }}</small>
+            <small class="gens-field__error" *ngIf="!tenantError && isInvalid('companyCode')">
+              Company code is required.
+            </small>
+          </div>
+
+          <div class="epr-row">
+            <label class="gens-field">
+              <span>First Name <em>*</em></span>
+              <div class="gens-field__control" [class.is-invalid]="isInvalid('firstName')">
+                <i class="ri ri-user-line"></i>
+                <input
+                  type="text"
+                  formControlName="firstName"
+                  placeholder="First name"
+                  autocomplete="given-name"
+                  maxlength="60"
+                  (input)="onNameInput($event, 'firstName')"
+                />
+              </div>
+              <small class="gens-field__error" *ngIf="isInvalid('firstName')">{{ nameErrorMessage('firstName') }}</small>
+            </label>
+            <label class="gens-field">
+              <span>Last Name <em>*</em></span>
+              <div class="gens-field__control" [class.is-invalid]="isInvalid('lastName')">
+                <i class="ri ri-user-line"></i>
+                <input
+                  type="text"
+                  formControlName="lastName"
+                  placeholder="Last name"
+                  autocomplete="family-name"
+                  maxlength="60"
+                  (input)="onNameInput($event, 'lastName')"
+                />
+              </div>
+              <small class="gens-field__error" *ngIf="isInvalid('lastName')">{{ nameErrorMessage('lastName') }}</small>
+            </label>
+          </div>
+
+          <div class="epr-row">
+            <label class="gens-field">
+              <span>Mobile Number <em>*</em></span>
+              <div class="gens-field__control" [class.is-invalid]="isInvalid('mobile')">
+                <i class="ri ri-smartphone-line"></i>
+                <input
+                  type="tel"
+                  formControlName="mobile"
+                  placeholder="10-digit mobile"
+                  maxlength="10"
+                  inputmode="numeric"
+                  (input)="onPhoneInput($event)"
+                />
+              </div>
+              <small class="gens-field__error" *ngIf="isInvalid('mobile')">Enter a valid 10-digit mobile (6–9).</small>
+            </label>
+            <label class="gens-field">
+              <span>Email <em>*</em></span>
+              <div class="gens-field__control" [class.is-invalid]="isInvalid('email')">
+                <i class="ri ri-mail-line"></i>
+                <input
+                  type="email"
+                  formControlName="email"
+                  placeholder="name@company.com"
+                  autocomplete="email"
+                  maxlength="100"
+                  (input)="onEmailInput($event)"
+                />
+              </div>
+              <small class="gens-field__error" *ngIf="isInvalid('email')">{{ emailErrorMessage() }}</small>
+            </label>
+          </div>
+
+          <div class="epr-row epr-row--dob">
+            <label class="gens-field">
+              <span>Date of Birth <em>*</em></span>
+              <div class="gens-field__control" [class.is-invalid]="isInvalid('dateOfBirth')">
+                <i class="ri ri-calendar-line"></i>
+                <input
+                  type="date"
+                  formControlName="dateOfBirth"
+                  [attr.max]="maxDob"
+                  (change)="onDobChange()"
+                />
+              </div>
+              <small class="gens-field__error" *ngIf="isInvalid('dateOfBirth')">{{ dobErrorMessage() }}</small>
+            </label>
+            <label class="gens-field">
+              <span>Age</span>
+              <div class="gens-field__control">
+                <i class="ri ri-cake-2-line"></i>
+                <input type="text" formControlName="age" placeholder="Auto" readonly />
+              </div>
+            </label>
+          </div>
+
+          <label class="gens-field">
+            <span>Gender <em>*</em></span>
+            <div class="gens-field__control" [class.is-invalid]="isInvalid('gender')">
+              <i class="ri ri-men-line"></i>
+              <select formControlName="gender">
+                <option value="" disabled>Select gender</option>
+                <option *ngFor="let g of genders" [value]="g.value">{{ g.label }}</option>
+              </select>
+            </div>
+            <small class="gens-field__error" *ngIf="isInvalid('gender')">Gender is required.</small>
+          </label>
+
+          <button type="submit" class="gens-btn gens-btn--primary epr-submit" [disabled]="loading">
+            {{ loading ? 'Registering…' : 'Register' }}
+          </button>
+        </form>
+
+        <p class="gens-login__footer-text">
+          Already registered?
+          <a class="gens-link" routerLink="/employee-portal/login">Employee login</a>
+        </p>
+      </div>
+    </main>
+  </div>
+</div>

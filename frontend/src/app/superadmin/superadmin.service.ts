@@ -153,6 +153,15 @@ export class SuperadminService {
   }
 
   /** Read-only tenant snapshot: employees, leaves, attendance, holidays */
+  /** Multipart: companyName, companyAddress, adminEmail, logo?, removeLogo? */
+  updateTenantDetails(tenantId: string, payload: FormData): Observable<any> {
+    return this.http.put(`${this.resolvedBaseUrl()}superadmin/tenants/${tenantId}`, payload, {
+      headers: this.authHeaders(),
+      withCredentials: true,
+      responseType: 'text',
+    });
+  }
+
   getTenantCompanySnapshot(tenantId: string): Observable<any> {
     return this.http.get(`${this.resolvedBaseUrl()}superadmin/tenants/${tenantId}/company-snapshot`, {
       headers: this.authHeaders(),

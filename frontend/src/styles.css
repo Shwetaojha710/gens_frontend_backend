@@ -155,3 +155,8 @@ div.dt-container div.dt-length select {
     border-color: #8bcbe3;
 }
 
+/* ng-select appendTo="body" — keep dropdown above cards/modals */
+.ng-dropdown-panel {
+  z-index: 3000 !important;
+}
+

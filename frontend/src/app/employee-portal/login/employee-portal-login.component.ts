@@ -10,6 +10,7 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { Notyf } from 'notyf';
 import { EmployeePortalService } from '../services/employee-portal.service';
+import { CompanyLogoService } from '../../services/company-logo.service';
 
 @Component({
   selector: 'app-employee-portal-login',
@@ -30,6 +31,7 @@ export class EmployeePortalLoginComponent {
     private fb: FormBuilder,
     private api: EmployeePortalService,
     private router: Router,
+    private companyLogo: CompanyLogoService,
   ) {
     this.tenantForm = this.fb.group({
       tenantId: ['', Validators.required],
@@ -132,7 +134,7 @@ export class EmployeePortalLoginComponent {
           | {
               token: string;
               user: { id: string; branchId?: string };
-              tenant?: { id: string; companyName: string; companyCode: string };
+              tenant?: { id: string; companyName: string; companyCode: string; logo?: string | null; logoDark?: string | null };
               currencyList?: unknown;
               baseUrl?: string;
               PORT?: string;
@@ -151,6 +153,7 @@ export class EmployeePortalLoginComponent {
         if (d.tenant) localStorage.setItem('empPortalTenant', JSON.stringify(d.tenant));
         if (d.currencyList) localStorage.setItem('empPortalCurrency', JSON.stringify(d.currencyList));
         if (d.baseUrl) localStorage.setItem('empPortalBaseUrl', String(d.baseUrl));
+        this.companyLogo.setLogos({ light: d.tenant?.logo, dark: d.tenant?.logoDark }, 'portal');
 
         this.notyf.success(String(res['message'] || 'Welcome!'));
         void this.router.navigate(['/employee-portal/dashboard']);

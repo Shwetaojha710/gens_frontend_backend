@@ -162,7 +162,8 @@ exports.getdocumentDD = async (req, res) => {
         }
         const documentTypes = await documentType.findAll({
             where: { tenantId, branchId, status:'active' },
-            attributes: ['id', 'type']
+            attributes: ['id', 'type'],
+            order: [['type', 'ASC']]
         });
 
         if (documentTypes.length === 0) {

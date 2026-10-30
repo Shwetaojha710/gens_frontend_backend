@@ -37,6 +37,12 @@ class PageBreakBlot extends BlockEmbed {
   }
 }
 
+/** Input field name for {{field:Name}}: letters, digits, spaces and . / - _ only (no HTML escaping issues). */
+function cleanInputFieldName(value: unknown): string {
+  const name = String(value ?? '').replace(/\s+/g, ' ').trim();
+  return /^[A-Za-z0-9 ./_-]{1,40}$/.test(name) ? name : '';
+}
+
 /** Token the server replaces with the Annexure "A" salary table. */
 const ANNEXURE_TOKEN = '{{salary_annexure}}';
 
@@ -364,6 +370,8 @@ const QUILL_SIZE_WHITELIST = [
   '8px', '9px', '10px', '11px', '12px', '13px', '14px', '15px', '16px', '18px', '20px', '22px', '24px', '28px', '32px', '36px', '48px', '64px', '72px',
 ];
 const QUILL_FONT_WHITELIST = [
+  'Times New Roman',
+  'Times',
   'Arial',
   'Arial Black',
   'Arial Narrow',
@@ -394,8 +402,6 @@ const QUILL_FONT_WHITELIST = [
   'Rockwell',
   'Segoe UI',
   'Tahoma',
-  'Times',
-  'Times New Roman',
   'Trebuchet MS',
   'Verdana',
 ];
@@ -591,6 +597,34 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
   /** Font family list for Format bar + Quill toolbar */
   fontFamilyOptions = QUILL_FONT_WHITELIST;
   fontSizeOptions = QUILL_SIZE_WHITELIST.filter((s) => s.endsWith('pt'));
+
+  /**
+   * Date variable for Date format tool.
+   * `today` = insert fixed today's date; others insert {{key:format}} filled on Generate Letter.
+   */
+  dateVariableOptions: { id: string; label: string }[] = [
+    { id: 'issue_date', label: 'Issue Date' },
+    { id: 'joining_date', label: 'Joining Date' },
+    { id: 'date_of_birth', label: 'Date of Birth' },
+    { id: 'today', label: "Today (fixed text)" },
+  ];
+  /** Selected date variable for the Format / Quill Date tool (default Issue Date). */
+  selectedDateVariable = 'issue_date';
+
+  /** Format patterns for the Date tool (applied to selectedDateVariable). */
+  dateFormatOptions: { id: string; label: string }[] = [
+    { id: 'dd/MM/yyyy', label: 'DD/MM/YYYY' },
+    { id: 'dd-MM-yyyy', label: 'DD-MM-YYYY' },
+    { id: 'dd MMM yyyy', label: 'DD MMM YYYY' },
+    { id: 'dd MMMM yyyy', label: 'DD MMMM YYYY' },
+    { id: 'd MMMM yyyy', label: 'D MMMM YYYY' },
+    { id: 'yyyy-MM-dd', label: 'YYYY-MM-DD' },
+    { id: 'MM/dd/yyyy', label: 'MM/DD/YYYY' },
+    { id: 'MMMM d, yyyy', label: 'Month D, YYYY' },
+    // "do" = ordinal day with raised suffix: 15th September, 2026
+    { id: 'do MMMM, yyyy', label: '15th Month, YYYY' },
+    { id: 'do MMMM yyyy', label: '15th Month YYYY' },
+  ];
 
   /** All tenant branches for assign multi-select */
   branchList: { id: string; name: string }[] = [];
@@ -1198,6 +1232,34 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
     canvasWmm: number;
   } | null = null;
 
+  /**
+   * Toolbar "Input Field": a named blank ({{field:Ref No}}) typed in on the Generate HR
+   * Letter page for each letter (reference number, amount, any text).
+   */
+  insertInputField(): void {
+    if (!this.quill) return;
+    const range = this.quill.getSelection(true);
+    const index = range ? range.index : Math.max(0, this.quill.getLength() - 1);
+    Swal.fire({
+      title: 'Add input field',
+      text: 'Name of the field. You type its value when generating the letter.',
+      input: 'text',
+      inputValue: 'Ref No',
+      inputPlaceholder: 'e.g. Ref No, Notice Period, Amount',
+      showCancelButton: true,
+      confirmButtonText: 'Insert',
+      inputValidator: (v) => (cleanInputFieldName(v) ? null : 'Use letters, numbers, spaces or . / - _'),
+    }).then((r) => {
+      const name = r.isConfirmed ? cleanInputFieldName(r.value) : '';
+      if (!name || !this.quill) return;
+      const token = `{{field:${name}}}`;
+      this.quill.insertText(index, token, { bold: true }, 'user');
+      this.quill.setSelection(index + token.length, 0, 'user');
+      this.form.bodyHtml = this.quill.root.innerHTML;
+      this.refreshPrintPreview(false);
+    });
+  }
+
   /** Toolbar "Text Box": insert a movable box on its own row at the cursor. */
   insertTextBox(): void {
     const inner = textBoxRowInnerHtml([DEFAULT_TEXT_BOX]);
@@ -1786,33 +1848,18 @@ export class DocumentTemplateComponent implements OnInit, OnDestroy {
       return;
     }
     try {
-      const html2pdfMod: any = await import('html2pdf.js');
-      const html2pdf = html2pdfMod.default ?? html2pdfMod;
+      const { downloadHtmlAsPdf } = await import('../../shared/utils/html-to-pdf.util');
       const dims = this.pageDims;
-      const host = document.createElement('div');
-      host.className = 'hr-pdf-host';
-      host.style.cssText = `position:fixed;left:-10000px;top:0;width:${dims.wMm}mm;`;
-      host.innerHTML = html; // <script> doesn't run via innerHTML — paginate here instead
-      document.body.appendChild(host);
-      await Promise.all(
-        Array.from(host.querySelectorAll('img')).map((img) =>
-          img.complete ? Promise.resolve() : img.decode().catch(() => undefined),
-        ),
-      );
-      hrPaginate(host.querySelector('[data-hr-root]'), this.lastPaginateCfg || {});
       const name = (this.form.name || 'document').replace(/[^\w\-]+/g, '_').slice(0, 60);
-      await html2pdf()
-        .set({
-          margin: 0,
-          filename: `${name}.pdf`,
-          image: { type: 'jpeg', quality: 0.95 },
-          html2canvas: { scale: 2, useCORS: true, logging: false },
-          jsPDF: { unit: 'mm', format: [dims.wMm, dims.hMm], orientation: 'portrait' },
-          pagebreak: { mode: ['css', 'legacy'], before: '.page-break' },
-        })
-        .from(host)
-        .save();
-      document.body.removeChild(host);
+      await downloadHtmlAsPdf({
+        html,
+        filename: `${name}.pdf`,
+        widthMm: dims.wMm,
+        heightMm: dims.hMm,
+        prepare: (doc) => {
+          hrPaginate(doc.querySelector('[data-hr-root]'), this.lastPaginateCfg || {});
+        },
+      });
       this.notyf.success('PDF downloaded');
     } catch (err) {
       console.error('exportAsPdf', err);
@@ -3297,6 +3344,39 @@ ${paginatorScriptTag(paginateCfg)}
       this.quill.root.style.fontFamily = fam;
       this.quill.root.style.fontSize = size;
     }
+    this.syncQuillToolbarFontLabel(fam);
+  }
+
+  /**
+   * Quill font picker shows Arial when selection has no inline font.
+   * Mirror template default (usually Times New Roman) on the picker label.
+   */
+  private syncQuillToolbarFontLabel(fam?: string): void {
+    const font = fam || this.form?.defaultFontFamily || 'Times New Roman';
+    const root =
+      this.quillToolbarHost?.nativeElement ||
+      (document.querySelector('app-document-template .ql-toolbar') as HTMLElement | null);
+    if (!root) return;
+    const label = root.querySelector(
+      '.ql-picker.ql-font .ql-picker-label',
+    ) as HTMLElement | null;
+    if (!label) return;
+    label.setAttribute('data-value', font);
+  }
+
+  /** Keep Quill font picker in sync with caret formats. */
+  private syncFontUiFromSelection(): void {
+    if (!this.quill) return;
+    const range = this.quill.getSelection();
+    const fmt = range ? this.quill.getFormat(range) : this.quill.getFormat();
+    const raw = (fmt as any)?.font;
+    if (!raw) {
+      // No inline font → show template default (Times New Roman), not Arial
+      this.syncQuillToolbarFontLabel(this.form?.defaultFontFamily || 'Times New Roman');
+      return;
+    }
+    const fam = this.normalizeFontFamily(raw) || String(raw);
+    this.syncQuillToolbarFontLabel(fam);
   }
 
   /** Max page index count that should show letterhead (Infinity = all). */
@@ -3469,7 +3549,8 @@ ${paginatorScriptTag(paginateCfg)}
             [{ list: 'ordered' }, { list: 'bullet' }],
             [{ indent: '-1' }, { indent: '+1' }],
             ['blockquote', 'link', 'image', 'table'],
-            ['pagebreak', 'textbox'],
+            ['pagebreak', 'textbox', 'inputfield'],
+            [{ dateformat: self.dateFormatOptions.map((d) => d.id) }],
             ['clean'],
           ],
           handlers: {
@@ -3478,6 +3559,13 @@ ${paginatorScriptTag(paginateCfg)}
             },
             textbox() {
               self.insertTextBox();
+            },
+            inputfield() {
+              self.insertInputField();
+            },
+            dateformat(value: string) {
+              // Uses selectedDateVariable (Issue / Joining / DOB / Today)
+              if (value) self.insertDateFormatted(value);
             },
             table() {
               self.insertQuillTable();
@@ -3526,6 +3614,9 @@ ${paginatorScriptTag(paginateCfg)}
       // Keep raw HTML so imported tables/images/styles survive edits as much as possible
       this.form.bodyHtml = this.quill?.root.innerHTML || '';
       this.refreshPrintPreview(false);
+    });
+    this.quill.on('selection-change', (range: any) => {
+      if (range) this.syncFontUiFromSelection();
     });
   }
 
@@ -3622,13 +3713,17 @@ ${paginatorScriptTag(paginateCfg)}
       this.quill.setSelection(idx, 0, 'silent');
       range = this.quill.getSelection(true);
     }
-    // No selection length → set document default; with selection → format selected text
-    if (!range || range.length === 0) {
-      this.applyEditorChromeDefaults();
-    } else {
+    // With selection → format selected text; no selection → whole-doc default + chrome
+    if (range && range.length > 0) {
       this.quill.format('font', fam, 'user');
       this.form.bodyHtml = this.quill.root.innerHTML;
+    } else {
+      // Apply to all text so picker + body both show Times (not leftover Arial spans)
+      this.quill.formatText(0, this.quill.getLength(), 'font', fam, 'user');
+      this.form.bodyHtml = this.quill.root.innerHTML;
+      this.applyEditorChromeDefaults();
     }
+    this.syncQuillToolbarFontLabel(fam);
     this.refreshPrintPreview(false);
   }
 
@@ -4785,6 +4880,114 @@ ${paginatorScriptTag(paginateCfg)}
     this.quill.setSelection(index + token.length, 0, 'user');
     this.form.bodyHtml = this.quill.root.innerHTML;
     this.refreshPrintPreview(false);
+  }
+
+  /**
+   * Toolbar Date format — insert at caret:
+   * - variable (issue_date / joining_date / date_of_birth) → {{key:format}} (or {{key}} for default)
+   * - today → fixed formatted date text
+   */
+  insertDateFormatted(formatId: string): void {
+    if (!formatId) return;
+    const variable = this.selectedDateVariable || 'issue_date';
+
+    // Dynamic placeholder filled on Generate Letter
+    if (variable !== 'today') {
+      const token =
+        formatId === 'dd/MM/yyyy' ? `{{${variable}}}` : `{{${variable}:${formatId}}}`;
+      this.insertDateToken(token);
+      return;
+    }
+
+    // Fixed "today" text
+    const text = this.formatDateValue(new Date(), formatId);
+    if (!text) return;
+    this.insertDateToken(text, false);
+  }
+
+  /** Insert a date token/text (bold for variables) at the editor caret. */
+  private insertDateToken(text: string, asVariable = true): void {
+    // Fixed dates may carry a raised ordinal suffix (\u0001th\u0002) from formatDateValue
+    if (!asVariable && /\u0001/.test(text) && this.quill && !this.useRichEditor) {
+      const range = this.quill.getSelection(true);
+      let at = range ? range.index : Math.max(0, this.quill.getLength() - 1);
+      for (const [i, part] of text.split(/[\u0001\u0002]/).entries()) {
+        if (!part) continue;
+        this.quill.insertText(at, part, { script: i % 2 ? 'super' : false }, 'user');
+        at += part.length;
+      }
+      this.quill.setSelection(at, 0, 'user');
+      this.form.bodyHtml = this.quill.root.innerHTML;
+      this.refreshPrintPreview(false);
+      return;
+    }
+    // Other editors: plain "15th"
+    text = text.replace(/[\u0001\u0002]/g, '');
+    const html = asVariable
+      ? `<strong>${this.escapeHtml(text)}</strong>&nbsp;`
+      : this.escapeHtml(text);
+
+    if (this.useRichEditor) {
+      const el = this.getRichEl();
+      if (!el) {
+        this.form.bodyHtml = (this.form.bodyHtml || '') + (asVariable ? `<strong>${this.escapeHtml(text)}</strong>` : this.escapeHtml(text));
+        return;
+      }
+      this.saveRichSelection();
+      this.insertHtmlAtCaret(html);
+      return;
+    }
+    if (!this.quill) {
+      this.form.bodyHtml = (this.form.bodyHtml || '') + (asVariable ? `<strong>${this.escapeHtml(text)}</strong>` : this.escapeHtml(text));
+      this.refreshPrintPreview(false);
+      return;
+    }
+    const range = this.quill.getSelection(true);
+    const index = range ? range.index : Math.max(0, this.quill.getLength() - 1);
+    if (asVariable) {
+      this.quill.insertText(index, text, { bold: true }, 'user');
+    } else {
+      this.quill.insertText(index, text, 'user');
+    }
+    this.quill.setSelection(index + text.length, 0, 'user');
+    this.form.bodyHtml = this.quill.root.innerHTML;
+    this.refreshPrintPreview(false);
+  }
+
+  /** Format a Date with tokens: dd, d, MM, MMM, MMMM, yyyy, yy */
+  private formatDateValue(date: Date, pattern: string): string {
+    const d = date instanceof Date && !Number.isNaN(date.getTime()) ? date : new Date();
+    const day = d.getDate();
+    const month = d.getMonth(); // 0-based
+    const year = d.getFullYear();
+    const monthsShort = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    const monthsLong = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    const pad2 = (n: number) => String(n).padStart(2, '0');
+    // "do" = 15th; suffix wrapped in \u0001…\u0002 so the insert can raise it (superscript)
+    const suffix = day % 100 >= 11 && day % 100 <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[day % 10] || 'th';
+    return String(pattern)
+      .replace(/\bdo\b/g, `${day}\u0001${suffix}\u0002`)
+      .replace(/yyyy/g, String(year))
+      .replace(/yy/g, String(year).slice(-2))
+      .replace(/MMMM/g, monthsLong[month])
+      .replace(/MMM/g, monthsShort[month])
+      .replace(/MM/g, pad2(month + 1))
+      .replace(/dd/g, pad2(day))
+      .replace(/\bd\b/g, String(day));
+  }
+
+  private escapeHtml(s: string): string {
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   onLetterheadFile(event: Event): void {
