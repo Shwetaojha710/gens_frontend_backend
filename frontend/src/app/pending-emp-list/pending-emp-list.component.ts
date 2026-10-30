@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { Notyf } from 'notyf';
 import { DashboardService } from '../services/dashboard.service';
@@ -17,7 +17,8 @@ import Swal from 'sweetalert2';
   templateUrl: './pending-emp-list.component.html',
   styleUrl: './pending-emp-list.component.css'
 })
-export class PendingEmpListComponent {
+export class PendingEmpListComponent implements OnDestroy {
+  @ViewChild('adminCameraVideo') adminCameraVideo?: ElementRef<HTMLVideoElement>;
   baseurl: any
   notyf: Notyf = new Notyf();
   tenantDetails: any = {}
@@ -54,11 +55,16 @@ export class PendingEmpListComponent {
     this.maxDate = `${year}-${month}-${day}`;
   }
   back() {
+    this.closeAdminCamera();
     this.personalDetails = {}
     this.profileImagePreview = null;
     this.selectedProfileFile = null;
     this.createFlag = false
     this.employeeList = []
+  }
+
+  ngOnDestroy(): void {
+    this.closeAdminCamera();
   }
   applyFilters() {
     const value = this.searchTerm || '';
@@ -355,8 +361,13 @@ stats:any
   profileImagePreview: string | null = null;
   selectedProfileFile: File | null = null;
   readonly defaultPendingAvatar = 'assets/img/marketing/gens-logo.png';
+  cameraOpen = false;
+  cameraBusy = false;
+  cameraError: string | null = null;
+  private cameraStream: MediaStream | null = null;
 
   opencreate() {
+    this.closeAdminCamera();
     this.personalDetails = {}
     this.profileImagePreview = null;
     this.selectedProfileFile = null;
@@ -369,6 +380,7 @@ stats:any
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
+    this.closeAdminCamera();
     const ok = ['image/png', 'image/jpeg', 'image/jpg'];
     if (!ok.includes(file.type)) {
       this.notyf.error('Only JPG or PNG images are allowed.');
@@ -380,11 +392,116 @@ stats:any
       input.value = '';
       return;
     }
+    this.applyPickedFile(file);
+    input.value = '';
+  }
+
+  private applyPickedFile(file: File): void {
     this.selectedProfileFile = file;
     const reader = new FileReader();
     reader.onload = () => (this.profileImagePreview = reader.result as string);
     reader.readAsDataURL(file);
-    input.value = '';
+  }
+
+  async openAdminCamera(): Promise<void> {
+    this.cameraError = null;
+    this.cameraOpen = true;
+    this.cameraBusy = false;
+    await new Promise((r) => setTimeout(r, 50));
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error('Camera not supported in this browser.');
+      }
+      this.stopCameraStream();
+      this.cameraStream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 960 } },
+      });
+      const video = this.adminCameraVideo?.nativeElement;
+      if (!video) {
+        throw new Error('Camera view not ready. Try again.');
+      }
+      video.muted = true;
+      video.playsInline = true;
+      video.setAttribute('playsinline', 'true');
+      video.srcObject = this.cameraStream;
+      await video.play().catch(() => undefined);
+    } catch (e: any) {
+      this.cameraError = e?.message || 'Unable to open camera. Allow camera permission or use gallery.';
+      this.stopCameraStream();
+    }
+  }
+
+  closeAdminCamera(): void {
+    this.stopCameraStream();
+    this.cameraOpen = false;
+    this.cameraBusy = false;
+    this.cameraError = null;
+  }
+
+  private stopCameraStream(): void {
+    if (this.cameraStream) {
+      this.cameraStream.getTracks().forEach((t) => t.stop());
+      this.cameraStream = null;
+    }
+    const video = this.adminCameraVideo?.nativeElement;
+    if (video) video.srcObject = null;
+  }
+
+  async captureAdminPhoto(): Promise<void> {
+    if (this.cameraBusy) return;
+    this.cameraBusy = true;
+    this.cameraError = null;
+    try {
+      const video = this.adminCameraVideo?.nativeElement;
+      if (!video || !this.cameraStream || video.videoWidth < 2) {
+        throw new Error('Camera not ready yet. Wait a moment and try again.');
+      }
+      const outW = 480;
+      const outH = 640;
+      const canvas = document.createElement('canvas');
+      canvas.width = outW;
+      canvas.height = outH;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Could not capture frame.');
+
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+      const targetRatio = outW / outH;
+      const srcRatio = vw / vh;
+      let sx = 0;
+      let sy = 0;
+      let sw = vw;
+      let sh = vh;
+      if (srcRatio > targetRatio) {
+        sw = Math.round(vh * targetRatio);
+        sx = Math.round((vw - sw) / 2);
+      } else {
+        sh = Math.round(vw / targetRatio);
+        sy = Math.round((vh - sh) / 2);
+      }
+      // Mirror to match preview
+      ctx.translate(outW, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, outW, outH);
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.9),
+      );
+      if (!blob) throw new Error('Capture failed.');
+      const file = new File([blob], `live_${Date.now()}.jpg`, { type: 'image/jpeg' });
+      if (file.size > 2 * 1024 * 1024) {
+        throw new Error('Captured image is too large. Try again.');
+      }
+      this.applyPickedFile(file);
+      this.closeAdminCamera();
+      this.notyf.success('Photo captured. Save / approve to upload.');
+    } catch (e: any) {
+      this.cameraError = e?.message || 'Capture failed.';
+      this.notyf.error(this.cameraError);
+    } finally {
+      this.cameraBusy = false;
+    }
   }
 
   clearProfilePhotoPick(): void {
@@ -678,6 +795,7 @@ stats:any
       await this.getDesignation(this.personalDetails.departmentId);
     }
     this.loadReportingPersons();
+    this.closeAdminCamera();
     this.createFlag = true;
     this.updateFlag = true;
   }

@@ -11,7 +11,7 @@
 
 
         <div class="card-body">
-          <div class="row mb-3 align-items-center" *ngIf="updateFlag">
+          <div class="row mb-3 align-items-start" *ngIf="updateFlag">
             <div class="col-auto">
               <div class="pending-photo-preview">
                 <img
@@ -23,24 +23,54 @@
             </div>
             <div class="col">
               <label class="col-form-label fw-bold d-block mb-1">Employee photo</label>
-              <label class="btn btn-sm btn-outline-primary mb-0">
-                Change photo
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg"
-                  hidden
-                  (change)="onProfilePhotoPick($event)"
-                />
-              </label>
-              <button
-                type="button"
-                class="btn btn-sm btn-link text-danger"
-                *ngIf="selectedProfileFile"
-                (click)="clearProfilePhotoPick()"
-              >
-                Undo change
-              </button>
-              <small class="d-block text-muted mt-1">JPG / PNG, max 2 MB. Admin can replace before approve.</small>
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-primary"
+                  (click)="openAdminCamera()"
+                  [disabled]="cameraOpen"
+                >
+                  <i class="fas fa-camera me-1"></i> Live capture
+                </button>
+                <label class="btn btn-sm btn-outline-primary mb-0">
+                  <i class="fas fa-images me-1"></i> From gallery
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg"
+                    hidden
+                    (change)="onProfilePhotoPick($event)"
+                  />
+                </label>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-link text-danger"
+                  *ngIf="selectedProfileFile"
+                  (click)="clearProfilePhotoPick()"
+                >
+                  Undo change
+                </button>
+              </div>
+              <small class="d-block text-muted mt-1">JPG / PNG, max 2 MB. Live camera or gallery upload.</small>
+
+              <div class="pending-camera-panel mt-3" *ngIf="cameraOpen">
+                <div class="pending-camera-frame">
+                  <video #adminCameraVideo autoplay playsinline muted></video>
+                </div>
+                <p class="small text-danger mb-2" *ngIf="cameraError">{{ cameraError }}</p>
+                <div class="d-flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-success"
+                    (click)="captureAdminPhoto()"
+                    [disabled]="!!cameraError || cameraBusy"
+                  >
+                    {{ cameraBusy ? 'Capturing…' : 'Capture photo' }}
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" (click)="closeAdminCamera()">
+                    Close camera
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
