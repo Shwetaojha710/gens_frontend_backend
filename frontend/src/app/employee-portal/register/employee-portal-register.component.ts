@@ -20,7 +20,12 @@ import { Notyf } from 'notyf';
 import { Subscription } from 'rxjs';
 import { EmployeePortalService } from '../services/employee-portal.service';
 
-const MIN_REGISTER_AGE = 15;
+const MIN_REGISTER_AGE = 18;
+
+/** Letters (incl. Unicode), spaces, apostrophe, hyphen — no digits/symbols. */
+const PERSON_NAME_PATTERN = /^[\p{L}][\p{L}\s'.-]{0,58}[\p{L}]$|^[\p{L}]$/u;
+const EMAIL_PATTERN =
+  /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)+$/;
 
 function minAgeFromDob(minYears: number): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
@@ -33,6 +38,26 @@ function minAgeFromDob(minYears: number): ValidatorFn {
     const m = today.getMonth() - d.getMonth();
     if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age -= 1;
     return age >= minYears ? null : { minAge: { requiredAge: minYears, actualAge: age } };
+  };
+}
+
+function personNameValidator(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const v = String(control.value ?? '').trim();
+    if (!v) return null;
+    if (v.length < 2) return { minlength: { requiredLength: 2, actualLength: v.length } };
+    if (/\d/.test(v)) return { personName: true };
+    if (!PERSON_NAME_PATTERN.test(v)) return { personName: true };
+    return null;
+  };
+}
+
+function strictEmailValidator(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const v = String(control.value ?? '').trim();
+    if (!v) return null;
+    if (!EMAIL_PATTERN.test(v) || v.length > 100) return { email: true };
+    return null;
   };
 }
 
@@ -100,7 +125,7 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
   private readonly passportRatio = 35 / 45;
   private readonly captureOutW = 450;
   private readonly captureOutH = 579; // 450 / (35/45)
-  /** Latest allowed DOB for date input (must be at least 15 years old). */
+  /** Latest allowed DOB for date input (must be at least 18 years old). */
   maxDob = '';
 
   constructor(
@@ -111,10 +136,16 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
   ) {
     this.form = this.fb.group({
       companyCode: ['', Validators.required],
-      firstName: ['', [Validators.required, Validators.maxLength(60)]],
-      lastName: ['', [Validators.required, Validators.maxLength(60)]],
+      firstName: [
+        '',
+        [Validators.required, Validators.minLength(2), Validators.maxLength(60), personNameValidator()],
+      ],
+      lastName: [
+        '',
+        [Validators.required, Validators.minLength(2), Validators.maxLength(60), personNameValidator()],
+      ],
       mobile: ['', [Validators.required, Validators.pattern(/^[6-9]\d{9}$/)]],
-      email: ['', [Validators.required, Validators.email]],
+      email: ['', [Validators.required, Validators.maxLength(100), strictEmailValidator()]],
       dateOfBirth: ['', [Validators.required, minAgeFromDob(MIN_REGISTER_AGE)]],
       age: [{ value: '', disabled: true }],
       gender: ['', Validators.required],
@@ -413,6 +444,44 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
   isInvalid(name: string): boolean {
     const c = this.form.get(name);
     return !!c && c.invalid && (c.dirty || c.touched);
+  }
+
+  nameErrorMessage(field: 'firstName' | 'lastName'): string {
+    const c = this.form.get(field);
+    if (!c || !(c.dirty || c.touched)) return '';
+    if (c.hasError('required')) {
+      return field === 'firstName' ? 'First name is required.' : 'Last name is required.';
+    }
+    if (c.hasError('minlength')) return 'Name must be at least 2 characters.';
+    if (c.hasError('maxlength')) return 'Name must be at most 60 characters.';
+    if (c.hasError('personName')) {
+      return 'Use letters only (spaces, apostrophe, hyphen allowed). No numbers.';
+    }
+    return 'Enter a valid name.';
+  }
+
+  emailErrorMessage(): string {
+    const c = this.form.get('email');
+    if (!c || !(c.dirty || c.touched)) return '';
+    if (c.hasError('required')) return 'Email is required.';
+    if (c.hasError('maxlength')) return 'Email is too long.';
+    if (c.hasError('email')) return 'Enter a valid email (e.g. name@company.com).';
+    return 'Enter a valid email.';
+  }
+
+  onNameInput(event: Event, field: 'firstName' | 'lastName'): void {
+    const input = event.target as HTMLInputElement;
+    // Strip digits and most symbols while typing; keep letters/space/'/-
+    const cleaned = input.value.replace(/[^\p{L}\s'.-]/gu, '').replace(/\s{2,}/g, ' ');
+    if (cleaned !== input.value) input.value = cleaned;
+    this.form.get(field)?.setValue(cleaned, { emitEvent: true });
+  }
+
+  onEmailInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const cleaned = input.value.replace(/\s/g, '').toLowerCase();
+    if (cleaned !== input.value) input.value = cleaned;
+    this.form.get('email')?.setValue(cleaned, { emitEvent: true });
   }
 
   onCompanyCodeBlur(): void {

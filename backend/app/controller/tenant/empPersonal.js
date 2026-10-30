@@ -268,12 +268,26 @@ exports.RegisterAppEmp = async (req, res) => {
     return Helper.response(false, "All fields must be provided", [], res, 400);
   }
 
+  if (
+    typeof Helper.isValidPersonName === "function" &&
+    (!Helper.isValidPersonName(firstName) || !Helper.isValidPersonName(lastName))
+  ) {
+    cleanupUpload();
+    return Helper.response(
+      false,
+      "Enter a valid first and last name (letters only, min 2 characters)",
+      [],
+      res,
+      400,
+    );
+  }
+
   if (!Helper.isValidMobile(mobile)) {
     cleanupUpload();
     return Helper.response(false, "Invalid mobile number format", [], res, 400);
   }
 
-  if (typeof Helper.isValidEmail === "function" && !Helper.isValidEmail(email)) {
+  if (!Helper.isValidEmail(email)) {
     cleanupUpload();
     return Helper.response(false, "Invalid email format", [], res, 400);
   }
@@ -332,11 +346,11 @@ exports.RegisterAppEmp = async (req, res) => {
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
       ageFromDob -= 1;
     }
-    if (ageFromDob < 15) {
+    if (ageFromDob < 18) {
       cleanupUpload();
       return Helper.response(
         false,
-        "You must be at least 15 years old to register",
+        "You must be at least 18 years old to register",
         {},
         res,
         400,

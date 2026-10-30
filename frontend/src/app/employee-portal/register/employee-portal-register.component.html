@@ -195,17 +195,31 @@
               <span>First Name <em>*</em></span>
               <div class="gens-field__control" [class.is-invalid]="isInvalid('firstName')">
                 <i class="ri ri-user-line"></i>
-                <input type="text" formControlName="firstName" placeholder="First name" autocomplete="given-name" />
+                <input
+                  type="text"
+                  formControlName="firstName"
+                  placeholder="First name"
+                  autocomplete="given-name"
+                  maxlength="60"
+                  (input)="onNameInput($event, 'firstName')"
+                />
               </div>
-              <small class="gens-field__error" *ngIf="isInvalid('firstName')">First name is required.</small>
+              <small class="gens-field__error" *ngIf="isInvalid('firstName')">{{ nameErrorMessage('firstName') }}</small>
             </label>
             <label class="gens-field">
               <span>Last Name <em>*</em></span>
               <div class="gens-field__control" [class.is-invalid]="isInvalid('lastName')">
                 <i class="ri ri-user-line"></i>
-                <input type="text" formControlName="lastName" placeholder="Last name" autocomplete="family-name" />
+                <input
+                  type="text"
+                  formControlName="lastName"
+                  placeholder="Last name"
+                  autocomplete="family-name"
+                  maxlength="60"
+                  (input)="onNameInput($event, 'lastName')"
+                />
               </div>
-              <small class="gens-field__error" *ngIf="isInvalid('lastName')">Last name is required.</small>
+              <small class="gens-field__error" *ngIf="isInvalid('lastName')">{{ nameErrorMessage('lastName') }}</small>
             </label>
           </div>
 
@@ -229,11 +243,16 @@
               <span>Email <em>*</em></span>
               <div class="gens-field__control" [class.is-invalid]="isInvalid('email')">
                 <i class="ri ri-mail-line"></i>
-                <input type="email" formControlName="email" placeholder="Email" autocomplete="email" />
+                <input
+                  type="email"
+                  formControlName="email"
+                  placeholder="name@company.com"
+                  autocomplete="email"
+                  maxlength="100"
+                  (input)="onEmailInput($event)"
+                />
               </div>
-              <small class="gens-field__error" *ngIf="isInvalid('email')">
-                {{ form.get('email')?.errors?.['required'] ? 'Email is required.' : 'Enter a valid email.' }}
-              </small>
+              <small class="gens-field__error" *ngIf="isInvalid('email')">{{ emailErrorMessage() }}</small>
             </label>
           </div>
 
