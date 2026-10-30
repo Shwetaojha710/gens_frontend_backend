@@ -51,17 +51,21 @@ const AppConfigValue = sequelize.define(
   },
   {
     tableName: 'app_config_values',
-    indexes: [
-      {
-        unique: true,
-        fields: ['tenantId', 'branchId', 'fieldKey'],
-        name: 'app_config_values_tenant_branch_field_uk',
-      },
-    ],
+    // Indexes applied in init after columns exist (avoids sync failing on old schema)
+    indexes: [],
   }
 );
 
 AppConfigValue.ALL_BRANCHES = ALL_BRANCHES;
+
+async function tableExists() {
+  try {
+    await sequelize.getQueryInterface().describeTable('app_config_values');
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 async function ensureColumns() {
   const qi = sequelize.getQueryInterface();
@@ -72,13 +76,24 @@ async function ensureColumns() {
   } catch {
     return;
   }
+
   if (!desc.branchId) {
     await qi.addColumn(table, 'branchId', {
       type: DataTypes.UUID,
       allowNull: false,
       defaultValue: ALL_BRANCHES,
     });
+    // Backfill any nulls (some PG versions leave null despite default on add)
+    try {
+      await sequelize.query(
+        `UPDATE "app_config_values" SET "branchId" = :bid WHERE "branchId" IS NULL`,
+        { replacements: { bid: ALL_BRANCHES } },
+      );
+    } catch (_) {
+      /* ok */
+    }
   }
+
   if (!desc.isEnabled) {
     await qi.addColumn(table, 'isEnabled', {
       type: DataTypes.BOOLEAN,
@@ -86,17 +101,51 @@ async function ensureColumns() {
       defaultValue: true,
     });
   }
-  // Drop old unique (tenantId, fieldKey) if present — ignore errors
-  try {
-    await qi.removeIndex(table, 'app_config_values_tenant_field_uk');
-  } catch (_) {
-    /* ok */
+
+  // Drop old unique (tenantId, fieldKey) if present
+  for (const name of [
+    'app_config_values_tenant_field_uk',
+    'app_config_values_tenantId_fieldKey_uk',
+  ]) {
+    try {
+      await qi.removeIndex(table, name);
+    } catch (_) {
+      /* ok */
+    }
   }
 }
 
-AppConfigValue.sync()
-  .then(() => ensureColumns())
-  .then(() => console.log('AppConfigValue model synced'))
-  .catch((err) => console.error('AppConfigValue sync error:', err?.message || err));
+async function ensureUniqueIndex() {
+  const qi = sequelize.getQueryInterface();
+  try {
+    await qi.addIndex('app_config_values', ['tenantId', 'branchId', 'fieldKey'], {
+      unique: true,
+      name: 'app_config_values_tenant_branch_field_uk',
+    });
+  } catch (err) {
+    const msg = String(err?.message || err);
+    // already exists
+    if (!/already exists|duplicate/i.test(msg)) {
+      console.warn('AppConfigValue index warn:', msg);
+    }
+  }
+}
+
+async function initAppConfigValue() {
+  const exists = await tableExists();
+  if (!exists) {
+    // Fresh table — create with all model columns
+    await AppConfigValue.sync();
+  } else {
+    // Existing table may predate branchId — add columns BEFORE any index on branchId
+    await ensureColumns();
+  }
+  await ensureUniqueIndex();
+  console.log('AppConfigValue model synced');
+}
+
+initAppConfigValue().catch((err) =>
+  console.error('AppConfigValue sync error:', err?.message || err),
+);
 
 module.exports = AppConfigValue;
