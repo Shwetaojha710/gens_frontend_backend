@@ -109,6 +109,7 @@ export const DEFAULT_PERMISSIONS: PermissionSection[] = [
       { key: 'set.prefix',       label: 'Company Prefix',    roles: ['admin', 'superadmin'] },
       { key: 'set.brand',        label: 'Brand & Colors',    roles: ['admin', 'superadmin'] },
       { key: 'set.handbook',     label: 'Employee Handbook', roles: ['admin', 'superadmin'] },
+      { key: 'set.appconfig',    label: 'App Config',        roles: ['admin', 'superadmin'] },
       { key: 'set.roleperm',     label: 'Role Permissions',  roles: ['admin', 'superadmin'] },
       { key: 'set.userperm',     label: 'User Permissions',  roles: ['admin', 'superadmin'] },
       { key: 'set.sidebaraccess',label: 'My Sidebar Access', roles: ['admin', 'superadmin', 'hr', 'manager', 'director', 'recruiter'] },

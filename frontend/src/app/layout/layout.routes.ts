@@ -536,6 +536,15 @@ export const layoutRoutes: Routes = [
           ),
       },
       {
+        path: 'master/app-config',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'set.appconfig' },
+        loadComponent: () =>
+          import('../master/app-config/app-config.component').then(
+            (m) => m.AppConfigComponent,
+          ),
+      },
+      {
         path: 'master/role-permission',
         canActivate: [PermissionGuard],
         data: { permKey: 'set.roleperm' },

@@ -1,0 +1,162 @@
+.ac-page {
+  --ac-text: #1e3a5f;
+  --ac-muted: #64748b;
+  --ac-brand: #0d5f9d;
+}
+
+.ac-page .sa-hero {
+  border: 0 !important;
+  border-radius: 1rem !important;
+  background: linear-gradient(89.79deg, #209af7 0.92%, #025a9d 99.82%) !important;
+  color: #fff;
+  box-shadow: 0 12px 36px rgba(2, 90, 157, 0.25);
+}
+
+.ac-page .sa-hero-kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.ac-page .sa-hero-title {
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.ac-page .sa-hero-subtitle {
+  margin-top: 0.4rem;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.85);
+  max-width: 36rem;
+}
+
+.ac-card {
+  border-radius: 1rem !important;
+}
+
+.ac-section-title {
+  color: var(--ac-text);
+}
+
+.ac-quality-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.ac-quality-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.ac-quality-value {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ac-brand);
+  line-height: 1;
+}
+
+.ac-quality-unit {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ac-muted);
+}
+
+.ac-range {
+  width: 100%;
+  accent-color: var(--ac-brand);
+  cursor: pointer;
+}
+
+.ac-range-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ac-muted);
+}
+
+.ac-field {
+  padding-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.ac-field--last {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.ac-number-wrap {
+  max-width: 12rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ac-number {
+  max-width: 8rem;
+}
+
+.ac-inline-unit {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ac-muted);
+}
+
+.ac-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--ac-text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.ac-switch input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--ac-brand);
+}
+
+.ac-page code {
+  font-size: 0.8em;
+  color: rgba(255, 255, 255, 0.95);
+  background: rgba(0, 0, 0, 0.15);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.ac-card code {
+  color: #0d5f9d;
+  background: rgba(13, 95, 157, 0.08);
+}
+
+.ac-hint-card {
+  background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
+}
+
+.ac-tips {
+  padding-left: 1.15rem;
+  margin: 0;
+  color: var(--ac-muted);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.ac-tips li + li {
+  margin-top: 0.4rem;
+}
+
+.ac-tips strong {
+  color: var(--ac-text);
+}

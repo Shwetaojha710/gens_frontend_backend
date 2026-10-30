@@ -397,7 +397,7 @@ exports.Applogin = async (req, res) => {
       otps.otp = Math.floor(1000 + Math.random() * 9000);
     }
     const templateId = "1107164267135286674";
-    otps.otp = 1234;
+    // otps.otp = 1234;
     otps.phone = data.mobile;
 
     otps.ip = Helper.getLocalIP();

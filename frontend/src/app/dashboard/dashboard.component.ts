@@ -439,13 +439,24 @@ export class DashboardComponent {
   }
 
   private formatCelebrationDateLong(item: any): string {
-    const raw = item?.nextOccurrence || item?.eventDate || item?.dateOfBirth || item?.joiningDate;
-    if (!raw) return '';
-    const d = new Date(raw);
-    if (Number.isNaN(d.getTime())) return '';
-    const day = d.getDate();
-    const month = d.toLocaleDateString('en-GB', { month: 'long' });
-    const year = new Date().getFullYear();
+    // Day/month from next occurrence (or DOB/joining); year must be the person's real year
+    const displayRaw =
+      item?.nextOccurrence || item?.eventDate || item?.dateOfBirth || item?.joiningDate;
+    if (!displayRaw) return '';
+    const display = new Date(displayRaw);
+    if (Number.isNaN(display.getTime())) return '';
+
+    const yearSourceRaw =
+      item?.cardKind === 'anniversary'
+        ? item?.joiningDate || item?.eventDate || displayRaw
+        : item?.dateOfBirth || item?.eventDate || displayRaw;
+    const yearSource = new Date(yearSourceRaw);
+    const year = !Number.isNaN(yearSource.getTime())
+      ? yearSource.getFullYear()
+      : display.getFullYear();
+
+    const day = display.getDate();
+    const month = display.toLocaleDateString('en-GB', { month: 'long' });
     return `${day} ${month} ${year}`;
   }
 

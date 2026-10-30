@@ -351,6 +351,15 @@ export class MasterService {
     return this.http.post(`${this.baseUrl}save-brand-colors`, colors);
   }
 
+  getAppConfig(): Observable<any> {
+    return this.http.post(`${this.baseUrl}get-app-config`, {});
+  }
+
+  /** body: { values: { imageQuality: '80', ... } } or legacy { imageQuality } */
+  saveAppConfig(body: { values?: Record<string, string | number>; imageQuality?: number }): Observable<any> {
+    return this.http.post(`${this.baseUrl}save-app-config`, body);
+  }
+
   getCompanyProfile(): Observable<any> {
     return this.http.post(`${this.baseUrl}get-company-profile`, {});
   }

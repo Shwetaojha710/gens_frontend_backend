@@ -137,6 +137,7 @@ export const APP_MENU_ITEMS: MenuItem[] = [
       { title: 'Company Logo',      icon: 'ri-image-line',             link: '/layout/master/company-logo',       permKey: 'set.brand' },
       { title: 'Company Letterhead', icon: 'ri-file-paper-line',       link: '/layout/master/letterhead',         permKey: 'set.brand' },
       { title: 'Employee Handbook', icon: 'ri-book-2-line',            link: '/layout/master/handbook',           permKey: 'set.handbook' },
+      { title: 'App Config',        icon: 'ri-settings-4-line',        link: '/layout/master/app-config',         permKey: 'set.appconfig' },
       { title: 'Role Permissions',  icon: 'ri-shield-keyhole-line', link: '/layout/master/role-permission', permKey: 'set.roleperm' },
       { title: 'User Permissions',  icon: 'ri-user-settings-line',  link: '/layout/master/user-permission', permKey: 'set.userperm' },
       { title: 'My Sidebar Access', icon: 'ri-eye-line',            link: '/layout/master/user-access',     permKey: 'set.sidebaraccess' },

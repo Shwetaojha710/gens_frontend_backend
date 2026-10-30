@@ -1,0 +1,147 @@
+<div class="container-fluid py-4 ac-page">
+
+  <div class="sa-hero card mb-4">
+    <div class="card-body py-4 px-4">
+      <p class="sa-hero-kicker">Settings</p>
+      <div class="sa-hero-title">App Config</div>
+      <div class="sa-hero-subtitle">
+        Tenant-wide preferences. Fields below are loaded from the database — add a row in
+        <code>app_config_fields</code> to show a new control here.
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status" style="width:2rem;height:2rem;">
+      <span class="visually-hidden">Loading…</span>
+    </div>
+  </div>
+
+  <div *ngIf="!loading" class="row g-4">
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm ac-card">
+        <div class="card-body p-4">
+
+          <div *ngIf="!fields.length" class="text-muted py-3">
+            No active fields in <code>app_config_fields</code>.
+          </div>
+
+          <div *ngFor="let field of fields; let last = last" class="ac-field" [class.ac-field--last]="last">
+            <h6 class="fw-bold mb-1 ac-section-title">{{ field.label }}</h6>
+            <p class="text-muted small mb-3" *ngIf="field.hint">{{ field.hint }}</p>
+
+            <!-- range -->
+            <ng-container *ngIf="field.fieldType === 'range'">
+              <div class="ac-quality-row">
+                <div class="ac-quality-meta">
+                  <span class="ac-quality-value">{{ displayNumber(field) }}</span>
+                  <span class="ac-quality-unit" *ngIf="field.unit">{{ field.unit }}</span>
+                </div>
+                <input
+                  type="range"
+                  class="ac-range form-range"
+                  [min]="field.minValue ?? 0"
+                  [max]="field.maxValue ?? 100"
+                  [step]="field.step || 1"
+                  [ngModel]="values[field.key]"
+                  (ngModelChange)="onRangeChange(field, $event)"
+                  [attr.aria-label]="field.label"
+                />
+                <div class="ac-range-labels">
+                  <span>{{ field.minValue }}</span>
+                  <span>{{ field.maxValue }}</span>
+                </div>
+              </div>
+              <div class="ac-number-wrap mt-3">
+                <label class="form-label mb-1" [attr.for]="'ac-num-' + field.key">Or enter a value</label>
+                <input
+                  [id]="'ac-num-' + field.key"
+                  type="number"
+                  class="form-control ac-number"
+                  [min]="field.minValue ?? null"
+                  [max]="field.maxValue ?? null"
+                  [step]="field.step || 1"
+                  [ngModel]="values[field.key]"
+                  (ngModelChange)="onRangeChange(field, $event)"
+                />
+              </div>
+            </ng-container>
+
+            <!-- number -->
+            <ng-container *ngIf="field.fieldType === 'number'">
+              <div class="ac-number-wrap">
+                <input
+                  type="number"
+                  class="form-control ac-number"
+                  [min]="field.minValue ?? null"
+                  [max]="field.maxValue ?? null"
+                  [step]="field.step || 1"
+                  [ngModel]="values[field.key]"
+                  (ngModelChange)="onRangeChange(field, $event)"
+                  [attr.aria-label]="field.label"
+                />
+                <span class="ac-inline-unit" *ngIf="field.unit">{{ field.unit }}</span>
+              </div>
+            </ng-container>
+
+            <!-- text -->
+            <ng-container *ngIf="field.fieldType === 'text'">
+              <input
+                type="text"
+                class="form-control"
+                [ngModel]="values[field.key]"
+                (ngModelChange)="onTextChange(field, $event)"
+                [attr.aria-label]="field.label"
+              />
+            </ng-container>
+
+            <!-- boolean -->
+            <ng-container *ngIf="field.fieldType === 'boolean'">
+              <label class="ac-switch">
+                <input
+                  type="checkbox"
+                  [checked]="isBoolOn(field)"
+                  (change)="onBoolChange(field, $any($event.target).checked)"
+                />
+                <span>{{ isBoolOn(field) ? 'On' : 'Off' }}</span>
+              </label>
+            </ng-container>
+
+            <!-- select -->
+            <ng-container *ngIf="field.fieldType === 'select'">
+              <select
+                class="form-select"
+                [ngModel]="values[field.key]"
+                (ngModelChange)="onTextChange(field, $event)"
+                [attr.aria-label]="field.label"
+              >
+                <option *ngFor="let opt of field.options" [value]="opt.value">{{ opt.label }}</option>
+              </select>
+            </ng-container>
+          </div>
+
+          <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top" *ngIf="fields.length">
+            <button type="button" class="btn btn-primary" (click)="save()" [disabled]="saving">
+              <span *ngIf="!saving">Save</span>
+              <span *ngIf="saving">Saving…</span>
+            </button>
+            <button type="button" class="btn btn-outline-secondary" (click)="reset()" [disabled]="saving">
+              Reset to defaults
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5" *ngIf="sidebarTips.length">
+      <div class="card border-0 shadow-sm ac-card ac-hint-card">
+        <div class="card-body p-4">
+          <h6 class="fw-bold mb-2 ac-section-title">Tips</h6>
+          <ul class="ac-tips mb-0">
+            <li *ngFor="let tip of sidebarTips">{{ tip }}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

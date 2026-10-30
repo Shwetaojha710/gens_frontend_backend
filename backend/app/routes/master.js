@@ -2,6 +2,7 @@ const express = require('express');
 const {Admin, AppAdmin} = require('../middleware/auth');
 const { createComponent, updateComponent, listComponents, deleteComponent } = require('../controller/tenant/component');
 const { getBrandColors, saveBrandColors, getLetterhead, uploadLetterhead, getHandbook, uploadHandbook, getInsurancePolicy, uploadInsurancePolicy, getCompanyProfile, getCompanyLogo, uploadCompanyLogo, removeCompanyLogo } = require('../controller/tenant/setting');
+const { getAppConfig, saveAppConfig } = require('../controller/tenant/appConfig');
 const { getTenantUsers, saveUserPermission, getUserPermission, deleteUserPermission } = require('../controller/tenant/userPermission');
 const upload = require('../middleware/upload');
 const logoUpload = require('../middleware/logoUpload');
@@ -14,6 +15,9 @@ router.post('/delete-component',Admin,deleteComponent)
 
 router.post('/get-brand-colors', Admin, getBrandColors)
 router.post('/save-brand-colors', Admin, saveBrandColors)
+
+router.post('/get-app-config', Admin, getAppConfig)
+router.post('/save-app-config', Admin, saveAppConfig)
 
 router.post('/get-letterhead', Admin, getLetterhead)
 router.post('/upload-letterhead', Admin, upload.single('letterhead'), uploadLetterhead)
