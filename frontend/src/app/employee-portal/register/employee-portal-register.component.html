@@ -55,7 +55,7 @@
 
         <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="epr-form">
           <div class="epr-photo-block">
-            <div class="epr-photo">
+            <div class="epr-photo-panel">
               <div class="epr-photo-preview" [class.has-photo]="!!profilePreview">
                 <img *ngIf="profilePreview" [src]="profilePreview" alt="Profile preview" />
                 <span *ngIf="!profilePreview" class="epr-photo-placeholder">
@@ -66,38 +66,47 @@
                 <div class="epr-photo-btns">
                   <button
                     type="button"
-                    class="gens-btn gens-btn--primary epr-upload-btn"
+                    class="gens-btn gens-btn--primary"
                     (click)="openCamera()"
                     [disabled]="cameraOpen || cameraStarting"
                   >
                     <i class="ri ri-camera-line"></i>
-                    {{ profileFile ? 'Retake live photo' : 'Take live photo' }}
-                  </button>
-                  <button
-                    type="button"
-                    class="gens-link"
-                    *ngIf="profileFile"
-                    (click)="clearProfile()"
-                  >
-                    Remove
+                    {{ profileFile ? 'Retake photo' : 'Take live photo' }}
                   </button>
                 </div>
                 <small class="epr-photo-hint">
-                  Live camera only — gallery upload is not allowed. Face the camera in good light.
+                  Please click a clear photo in good light.
                 </small>
               </div>
             </div>
 
             <div class="epr-camera" *ngIf="cameraOpen">
-              <div class="epr-camera__frame">
-                <video #cameraVideo autoplay playsinline muted class="epr-camera__video"></video>
-                <div class="epr-camera__guide" aria-hidden="true"></div>
-                <p class="epr-camera__tip" *ngIf="cameraStarting">Starting camera…</p>
-                <p class="epr-camera__tip" *ngIf="!cameraStarting">
+              <div class="epr-camera__frame" [class.is-review]="captureReview">
+                <video
+                  #cameraVideo
+                  autoplay
+                  playsinline
+                  muted
+                  class="epr-camera__video"
+                  [hidden]="captureReview"
+                ></video>
+                <img
+                  *ngIf="captureReview && pendingPreview"
+                  class="epr-camera__still"
+                  [src]="pendingPreview"
+                  alt="Captured photo"
+                />
+                <div class="epr-camera__guide" *ngIf="!captureReview" aria-hidden="true"></div>
+                <p class="epr-camera__tip" *ngIf="!captureReview && cameraStarting">Starting camera…</p>
+                <p class="epr-camera__tip" *ngIf="!captureReview && !cameraStarting">
                   Align your face inside the frame, then capture
                 </p>
+                <p class="epr-camera__tip epr-camera__tip--review" *ngIf="captureReview">
+                  Check your photo, then submit
+                </p>
               </div>
-              <div class="epr-camera__actions">
+
+              <div class="epr-camera__actions" *ngIf="!captureReview">
                 <button type="button" class="gens-btn gens-btn--outline" (click)="closeCamera()">
                   Cancel
                 </button>
@@ -108,6 +117,15 @@
                   [disabled]="cameraStarting"
                 >
                   <i class="ri ri-camera-fill"></i> Capture
+                </button>
+              </div>
+
+              <div class="epr-camera__actions" *ngIf="captureReview">
+                <button type="button" class="gens-btn gens-btn--outline" (click)="retakePhoto()">
+                  Retake
+                </button>
+                <button type="button" class="gens-btn gens-btn--primary" (click)="submitCapturedPhoto()">
+                  <i class="ri ri-check-line"></i> Submit photo
                 </button>
               </div>
               <p class="epr-camera__err" *ngIf="cameraError">{{ cameraError }}</p>
@@ -193,7 +211,7 @@
             </label>
           </div>
 
-          <div class="epr-row">
+          <div class="epr-row epr-row--dob">
             <label class="gens-field">
               <span>Date of Birth <em>*</em></span>
               <div class="gens-field__control" [class.is-invalid]="isInvalid('dateOfBirth')">
@@ -223,7 +241,7 @@
             <small class="gens-field__error" *ngIf="isInvalid('gender')">Gender is required.</small>
           </label>
 
-          <button type="submit" class="gens-btn gens-btn--primary" [disabled]="loading">
+          <button type="submit" class="gens-btn gens-btn--primary epr-submit" [disabled]="loading">
             {{ loading ? 'Registering…' : 'Register' }}
           </button>
         </form>

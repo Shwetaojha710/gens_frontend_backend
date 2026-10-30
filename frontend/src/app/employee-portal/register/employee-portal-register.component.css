@@ -1,46 +1,110 @@
-.epr-card {
-  max-height: min(92vh, 900px);
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+/* Register needs page scroll — login shell is locked to 100vh */
+.gens-login {
+  max-height: none;
   overflow-y: auto;
+}
+
+.gens-login__shell {
+  max-height: none;
+  align-items: flex-start;
+  padding: 48px 28px 56px;
+  gap: 20px;
+}
+
+.gens-login__right {
+  align-items: flex-start;
+  padding-top: 0;
+}
+
+.epr-card {
+  max-width: 460px;
+  max-height: none;
+  overflow: visible;
+  padding: 26px 24px 20px;
+}
+
+.epr-card .gens-login__sub {
+  margin-bottom: 18px;
 }
 
 .epr-form {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 12px;
+}
+
+/* Override login .gens-field margin — gap handles spacing */
+.epr-form .gens-field {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.epr-form .gens-field > span {
+  margin-bottom: 6px;
+  font-size: 12.5px;
+}
+
+.epr-form .gens-field__control {
+  min-height: 44px;
+  padding: 0 12px;
+  gap: 8px;
+}
+
+.epr-form .gens-field__control input,
+.epr-form .gens-field__control select {
+  font-size: 13.5px;
+  padding: 10px 0;
 }
 
 .epr-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+  gap: 10px;
+  align-items: start;
 }
 
+.epr-row--dob {
+  grid-template-columns: 1.4fr 0.7fr;
+}
+
+/* —— Photo —— */
 .epr-photo-block {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 10px;
+  margin-bottom: 4px;
 }
 
-.epr-photo {
+.epr-photo-panel {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 14px;
+  padding: 12px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
 }
 
 .epr-photo-preview {
-  width: 72px;
-  height: 92px;
-  border-radius: 0.5rem;
+  width: 78px;
+  height: 100px;
+  border-radius: 10px;
   overflow: hidden;
-  background: #f1f5f9;
-  border: 2px solid #e2e8f0;
+  background: #eef2f7;
+  border: 1.5px dashed #cbd5e1;
   display: grid;
   place-items: center;
   flex-shrink: 0;
 }
 
 .epr-photo-preview.has-photo {
-  border-color: #14b8a6;
+  border-style: solid;
+  border-color: #20b2aa;
 }
 
 .epr-photo-preview img {
@@ -51,125 +115,172 @@
 
 .epr-photo-placeholder {
   color: #94a3b8;
-  font-size: 1.5rem;
+  font-size: 1.6rem;
+  line-height: 1;
 }
 
 .epr-photo-actions {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.35rem;
+  gap: 6px;
 }
 
 .epr-photo-btns {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  align-items: center;
+  gap: 10px;
 }
 
-.epr-upload-btn {
-  cursor: pointer;
-  margin: 0;
-  padding: 0.4rem 0.85rem;
-  font-size: 0.8125rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
+/* Don't stretch to full card width like login submit */
+.epr-photo-actions .gens-btn {
+  width: auto;
+  min-height: 40px;
+  padding: 8px 14px;
+  font-size: 13px;
+  border-radius: 10px;
 }
 
 .epr-photo-hint {
   display: block;
   color: #64748b;
-  font-size: 0.7rem;
-  line-height: 1.35;
-  max-width: 260px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  max-width: 100%;
 }
 
+/* —— Live camera —— */
 .epr-camera {
-  border: 1px solid #e2e8f0;
-  border-radius: 0.75rem;
-  padding: 0.65rem;
+  border-radius: 14px;
+  padding: 12px;
   background: #0f172a;
 }
 
 .epr-camera__frame {
   position: relative;
   width: 100%;
-  max-width: 280px;
+  max-width: 240px;
   margin: 0 auto;
   aspect-ratio: 35 / 45;
-  border-radius: 0.5rem;
+  border-radius: 12px;
   overflow: hidden;
   background: #000;
+  border: 2px solid rgba(32, 178, 170, 0.45);
 }
 
-.epr-camera__video {
+.epr-camera__frame.is-review {
+  max-width: 280px;
+  border-color: #20b2aa;
+  box-shadow: 0 0 0 3px rgba(32, 178, 170, 0.25);
+}
+
+.epr-camera__video,
+.epr-camera__still {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
+}
+
+.epr-camera__video {
   transform: scaleX(-1);
+}
+
+.epr-camera__tip--review {
+  background: rgba(15, 23, 42, 0.55);
+  padding: 6px 8px;
+  bottom: 0;
 }
 
 .epr-camera__guide {
   pointer-events: none;
   position: absolute;
-  inset: 8%;
-  border: 2px dashed rgba(20, 184, 166, 0.85);
+  inset: 10%;
+  border: 2px dashed rgba(32, 178, 170, 0.9);
   border-radius: 50% / 42%;
-  box-shadow: 0 0 0 999px rgba(15, 23, 42, 0.45);
+  box-shadow: 0 0 0 999px rgba(15, 23, 42, 0.4);
 }
 
 .epr-camera__tip {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0.4rem;
+  bottom: 0.45rem;
   margin: 0;
+  padding: 0 8px;
   text-align: center;
   color: #fff;
-  font-size: 0.7rem;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  font-size: 11px;
+  font-weight: 500;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 
 .epr-camera__actions {
   display: flex;
   justify-content: center;
-  gap: 0.5rem;
-  margin-top: 0.65rem;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.epr-camera__actions .gens-btn {
+  width: auto;
+  min-width: 110px;
+  min-height: 40px;
+  font-size: 13px;
+  padding: 8px 16px;
+}
+
+.epr-camera__actions .gens-btn--outline {
+  background: transparent;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+}
+
+.epr-camera__actions .gens-btn--outline:hover {
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .epr-camera__err {
-  margin: 0.5rem 0 0;
+  margin: 10px 0 0;
   color: #fca5a5;
-  font-size: 0.75rem;
+  font-size: 12px;
   text-align: center;
 }
 
+/* —— Company verify —— */
 .gens-field em {
   color: #dc2626;
   font-style: normal;
 }
 
 .epr-code-control {
-  gap: 0.35rem;
+  gap: 8px;
+  padding-right: 8px;
 }
 
 .epr-code-control.is-valid {
-  border-color: #14b8a6;
+  border-color: #20b2aa;
+  box-shadow: 0 0 0 3px rgba(32, 178, 170, 0.12);
 }
 
 .epr-verify-btn {
   flex-shrink: 0;
   border: 0;
-  background: #0f766e;
+  background: #20b2aa;
   color: #fff;
   font: inherit;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.35rem 0.7rem;
-  border-radius: 0.4rem;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 9px;
   cursor: pointer;
   white-space: nowrap;
+  line-height: 1;
+  min-height: 32px;
 }
 
 .epr-verify-btn:disabled {
@@ -178,17 +289,17 @@
 }
 
 .epr-verify-btn:not(:disabled):hover {
-  background: #0d9488;
+  background: #178f89;
 }
 
 .gens-field__ok {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  margin-top: 0.25rem;
+  gap: 4px;
+  margin-top: 6px;
   color: #0f766e;
-  font-size: 0.75rem;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .gens-field__control select {
@@ -200,20 +311,88 @@
   color: inherit;
   padding: 0;
   appearance: auto;
+  cursor: pointer;
 }
 
 .gens-field__control input[type='date'] {
   min-width: 0;
 }
 
+.epr-submit {
+  margin-top: 6px;
+}
+
+.gens-login__footer-text {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 13px;
+  color: #718096;
+}
+
+@media (max-width: 1199.98px) {
+  .gens-login__shell {
+    padding-top: 36px;
+  }
+}
+
 @media (max-width: 991.98px) {
   .epr-hide-md {
     display: none !important;
   }
+
+  .gens-login__shell {
+    flex-direction: column;
+    align-items: center;
+    padding: 28px 16px 40px;
+  }
+
+  .gens-login__left {
+    width: 100%;
+    max-width: 460px;
+    padding-top: 0;
+  }
+
+  .gens-login__right {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .epr-card {
+    max-width: 460px;
+    margin: 0 auto;
+  }
 }
 
 @media (max-width: 575.98px) {
-  .epr-row {
+  .epr-row,
+  .epr-row--dob {
     grid-template-columns: 1fr;
+  }
+
+  .epr-photo-panel {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+
+  .epr-photo-preview {
+    margin: 0 auto;
+  }
+
+  .epr-photo-actions {
+    align-items: center;
+  }
+
+  .epr-photo-btns {
+    justify-content: center;
+  }
+
+  .epr-photo-hint {
+    text-align: center;
+  }
+
+  .epr-card {
+    padding: 22px 16px 18px;
+    border-radius: 18px;
   }
 }

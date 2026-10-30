@@ -37,6 +37,10 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
   cameraOpen = false;
   cameraStarting = false;
   cameraError = '';
+  /** After Capture: show still + Submit before applying to form. */
+  captureReview = false;
+  pendingPreview: string | null = null;
+  private pendingFile: File | null = null;
   private stream: MediaStream | null = null;
 
   private notyf = new Notyf();
@@ -184,6 +188,8 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
       return;
     }
     this.cameraError = '';
+    this.clearPendingCapture();
+    this.captureReview = false;
     this.cameraOpen = true;
     this.cameraStarting = true;
     try {
@@ -196,7 +202,6 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
           height: { ideal: 720 },
         },
       });
-      // Wait for *ngIf video to render
       await new Promise((r) => setTimeout(r, 50));
       const video = this.cameraVideo?.nativeElement;
       if (!video) {
@@ -221,7 +226,14 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
   }
 
   closeCamera(): void {
+    this.clearPendingCapture();
     this.stopCamera();
+  }
+
+  private clearPendingCapture(): void {
+    this.pendingFile = null;
+    this.pendingPreview = null;
+    this.captureReview = false;
   }
 
   private stopCameraTracksOnly(): void {
@@ -237,6 +249,7 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
     this.stopCameraTracksOnly();
     this.cameraOpen = false;
     this.cameraStarting = false;
+    this.captureReview = false;
   }
 
   capturePhoto(): void {
@@ -253,7 +266,6 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
       return;
     }
 
-    // Center-crop to passport aspect (35:45)
     let cropW = vw;
     let cropH = Math.round(cropW / this.passportRatio);
     if (cropH > vh) {
@@ -279,9 +291,6 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
           this.notyf.error('Could not capture photo. Try again.');
           return;
         }
-        const file = new File([blob], `live-photo-${Date.now()}.jpg`, {
-          type: 'image/jpeg',
-        });
         if (blob.size < this.photoMinBytes) {
           this.notyf.error('Photo quality is too low. Improve lighting and capture again.');
           return;
@@ -290,16 +299,42 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
           this.notyf.error('Captured photo is too large. Try again.');
           return;
         }
-        this.profileFile = file;
+        const file = new File([blob], `live-photo-${Date.now()}.jpg`, {
+          type: 'image/jpeg',
+        });
         const reader = new FileReader();
-        reader.onload = () => (this.profilePreview = reader.result as string);
-        reader.readAsDataURL(file);
-        this.stopCamera();
-        this.notyf.success('Photo captured.');
+        reader.onload = () => {
+          this.pendingFile = file;
+          this.pendingPreview = reader.result as string;
+          this.captureReview = true;
+          // Freeze live feed; keep panel open so user sees image + Submit
+          this.stopCameraTracksOnly();
+        };
+        reader.readAsDataURL(blob);
       },
       'image/jpeg',
       0.88,
     );
+  }
+
+  /** Confirm captured photo and close camera panel. */
+  submitCapturedPhoto(): void {
+    if (!this.pendingFile || !this.pendingPreview) {
+      this.notyf.error('No photo to submit. Capture again.');
+      return;
+    }
+    this.profileFile = this.pendingFile;
+    this.profilePreview = this.pendingPreview;
+    this.clearPendingCapture();
+    this.cameraOpen = false;
+    this.cameraStarting = false;
+    this.notyf.success('Photo saved.');
+  }
+
+  /** Discard still and open camera again. */
+  retakePhoto(): void {
+    this.clearPendingCapture();
+    void this.openCamera();
   }
 
   clearProfile(): void {
