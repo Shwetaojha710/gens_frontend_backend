@@ -67,6 +67,9 @@ export class HeaderComponent implements OnDestroy {
   editSaving = false;
   editLogoFile: File | null = null;
   editLogoPreview: string | null = null;
+  showCurrentPassword = false;
+  showNewPassword = false;
+  showConfirmPassword = false;
   editForm = {
     companyName: '',
     name: '',
@@ -111,6 +114,9 @@ export class HeaderComponent implements OnDestroy {
     };
     this.editLogoFile = null;
     this.editLogoPreview = null;
+    this.showCurrentPassword = false;
+    this.showNewPassword = false;
+    this.showConfirmPassword = false;
     this.editProfileOpen = true;
   }
 
@@ -119,6 +125,9 @@ export class HeaderComponent implements OnDestroy {
     this.editProfileOpen = false;
     this.editLogoFile = null;
     this.editLogoPreview = null;
+    this.showCurrentPassword = false;
+    this.showNewPassword = false;
+    this.showConfirmPassword = false;
   }
 
   onEditLogoPick(event: Event): void {

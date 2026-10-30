@@ -506,11 +506,50 @@
   font-size: 14px;
   color: #1e293b;
   outline: none;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .cp-field input:focus {
   border-color: #20b2aa;
   box-shadow: 0 0 0 3px rgba(32, 178, 170, 0.15);
+}
+
+.cp-pass-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.cp-pass-wrap input {
+  padding-right: 42px;
+}
+
+.cp-pass-eye {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  padding: 0;
+}
+
+.cp-pass-eye:hover {
+  color: #0f766e;
+  background: #f1f5f9;
+}
+
+.cp-pass-eye i {
+  font-size: 14px;
+  pointer-events: none;
 }
 
 .cp-field__readonly {

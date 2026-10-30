@@ -213,17 +213,63 @@
 
     <label class="cp-field">
       <span>Current password</span>
-      <input type="password" [(ngModel)]="editForm.currentPassword" name="currentPassword" autocomplete="current-password" />
+      <div class="cp-pass-wrap">
+        <input
+          [type]="showCurrentPassword ? 'text' : 'password'"
+          [(ngModel)]="editForm.currentPassword"
+          name="currentPassword"
+          autocomplete="current-password"
+        />
+        <button
+          type="button"
+          class="cp-pass-eye"
+          (click)="showCurrentPassword = !showCurrentPassword"
+          [attr.aria-label]="showCurrentPassword ? 'Hide password' : 'Show password'"
+        >
+          <i class="fas" [class.fa-eye]="!showCurrentPassword" [class.fa-eye-slash]="showCurrentPassword"></i>
+        </button>
+      </div>
     </label>
 
     <label class="cp-field">
       <span>New password</span>
-      <input type="password" [(ngModel)]="editForm.newPassword" name="newPassword" autocomplete="new-password" minlength="6" />
+      <div class="cp-pass-wrap">
+        <input
+          [type]="showNewPassword ? 'text' : 'password'"
+          [(ngModel)]="editForm.newPassword"
+          name="newPassword"
+          autocomplete="new-password"
+          minlength="6"
+        />
+        <button
+          type="button"
+          class="cp-pass-eye"
+          (click)="showNewPassword = !showNewPassword"
+          [attr.aria-label]="showNewPassword ? 'Hide password' : 'Show password'"
+        >
+          <i class="fas" [class.fa-eye]="!showNewPassword" [class.fa-eye-slash]="showNewPassword"></i>
+        </button>
+      </div>
     </label>
 
     <label class="cp-field">
       <span>Confirm new password</span>
-      <input type="password" [(ngModel)]="editForm.confirmPassword" name="confirmPassword" autocomplete="new-password" />
+      <div class="cp-pass-wrap">
+        <input
+          [type]="showConfirmPassword ? 'text' : 'password'"
+          [(ngModel)]="editForm.confirmPassword"
+          name="confirmPassword"
+          autocomplete="new-password"
+        />
+        <button
+          type="button"
+          class="cp-pass-eye"
+          (click)="showConfirmPassword = !showConfirmPassword"
+          [attr.aria-label]="showConfirmPassword ? 'Hide password' : 'Show password'"
+        >
+          <i class="fas" [class.fa-eye]="!showConfirmPassword" [class.fa-eye-slash]="showConfirmPassword"></i>
+        </button>
+      </div>
     </label>
 
     <div class="cp-modal__foot">
