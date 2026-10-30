@@ -74,7 +74,7 @@
                   </button>
                 </div>
                 <small class="epr-photo-hint">
-                  Please click a clear photo in good light.
+                  Clear face photo only — not bottles, bags, or other objects.
                 </small>
               </div>
             </div>
@@ -242,9 +242,14 @@
               <span>Date of Birth <em>*</em></span>
               <div class="gens-field__control" [class.is-invalid]="isInvalid('dateOfBirth')">
                 <i class="ri ri-calendar-line"></i>
-                <input type="date" formControlName="dateOfBirth" (change)="onDobChange()" />
+                <input
+                  type="date"
+                  formControlName="dateOfBirth"
+                  [attr.max]="maxDob"
+                  (change)="onDobChange()"
+                />
               </div>
-              <small class="gens-field__error" *ngIf="isInvalid('dateOfBirth')">Date of birth is required.</small>
+              <small class="gens-field__error" *ngIf="isInvalid('dateOfBirth')">{{ dobErrorMessage() }}</small>
             </label>
             <label class="gens-field">
               <span>Age</span>

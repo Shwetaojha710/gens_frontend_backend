@@ -7,15 +7,34 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
+  AbstractControl,
   FormBuilder,
   FormGroup,
   ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
   Validators,
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Notyf } from 'notyf';
 import { Subscription } from 'rxjs';
 import { EmployeePortalService } from '../services/employee-portal.service';
+
+const MIN_REGISTER_AGE = 15;
+
+function minAgeFromDob(minYears: number): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const raw = control.value;
+    if (!raw) return null;
+    const d = new Date(String(raw).slice(0, 10));
+    if (Number.isNaN(d.getTime())) return { minAge: { requiredAge: minYears } };
+    const today = new Date();
+    let age = today.getFullYear() - d.getFullYear();
+    const m = today.getMonth() - d.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age -= 1;
+    return age >= minYears ? null : { minAge: { requiredAge: minYears, actualAge: age } };
+  };
+}
 
 @Component({
   selector: 'app-employee-portal-register',
@@ -81,6 +100,8 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
   private readonly passportRatio = 35 / 45;
   private readonly captureOutW = 450;
   private readonly captureOutH = 579; // 450 / (35/45)
+  /** Latest allowed DOB for date input (must be at least 15 years old). */
+  maxDob = '';
 
   constructor(
     private fb: FormBuilder,
@@ -94,10 +115,11 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
       lastName: ['', [Validators.required, Validators.maxLength(60)]],
       mobile: ['', [Validators.required, Validators.pattern(/^[6-9]\d{9}$/)]],
       email: ['', [Validators.required, Validators.email]],
-      dateOfBirth: ['', Validators.required],
+      dateOfBirth: ['', [Validators.required, minAgeFromDob(MIN_REGISTER_AGE)]],
       age: [{ value: '', disabled: true }],
       gender: ['', Validators.required],
     });
+    this.maxDob = this.computeMaxDob(MIN_REGISTER_AGE);
 
     this.subs.add(
       this.form.get('dateOfBirth')!.valueChanges.subscribe((v) => {
@@ -154,7 +176,137 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
     this.cdr.detectChanges();
   }
 
-  /** Brightness + sharpness + face (FaceDetector when available). */
+  private readonly NO_PERSON_HINT =
+    'A clear face is required — do not upload bottles, bags, or other objects.';
+
+  /** True if RGB looks like human skin (rejects bottles/bags/walls). */
+  private isSkinTone(r: number, g: number, b: number): boolean {
+    if (r < 60 || g < 30 || b < 15) return false;
+    if (r < g || r < b) return false;
+    if (Math.abs(r - g) < 12) return false;
+    // YCbCr skin window
+    const y = 0.299 * r + 0.587 * g + 0.114 * b;
+    const cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
+    const cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
+    return y > 50 && y < 240 && cb >= 77 && cb <= 135 && cr >= 133 && cr <= 180;
+  }
+
+  /**
+   * Fallback when FaceDetector API is missing: require enough skin + face-like
+   * structure in the oval so objects (bottle/bag) fail.
+   */
+  private looksLikePersonHeuristic(
+    data: Uint8ClampedArray,
+    width: number,
+    height: number,
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    gray: Float32Array,
+  ): boolean {
+    let total = 0;
+    let skin = 0;
+    let edge = 0;
+    for (let y = y0; y < y1; y += 2) {
+      for (let x = x0; x < x1; x += 2) {
+        const i = (y * width + x) * 4;
+        total++;
+        if (this.isSkinTone(data[i], data[i + 1], data[i + 2])) skin++;
+        if (x > x0 && y > y0 && x < x1 - 1 && y < y1 - 1) {
+          const c = gray[y * width + x];
+          const gx = Math.abs(gray[y * width + (x + 1)] - gray[y * width + (x - 1)]);
+          const gy = Math.abs(gray[(y + 1) * width + x] - gray[(y - 1) * width + x]);
+          if (gx + gy > 28) edge++;
+        }
+      }
+    }
+    if (total < 80) return false;
+    const skinRatio = skin / total;
+    const edgeRatio = edge / total;
+    // Face: meaningful skin + facial feature edges; objects usually fail one of these
+    return skinRatio >= 0.12 && edgeRatio >= 0.04 && skin >= 40;
+  }
+
+  /** Require a single person face in frame (blocks bottles/bags/etc.). */
+  private async requirePersonFace(
+    canvas: HTMLCanvasElement,
+  ): Promise<{ ok: boolean; hint: string }> {
+    const { width, height } = canvas;
+    const FaceDetectorCtor = (
+      window as unknown as {
+        FaceDetector?: new (opts?: {
+          fastMode?: boolean;
+          maxDetectedFaces?: number;
+        }) => {
+          detect: (src: CanvasImageSource) => Promise<
+            Array<{ boundingBox: DOMRectReadOnly }>
+          >;
+        };
+      }
+    ).FaceDetector;
+
+    if (FaceDetectorCtor) {
+      try {
+        const detector = new FaceDetectorCtor({ fastMode: true, maxDetectedFaces: 3 });
+        const faces = await detector.detect(canvas);
+        if (!faces.length) {
+          return { ok: false, hint: this.NO_PERSON_HINT };
+        }
+        if (faces.length > 1) {
+          return { ok: false, hint: 'Multiple faces detected — only one person in frame.' };
+        }
+        const box = faces[0].boundingBox;
+        const cx = box.x + box.width / 2;
+        const cy = box.y + box.height / 2;
+        const aspect = box.height / Math.max(box.width, 1);
+        const inOval =
+          cx > width * 0.15 &&
+          cx < width * 0.85 &&
+          cy > height * 0.1 &&
+          cy < height * 0.9 &&
+          box.width > width * 0.12 &&
+          box.height > height * 0.12 &&
+          aspect > 0.7 &&
+          aspect < 2.2;
+        if (!inOval) {
+          return {
+            ok: false,
+            hint: 'Center your face in the oval — a clear person photo is required.',
+          };
+        }
+        return { ok: true, hint: 'Looking good — tap Capture.' };
+      } catch {
+        return {
+          ok: false,
+          hint: 'Could not verify face. Hold still and try again.',
+        };
+      }
+    }
+
+    // No FaceDetector (e.g. Firefox) — skin + structure heuristic
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return { ok: false, hint: 'Could not analyze camera frame.' };
+    const data = ctx.getImageData(0, 0, width, height).data;
+    const x0 = Math.floor(width * 0.22);
+    const y0 = Math.floor(height * 0.18);
+    const x1 = Math.floor(width * 0.78);
+    const y1 = Math.floor(height * 0.78);
+    const gray = new Float32Array(width * height);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const i = (y * width + x) * 4;
+        gray[y * width + x] =
+          0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+      }
+    }
+    if (!this.looksLikePersonHeuristic(data, width, height, x0, y0, x1, y1, gray)) {
+      return { ok: false, hint: this.NO_PERSON_HINT };
+    }
+    return { ok: true, hint: 'Looking good — tap Capture.' };
+  }
+
+  /** Brightness + sharpness + mandatory person/face check. */
   private async analyzeCaptureQuality(
     canvas: HTMLCanvasElement,
   ): Promise<{ ok: boolean; hint: string }> {
@@ -217,50 +369,10 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
       return { ok: false, hint: 'Image is blurry — hold still and tap Capture.' };
     }
 
-    const FaceDetectorCtor = (
-      window as unknown as {
-        FaceDetector?: new (opts?: {
-          fastMode?: boolean;
-          maxDetectedFaces?: number;
-        }) => { detect: (src: CanvasImageSource) => Promise<Array<{ boundingBox: DOMRectReadOnly }>> };
-      }
-    ).FaceDetector;
-
-    let faceOk = false;
-    if (FaceDetectorCtor) {
-      try {
-        const detector = new FaceDetectorCtor({ fastMode: true, maxDetectedFaces: 3 });
-        const faces = await detector.detect(canvas);
-        if (!faces.length) {
-          return { ok: false, hint: 'No face detected — center your face in the oval.' };
-        }
-        if (faces.length > 1) {
-          return { ok: false, hint: 'Multiple faces detected — only one person in frame.' };
-        }
-        const box = faces[0].boundingBox;
-        const cx = box.x + box.width / 2;
-        const cy = box.y + box.height / 2;
-        const inOval =
-          cx > width * 0.18 &&
-          cx < width * 0.82 &&
-          cy > height * 0.12 &&
-          cy < height * 0.88 &&
-          box.width > width * 0.14;
-        if (!inOval) {
-          return { ok: false, hint: 'Move closer and center your face in the oval.' };
-        }
-        faceOk = true;
-      } catch {
-        /* FaceDetector may throw — fall through */
-      }
-    }
-
-    if (!faceOk && sharpness < this.SENSOR_SHARP_MIN) {
-      return { ok: false, hint: 'Image is blurry — hold still and tap Capture.' };
-    }
+    const person = await this.requirePersonFace(canvas);
+    if (!person.ok) return person;
 
     if (sharpness < this.SENSOR_SHARP_MIN) {
-      // Face found but a bit soft — allow capture with soft tip
       return { ok: true, hint: 'Hold still — looking good, tap Capture.' };
     }
 
@@ -367,15 +479,32 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
     this.form.get('age')?.setValue(this.ageFromDob(v), { emitEvent: false });
   }
 
+  private computeMaxDob(minYears: number): string {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - minYears);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
   private ageFromDob(isoDate: string): number | '' {
     if (!isoDate) return '';
-    const d = new Date(isoDate);
+    const d = new Date(String(isoDate).slice(0, 10));
     if (Number.isNaN(d.getTime())) return '';
     const today = new Date();
     let age = today.getFullYear() - d.getFullYear();
     const m = today.getMonth() - d.getMonth();
     if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age -= 1;
     return age >= 0 && age < 120 ? age : '';
+  }
+
+  dobErrorMessage(): string {
+    const c = this.form.get('dateOfBirth');
+    if (!c || !c.touched && !c.dirty) return '';
+    if (c.hasError('required')) return 'Date of birth is required.';
+    if (c.hasError('minAge')) return `You must be at least ${MIN_REGISTER_AGE} years old.`;
+    return 'Enter a valid date of birth.';
   }
 
   private toAppDate(iso: string): string {
@@ -571,6 +700,21 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
         return;
       }
 
+      // Mirror capture to match on-screen preview (CSS scaleX(-1))
+      const drawMirrored = (
+        source: CanvasImageSource,
+        sx: number,
+        sy: number,
+        sw: number,
+        sh: number,
+      ) => {
+        ctx.save();
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(source, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      };
+
       if (vw >= 2 && vh >= 2) {
         let cropW = vw;
         let cropH = Math.round(cropW / this.passportRatio);
@@ -582,7 +726,7 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
         const sy = Math.max(0, Math.floor((vh - cropH) / 2));
         cropW = Math.max(1, Math.min(cropW, vw - sx));
         cropH = Math.max(1, Math.min(cropH, vh - sy));
-        ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
+        drawMirrored(video, sx, sy, cropW, cropH);
       } else {
         // Fallback: ImageCapture API / full-element draw
         const track = this.stream.getVideoTracks()[0];
@@ -600,28 +744,36 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
             }
             const sx = Math.max(0, Math.floor((bw - cropW) / 2));
             const sy = Math.max(0, Math.floor((bh - cropH) / 2));
-            ctx.drawImage(bitmap, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
+            drawMirrored(bitmap, sx, sy, cropW, cropH);
             bitmap.close?.();
           } catch {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            drawMirrored(video, 0, 0, Math.max(vw, 1), Math.max(vh, 1));
           }
         } else {
-          // Last resort — may be blank but avoids hard "not ready" dead-end
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          drawMirrored(video, 0, 0, Math.max(vw, 1), Math.max(vh, 1));
         }
       }
 
-      // Quality sensors before accepting the still
-      const quality = await this.analyzeCaptureQuality(canvas);
-      if (!quality.ok) {
-        this.notyf.error(quality.hint);
-        this.sensorHint = quality.hint;
+      // Always require a real person face on the final still (blocks bottles/bags/etc.)
+      const person = await this.requirePersonFace(canvas);
+      if (!person.ok) {
+        this.notyf.error(person.hint);
+        this.sensorHint = person.hint;
         this.sensorOk = false;
         return;
       }
+      if (!this.sensorOk) {
+        const quality = await this.analyzeCaptureQuality(canvas);
+        if (!quality.ok) {
+          this.notyf.error(quality.hint);
+          this.sensorHint = quality.hint;
+          this.sensorOk = false;
+          return;
+        }
+      }
 
       const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.88),
+        canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.92),
       );
 
       if (!blob) {
@@ -655,13 +807,14 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
         reader.readAsDataURL(blob);
       });
 
-      this.pendingFile = file;
-      this.pendingPreview = dataUrl;
-      this.pendingPhotoHash = photoHash;
-      this.captureReview = true;
+      // Attach immediately when looking good — no extra Submit-photo step
+      this.profileFile = file;
+      this.profilePreview = dataUrl;
+      this.profilePhotoHash = photoHash;
+      this.clearPendingCapture();
       this.stopSensorLoop();
-      this.stopCameraTracksOnly();
-      this.cameraReady = false;
+      this.stopCamera();
+      this.notyf.success('Photo captured.');
       this.cdr.detectChanges();
     } catch (e) {
       console.error('capturePhoto failed', e);

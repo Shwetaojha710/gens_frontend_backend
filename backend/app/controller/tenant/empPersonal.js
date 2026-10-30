@@ -315,7 +315,27 @@ exports.RegisterAppEmp = async (req, res) => {
 
     if (profileImage) mirrorProfileImageToUpload(profileImage);
 
-    const dob = parseRegisterDob(dateOfBirth) || new Date("1970-01-01");
+    const dob = parseRegisterDob(dateOfBirth);
+    if (!dob) {
+      cleanupUpload();
+      return Helper.response(false, "Invalid date of birth", {}, res, 400);
+    }
+    const today = new Date();
+    let ageFromDob = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+      ageFromDob -= 1;
+    }
+    if (ageFromDob < 15) {
+      cleanupUpload();
+      return Helper.response(
+        false,
+        "You must be at least 15 years old to register",
+        {},
+        res,
+        400,
+      );
+    }
     const ageNum = Number(age);
     const newEmp = await empPersonal.create({
       tenantId,
@@ -324,7 +344,7 @@ exports.RegisterAppEmp = async (req, res) => {
       mobile,
       email: email || null,
       dateOfBirth: dob,
-      age: Number.isFinite(ageNum) && ageNum > 0 ? Math.round(ageNum) : 18,
+      age: Number.isFinite(ageNum) && ageNum > 0 ? Math.round(ageNum) : ageFromDob,
       gender: gender || null,
       profileImage: profileImage || null,
       profileImageHash: profileImageHash || null,
