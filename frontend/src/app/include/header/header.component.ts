@@ -32,7 +32,7 @@ export class HeaderComponent implements OnDestroy {
   tenantDetails: any = {}
   baseurl: any
   /** Avatar fallback when the company has no logo */
-  readonly defaultAvatarLogo = 'assets/img/logo/quaere_logo_1.PNG';
+  readonly defaultAvatarLogo = 'assets/img/marketing/gens-logo.png';
   companyLogoUrl: string | null = null;
   private logoSub?: Subscription;
 
@@ -70,6 +70,7 @@ export class HeaderComponent implements OnDestroy {
   editForm = {
     companyName: '',
     name: '',
+    email: '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
@@ -103,6 +104,7 @@ export class HeaderComponent implements OnDestroy {
     this.editForm = {
       companyName: String(tenant?.companyName || ''),
       name: String(this.personalDetail?.name || ''),
+      email: String(this.personalDetail?.email || ''),
       currentPassword: '',
       newPassword: '',
       confirmPassword: '',

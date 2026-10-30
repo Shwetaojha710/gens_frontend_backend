@@ -204,6 +204,11 @@
       <input type="text" [(ngModel)]="editForm.name" name="adminName" maxlength="80" required />
     </label>
 
+    <label class="cp-field">
+      <span>Email ID</span>
+      <input type="email" [value]="editForm.email" name="adminEmail" readonly class="cp-field__readonly" />
+    </label>
+
     <div class="cp-section-label">Change password <em>(optional)</em></div>
 
     <label class="cp-field">

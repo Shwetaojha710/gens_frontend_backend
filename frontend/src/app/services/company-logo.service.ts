@@ -4,7 +4,7 @@ import { BehaviorSubject, Observable, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 /** Default brand logo shown when a company has not uploaded its own. */
-export const DEFAULT_COMPANY_LOGO = 'assets/img/logo/image.png';
+export const DEFAULT_COMPANY_LOGO = 'assets/img/marketing/gens-logo.png';
 
 /** 'admin' = HR/admin panel session, 'portal' = employee portal session. */
 export type CompanyLogoScope = 'admin' | 'portal';

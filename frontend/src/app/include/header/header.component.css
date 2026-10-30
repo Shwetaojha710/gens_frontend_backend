@@ -513,6 +513,17 @@
   box-shadow: 0 0 0 3px rgba(32, 178, 170, 0.15);
 }
 
+.cp-field__readonly {
+  background: #f8fafc;
+  color: #64748b;
+  cursor: default;
+}
+
+.cp-field__readonly:focus {
+  border-color: #e2e8f0;
+  box-shadow: none;
+}
+
 .cp-section-label {
   margin-top: 4px;
   font-size: 12px;
