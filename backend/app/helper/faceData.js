@@ -153,6 +153,53 @@ function resolveProfileImagePath(filenameOrPath) {
   return face;
 }
 
+/**
+ * Rename uploaded face file to empPersonal UUID: `{empId}.jpg`
+ * Returns final filename, or null if source missing.
+ */
+function renameProfileImageToEmpId(sourcePathOrName, empId) {
+  if (!sourcePathOrName || !empId) return null;
+  const src = resolveProfileImagePath(sourcePathOrName);
+  if (!src || !fs.existsSync(src)) {
+    console.warn('renameProfileImageToEmpId: source missing', sourcePathOrName);
+    return null;
+  }
+  const ext = path.extname(src).toLowerCase() || '.jpg';
+  const finalName = `${String(empId)}${ext}`;
+  const dest = path.join(faceDataDir(), finalName);
+
+  try {
+    if (path.resolve(src) !== path.resolve(dest)) {
+      // Drop previous file for this emp id if present
+      if (fs.existsSync(dest)) {
+        try {
+          fs.unlinkSync(dest);
+        } catch (_) {
+          /* ignore */
+        }
+      }
+      fs.renameSync(src, dest);
+      // Clean temp name from legacy upload mirror
+      const tempBase = path.basename(src);
+      if (tempBase !== finalName) {
+        const legacyTemp = legacyUploadPath(tempBase);
+        if (legacyTemp && fs.existsSync(legacyTemp)) {
+          try {
+            fs.unlinkSync(legacyTemp);
+          } catch (_) {
+            /* ignore */
+          }
+        }
+      }
+    }
+    mirrorProfileImageToUpload(finalName);
+    return finalName;
+  } catch (err) {
+    console.error('renameProfileImageToEmpId failed:', err?.message || err);
+    return path.basename(src);
+  }
+}
+
 /** Keep a copy under upload/ so express.static + IMG_BASE_URL still resolve. */
 function mirrorProfileImageToUpload(filenameOrPath) {
   if (!filenameOrPath) return;
@@ -220,6 +267,7 @@ module.exports = {
   faceDataFilePath,
   legacyUploadPath,
   resolveProfileImagePath,
+  renameProfileImageToEmpId,
   mirrorProfileImageToUpload,
   unlinkProfileImage,
   faceDataPublicUrl,

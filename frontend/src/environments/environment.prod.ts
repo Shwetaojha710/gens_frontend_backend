@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://gens.in/api/api/',
+  apiUrl: 'https://gens.demoquaeretech.in/api/api/',
   python_apiUrl: 'https://gens.in/resume_tracker/api/v1/ats',
   websitechatApiUrl: 'https://wonderful-den-garlic-disposal.trycloudflare.com/chat',
   aiHrmsApiUrl: 'https://gens.in/chatbot',
