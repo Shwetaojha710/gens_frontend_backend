@@ -22,10 +22,11 @@
 }
 
 .epr-card {
-  max-width: 460px;
+  max-width: 560px;
+  width: 100%;
   max-height: none;
   overflow: visible;
-  padding: 26px 24px 20px;
+  padding: 26px 28px 20px;
 }
 
 .epr-card .gens-login__sub {
@@ -436,7 +437,7 @@
 
   .gens-login__right {
     width: 100%;
-    max-width: 480px;
+    max-width: 560px;
     display: flex;
     justify-content: center;
     align-items: flex-start;
@@ -445,7 +446,7 @@
 
   .epr-card {
     width: 100%;
-    max-width: 480px;
+    max-width: 560px;
     margin: 0 auto;
   }
 

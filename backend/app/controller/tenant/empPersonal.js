@@ -259,7 +259,7 @@ exports.RegisterAppEmp = async (req, res) => {
 
   const tenantId = tenant?.id;
 
-  if (!tenantId || !firstName || !lastName || !mobile || !companyCode) {
+  if (!tenantId || !firstName || !lastName || !mobile || !email || !companyCode) {
     cleanupUpload();
     return Helper.response(false, "All fields must be provided", [], res, 400);
   }
@@ -267,6 +267,11 @@ exports.RegisterAppEmp = async (req, res) => {
   if (!Helper.isValidMobile(mobile)) {
     cleanupUpload();
     return Helper.response(false, "Invalid mobile number format", [], res, 400);
+  }
+
+  if (typeof Helper.isValidEmail === "function" && !Helper.isValidEmail(email)) {
+    cleanupUpload();
+    return Helper.response(false, "Invalid email format", [], res, 400);
   }
 
   try {

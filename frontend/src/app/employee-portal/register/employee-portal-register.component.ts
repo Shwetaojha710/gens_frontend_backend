@@ -90,7 +90,7 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
       firstName: ['', [Validators.required, Validators.maxLength(60)]],
       lastName: ['', [Validators.required, Validators.maxLength(60)]],
       mobile: ['', [Validators.required, Validators.pattern(/^[6-9]\d{9}$/)]],
-      email: ['', [Validators.email]],
+      email: ['', [Validators.required, Validators.email]],
       dateOfBirth: ['', Validators.required],
       age: [{ value: '', disabled: true }],
       gender: ['', Validators.required],

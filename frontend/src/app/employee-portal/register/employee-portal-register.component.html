@@ -226,12 +226,14 @@
               <small class="gens-field__error" *ngIf="isInvalid('mobile')">Enter a valid 10-digit mobile (6–9).</small>
             </label>
             <label class="gens-field">
-              <span>Email</span>
+              <span>Email <em>*</em></span>
               <div class="gens-field__control" [class.is-invalid]="isInvalid('email')">
                 <i class="ri ri-mail-line"></i>
-                <input type="email" formControlName="email" placeholder="Email (optional)" autocomplete="email" />
+                <input type="email" formControlName="email" placeholder="Email" autocomplete="email" />
               </div>
-              <small class="gens-field__error" *ngIf="isInvalid('email')">Enter a valid email.</small>
+              <small class="gens-field__error" *ngIf="isInvalid('email')">
+                {{ form.get('email')?.errors?.['required'] ? 'Email is required.' : 'Enter a valid email.' }}
+              </small>
             </label>
           </div>
 
