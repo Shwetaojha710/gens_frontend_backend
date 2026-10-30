@@ -233,12 +233,16 @@ exports.RegisterAppEmp = async (req, res) => {
   } = req.body || {};
 
   const profileImage = req.file ? req.file.filename : null;
-  const uploadPath = profileImage
-    ? resolveProfileImagePath(profileImage)
-    : null;
+  // Prefer multer's real path — avoids ENOENT when FACE_DATA_PATH was unavailable
+  const uploadPath = req.file?.path
+    ? req.file.path
+    : profileImage
+      ? resolveProfileImagePath(profileImage)
+      : null;
 
   const cleanupUpload = () => {
-    if (profileImage) unlinkProfileImage(profileImage);
+    if (req.file?.path) unlinkProfileImage(req.file.path);
+    else if (profileImage) unlinkProfileImage(profileImage);
   };
 
   firstName = firstName != null ? String(firstName).trim() : "";
@@ -282,6 +286,8 @@ exports.RegisterAppEmp = async (req, res) => {
       if (photoHash && photoHash !== profileImageHash) {
         // Client hash is advisory; trust server hash for storage/dupe check
       }
+    } else if (profileImage) {
+      console.warn("RegisterAppEmp: profile image file missing at", uploadPath);
     }
 
     if (profileImageHash) {
@@ -313,7 +319,7 @@ exports.RegisterAppEmp = async (req, res) => {
       }
     }
 
-    if (profileImage) mirrorProfileImageToUpload(profileImage);
+    if (profileImage) mirrorProfileImageToUpload(req.file?.path || profileImage);
 
     const dob = parseRegisterDob(dateOfBirth);
     if (!dob) {
@@ -1388,8 +1394,9 @@ exports.uploadImage = async (req, res) => {
   const { id } = req.body;
   const tenantId = req.users && req.users.tenantId;
   const image = req.file ? req.file.filename : null;
+  const uploadedPath = req.file?.path || null;
   if (!tenantId || !id) {
-    if (image) unlinkProfileImage(image);
+    if (uploadedPath || image) unlinkProfileImage(uploadedPath || image);
     return Helper.response(
       false,
       "Tenant ID and Employee ID are required",
@@ -1409,11 +1416,14 @@ exports.uploadImage = async (req, res) => {
       where: { id, tenantId },
     });
     if (!emp) {
-      unlinkProfileImage(image);
+      unlinkProfileImage(uploadedPath || image);
       return Helper.response(false, "Employee not found", [], res, 404);
     }
 
-    const newPath = resolveProfileImagePath(image);
+    const newPath =
+      uploadedPath && fs.existsSync(uploadedPath)
+        ? uploadedPath
+        : resolveProfileImagePath(image);
     let profileImageHash = null;
     if (newPath && fs.existsSync(newPath)) {
       profileImageHash = crypto
@@ -1428,7 +1438,7 @@ exports.uploadImage = async (req, res) => {
         },
       });
       if (dup) {
-        unlinkProfileImage(image);
+        unlinkProfileImage(uploadedPath || image);
         return Helper.response(
           false,
           "This photo was already used for another employee. Please choose a different image.",
@@ -1443,7 +1453,7 @@ exports.uploadImage = async (req, res) => {
       unlinkProfileImage(emp.profileImage);
     }
 
-    mirrorProfileImageToUpload(image);
+    mirrorProfileImageToUpload(uploadedPath || image);
 
     emp.profileImage = image;
     if (profileImageHash) emp.profileImageHash = profileImageHash;
