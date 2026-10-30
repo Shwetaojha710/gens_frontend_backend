@@ -55,7 +55,7 @@
 
         <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="epr-form">
           <div class="epr-photo-block">
-            <div class="epr-photo-panel">
+            <div class="epr-photo-panel" *ngIf="!cameraOpen">
               <div class="epr-photo-preview" [class.has-photo]="!!profilePreview">
                 <img *ngIf="profilePreview" [src]="profilePreview" alt="Profile preview" />
                 <span *ngIf="!profilePreview" class="epr-photo-placeholder">
@@ -68,7 +68,6 @@
                     type="button"
                     class="gens-btn gens-btn--primary"
                     (click)="openCamera()"
-                    [disabled]="cameraOpen || cameraStarting"
                   >
                     <i class="ri ri-camera-line"></i>
                     {{ profileFile ? 'Retake photo' : 'Take live photo' }}
@@ -81,6 +80,10 @@
             </div>
 
             <div class="epr-camera" *ngIf="cameraOpen">
+              <p class="epr-camera__title">
+                {{ captureReview ? 'Review your photo' : 'Live photo' }}
+              </p>
+
               <div class="epr-camera__frame" [class.is-review]="captureReview">
                 <video
                   #cameraVideo
@@ -88,7 +91,7 @@
                   playsinline
                   muted
                   class="epr-camera__video"
-                  [hidden]="captureReview"
+                  [class.is-hidden]="captureReview"
                 ></video>
                 <img
                   *ngIf="captureReview && pendingPreview"
@@ -97,34 +100,36 @@
                   alt="Captured photo"
                 />
                 <div class="epr-camera__guide" *ngIf="!captureReview" aria-hidden="true"></div>
-                <p class="epr-camera__tip" *ngIf="!captureReview && cameraStarting">Starting camera…</p>
-                <p class="epr-camera__tip" *ngIf="!captureReview && !cameraStarting">
-                  Align your face inside the frame, then capture
-                </p>
-                <p class="epr-camera__tip epr-camera__tip--review" *ngIf="captureReview">
-                  Check your photo, then submit
-                </p>
               </div>
 
+              <p class="epr-camera__tip" *ngIf="!captureReview && cameraStarting">Starting camera…</p>
+              <p class="epr-camera__tip" *ngIf="!captureReview && !cameraStarting">
+                Align your face inside the oval, then tap Capture
+              </p>
+              <p class="epr-camera__tip" *ngIf="captureReview">
+                Looking good? Submit photo or retake
+              </p>
+
               <div class="epr-camera__actions" *ngIf="!captureReview">
-                <button type="button" class="gens-btn gens-btn--outline" (click)="closeCamera()">
+                <button type="button" class="epr-cam-btn epr-cam-btn--ghost" (click)="closeCamera()">
                   Cancel
                 </button>
                 <button
                   type="button"
-                  class="gens-btn gens-btn--primary"
+                  class="epr-cam-btn epr-cam-btn--primary"
                   (click)="capturePhoto()"
-                  [disabled]="cameraStarting"
+                  [disabled]="cameraStarting || !cameraReady"
                 >
-                  <i class="ri ri-camera-fill"></i> Capture
+                  <i class="ri ri-camera-fill"></i>
+                  {{ cameraStarting || !cameraReady ? 'Preparing…' : 'Capture' }}
                 </button>
               </div>
 
               <div class="epr-camera__actions" *ngIf="captureReview">
-                <button type="button" class="gens-btn gens-btn--outline" (click)="retakePhoto()">
+                <button type="button" class="epr-cam-btn epr-cam-btn--ghost" (click)="retakePhoto()">
                   Retake
                 </button>
-                <button type="button" class="gens-btn gens-btn--primary" (click)="submitCapturedPhoto()">
+                <button type="button" class="epr-cam-btn epr-cam-btn--primary" (click)="submitCapturedPhoto()">
                   <i class="ri ri-check-line"></i> Submit photo
                 </button>
               </div>

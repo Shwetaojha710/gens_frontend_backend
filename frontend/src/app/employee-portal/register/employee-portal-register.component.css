@@ -155,26 +155,34 @@
 /* —— Live camera —— */
 .epr-camera {
   border-radius: 14px;
-  padding: 12px;
-  background: #0f172a;
+  padding: 14px 12px 12px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+}
+
+.epr-camera__title {
+  margin: 0 0 10px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #2d3748;
 }
 
 .epr-camera__frame {
   position: relative;
   width: 100%;
-  max-width: 240px;
+  max-width: 200px;
   margin: 0 auto;
   aspect-ratio: 35 / 45;
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
-  background: #000;
-  border: 2px solid rgba(32, 178, 170, 0.45);
+  background: #0f172a;
+  border: 2px solid #20b2aa;
 }
 
 .epr-camera__frame.is-review {
-  max-width: 280px;
-  border-color: #20b2aa;
-  box-shadow: 0 0 0 3px rgba(32, 178, 170, 0.25);
+  max-width: 220px;
+  box-shadow: 0 0 0 3px rgba(32, 178, 170, 0.2);
 }
 
 .epr-camera__video,
@@ -189,64 +197,84 @@
   transform: scaleX(-1);
 }
 
-.epr-camera__tip--review {
-  background: rgba(15, 23, 42, 0.55);
-  padding: 6px 8px;
-  bottom: 0;
+.epr-camera__video.is-hidden {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .epr-camera__guide {
   pointer-events: none;
   position: absolute;
-  inset: 10%;
-  border: 2px dashed rgba(32, 178, 170, 0.9);
+  inset: 12%;
+  border: 2px dashed rgba(255, 255, 255, 0.85);
   border-radius: 50% / 42%;
-  box-shadow: 0 0 0 999px rgba(15, 23, 42, 0.4);
+  box-shadow: 0 0 0 999px rgba(15, 23, 42, 0.35);
 }
 
 .epr-camera__tip {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0.45rem;
-  margin: 0;
-  padding: 0 8px;
+  margin: 10px 0 0;
+  padding: 0 6px;
   text-align: center;
-  color: #fff;
-  font-size: 11px;
+  color: #64748b;
+  font-size: 12px;
   font-weight: 500;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  line-height: 1.35;
 }
 
 .epr-camera__actions {
   display: flex;
   justify-content: center;
+  align-items: stretch;
   gap: 8px;
   margin-top: 12px;
 }
 
-.epr-camera__actions .gens-btn {
-  width: auto;
-  min-width: 110px;
-  min-height: 40px;
-  font-size: 13px;
-  padding: 8px 16px;
+.epr-cam-btn {
+  flex: 1;
+  max-width: 160px;
+  min-height: 44px;
+  border-radius: 12px;
+  border: 0;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
-.epr-camera__actions .gens-btn--outline {
-  background: transparent;
-  border: 1.5px solid rgba(255, 255, 255, 0.35);
+.epr-cam-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.epr-cam-btn--ghost {
+  background: #fff;
+  color: #334155;
+  border: 1.5px solid #cbd5e1;
+}
+
+.epr-cam-btn--ghost:hover {
+  background: #f1f5f9;
+}
+
+.epr-cam-btn--primary {
+  background: #178f89;
   color: #fff;
 }
 
-.epr-camera__actions .gens-btn--outline:hover {
-  border-color: #fff;
-  background: rgba(255, 255, 255, 0.08);
+.epr-cam-btn--primary:hover:not(:disabled) {
+  background: #147a75;
 }
 
 .epr-camera__err {
   margin: 10px 0 0;
-  color: #fca5a5;
+  color: #e53e3e;
   font-size: 12px;
   text-align: center;
 }
@@ -474,23 +502,17 @@
   }
 
   .epr-camera {
-    padding: 10px;
+    padding: 12px 10px 10px;
   }
 
   .epr-camera__frame,
   .epr-camera__frame.is-review {
-    max-width: min(260px, 72vw);
+    max-width: min(190px, 58vw);
   }
 
-  .epr-camera__actions {
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .epr-camera__actions .gens-btn {
-    flex: 1 1 calc(50% - 8px);
-    min-width: 0;
-    width: auto;
+  .epr-cam-btn {
+    max-width: none;
+    min-height: 44px;
   }
 
   .epr-submit {
@@ -539,7 +561,12 @@
     text-align: center;
   }
 
-  .epr-camera__actions .gens-btn {
-    flex: 1 1 100%;
+  .epr-camera__actions {
+    flex-direction: column;
+  }
+
+  .epr-cam-btn {
+    width: 100%;
+    max-width: none;
   }
 }

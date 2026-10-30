@@ -1,4 +1,10 @@
-import { Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  OnDestroy,
+  ViewChild,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormBuilder,
@@ -36,6 +42,7 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
 
   cameraOpen = false;
   cameraStarting = false;
+  cameraReady = false;
   cameraError = '';
   /** After Capture: show still + Submit before applying to form. */
   captureReview = false;
@@ -63,6 +70,7 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
     private fb: FormBuilder,
     private api: EmployeePortalService,
     private router: Router,
+    private cdr: ChangeDetectorRef,
   ) {
     this.form = this.fb.group({
       companyCode: ['', Validators.required],
@@ -190,28 +198,31 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
     this.cameraError = '';
     this.clearPendingCapture();
     this.captureReview = false;
+    this.cameraReady = false;
     this.cameraOpen = true;
     this.cameraStarting = true;
+    this.cdr.detectChanges();
+
     try {
       this.stopCameraTracksOnly();
-      this.stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: {
-          facingMode: 'user',
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-      });
-      await new Promise((r) => setTimeout(r, 50));
-      const video = this.cameraVideo?.nativeElement;
-      if (!video) {
-        throw new Error('Camera view not ready');
-      }
+      this.stream = await this.requestCameraStream();
+
+      const video = await this.waitForVideoEl();
+      video.muted = true;
+      video.playsInline = true;
+      video.setAttribute('playsinline', 'true');
+      video.setAttribute('webkit-playsinline', 'true');
       video.srcObject = this.stream;
-      await video.play();
+
+      await video.play().catch(() => undefined);
+      await this.waitForVideoFrame(video);
+
       this.cameraStarting = false;
+      this.cameraReady = true;
+      this.cdr.detectChanges();
     } catch (err: unknown) {
       this.cameraStarting = false;
+      this.cameraReady = false;
       this.stopCamera();
       const name = (err as { name?: string })?.name || '';
       if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
@@ -223,6 +234,78 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
       }
       this.notyf.error(this.cameraError);
     }
+  }
+
+  private async requestCameraStream(): Promise<MediaStream> {
+    const attempts: MediaStreamConstraints[] = [
+      {
+        audio: false,
+        video: {
+          facingMode: { ideal: 'user' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+      },
+      { audio: false, video: { facingMode: 'user' } },
+      { audio: false, video: true },
+    ];
+    let lastErr: unknown;
+    for (const constraints of attempts) {
+      try {
+        return await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error('getUserMedia failed');
+  }
+
+  private async waitForVideoEl(timeoutMs = 3000): Promise<HTMLVideoElement> {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      this.cdr.detectChanges();
+      const el = this.cameraVideo?.nativeElement;
+      if (el) return el;
+      await new Promise((r) => setTimeout(r, 40));
+    }
+    throw new Error('Camera view not ready');
+  }
+
+  private waitForVideoFrame(video: HTMLVideoElement, timeoutMs = 8000): Promise<void> {
+    if (video.videoWidth > 0 && video.videoHeight > 0) {
+      return Promise.resolve();
+    }
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        cleanup();
+        if (video.videoWidth > 0 && video.videoHeight > 0) {
+          resolve();
+        } else {
+          reject(new Error('Camera frame timeout'));
+        }
+      }, timeoutMs);
+
+      const onReady = () => {
+        if (video.videoWidth > 0 && video.videoHeight > 0) {
+          cleanup();
+          resolve();
+        }
+      };
+
+      const cleanup = () => {
+        clearTimeout(timer);
+        video.removeEventListener('loadedmetadata', onReady);
+        video.removeEventListener('loadeddata', onReady);
+        video.removeEventListener('playing', onReady);
+        video.removeEventListener('canplay', onReady);
+      };
+
+      video.addEventListener('loadedmetadata', onReady);
+      video.addEventListener('loadeddata', onReady);
+      video.addEventListener('playing', onReady);
+      video.addEventListener('canplay', onReady);
+      onReady();
+    });
   }
 
   closeCamera(): void {
@@ -249,20 +332,20 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
     this.stopCameraTracksOnly();
     this.cameraOpen = false;
     this.cameraStarting = false;
+    this.cameraReady = false;
     this.captureReview = false;
   }
 
   capturePhoto(): void {
     const video = this.cameraVideo?.nativeElement;
-    if (!video || !this.stream || video.readyState < 2) {
-      this.notyf.error('Camera is not ready yet. Please wait a moment.');
-      return;
-    }
+    const liveTrack = this.stream
+      ?.getVideoTracks()
+      .some((t) => t.readyState === 'live');
+    const vw = video?.videoWidth || 0;
+    const vh = video?.videoHeight || 0;
 
-    const vw = video.videoWidth;
-    const vh = video.videoHeight;
-    if (!vw || !vh) {
-      this.notyf.error('Camera frame not available. Try again.');
+    if (!video || (!liveTrack && !this.cameraReady) || vw < 2 || vh < 2) {
+      this.notyf.error('Camera is not ready yet. Please wait a moment.');
       return;
     }
 
