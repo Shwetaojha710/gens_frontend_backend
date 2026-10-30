@@ -257,30 +257,44 @@
   font-style: normal;
 }
 
-.epr-code-control {
-  gap: 8px;
-  padding-right: 8px;
+.epr-company > span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #4a5568;
 }
 
-.epr-code-control.is-valid {
+.epr-company-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.epr-company-row .gens-field__control {
+  flex: 1;
+  min-width: 0;
+}
+
+.epr-company-row .gens-field__control.is-valid {
   border-color: #20b2aa;
   box-shadow: 0 0 0 3px rgba(32, 178, 170, 0.12);
 }
 
 .epr-verify-btn {
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  align-self: stretch;
   border: 0;
   background: #20b2aa;
   color: #fff;
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
-  padding: 8px 14px;
-  border-radius: 9px;
+  padding: 0 16px;
+  border-radius: 12px;
   cursor: pointer;
   white-space: nowrap;
-  line-height: 1;
-  min-height: 32px;
+  min-width: 76px;
 }
 
 .epr-verify-btn:disabled {
@@ -332,46 +346,183 @@
 @media (max-width: 1199.98px) {
   .gens-login__shell {
     padding-top: 36px;
+    padding-left: 20px;
+    padding-right: 20px;
   }
 }
 
-@media (max-width: 991.98px) {
-  .epr-hide-md {
+/* Tablet & below: form-first, hide marketing columns */
+@media (max-width: 1024px) {
+  .epr-hide-md,
+  .gens-login__left,
+  .gens-login__center {
     display: none !important;
   }
 
   .gens-login__shell {
+    display: flex !important;
     flex-direction: column;
     align-items: center;
-    padding: 28px 16px 40px;
-  }
-
-  .gens-login__left {
+    justify-content: flex-start;
+    max-width: 100%;
     width: 100%;
-    max-width: 460px;
-    padding-top: 0;
+    min-height: 100vh;
+    max-height: none;
+    padding: 24px 16px 40px;
+    gap: 0;
+    margin: 0 auto;
   }
 
   .gens-login__right {
     width: 100%;
+    max-width: 480px;
+    display: flex;
     justify-content: center;
+    align-items: flex-start;
+    padding: 0;
   }
 
   .epr-card {
-    max-width: 460px;
+    width: 100%;
+    max-width: 480px;
     margin: 0 auto;
+  }
+
+  .gens-login__wave {
+    background-position: bottom center;
+    background-size: cover;
+    opacity: 0.85;
   }
 }
 
-@media (max-width: 575.98px) {
+@media (max-width: 767.98px) {
+  .gens-login__shell {
+    padding: 16px 12px 32px;
+    padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .epr-card {
+    padding: 20px 14px 16px;
+    border-radius: 18px;
+    box-shadow: 0 12px 36px -18px rgba(45, 55, 72, 0.4);
+  }
+
+  .epr-card .gens-login__card-logo img {
+    height: 32px;
+  }
+
+  .epr-card h2 {
+    font-size: 1.15rem;
+  }
+
+  .epr-card .gens-login__sub {
+    font-size: 13px;
+    margin-bottom: 14px;
+  }
+
+  .epr-form {
+    gap: 11px;
+  }
+
   .epr-row,
   .epr-row--dob {
     grid-template-columns: 1fr;
+    gap: 11px;
+  }
+
+  .epr-photo-panel {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+  }
+
+  .epr-photo-preview {
+    width: 64px;
+    height: 82px;
+  }
+
+  .epr-photo-actions {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .epr-photo-actions .gens-btn {
+    width: 100%;
+    min-height: 40px;
+    font-size: 12.5px;
+    padding: 8px 10px;
+  }
+
+  .epr-photo-btns {
+    width: 100%;
+  }
+
+  .epr-photo-hint {
+    font-size: 11px;
+  }
+
+  .epr-company-row {
+    gap: 8px;
+  }
+
+  .epr-verify-btn {
+    min-width: 72px;
+    padding: 0 12px;
+    font-size: 12.5px;
+    border-radius: 12px;
+  }
+
+  .epr-camera {
+    padding: 10px;
+  }
+
+  .epr-camera__frame,
+  .epr-camera__frame.is-review {
+    max-width: min(260px, 72vw);
+  }
+
+  .epr-camera__actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .epr-camera__actions .gens-btn {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 0;
+    width: auto;
+  }
+
+  .epr-submit {
+    min-height: 48px;
+    font-size: 15px;
+    margin-top: 8px;
+  }
+
+  .gens-login__footer-text {
+    font-size: 12.5px;
+    margin-top: 12px;
+  }
+
+  /* Prevent iOS zoom on focus */
+  .epr-form .gens-field__control input,
+  .epr-form .gens-field__control select {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 399.98px) {
+  .gens-login__shell {
+    padding: 12px 10px 28px;
+  }
+
+  .epr-card {
+    padding: 18px 12px 14px;
+    border-radius: 16px;
   }
 
   .epr-photo-panel {
     flex-direction: column;
-    align-items: stretch;
     text-align: center;
   }
 
@@ -381,18 +532,14 @@
 
   .epr-photo-actions {
     align-items: center;
-  }
-
-  .epr-photo-btns {
-    justify-content: center;
+    width: 100%;
   }
 
   .epr-photo-hint {
     text-align: center;
   }
 
-  .epr-card {
-    padding: 22px 16px 18px;
-    border-radius: 18px;
+  .epr-camera__actions .gens-btn {
+    flex: 1 1 100%;
   }
 }

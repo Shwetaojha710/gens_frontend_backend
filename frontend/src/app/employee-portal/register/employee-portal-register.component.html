@@ -132,29 +132,31 @@
             </div>
           </div>
 
-          <label class="gens-field">
+          <div class="gens-field epr-company">
             <span>Company Code <em>*</em></span>
-            <div
-              class="gens-field__control epr-code-control"
-              [class.is-invalid]="isInvalid('companyCode') || !!tenantError"
-              [class.is-valid]="tenantVerified"
-            >
-              <i class="ri ri-building-line"></i>
-              <input
-                type="text"
-                formControlName="companyCode"
-                placeholder="Company code"
-                autocomplete="organization"
-                (blur)="onCompanyCodeBlur()"
-                (keydown.enter)="$event.preventDefault(); verifyCompanyCode()"
-              />
+            <div class="epr-company-row">
+              <div
+                class="gens-field__control"
+                [class.is-invalid]="isInvalid('companyCode') || !!tenantError"
+                [class.is-valid]="tenantVerified"
+              >
+                <i class="ri ri-building-line"></i>
+                <input
+                  type="text"
+                  formControlName="companyCode"
+                  placeholder="Company code"
+                  autocomplete="organization"
+                  (blur)="onCompanyCodeBlur()"
+                  (keydown.enter)="$event.preventDefault(); verifyCompanyCode()"
+                />
+              </div>
               <button
                 type="button"
                 class="epr-verify-btn"
                 (click)="verifyCompanyCode()"
                 [disabled]="verifyingTenant"
               >
-                {{ verifyingTenant ? 'Checking…' : 'Verify' }}
+                {{ verifyingTenant ? '…' : 'Verify' }}
               </button>
             </div>
             <small class="gens-field__ok" *ngIf="tenantVerified && verifiedCompanyName">
@@ -164,7 +166,7 @@
             <small class="gens-field__error" *ngIf="!tenantError && isInvalid('companyCode')">
               Company code is required.
             </small>
-          </label>
+          </div>
 
           <div class="epr-row">
             <label class="gens-field">
