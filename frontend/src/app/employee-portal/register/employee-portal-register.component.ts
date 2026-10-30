@@ -59,9 +59,12 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
   capturing = false;
   private sensorTimer: ReturnType<typeof setInterval> | null = null;
   private readonly photoCaptureMinBytes = 5 * 1024;
-  private readonly SENSOR_BRIGHT_MIN = 45;
-  private readonly SENSOR_BRIGHT_MAX = 210;
-  private readonly SENSOR_SHARP_MIN = 18;
+  private readonly SENSOR_BRIGHT_MIN = 40;
+  private readonly SENSOR_BRIGHT_MAX = 220;
+  /** Laplacian RMS — kept low; webcams + downscale falsely fail at ~18. */
+  private readonly SENSOR_SHARP_MIN = 6;
+  /** Absolute floor — reject only when clearly unusable. */
+  private readonly SENSOR_SHARP_HARD_MIN = 3.5;
 
   private notyf = new Notyf();
   private subs = new Subscription();
@@ -137,8 +140,9 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
     const video = this.videoEl || this.cameraVideo?.nativeElement;
     if (!video || video.videoWidth < 2) return;
     const probe = document.createElement('canvas');
-    const w = 160;
-    const h = Math.round((w * video.videoHeight) / video.videoWidth) || 160;
+    // Larger probe → Laplacian not crushed by heavy downscale (was causing false "blurry")
+    const w = Math.min(320, Math.max(220, video.videoWidth));
+    const h = Math.round((w * video.videoHeight) / video.videoWidth) || 240;
     probe.width = w;
     probe.height = h;
     const ctx = probe.getContext('2d', { willReadFrequently: true });
@@ -160,11 +164,11 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
     const { width, height } = canvas;
     const data = ctx.getImageData(0, 0, width, height).data;
 
-    // Prefer center oval region (passport framing)
-    const x0 = Math.floor(width * 0.18);
-    const y0 = Math.floor(height * 0.12);
-    const x1 = Math.floor(width * 0.82);
-    const y1 = Math.floor(height * 0.88);
+    // Prefer center oval / face band (ignore soft background)
+    const x0 = Math.floor(width * 0.22);
+    const y0 = Math.floor(height * 0.18);
+    const x1 = Math.floor(width * 0.78);
+    const y1 = Math.floor(height * 0.78);
 
     let sum = 0;
     let n = 0;
@@ -185,8 +189,9 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
     }
     const brightness = n ? sum / n : 0;
 
-    for (let y = y0 + 1; y < y1 - 1; y++) {
-      for (let x = x0 + 1; x < x1 - 1; x++) {
+    // Sample every other pixel — faster + less noise-sensitive than full grid
+    for (let y = y0 + 1; y < y1 - 1; y += 2) {
+      for (let x = x0 + 1; x < x1 - 1; x += 2) {
         const c = gray[y * width + x];
         const lap =
           -4 * c +
@@ -206,7 +211,9 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
     if (brightness > this.SENSOR_BRIGHT_MAX) {
       return { ok: false, hint: 'Too bright — reduce glare / backlight.' };
     }
-    if (sharpness < this.SENSOR_SHARP_MIN) {
+
+    // Only hard-reject extreme blur; mild softness is common on laptop cams
+    if (sharpness < this.SENSOR_SHARP_HARD_MIN) {
       return { ok: false, hint: 'Image is blurry — hold still and tap Capture.' };
     }
 
@@ -219,6 +226,7 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
       }
     ).FaceDetector;
 
+    let faceOk = false;
     if (FaceDetectorCtor) {
       try {
         const detector = new FaceDetectorCtor({ fastMode: true, maxDetectedFaces: 3 });
@@ -233,23 +241,27 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
         const cx = box.x + box.width / 2;
         const cy = box.y + box.height / 2;
         const inOval =
-          cx > width * 0.2 &&
-          cx < width * 0.8 &&
-          cy > height * 0.15 &&
-          cy < height * 0.85 &&
-          box.width > width * 0.18;
+          cx > width * 0.18 &&
+          cx < width * 0.82 &&
+          cy > height * 0.12 &&
+          cy < height * 0.88 &&
+          box.width > width * 0.14;
         if (!inOval) {
           return { ok: false, hint: 'Move closer and center your face in the oval.' };
         }
+        faceOk = true;
       } catch {
         /* FaceDetector may throw — fall through */
       }
-    } else {
-      // Soft face proxy: center region should not be flat / extreme
-      const midVar = sharpness;
-      if (midVar < this.SENSOR_SHARP_MIN * 1.1) {
-        return { ok: false, hint: 'Face not clear — center yourself and improve light.' };
-      }
+    }
+
+    if (!faceOk && sharpness < this.SENSOR_SHARP_MIN) {
+      return { ok: false, hint: 'Image is blurry — hold still and tap Capture.' };
+    }
+
+    if (sharpness < this.SENSOR_SHARP_MIN) {
+      // Face found but a bit soft — allow capture with soft tip
+      return { ok: true, hint: 'Hold still — looking good, tap Capture.' };
     }
 
     return { ok: true, hint: 'Looking good — tap Capture.' };
