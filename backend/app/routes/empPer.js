@@ -5,7 +5,7 @@ const { createEmp, getEmp, updateEmp, deleteEmp, uploadImage, getUploadedImage, 
 const upload = require('../middleware/upload');
 
 router.post('/createEmp', Admin,upload.single('image'), createEmp);
-router.post('/RegisterAppEmp', RegisterAppEmp);
+router.post('/RegisterAppEmp', upload.single('profileImage'), RegisterAppEmp);
 router.post('/check-tenant', CheckTenant);
 router.post('/getEmp', Admin, getEmp);
 router.post('/getEmpForwebcam', WebcamAdmin, getEmp);

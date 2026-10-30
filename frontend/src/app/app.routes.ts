@@ -102,6 +102,13 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'employee-portal/register',
+    loadComponent: () =>
+      import('./employee-portal/register/employee-portal-register.component').then(
+        (m) => m.EmployeePortalRegisterComponent,
+      ),
+  },
+  {
     path: 'employee-portal',
     canActivate: [employeePortalGuard],
     loadChildren: () =>

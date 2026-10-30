@@ -1,11 +1,20 @@
+const { Op } = require('sequelize');
 const AppConfigField = require('../../models/appConfigField');
 const AppConfigValue = require('../../models/appConfigValue');
+const Branch = require('../../models/branch');
 const Helper = require('../../helper/helper');
+
+const ALL_BRANCHES = AppConfigValue.ALL_BRANCHES;
 
 function numOrNull(v) {
   if (v == null || v === '') return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
+}
+
+function normalizeBranchId(raw) {
+  if (raw == null || raw === '' || raw === 'all' || raw === 'ALL') return ALL_BRANCHES;
+  return String(raw);
 }
 
 function shapeField(row) {
@@ -63,17 +72,26 @@ async function loadActiveFields() {
   });
 }
 
+async function listTenantBranches(tenantId) {
+  const rows = await Branch.findAll({
+    where: { tenantId },
+    attributes: ['id', 'name'],
+    order: [['name', 'ASC']],
+    raw: true,
+  });
+  return (rows || []).map((b) => ({ id: b.id, name: b.name }));
+}
+
 /**
- * Migrate legacy app_config.imageQuality → app_config_values once (if old table exists).
+ * Migrate legacy app_config.imageQuality → all-branches value once.
  */
 async function migrateLegacyImageQuality(tenantId, userId) {
   try {
     const existing = await AppConfigValue.findOne({
-      where: { tenantId, fieldKey: 'imageQuality' },
+      where: { tenantId, fieldKey: 'imageQuality', branchId: ALL_BRANCHES },
     });
     if (existing) return;
 
-    // Lazy require — old model may still exist
     let AppConfig;
     try {
       AppConfig = require('../../models/appConfig');
@@ -85,32 +103,89 @@ async function migrateLegacyImageQuality(tenantId, userId) {
 
     await AppConfigValue.create({
       tenantId,
+      branchId: ALL_BRANCHES,
       fieldKey: 'imageQuality',
       value: String(legacy.imageQuality),
+      isEnabled: true,
       createdBy: userId || null,
       updatedBy: userId || null,
     });
   } catch (_) {
-    /* ignore migration errors */
+    /* ignore */
   }
 }
 
-async function buildConfigPayload(tenantId, userId) {
+/**
+ * Resolve values for a branch:
+ * 1) branch-specific rows (if isEnabled)
+ * 2) else all-branches rows (if isEnabled)
+ * 3) else field defaults
+ */
+async function buildConfigPayload(tenantId, userId, branchIdRaw) {
   await migrateLegacyImageQuality(tenantId, userId);
 
+  const branchId = normalizeBranchId(branchIdRaw);
   const fieldRows = await loadActiveFields();
+  const fields = fieldRows.map(shapeField);
+
+  const scopeIds =
+    branchId === ALL_BRANCHES ? [ALL_BRANCHES] : [branchId, ALL_BRANCHES];
+
   const valueRows = await AppConfigValue.findAll({
-    where: { tenantId },
+    where: { tenantId, branchId: { [Op.in]: scopeIds } },
     raw: true,
   });
-  const valueMap = Object.fromEntries(valueRows.map((r) => [r.fieldKey, r.value]));
 
-  const fields = fieldRows.map(shapeField);
+  const byBranch = { [ALL_BRANCHES]: {}, [branchId]: {} };
+  const enabledByBranch = { [ALL_BRANCHES]: true, [branchId]: true };
+
+  for (const r of valueRows) {
+    const bid = r.branchId || ALL_BRANCHES;
+    if (!byBranch[bid]) byBranch[bid] = {};
+    byBranch[bid][r.fieldKey] = r.value;
+    // isEnabled is stored per row; use imageQuality/meta row or any row — prefer explicit
+    if (r.fieldKey === '__enabled' || Object.keys(byBranch[bid]).length === 1) {
+      enabledByBranch[bid] = r.isEnabled !== false;
+    }
+    if (r.isEnabled === false) enabledByBranch[bid] = false;
+    if (r.isEnabled === true && enabledByBranch[bid] !== false) {
+      /* keep */
+    }
+  }
+
+  // Dedicated enable flag row (optional) or infer from any field's isEnabled on that branch
+  const enableRows = valueRows.filter((r) => r.fieldKey === '__branch_enabled');
+  for (const r of enableRows) {
+    enabledByBranch[r.branchId || ALL_BRANCHES] = String(r.value) !== 'false' && r.isEnabled !== false;
+  }
+
+  // If branch-specific rows exist, check their isEnabled from first non-meta field
+  if (branchId !== ALL_BRANCHES) {
+    const branchFieldRows = valueRows.filter(
+      (r) => r.branchId === branchId && r.fieldKey !== '__branch_enabled'
+    );
+    if (branchFieldRows.length) {
+      enabledByBranch[branchId] = branchFieldRows.every((r) => r.isEnabled !== false);
+    } else {
+      // no branch rows yet → treat as not specifically enabled (use all fallback)
+      enabledByBranch[branchId] = false;
+    }
+  }
+
+  const useBranch =
+    branchId !== ALL_BRANCHES && enabledByBranch[branchId] && Object.keys(byBranch[branchId] || {}).length > 0;
+  const useAll = enabledByBranch[ALL_BRANCHES] !== false;
+
+  const sourceMap = useBranch
+    ? byBranch[branchId]
+    : useAll
+      ? byBranch[ALL_BRANCHES] || {}
+      : {};
+
   const values = {};
-  /** Typed map for mobile apps (numbers/booleans coerced). */
   const config = {};
   for (const f of fields) {
-    const str = coerceValue(f, valueMap[f.key] != null ? valueMap[f.key] : f.defaultValue);
+    const str = coerceValue(f, sourceMap[f.key] != null ? sourceMap[f.key] : f.defaultValue);
     values[f.key] = str;
     if (f.fieldType === 'range' || f.fieldType === 'number') {
       const n = Number(str);
@@ -121,17 +196,71 @@ async function buildConfigPayload(tenantId, userId) {
       config[f.key] = str;
     }
   }
-  return { fields, values, config };
+
+  const branches = await listTenantBranches(tenantId);
+
+  // Which branches currently have enabled custom config
+  const enabledBranchIds = [];
+  const allBranchRows = await AppConfigValue.findAll({
+    where: {
+      tenantId,
+      branchId: { [Op.ne]: ALL_BRANCHES },
+      fieldKey: { [Op.ne]: '__branch_enabled' },
+      isEnabled: true,
+    },
+    attributes: ['branchId'],
+    group: ['branchId'],
+    raw: true,
+  }).catch(async () => {
+    const rows = await AppConfigValue.findAll({
+      where: {
+        tenantId,
+        branchId: { [Op.ne]: ALL_BRANCHES },
+        isEnabled: true,
+      },
+      attributes: ['branchId'],
+      raw: true,
+    });
+    const seen = new Set();
+    return rows.filter((r) => {
+      if (seen.has(r.branchId)) return false;
+      seen.add(r.branchId);
+      return true;
+    });
+  });
+
+  for (const r of allBranchRows) {
+    if (r.branchId && !enabledBranchIds.includes(r.branchId)) {
+      enabledBranchIds.push(r.branchId);
+    }
+  }
+
+  const isEnabled =
+    branchId === ALL_BRANCHES
+      ? useAll
+      : useBranch || false;
+
+  return {
+    fields,
+    values,
+    config,
+    branchId: branchId === ALL_BRANCHES ? null : branchId,
+    isEnabled,
+    branches,
+    enabledBranchIds,
+    allBranchesId: ALL_BRANCHES,
+  };
 }
 
-/** POST /get-app-config — Admin (web settings) */
+/** POST /get-app-config — body: { branchId?: string | null } */
 exports.getAppConfig = async (req, res) => {
   try {
     const tenantId = req.users?.tenantId;
     const userId = req.users?.id;
     if (!tenantId) return Helper.response(false, 'User Not Found', {}, res, 404);
 
-    const payload = await buildConfigPayload(tenantId, userId);
+    const branchId = req.body?.branchId ?? req.query?.branchId ?? null;
+    const payload = await buildConfigPayload(tenantId, userId, branchId);
     return Helper.response(true, 'App config fetched', payload, res, 200);
   } catch (error) {
     console.error('getAppConfig error:', error);
@@ -139,17 +268,16 @@ exports.getAppConfig = async (req, res) => {
   }
 };
 
-/**
- * GET|POST /get-emp-app-config — Employee / mobile app (AppAdmin).
- * Returns fields + string values + typed `config` map (e.g. config.imageQuality = 80).
- */
+/** GET|POST /get-emp-app-config — uses employee branchId from token */
 exports.getEmpAppConfig = async (req, res) => {
   try {
     const tenantId = req.users?.tenantId;
     const userId = req.users?.id;
     if (!tenantId) return Helper.response(false, 'User Not Found', {}, res, 404);
 
-    const payload = await buildConfigPayload(tenantId, userId);
+    const branchId =
+      req.body?.branchId || req.query?.branchId || req.users?.branchId || null;
+    const payload = await buildConfigPayload(tenantId, userId, branchId);
     return Helper.response(true, 'App config fetched', payload, res, 200);
   } catch (error) {
     console.error('getEmpAppConfig error:', error);
@@ -159,8 +287,11 @@ exports.getEmpAppConfig = async (req, res) => {
 
 /**
  * POST /save-app-config
- * body: { values: { imageQuality: 80, ... } }
- * also accepts flat { imageQuality } for backward compatibility
+ * body: {
+ *   branchId?: string | null,   // null / 'all' = all branches
+ *   isEnabled?: boolean,        // enable config for this branch
+ *   values: { imageQuality: 80, ... }
+ * }
  */
 exports.saveAppConfig = async (req, res) => {
   try {
@@ -169,10 +300,21 @@ exports.saveAppConfig = async (req, res) => {
     if (!tenantId) return Helper.response(false, 'User Not Found', {}, res, 404);
 
     const body = req.body || {};
-    let incoming = body.values && typeof body.values === 'object' ? { ...body.values } : { ...body };
+    const branchId = normalizeBranchId(body.branchId);
+    const isEnabled = body.isEnabled !== false && body.isEnabled !== 'false';
+
+    let incoming =
+      body.values && typeof body.values === 'object' ? { ...body.values } : { ...body };
     delete incoming.values;
     delete incoming.id;
     delete incoming.tenantId;
+    delete incoming.branchId;
+    delete incoming.isEnabled;
+    delete incoming.branches;
+    delete incoming.enabledBranchIds;
+    delete incoming.fields;
+    delete incoming.config;
+    delete incoming.allBranchesId;
 
     const fieldRows = await loadActiveFields();
     if (!fieldRows.length) {
@@ -182,56 +324,62 @@ exports.saveAppConfig = async (req, res) => {
     const fieldByKey = Object.fromEntries(fieldRows.map((f) => [f.key, f]));
     const unknown = Object.keys(incoming).filter((k) => !fieldByKey[k]);
     if (unknown.length) {
-      return Helper.response(
-        false,
-        `Unknown field(s): ${unknown.join(', ')}`,
-        {},
-        res,
-        200
-      );
+      return Helper.response(false, `Unknown field(s): ${unknown.join(', ')}`, {}, res, 200);
     }
 
     const keysToSave = Object.keys(incoming);
-    if (!keysToSave.length) {
+    if (!keysToSave.length && body.isEnabled === undefined) {
       return Helper.response(false, 'No values to save.', {}, res, 200);
     }
 
+    // If disabling a specific branch, mark existing rows disabled (keep values)
+    if (!isEnabled && branchId !== ALL_BRANCHES) {
+      await AppConfigValue.update(
+        { isEnabled: false, updatedBy: userId || null },
+        { where: { tenantId, branchId } }
+      );
+      const payload = await buildConfigPayload(tenantId, userId, branchId);
+      return Helper.response(true, 'App config disabled for branch', payload, res, 200);
+    }
+
+    const keys = keysToSave.length ? keysToSave : fieldRows.map((f) => f.key);
     const savedValues = {};
-    for (const key of keysToSave) {
+
+    for (const key of keys) {
       const field = fieldByKey[key];
-      const coerced = coerceValue(shapeField(field), incoming[key]);
+      if (!field) continue;
+      const raw =
+        incoming[key] != null
+          ? incoming[key]
+          : (
+              await AppConfigValue.findOne({
+                where: { tenantId, branchId, fieldKey: key },
+                raw: true,
+              })
+            )?.value ?? field.defaultValue;
+      const coerced = coerceValue(shapeField(field), raw);
 
       const [row] = await AppConfigValue.findOrCreate({
-        where: { tenantId, fieldKey: key },
+        where: { tenantId, branchId, fieldKey: key },
         defaults: {
           tenantId,
+          branchId,
           fieldKey: key,
           value: coerced,
+          isEnabled: true,
           createdBy: userId || null,
           updatedBy: userId || null,
         },
       });
-      if (row.value !== coerced) {
-        row.value = coerced;
-        row.updatedBy = userId || null;
-        await row.save();
-      }
+      row.value = coerced;
+      row.isEnabled = true;
+      row.updatedBy = userId || null;
+      await row.save();
       savedValues[key] = coerced;
     }
 
-    // Full snapshot after save
-    const allValues = await AppConfigValue.findAll({ where: { tenantId }, raw: true });
-    const valueMap = Object.fromEntries(allValues.map((r) => [r.fieldKey, r.value]));
-    const fields = fieldRows.map(shapeField);
-    const values = {};
-    for (const f of fields) {
-      values[f.key] =
-        savedValues[f.key] != null
-          ? savedValues[f.key]
-          : coerceValue(f, valueMap[f.key] != null ? valueMap[f.key] : f.defaultValue);
-    }
-
-    return Helper.response(true, 'App config saved', { fields, values }, res, 200);
+    const payload = await buildConfigPayload(tenantId, userId, branchId);
+    return Helper.response(true, 'App config saved', payload, res, 200);
   } catch (error) {
     console.error('saveAppConfig error:', error);
     return Helper.response(false, error.message || 'Server error', {}, res, 500);

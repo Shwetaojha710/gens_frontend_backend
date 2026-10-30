@@ -191,6 +191,27 @@ exports.CheckTenant = async (req, res) => {
   }
 };
 
+/** Parse DOB from DD/MM/YYYY, YYYY-MM-DD, or Date-parseable string. */
+function parseRegisterDob(raw) {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) {
+    const [dd, mm, yyyy] = s.split("/");
+    const d = new Date(`${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const d = new Date(s.slice(0, 10));
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * Mobile / Employee Portal self-registration.
+ * multipart/form-data: firstName, lastName, mobile, email, dateOfBirth, age, gender, companyCode, profileImage?
+ */
 exports.RegisterAppEmp = async (req, res) => {
   let {
     firstName,
@@ -201,62 +222,99 @@ exports.RegisterAppEmp = async (req, res) => {
     age,
     gender,
     companyCode,
-  } = req.body;
+  } = req.body || {};
+
+  const profileImage = req.file ? req.file.filename : null;
+
+  const cleanupUpload = () => {
+    if (!profileImage) return;
+    const filePath = path.join(__dirname, "../../../upload", profileImage);
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (_) {
+        /* ignore */
+      }
+    }
+  };
+
+  firstName = firstName != null ? String(firstName).trim() : "";
+  lastName = lastName != null ? String(lastName).trim() : "";
+  mobile = mobile != null ? String(mobile).trim() : "";
+  email = email != null ? String(email).trim() : "";
+  companyCode = companyCode != null ? String(companyCode).trim() : "";
+  gender = gender != null ? String(gender).trim() : "";
 
   const tenant = await Tenant.findOne({
-    where: {
-      companyCode: companyCode,
-    },
+    where: { companyCode },
   });
   if (!tenant) {
+    cleanupUpload();
     return Helper.response(false, "No Company Found", {}, res, 400);
   }
 
   const tenantId = tenant?.id;
 
-  if (!tenantId || !firstName || !lastName || !mobile) {
+  if (!tenantId || !firstName || !lastName || !mobile || !companyCode) {
+    cleanupUpload();
     return Helper.response(false, "All fields must be provided", [], res, 400);
   }
 
   if (!Helper.isValidMobile(mobile)) {
+    cleanupUpload();
     return Helper.response(false, "Invalid mobile number format", [], res, 400);
   }
 
   try {
-    const [existsMobile, existsEmail] = await Promise.all([
-      empPersonal.findOne({ where: { mobile, tenantId } }),
-      empPersonal.findOne({ where: { email, tenantId } }),
-    ]);
-
+    const existsMobile = await empPersonal.findOne({ where: { mobile, tenantId } });
     if (existsMobile) {
+      cleanupUpload();
       return Helper.response(false, "Mobile Already Exists", {}, res, 400);
     }
-    if (existsEmail) {
-      return Helper.response(false, "Email Already Exists", {}, res, 400);
+    if (email) {
+      const existsEmail = await empPersonal.findOne({ where: { email, tenantId } });
+      if (existsEmail) {
+        cleanupUpload();
+        return Helper.response(false, "Email Already Exists", {}, res, 400);
+      }
     }
 
+    const dob = parseRegisterDob(dateOfBirth) || new Date("1970-01-01");
+    const ageNum = Number(age);
     const newEmp = await empPersonal.create({
       tenantId,
       firstName,
       lastName,
       mobile,
-      email,
-      dateOfBirth:
-        new Date(dateOfBirth.split("/").reverse().join("-")) || "01/01/1970",
-      age: age || 18,
-      gender,
+      email: email || null,
+      dateOfBirth: dob,
+      age: Number.isFinite(ageNum) && ageNum > 0 ? Math.round(ageNum) : 18,
+      gender: gender || null,
+      profileImage: profileImage || null,
     });
+
+    const plain = newEmp?.toJSON ? newEmp.toJSON() : newEmp;
+    if (plain?.profileImage) {
+      plain.profileImageUrl = `${process.env.IMG_BASE_URL || `${String(process.env.BASE_URL || "").replace(/\/+$/, "")}/upload`}/${plain.profileImage}`;
+    }
 
     return Helper.response(
       true,
       "Employee created successfully",
-      newEmp,
+      plain,
       res,
       200,
     );
   } catch (error) {
+    cleanupUpload();
     console.error("Error creating employee:", error);
-    return Helper.response(false, error?.errors[0]?.message, error, res, 500);
+    return Helper.response(
+      false,
+      error?.errors?.[0]?.message || error?.message || "Server error",
+      error,
+      res,
+      500,
+    );
   }
 };
 

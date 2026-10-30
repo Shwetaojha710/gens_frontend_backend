@@ -29,6 +29,12 @@ export interface AppConfigFieldDef {
 export class AppConfigComponent implements OnInit {
   fields: AppConfigFieldDef[] = [];
   values: Record<string, string> = {};
+  branches: { id: string; name: string }[] = [];
+  /** null = All branches (tenant default) */
+  selectedBranchId: string | null = null;
+  /** Enable custom config for the selected branch */
+  isEnabled = true;
+  enabledBranchIds: string[] = [];
   loading = false;
   saving = false;
   private notyf = new Notyf();
@@ -47,53 +53,63 @@ export class AppConfigComponent implements OnInit {
     return tips;
   }
 
+  get selectedBranchLabel(): string {
+    if (!this.selectedBranchId) return 'All branches';
+    return this.branches.find((b) => b.id === this.selectedBranchId)?.name || 'Branch';
+  }
+
+  isBranchEnabledInList(id: string): boolean {
+    return this.enabledBranchIds.includes(id);
+  }
+
+  branchName(id: string): string {
+    return this.branches.find((b) => b.id === id)?.name || id;
+  }
+
   load(): void {
     this.loading = true;
-    this.master.getAppConfig().subscribe({
+    this.master.getAppConfig({ branchId: this.selectedBranchId }).subscribe({
       next: (res: any) => {
         this.loading = false;
         if (!res?.status) {
           this.notyf.error(res?.message || 'Failed to load app config.');
           return;
         }
-        const data = res.data || {};
-        // New shape: { fields, values } — legacy: flat imageQuality
-        if (Array.isArray(data.fields)) {
-          this.fields = data.fields;
-          this.values = { ...(data.values || {}) };
-          for (const f of this.fields) {
-            if (this.values[f.key] == null || this.values[f.key] === '') {
-              this.values[f.key] = f.defaultValue ?? '';
-            }
-          }
-        } else if (data.imageQuality != null) {
-          this.fields = [
-            {
-              key: 'imageQuality',
-              label: 'Image quality',
-              hint: 'Higher values keep more detail and larger files.',
-              fieldType: 'range',
-              minValue: data.minImageQuality ?? 30,
-              maxValue: data.maxImageQuality ?? 100,
-              step: 1,
-              defaultValue: '80',
-              unit: '%',
-              options: [],
-              tips: [],
-              sortOrder: 10,
-            },
-          ];
-          this.values = { imageQuality: String(data.imageQuality) };
-        } else {
-          this.fields = [];
-          this.values = {};
-        }
+        this.applyPayload(res.data || {});
       },
       error: () => {
         this.loading = false;
         this.notyf.error('Failed to load app config.');
       },
     });
+  }
+
+  onBranchChange(): void {
+    this.load();
+  }
+
+  private applyPayload(data: any): void {
+    if (Array.isArray(data.branches)) {
+      this.branches = data.branches.map((b: any) => ({
+        id: b.id,
+        name: b.name || b.id,
+      }));
+    }
+    this.enabledBranchIds = Array.isArray(data.enabledBranchIds) ? data.enabledBranchIds : [];
+    this.isEnabled = data.isEnabled !== false;
+
+    if (Array.isArray(data.fields)) {
+      this.fields = data.fields;
+      this.values = { ...(data.values || {}) };
+      for (const f of this.fields) {
+        if (this.values[f.key] == null || this.values[f.key] === '') {
+          this.values[f.key] = f.defaultValue ?? '';
+        }
+      }
+    } else {
+      this.fields = [];
+      this.values = {};
+    }
   }
 
   displayNumber(field: AppConfigFieldDef): string {
@@ -142,27 +158,33 @@ export class AppConfigComponent implements OnInit {
     }
 
     this.saving = true;
-    this.master.saveAppConfig({ values: payload }).subscribe({
-      next: (res: any) => {
-        this.saving = false;
-        if (res?.status) {
-          if (res.data?.values) this.values = { ...res.data.values };
-          if (Array.isArray(res.data?.fields)) this.fields = res.data.fields;
-          this.notyf.success(res.message || 'App config saved.');
-        } else {
-          this.notyf.error(res?.message || 'Could not save.');
-        }
-      },
-      error: () => {
-        this.saving = false;
-        this.notyf.error('Failed to save. Please try again.');
-      },
-    });
+    this.master
+      .saveAppConfig({
+        branchId: this.selectedBranchId,
+        isEnabled: this.isEnabled,
+        values: payload,
+      })
+      .subscribe({
+        next: (res: any) => {
+          this.saving = false;
+          if (res?.status) {
+            this.applyPayload(res.data || {});
+            this.notyf.success(res.message || 'App config saved.');
+          } else {
+            this.notyf.error(res?.message || 'Could not save.');
+          }
+        },
+        error: () => {
+          this.saving = false;
+          this.notyf.error('Failed to save. Please try again.');
+        },
+      });
   }
 
   reset(): void {
     for (const f of this.fields) {
       this.values[f.key] = f.defaultValue ?? '';
     }
+    if (this.selectedBranchId) this.isEnabled = true;
   }
 }
