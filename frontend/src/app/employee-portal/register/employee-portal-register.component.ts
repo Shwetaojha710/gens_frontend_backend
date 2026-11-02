@@ -19,6 +19,11 @@ import { Router, RouterLink } from '@angular/router';
 import { Notyf } from 'notyf';
 import { Subscription } from 'rxjs';
 import { EmployeePortalService } from '../services/employee-portal.service';
+import {
+  detectFaces,
+  disposeFaceDetector,
+  loadFaceDetector,
+} from './face-detection.helper';
 
 const MIN_REGISTER_AGE = 18;
 
@@ -172,6 +177,7 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
     this.stopSensorLoop();
     this.stopCamera();
     this.subs.unsubscribe();
+    disposeFaceDetector();
   }
 
   private startSensorLoop(): void {
@@ -365,85 +371,55 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
     );
   }
 
-  /** Require a single clear, uncovered person face (blocks bags/wrappers/objects). */
+  /** Require a single clear, uncovered person face via MediaPipe face detection. */
   private async requirePersonFace(
     canvas: HTMLCanvasElement,
   ): Promise<{ ok: boolean; hint: string }> {
     const { width, height } = canvas;
-    type FaceLandmark = { locations: Array<{ x: number; y: number }>; type: string };
-    type DetectedFace = {
-      boundingBox: DOMRectReadOnly;
-      landmarks?: FaceLandmark[];
-    };
-    const FaceDetectorCtor = (
-      window as unknown as {
-        FaceDetector?: new (opts?: {
-          fastMode?: boolean;
-          maxDetectedFaces?: number;
-        }) => { detect: (src: CanvasImageSource) => Promise<DetectedFace[]> };
-      }
-    ).FaceDetector;
 
-    if (FaceDetectorCtor) {
-      try {
-        // fastMode false → better chance of landmarks + stricter faces
-        const detector = new FaceDetectorCtor({ fastMode: false, maxDetectedFaces: 3 });
-        const faces = await detector.detect(canvas);
-        if (!faces.length) {
-          return { ok: false, hint: this.NO_PERSON_HINT };
-        }
-        if (faces.length > 1) {
-          return { ok: false, hint: 'Multiple faces detected — only one person in frame.' };
-        }
-        const face = faces[0];
-        const box = face.boundingBox;
-        const cx = box.x + box.width / 2;
-        const cy = box.y + box.height / 2;
-        const aspect = box.height / Math.max(box.width, 1);
-        const inOval =
-          cx > width * 0.15 &&
-          cx < width * 0.85 &&
-          cy > height * 0.1 &&
-          cy < height * 0.9 &&
-          box.width > width * 0.14 &&
-          box.height > height * 0.14 &&
-          aspect > 0.75 &&
-          aspect < 2.0;
-        if (!inOval) {
-          return {
-            ok: false,
-            hint: 'Center your face in the oval — a clear person photo is required.',
-          };
-        }
+    const { faces, engine } = await detectFaces(canvas);
 
-        // Landmarks: require mouth (and ideally nose) so covered lower-face fails
-        const landmarks = face.landmarks || [];
-        if (landmarks.length) {
-          const types = new Set(landmarks.map((l) => String(l.type || '').toLowerCase()));
-          const hasMouth = types.has('mouth');
-          const hasNose = types.has('nose');
-          const hasEye = types.has('eye') || types.has('eyes');
-          if (hasEye && !hasMouth && !hasNose) {
-            return { ok: false, hint: this.FACE_COVERED_HINT };
-          }
-          if (!hasMouth && !hasNose) {
-            return { ok: false, hint: this.FACE_COVERED_HINT };
-          }
-        }
-
-        const clear = this.faceRegionClear(canvas, box);
-        if (!clear.ok) return clear;
-
-        return { ok: true, hint: 'Looking good — tap Capture.' };
-      } catch {
-        return {
-          ok: false,
-          hint: 'Could not verify face. Hold still and try again.',
-        };
-      }
+    if (faces.length > 1) {
+      return { ok: false, hint: 'Multiple faces detected — only one person in frame.' };
     }
 
-    // No FaceDetector (e.g. Firefox) — skin + structure heuristic
+    if (faces.length === 1) {
+      const box = faces[0];
+      // Low-confidence detections often = partial / covered face
+      if (box.score != null && box.score < 0.55) {
+        return { ok: false, hint: this.FACE_COVERED_HINT };
+      }
+      const cx = box.x + box.width / 2;
+      const cy = box.y + box.height / 2;
+      const aspect = box.height / Math.max(box.width, 1);
+      const inOval =
+        cx > width * 0.12 &&
+        cx < width * 0.88 &&
+        cy > height * 0.08 &&
+        cy < height * 0.92 &&
+        box.width > width * 0.14 &&
+        box.height > height * 0.14 &&
+        aspect > 0.7 &&
+        aspect < 2.2;
+      if (!inOval) {
+        return {
+          ok: false,
+          hint: 'Center your face in the oval — a clear person photo is required.',
+        };
+      }
+
+      const clear = this.faceRegionClear(canvas, box);
+      if (!clear.ok) return clear;
+
+      return { ok: true, hint: 'Looking good — tap Capture.' };
+    }
+
+    // No ML face found
+    if (engine === 'mediapipe' || engine === 'browser') {
+      return { ok: false, hint: this.NO_PERSON_HINT };
+    }
+
+    // Detector unavailable — strict skin/structure heuristic only
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return { ok: false, hint: 'Could not analyze camera frame.' };
     const data = ctx.getImageData(0, 0, width, height).data;
@@ -462,7 +438,6 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
     if (!this.looksLikePersonHeuristic(data, width, height, x0, y0, x1, y1, gray)) {
       return { ok: false, hint: this.NO_PERSON_HINT };
     }
-    // Also run lower-face clear check on oval center
     const clear = this.faceRegionClear(canvas, {
       x: x0,
       y: y0,
@@ -735,9 +710,13 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
     this.capturing = false;
     this.cameraOpen = true;
     this.cameraStarting = true;
+    this.sensorHint = 'Loading face detection…';
     this.cdr.detectChanges();
 
     try {
+      // Preload MediaPipe face model in parallel with camera open
+      const faceModelReady = loadFaceDetector().catch(() => null);
+
       this.stopCameraTracksOnly();
       this.stream = await this.requestCameraStream();
 
@@ -765,6 +744,7 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
       }
 
       await this.waitForVideoFrame(video);
+      await faceModelReady;
 
       this.cameraStarting = false;
       this.cameraReady = true;
