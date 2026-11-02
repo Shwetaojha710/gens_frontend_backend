@@ -15,11 +15,11 @@ const Prefix = require("../../models/prefix");
 const RoundType = require("../../models/round_type");
 const InterviewRound = require("../../models/interview_round");
 
-// Latitude/longitude are optional, but when entered they must be plain decimal
-// degrees within range (e.g. 19.1550, 72.8500). Returns { value } or { error }.
+// Latitude/longitude are mandatory plain decimal degrees within range
+// (e.g. 19.1550, 72.8500). Returns { value } or { error }.
 const parseCoordinate = (raw, label, min, max) => {
   if (raw === undefined || raw === null || String(raw).trim() === "") {
-    return { value: null };
+    return { error: `${label} is required` };
   }
   const str = String(raw).trim();
   if (!/^-?\d+(\.\d+)?$/.test(str)) {
@@ -37,9 +37,6 @@ const validateCoordinates = (latitude, longitude) => {
   if (lat.error) return { error: lat.error };
   const lng = parseCoordinate(longitude, "Longitude", -180, 180);
   if (lng.error) return { error: lng.error };
-  if ((lat.value === null) !== (lng.value === null)) {
-    return { error: "Please enter both latitude and longitude, or leave both blank" };
-  }
   return { latitude: lat.value, longitude: lng.value };
 };
 
@@ -197,18 +194,16 @@ exports.updateBranch = async (req, res) => {
       return Helper.response(false, "Branch with this name already exists", [], res, 409);
     }
 
-    const lat = parseCoordinate(latitude, "Latitude", -90, 90);
-    if (lat.error) return Helper.response(false, lat.error, [], res, 400);
-    const lng = parseCoordinate(longitude, "Longitude", -180, 180);
-    if (lng.error) return Helper.response(false, lng.error, [], res, 400);
+    const coords = validateCoordinates(latitude, longitude);
+    if (coords.error) return Helper.response(false, coords.error, [], res, 400);
     const range = parseRange(req.body.range);
     if (range.error) return Helper.response(false, range.error, [], res, 400);
 
     const imageFile = req.files && req.files.find((f) => f.fieldname == "image");
     const oldBranch = toPlain(branchs);
     branchs.name = name || branchs.name;
-    branchs.latitude = lat.value ?? branchs.latitude;
-    branchs.longitude = lng.value ?? branchs.longitude;
+    branchs.latitude = coords.latitude;
+    branchs.longitude = coords.longitude;
     // Sent blank = clear the range; not sent = keep it
     if (req.body.range !== undefined) branchs.range = range.value;
     branchs.status = status || branchs.status;

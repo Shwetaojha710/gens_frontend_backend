@@ -25,22 +25,26 @@
             </div>
 
             <div class="col-lg-3 col-sm-12">
-              <label class="form-label">Latitude</label>
+              <label class="form-label">Latitude <span class="text-danger">*</span></label>
               <input
                 type="text"
                 class="form-control"
                 placeholder="Enter Latitude"
+                name="latitude"
                 [(ngModel)]="obj['latitude']"
+                required
               />
             </div>
 
             <div class="col-lg-3 col-sm-12">
-              <label class="form-label">Longitude</label>
+              <label class="form-label">Longitude <span class="text-danger">*</span></label>
               <input
                 type="text"
                 class="form-control"
                 placeholder="Enter Longitude"
+                name="longitude"
                 [(ngModel)]="obj['longitude']"
+                required
               />
             </div>
 

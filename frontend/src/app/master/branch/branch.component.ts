@@ -179,6 +179,12 @@ export class BranchComponent {
     if (!ValidationUtil.showRequiredError('Branch name', this.obj.name, this.notyf)) {
       return;
     }
+    if (!ValidationUtil.showRequiredError('Latitude', this.obj.latitude, this.notyf)) {
+      return;
+    }
+    if (!ValidationUtil.showRequiredError('Longitude', this.obj.longitude, this.notyf)) {
+      return;
+    }
 
     const formData = new FormData();
     formData.append('name', this.obj.name || '');
@@ -222,6 +228,16 @@ export class BranchComponent {
   }
 
   updatedata() {
+    if (!ValidationUtil.showRequiredError('Branch name', this.obj.name, this.notyf)) {
+      return;
+    }
+    if (!ValidationUtil.showRequiredError('Latitude', this.obj.latitude, this.notyf)) {
+      return;
+    }
+    if (!ValidationUtil.showRequiredError('Longitude', this.obj.longitude, this.notyf)) {
+      return;
+    }
+
     const formData = new FormData();
     formData.append('id', this.obj.id);
     formData.append('name', this.obj.name || '');
