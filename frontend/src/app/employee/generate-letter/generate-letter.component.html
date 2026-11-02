@@ -3,7 +3,7 @@
   <div class="gl-header mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div>
       <h4 class="gl-title mb-0">Generate HR Letter</h4>
-      <p class="gl-subtitle mb-0">Assigned documents list · naya letter ke liye Add use karo</p>
+      <p class="gl-subtitle mb-0">Assigned documents list · use Add to create a new letter</p>
     </div>
     <div class="d-flex flex-wrap gap-2">
       <button type="button" class="btn btn-primary gl-btn" (click)="openAddForm()" *ngIf="!showAddForm">
@@ -187,7 +187,7 @@
       <ng-template #listEmpty>
         <div class="gl-empty">
           <div class="gl-empty__title">No assigned letters yet</div>
-          <p class="text-muted mb-3 small">Add Letter → Preview → Save ke baad yahan dikhenge.</p>
+          <p class="text-muted mb-3 small">Add Letter → Preview → Save — letters will appear here after saving.</p>
           <button type="button" class="btn btn-primary btn-sm" (click)="openAddForm()">+ Add Letter</button>
         </div>
       </ng-template>
