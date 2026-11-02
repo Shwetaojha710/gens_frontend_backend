@@ -56,10 +56,10 @@ export class DateWiseAttendanceComponent {
   getMin(a: number, b: number): number {
     return Math.min(a, b);
   }
-  onItemsPerPageChange(event: any) {
-    this.itemsPerPage = +event.target.value;
-    this.currentPage = 1; // Reset to first page
-    this.updateDisplayedList();
+  onItemsPerPageChange(value: number | string) {
+    this.itemsPerPage = Number(value) || 10;
+    this.currentPage = 1;
+    this.applyListFilters();
   }
   dayList: string[] = [];
 
@@ -149,51 +149,64 @@ export class DateWiseAttendanceComponent {
   yearList: any = [];
   EmpList: any = []
   AttendanceList: any = []
-  searchText: any
+  searchText: any = ''
   originalList: any = []
   currentPage = 1;
   itemsPerPage = 10;
-  totalPages = 0;
-  updateDisplayedList() {
-    const start = (this.currentPage - 1) * this.itemsPerPage;
-    const end = start + this.itemsPerPage;
-    this.AttendanceMasterList = this.filteredList.slice(start, end);
-    this.totalPages = Math.ceil(this.filteredList.length / this.itemsPerPage);
-  }
+  totalPages = 1;
+  pageNumbers: number[] = [];
 
-  goToPage(page: number) {
-    if (page < 1 || page > this.totalPages) return;
-    this.currentPage = page;
-    this.updateVisiblePages();
-    this.updateDisplayedList();
-  }
-  applyFilter(event: any) {
-    this.searchText = event?.target.value;
-
-    if (!this.searchText || this.searchText.trim() === '') {
-      this.filteredList = [...this.originalList];
+  /** Recompute filtered rows + page slice + page numbers */
+  applyListFilters(): void {
+    const q = String(this.searchText || '').trim().toLowerCase();
+    if (!q) {
+      this.filteredList = [...(this.originalList || [])];
     } else {
-      const search = this.searchText.toLowerCase();
-      this.filteredList = this.originalList.filter((item: any) =>
-        item.employee_name?.toLowerCase().includes(search) ||
-        (item.date && item.date.toLowerCase().includes(search)) ||
-        (item.status && item.status.toLowerCase().includes(search)) ||
-        (item.checkIn && String(item.checkIn).toLowerCase().includes(search)) ||
-        (item.checkOut && String(item.checkOut).toLowerCase().includes(search))
+      this.filteredList = (this.originalList || []).filter((item: any) =>
+        item.employee_name?.toLowerCase().includes(q) ||
+        (item.date && String(item.date).toLowerCase().includes(q)) ||
+        (item.status && String(item.status).toLowerCase().includes(q)) ||
+        (item.checkIn && String(item.checkIn).toLowerCase().includes(q)) ||
+        (item.checkOut && String(item.checkOut).toLowerCase().includes(q))
       );
     }
 
-    this.currentPage = 1;
-    this.updateDisplayedList();
+    this.totalPages = Math.max(1, Math.ceil(this.filteredList.length / this.itemsPerPage) || 1);
+    if (this.currentPage > this.totalPages) this.currentPage = this.totalPages;
+    if (this.currentPage < 1) this.currentPage = 1;
+    this.pageNumbers = Array.from({ length: this.totalPages }, (_, i) => i + 1);
+    this.slicePage();
     this.updateVisiblePages();
+  }
+
+  slicePage(): void {
+    const start = (this.currentPage - 1) * this.itemsPerPage;
+    this.AttendanceMasterList = this.filteredList.slice(start, start + this.itemsPerPage);
+  }
+
+  updateDisplayedList() {
+    this.applyListFilters();
+  }
+
+  goToPage(page: number, event?: Event) {
+    event?.preventDefault();
+    if (page < 1 || page > this.totalPages) return;
+    this.currentPage = page;
+    this.slicePage();
+    this.updateVisiblePages();
+  }
+
+  applyFilter(event: any) {
+    this.searchText = event?.target?.value || '';
+    this.currentPage = 1;
+    this.applyListFilters();
   }
 
   async ngOnInit() {
 
     await this.empList();
     await this.getYear();
-    this.updateDisplayedList();
-    this.updateVisiblePages();
+    this.applyListFilters();
 
   }
 
@@ -206,9 +219,12 @@ export class DateWiseAttendanceComponent {
       let message = response.message ? response.message : 'Data found Successfully';
       let status = this.statusService.handleResponseStatus(response.status, message);
       if (status == true) {
-        this.notyf.success(response.message || 'Employees loaded successfully');
+        const rows = response.data || [];
+        if (rows.length) {
+          this.notyf.success(response.message || 'Employees loaded successfully');
+        }
         this.AttendanceMasterList = [];
-        this.AttendanceMasterList = response.data || [];
+        this.AttendanceMasterList = rows;
         const statusMap: Record<string, string> = {
           'Week Off': 'WO',
           'Present': 'P',
@@ -236,18 +252,39 @@ export class DateWiseAttendanceComponent {
           const filterMap: Record<string, string> = { present: 'P', absent: 'A', leave: 'L' };
           const target = filterMap[this.dashboardStatusFilter.toLowerCase()];
           if (target) {
+            const before = this.AttendanceMasterList.length;
             this.AttendanceMasterList = this.AttendanceMasterList.filter((item: any) => item.status === target);
+            if (before > 0 && this.AttendanceMasterList.length === 0) {
+              this.notyf.error(
+                target === 'P'
+                  ? 'No employees are Present for this date'
+                  : target === 'A'
+                    ? 'No employees are Absent for this date'
+                    : 'No matching attendance records for this date',
+              );
+            }
           }
+        }
+
+        if (!(response.data || []).length) {
+          this.notyf.error(
+            response.message ||
+              'No active approved employees found for this branch. Add or approve employees first.',
+          );
         }
 
         this.originalList = [...this.AttendanceMasterList];
         this.filteredList = [...this.originalList];
         this.searchText = '';
         this.currentPage = 1;
+        this.masterSelected = false;
         this.generateDayList(this.obj['startDate'], this.obj['endDate']);
-        this.updateDisplayedList();
-        this.updateVisiblePages();
+        this.applyListFilters();
       } else if (status == false) {
+        this.originalList = [];
+        this.filteredList = [];
+        this.AttendanceMasterList = [];
+        this.applyListFilters();
         this.notyf.error(response.message)
       }
       else if (status == 'expired') {
@@ -256,10 +293,12 @@ export class DateWiseAttendanceComponent {
       }
     },
       (error: any) => {
+        this.originalList = [];
+        this.filteredList = [];
         this.AttendanceMasterList = [];
+        this.applyListFilters();
         console.error('Error loading employees:', error);
         this.notyf.error(error?.error?.message || 'Failed to load employees. Please try again.');
-        // alert('Failed to load employees. Please try again.');
       }
     );
 
@@ -330,10 +369,17 @@ export class DateWiseAttendanceComponent {
     this.master.getemployeeList().subscribe((data: { [x: string]: any; data: any; }) => {
       console.log(data)
       if (data['status'] == true) {
-        // this.notyf.success(data['message']);
-        this.EmpList = data.data;
-        this.EmpList = this.EmpList.filter((item: any) => item.label != 'All')
-
+        // Keep "All" so date-wise can load every employee in the branch
+        const list = data.data || [];
+        const hasAll = list.some(
+          (item: any) => item?.value === 'All' || item?.label === 'All',
+        );
+        this.EmpList = hasAll
+          ? list
+          : [{ label: 'All', value: 'All' }, ...list];
+        if (!this.obj['emp_id']) {
+          this.obj['emp_id'] = 'All';
+        }
       }
       else if (data['status'] == 'expired') {
         this.router.navigate(['login'])
@@ -530,9 +576,7 @@ export class DateWiseAttendanceComponent {
       if (data['status'] == true) {
         this.notyf.success(data['message']);
         this.originalList = this.originalList.filter((row: any) => row.id !== item.id);
-        this.filteredList = this.filteredList.filter((row: any) => row.id !== item.id);
-        this.updateDisplayedList();
-        this.updateVisiblePages();
+        this.applyListFilters();
       } else if (data['status'] == 'expired') {
         this.router.navigate(['login'])
       } else {
@@ -542,7 +586,11 @@ export class DateWiseAttendanceComponent {
   }
   visiblePages: number[] = [];
   updateVisiblePages() {
-    const chunkSize = 3;
+    if (!this.totalPages || this.totalPages < 1) {
+      this.visiblePages = [];
+      return;
+    }
+    const chunkSize = 5;
     const startPage = Math.floor((this.currentPage - 1) / chunkSize) * chunkSize + 1;
     const endPage = Math.min(startPage + chunkSize - 1, this.totalPages);
 

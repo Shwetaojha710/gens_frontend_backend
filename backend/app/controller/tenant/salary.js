@@ -4950,6 +4950,74 @@ exports.calculateAttendance = async (req, res) => {
       );
     }
 
+    // Preload shifts once — per-day Shift.findOne caused Postgres 53200
+    // (out of shared memory / max_locks_per_transaction).
+    const allShifts = await Shift.findAll({
+      where: { tenantId, branchId },
+      raw: true,
+    });
+    const shiftLookup = {};
+    allShifts.forEach((s) => {
+      if (!s?.shift || !s?.day_of_week) return;
+      if (!shiftLookup[s.shift]) shiftLookup[s.shift] = {};
+      const existing = shiftLookup[s.shift][s.day_of_week];
+      // Prefer active row when duplicates exist for same day
+      if (!existing || s.status === "active") {
+        shiftLookup[s.shift][s.day_of_week] = s;
+      }
+    });
+    const getShiftForDay = (shiftName, dayName, requireActive = false) => {
+      const row = shiftLookup[shiftName]?.[dayName] || null;
+      if (!row) return null;
+      if (requireActive && row.status !== "active") return null;
+      return row;
+    };
+
+    // Holidays are month-scoped and shared across employees
+    const monthStartStr = moment(
+      `${year}-${String(month).padStart(2, "0")}-01`,
+      "YYYY-MM-DD",
+    )
+      .startOf("month")
+      .format("YYYY-MM-DD");
+    const monthEndStr = moment(monthStartStr).endOf("month").format("YYYY-MM-DD");
+    const holidayListShared = await holiday.findAll({
+      where: {
+        tenantId,
+        branchId,
+        date: { [Op.between]: [monthStartStr, monthEndStr] },
+      },
+      raw: true,
+    });
+    const holidayTypeIdsShared = [
+      ...new Set(holidayListShared.map((item) => item.holiday_type).filter(Boolean)),
+    ];
+    const holidayTypeListShared = holidayTypeIdsShared.length
+      ? await HolidayType.findAll({
+          where: {
+            id: { [Op.in]: holidayTypeIdsShared },
+            tenantId,
+            branchId,
+            status: "active",
+          },
+          attributes: ["id", "name"],
+          raw: true,
+        })
+      : [];
+    const holidayTypeMapShared = Object.fromEntries(
+      holidayTypeListShared.map((item) => [item.id, item.name]),
+    );
+
+    // Leave master names for the branch (avoid N+1 leaveMaster.findOne)
+    const leaveMasterRows = await leaveMaster.findAll({
+      where: { branchId },
+      attributes: ["id", "leaveName", "leaveCode"],
+      raw: true,
+    });
+    const leaveMasterById = Object.fromEntries(
+      leaveMasterRows.map((r) => [r.id, r]),
+    );
+
     // console.log("Proceeding salary generation for:", employeeId);
     let absentdaysArr = [];
     for (let i = 0; i < employeeId.length; i++) {
@@ -5119,51 +5187,14 @@ exports.calculateAttendance = async (req, res) => {
         },
         raw: true,
       });
-      leavebalance = await Promise.all(
-        leavebalance.map(async (item) => {
-          const leaveName = await leaveMaster.findOne({
-            where: {
-              id: item?.leaveTypeId,
-              branchId,
-            },
-          });
-          return {
-            ...item,
-            leave_name: leaveName?.leaveName,
-          };
-        }),
-      );
+      leavebalance = leavebalance.map((item) => ({
+        ...item,
+        leave_name: leaveMasterById[item?.leaveTypeId]?.leaveName || null,
+      }));
 
-      // Collect all holidays for tenant
-      const holidayList = await holiday.findAll({
-        where: {
-          tenantId,
-          branchId,
-          date: {
-            [Op.between]: [
-              startDate.format("YYYY-MM-DD"),
-              endDate.format("YYYY-MM-DD"),
-            ],
-          },
-        },
-        raw: true,
-      });
-      const holidayTypeIds = [...new Set(holidayList.map((item) => item.holiday_type).filter(Boolean))];
-      const holidayTypeList = holidayTypeIds.length
-        ? await HolidayType.findAll({
-            where: {
-              id: { [Op.in]: holidayTypeIds },
-              tenantId,
-              branchId,
-              status: "active",
-            },
-            attributes: ["id", "name"],
-            raw: true,
-          })
-        : [];
-      const holidayTypeMap = Object.fromEntries(
-        holidayTypeList.map((item) => [item.id, item.name]),
-      );
+      // Shared month holidays (preloaded) — same for every employee
+      const holidayList = holidayListShared;
+      const holidayTypeMap = holidayTypeMapShared;
       const holidayMap = Object.fromEntries(
         holidayList.map((item) => {
           const typeName = String(holidayTypeMap[item.holiday_type] || "").trim().toLowerCase();
@@ -5214,19 +5245,71 @@ exports.calculateAttendance = async (req, res) => {
       const restrictedHolidayDates = Object.keys(holidayMap).filter(
         (date) => holidayMap[date]?.isRestrictedHoliday,
       );
+      // Monthly attendance once per employee (used for RH / sandwich / day loop)
+      const monthlyAttRows = await attendance.findAll({
+        where: {
+          employeeId: employeeId[i],
+          tenantId,
+          branchId,
+          [Op.or]: [
+            { month: Number(month), year: Number(year) },
+            {
+              date: {
+                [Op.between]: [
+                  startDate.format("YYYY-MM-DD"),
+                  endDate.format("YYYY-MM-DD"),
+                ],
+              },
+            },
+            {
+              check_in_time: {
+                [Op.between]: [
+                  startDate.format("YYYY-MM-DD 00:00:00"),
+                  endDate.format("YYYY-MM-DD 23:59:59"),
+                ],
+              },
+            },
+          ],
+        },
+        raw: true,
+      });
+      const attendanceByDate = {};
+      monthlyAttRows.forEach((att) => {
+        let dateKey = null;
+        if (att.date) {
+          dateKey = moment(att.date).format("YYYY-MM-DD");
+        } else if (
+          att.check_in_time &&
+          att.check_in_time !== "WEEK_OFF" &&
+          att.check_in_time !== "WO"
+        ) {
+          const parsed = moment(att.check_in_time);
+          if (parsed.isValid()) dateKey = parsed.format("YYYY-MM-DD");
+        }
+        if (!dateKey) return;
+        const existing = attendanceByDate[dateKey];
+        const isWo =
+          att.check_in_time === "WEEK_OFF" || att.check_in_time === "WO";
+        // Prefer real punch over week-off marker if both exist
+        if (!existing || (!isWo && existing.check_in_time === "WEEK_OFF")) {
+          attendanceByDate[dateKey] = att;
+        }
+      });
+
       const presentRestrictedHolidayDates = new Set();
       if (restrictedHolidayDates.length) {
-        const restrictedHolidayAttendance = await attendance.findAll({
-          where: {
-            employeeId: employeeId[i],
-            branchId,
-            check_in_time: { [Op.ne]: null },
-            check_out_time: { [Op.ne]: null },
-          },
-          raw: true,
-        });
-        restrictedHolidayAttendance.forEach((att) => {
-          const dateKey = moment(att.check_in_time).format("YYYY-MM-DD");
+        monthlyAttRows.forEach((att) => {
+          if (
+            !att?.check_in_time ||
+            !att?.check_out_time ||
+            att.check_in_time === "WEEK_OFF" ||
+            att.check_in_time === "WO"
+          ) {
+            return;
+          }
+          const parsed = moment(att.check_in_time);
+          if (!parsed.isValid()) return;
+          const dateKey = parsed.format("YYYY-MM-DD");
           if (restrictedHolidayDates.includes(dateKey)) {
             presentRestrictedHolidayDates.add(dateKey);
           }
@@ -5245,19 +5328,7 @@ exports.calculateAttendance = async (req, res) => {
 
       const shiftWeekOffDates = [];
       for (let d = moment(startDate); d.isSameOrBefore(endDate); d.add(1, "days")) {
-
-        console.log(d.format("dddd"));
-        
-        const shift = await Shift.findOne({
-          where: {
-            day_of_week: d.format("dddd"),
-            branchId,
-            // status: "active",
-            shift: PersonalInfo?.shift_id,
-            tenantId,
-          },
-          raw: true,
-        });
+        const shift = getShiftForDay(PersonalInfo?.shift_id, d.format("dddd"), false);
         if (shift?.is_week_off) {
           shiftWeekOffDates.push(d.format("YYYY-MM-DD"));
         }
@@ -5285,21 +5356,8 @@ exports.calculateAttendance = async (req, res) => {
         }
       });
 
-      const monthAttendanceForSandwich = await attendance.findAll({
-        where: {
-          employeeId: employeeId[i],
-          branchId,
-          check_in_time: {
-            [Op.between]: [
-              startDate.format("YYYY-MM-DD 00:00:00"),
-              endDate.format("YYYY-MM-DD 23:59:59"),
-            ],
-          },
-        },
-        raw: true,
-      });
       const presentDatesForSandwich = new Set();
-      monthAttendanceForSandwich.forEach((att) => {
+      monthlyAttRows.forEach((att) => {
         if (
           att?.check_in_time &&
           att?.check_out_time &&
@@ -5596,16 +5654,7 @@ exports.calculateAttendance = async (req, res) => {
 
       for (let d = moment(startDate); d <= endDate; d.add(1, "days")) {
         const dayName = d.format("dddd");
-        const shift = await Shift.findOne({
-          where: {
-            day_of_week: dayName,
-            branchId,
-            status: "active",
-            shift: PersonalInfo?.shift_id,
-            tenantId,
-          },
-          raw: true,
-        });
+        const shift = getShiftForDay(PersonalInfo?.shift_id, dayName, true);
 
         workingDays.push({ date: d.clone(), shift });
         dynamicWorkingDays++;
@@ -5616,6 +5665,7 @@ exports.calculateAttendance = async (req, res) => {
       let lateDays = 0;
       let graceLateCount = 0;
       let absentDays = 0;
+      const getMonthlyAttendance = monthlyAttRows;
 
       for (let entry of workingDays) {
         const date = entry.date;
@@ -5661,16 +5711,6 @@ exports.calculateAttendance = async (req, res) => {
           }
           continue;
         }
-        const getMonthlyAttendance = await attendance.findAll({
-          where: {
-            employeeId: employeeId[i],
-            tenantId,
-            branchId,
-            month,
-            year,
-          },
-          raw: true,
-        });
         if (getMonthlyAttendance && getMonthlyAttendance.length > 0) {
           if (!shift || shift.is_week_off) {
             fullDays++;
@@ -5682,30 +5722,9 @@ exports.calculateAttendance = async (req, res) => {
         //         absentDays++;
         //     continue;
         // }
-        
-       
 
-        // Prefer date column (upload / regularization), then datetime punch range
-        let attendances = await attendance.findOne({
-          where: {
-            employeeId: employeeId[i],
-            branchId,
-            date: dayStr,
-          },
-          raw: true,
-        });
-        if (!attendances) {
-          attendances = await attendance.findOne({
-            where: {
-              employeeId: employeeId[i],
-              branchId,
-              check_in_time: {
-                [Op.between]: [startOfDayUTC, endOfDayUTC],
-              },
-            },
-            raw: true,
-          });
-        }
+        // In-memory day punch (preloaded) — avoids per-day DB findOne lock pressure
+        let attendances = attendanceByDate[dayStr] || null;
         const isWeekOffMarker =
           attendances &&
           (attendances.check_in_time === "WEEK_OFF" ||

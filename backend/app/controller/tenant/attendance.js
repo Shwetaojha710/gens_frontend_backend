@@ -987,16 +987,31 @@ exports.getDateWiseAttendance = async (req, res) => {
 
     let employees = [];
     let records = [];
+    // Null joiningDate must still appear (common for new companies / incomplete profiles).
+    // Pending self-registration is excluded — only real employees.
+    const employeeListWhere = {
+      tenantId,
+      branchId,
+      status: "active",
+      [Op.and]: [
+        {
+          [Op.or]: [
+            { joiningDate: { [Op.is]: null } },
+            { joiningDate: { [Op.lte]: monthEnd } },
+          ],
+        },
+        {
+          [Op.or]: [
+            { emp_status: { [Op.is]: null } },
+            { emp_status: "approved" },
+          ],
+        },
+      ],
+    };
+
     if (emp_id == "All" || emp_id == "all") {
       employees = await empPersonal.findAll({
-        where: {
-          tenantId,
-          branchId,
-          status: "active",
-          joiningDate: { [Op.lte]: monthEnd },
-          // rejected self-registration requests are not employees
-          [Op.or]: [{ emp_status: { [Op.is]: null } }, { emp_status: { [Op.ne]: "rejected" } }],
-        },
+        where: employeeListWhere,
         attributes: ["id", "firstName", "lastName", "shift_id"],
         order: [
           ["firstName", "ASC"],
@@ -1026,14 +1041,39 @@ exports.getDateWiseAttendance = async (req, res) => {
       const emp = await empPersonal.findOne({
         where: {
           id: emp_id,
-          tenantId,
-          branchId,
-          joiningDate: { [Op.lte]: monthEnd },
+          ...employeeListWhere,
         },
         attributes: ["id", "firstName", "lastName", "shift_id"],
         raw: true,
       });
       if (!emp) {
+        // Distinguish missing vs not yet eligible (pending / future join)
+        const anyEmp = await empPersonal.findOne({
+          where: { id: emp_id, tenantId },
+          attributes: ["id", "branchId", "status", "emp_status", "joiningDate"],
+          raw: true,
+        });
+        if (!anyEmp) {
+          return Helper.response(false, "Employee not found", [], res, 404);
+        }
+        if (String(anyEmp.branchId) !== String(branchId)) {
+          return Helper.response(
+            false,
+            "Employee not found in the selected branch",
+            [],
+            res,
+            404,
+          );
+        }
+        if (String(anyEmp.emp_status || "").toLowerCase() === "pending") {
+          return Helper.response(
+            false,
+            "Employee is still pending approval",
+            [],
+            res,
+            404,
+          );
+        }
         return Helper.response(false, "Employee not found", [], res, 404);
       }
 
@@ -1057,6 +1097,16 @@ exports.getDateWiseAttendance = async (req, res) => {
         },
         raw: true,
       });
+    }
+
+    if (!employees.length) {
+      return Helper.response(
+        true,
+        "No active approved employees found for this branch. Add or approve employees first.",
+        [],
+        res,
+        200,
+      );
     }
 
     const shiftIds = [
@@ -1163,17 +1213,30 @@ exports.getDateWiseAttendance = async (req, res) => {
 
     const groupedRecords = {};
     records.forEach((r) => {
+      const isWoMarker =
+        r.check_in_time === "WEEK_OFF" || r.check_in_time === "WO";
       const dateKey = r.date
         ? moment(r.date).format("YYYY-MM-DD")
-        : moment(r.check_in_time).format("YYYY-MM-DD");
+        : !isWoMarker && r.check_in_time
+          ? moment(r.check_in_time).format("YYYY-MM-DD")
+          : null;
+      if (!dateKey || dateKey === "Invalid date") return;
       if (!groupedRecords[r.employeeId]) groupedRecords[r.employeeId] = {};
+      const hasRealPunch =
+        !isWoMarker &&
+        !!(r.check_in_time && String(r.check_in_time).match(/^\d{4}-\d{2}-\d{2}/));
       groupedRecords[r.employeeId][dateKey] = {
         id: r.id,
-        checkIn: r.check_in_time || null,
+        checkIn: isWoMarker ? null : r.check_in_time || null,
         checkOut: r.check_out_time || null,
-        // Marked present (e.g. by admin) or checked in — same rule as the dashboard
-        isPresent: !!r.is_present || !!r.check_in_time,
-        status: r.check_in_time || r.is_present ? "Present" : "Absent",
+        isWeekOff: isWoMarker,
+        // Marked present or real check-in — never treat WEEK_OFF marker as Present
+        isPresent: !!r.is_present || hasRealPunch,
+        status: isWoMarker
+          ? "Week Off"
+          : hasRealPunch || r.is_present
+            ? "Present"
+            : "Absent",
       };
     });
 
@@ -1200,6 +1263,8 @@ exports.getDateWiseAttendance = async (req, res) => {
         // Leave first (First Half / Second Half / Full Day Leave)
         if (leaveStatus) {
           status = leaveStatus;
+        } else if (entry?.isWeekOff) {
+          status = "Week Off";
         } else if (entry?.isPresent) {
           status = "Present";
         } else if (hol) {

@@ -321,13 +321,13 @@ exports.RegisterAppEmp = async (req, res) => {
       }
     }
 
-    const existsMobile = await empPersonal.findOne({ where: { mobile, tenantId } });
+    const existsMobile = await empPersonal.findOne({ where: { mobile, tenantId ,status: "active"} });
     if (existsMobile) {
       cleanupUpload();
       return Helper.response(false, "Mobile Already Exists", {}, res, 400);
     }
     if (email) {
-      const existsEmail = await empPersonal.findOne({ where: { email, tenantId } });
+      const existsEmail = await empPersonal.findOne({ where: { email, tenantId ,status: "active"} });
       if (existsEmail) {
         cleanupUpload();
         return Helper.response(false, "Email Already Exists", {}, res, 400);

@@ -64,10 +64,20 @@ const NOT_REJECTED = {
   [Op.or]: [{ emp_status: { [Op.is]: null } }, { emp_status: { [Op.ne]: "rejected" } }],
 };
 
-// An employee counts as present for a day when marked present or checked in
-// (same rule as team-wise attendance).
+// An employee counts as present for a day when marked present or checked in.
+// WEEK_OFF / WO upload markers must NOT count as present.
 const PRESENT_ROW = {
-  [Op.or]: [{ is_present: true }, { check_in_time: { [Op.ne]: null } }],
+  [Op.or]: [
+    { is_present: true },
+    {
+      check_in_time: {
+        [Op.and]: [
+          { [Op.ne]: null },
+          { [Op.notIn]: ["WEEK_OFF", "WO"] },
+        ],
+      },
+    },
+  ],
 };
 
 /**
