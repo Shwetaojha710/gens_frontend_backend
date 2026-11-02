@@ -271,12 +271,28 @@ exports.getMonthlyAttendance = async (req, res) => {
         where: {
           tenantId,
           branchId,
-          check_in_time: {
-            [Op.between]: [
-              startDate.format("YYYY-MM-DD 00:00:00"),
-              endDate.format("YYYY-MM-DD 23:59:59"),
-            ],
-          },
+          [Op.or]: [
+            {
+              date: {
+                [Op.between]: [
+                  startDate.format("YYYY-MM-DD"),
+                  endDate.format("YYYY-MM-DD"),
+                ],
+              },
+            },
+            {
+              month: Number(month),
+              year: Number(year),
+            },
+            {
+              check_in_time: {
+                [Op.between]: [
+                  startDate.format("YYYY-MM-DD 00:00:00"),
+                  endDate.format("YYYY-MM-DD 23:59:59"),
+                ],
+              },
+            },
+          ],
         },
         raw: true,
       });
@@ -305,12 +321,28 @@ exports.getMonthlyAttendance = async (req, res) => {
           employeeId: emp_id,
           tenantId,
           branchId,
-          check_in_time: {
-            [Op.between]: [
-              startDate.format("YYYY-MM-DD 00:00:00"),
-              endDate.format("YYYY-MM-DD 23:59:59"),
-            ],
-          },
+          [Op.or]: [
+            {
+              date: {
+                [Op.between]: [
+                  startDate.format("YYYY-MM-DD"),
+                  endDate.format("YYYY-MM-DD"),
+                ],
+              },
+            },
+            {
+              month: Number(month),
+              year: Number(year),
+            },
+            {
+              check_in_time: {
+                [Op.between]: [
+                  startDate.format("YYYY-MM-DD 00:00:00"),
+                  endDate.format("YYYY-MM-DD 23:59:59"),
+                ],
+              },
+            },
+          ],
         },
         raw: true,
       });
@@ -323,11 +355,23 @@ exports.getMonthlyAttendance = async (req, res) => {
     const groupedRecords = {};
 
     records.forEach((r) => {
-      const day = moment(r.check_in_time).date();
+      const isWeekOffMarker = r.check_in_time === "WEEK_OFF" || r.check_in_time === "WO";
+      let day = null;
+      if (r.date) {
+        day = moment(r.date).date();
+      } else if (r.check_in_time && !isWeekOffMarker) {
+        const parsed = moment(r.check_in_time);
+        if (parsed.isValid()) day = parsed.date();
+      }
+      if (!day) return;
+
       if (!groupedRecords[r.employeeId]) groupedRecords[r.employeeId] = {};
       groupedRecords[r.employeeId][day] = {
-        checkIn: r.check_in_time,
+        checkIn: isWeekOffMarker ? null : r.check_in_time,
         checkOut: r.check_out_time,
+        isWeekOff: isWeekOffMarker,
+        isPresent: !!r.is_present,
+        hasRecord: true,
       };
     });
 
@@ -418,10 +462,15 @@ exports.getMonthlyAttendance = async (req, res) => {
 
         let status = "Absent";
 
-        if (entry) {
+        if (entry?.isWeekOff) {
+          status = "Week Off";
+        } else if (entry?.checkIn || entry?.checkOut) {
           status = "Present";
+        } else if (entry?.hasRecord) {
+          // Explicit Absent uploaded (no check-in / check-out)
+          status = "Absent";
         } else {
-          // priority logic
+          // priority logic when no uploaded attendance row
 
           if (holidayMap[i]) {
             status = "Holiday";
@@ -2197,9 +2246,16 @@ exports.downloadAttendance = async (req, res) => {
     attendances.forEach((att) => {
       if (!attendanceMap[att.employeeId]) attendanceMap[att.employeeId] = {};
 
-      const day = moment(att.date).date();
+      const day = att.date
+        ? moment(att.date).date()
+        : att.check_in_time && att.check_in_time !== "WEEK_OFF" && att.check_in_time !== "WO"
+          ? moment(att.check_in_time).date()
+          : null;
+      if (!day) return;
 
-      if (att.check_in_time || att.check_out_time) {
+      if (att.check_in_time === "WEEK_OFF" || att.check_in_time === "WO") {
+        attendanceMap[att.employeeId][day] = "WO";
+      } else if (att.check_in_time || att.check_out_time) {
         let checkIn = att.check_in_time
           ? moment(att.check_in_time).format("HH:mm")
           : "";
@@ -2213,9 +2269,10 @@ exports.downloadAttendance = async (req, res) => {
         if (checkIn == "Invalid date") {
           checkIn = "00:00";
         }
-        // console.log(checkIn,checkOut);
 
         attendanceMap[att.employeeId][day] = `${checkIn} ${checkOut}`;
+      } else if (att.is_present === false) {
+        attendanceMap[att.employeeId][day] = "A";
       }
     });
 
@@ -2650,17 +2707,20 @@ exports.uploadAttendance = async (req, res) => {
 
       // 🔁 Loop dates
       for (let d = 0; d < dateColumns.length; d++) {
-        const day = dateColumns[d];
-        const value = row[d + 2];
+        const day = parseInt(dateColumns[d], 10);
+        const rawValue = row[d + 2];
 
-        if (!day || !value) continue;
-        if (value === "WO") continue; // skip weekly off
+        if (!day || rawValue === undefined || rawValue === null || rawValue === "") continue;
+
+        const normalized = String(rawValue).trim().toUpperCase().replace(/\s+/g, " ");
+        const isWO = ["WO", "WEEK OFF", "WEEKOFF", "W/OFF", "WEEK-OFF"].includes(normalized);
+        const isAbsent = ["A", "ABSENT", "AB"].includes(normalized);
 
         const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(
           day,
         ).padStart(2, "0")}`;
 
-        // ✅ collect delete condition
+        // Always clear existing row for this day (including WO / Absent overrides)
         deleteConditions.push({
           tenantId,
           branchId,
@@ -2672,10 +2732,17 @@ exports.uploadAttendance = async (req, res) => {
         let checkOut = null;
         let isPresent = false;
 
-        if (value == "A") {
+        if (isWO) {
+          // Marker so Attendance Logs can show WO even when shift master differs
+          checkIn = "WEEK_OFF";
+          checkOut = null;
+          isPresent = false;
+        } else if (isAbsent) {
+          checkIn = null;
+          checkOut = null;
           isPresent = false;
         } else {
-          const parts = value.split(" ");
+          const parts = String(rawValue).trim().split(/\s+/);
 
           if (parts.length >= 2) {
             const checkInTime = parts[0];
@@ -2688,6 +2755,9 @@ exports.uploadAttendance = async (req, res) => {
               checkOutTime == "00:00" ? null : `${dateStr} ${checkOutTime}`;
 
             isPresent = true;
+          } else {
+            // Unrecognized cell — skip insert but still deleted stale row above
+            continue;
           }
         }
 
@@ -2708,7 +2778,7 @@ exports.uploadAttendance = async (req, res) => {
       }
     }
 
-    if (!bulkData.length) {
+    if (!bulkData.length && !deleteConditions.length) {
       return Helper.response(
         false,
         "No valid attendance records found in Excel",
@@ -2722,16 +2792,21 @@ exports.uploadAttendance = async (req, res) => {
     const transaction = await sequelize.transaction();
 
     try {
-      await attendance.destroy(
-        {
+      // Chunk OR deletes to avoid Postgres "out of shared memory" / lock pressure
+      const DELETE_CHUNK = 100;
+      for (let i = 0; i < deleteConditions.length; i += DELETE_CHUNK) {
+        const chunk = deleteConditions.slice(i, i + DELETE_CHUNK);
+        await attendance.destroy({
           where: {
-            [Op.or]: deleteConditions,
+            [Op.or]: chunk,
           },
-        },
-        { transaction },
-      );
+          transaction,
+        });
+      }
 
-      await attendance.bulkCreate(bulkData, { transaction });
+      if (bulkData.length) {
+        await attendance.bulkCreate(bulkData, { transaction });
+      }
 
       await transaction.commit();
     } catch (err) {

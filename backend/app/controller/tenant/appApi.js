@@ -3711,17 +3711,19 @@ exports.AppupdatedApplyLeaveStatus = async (req, res) => {
         //   // );
         // }
 
-        if (existingLeave.compOffId) {
-          const compOffRecord = await comp_off.findOne({ where: { id: existingLeave.compOffId } });
-          if (compOffRecord) {
-            const newUsed = Number(compOffRecord.usedDays || 0) + leaveDays;
-            const newRemaining = Math.max(Number(compOffRecord.remainingDays || 0) - leaveDays, 0);
-            await comp_off.update(
-              { usedDays: newUsed.toFixed(1), remainingDays: newRemaining.toFixed(1), status: newRemaining <= 0 ? "used" : "active" },
-              { where: { id: existingLeave.compOffId } },
-            );
-          }
-        }
+        // Comp-off balance is deducted at salary generate (same as regular leave_balance).
+        // Deducting here as well caused double deduction on Generate Salary.
+        // if (existingLeave.compOffId) {
+        //   const compOffRecord = await comp_off.findOne({ where: { id: existingLeave.compOffId } });
+        //   if (compOffRecord) {
+        //     const newUsed = Number(compOffRecord.usedDays || 0) + leaveDays;
+        //     const newRemaining = Math.max(Number(compOffRecord.remainingDays || 0) - leaveDays, 0);
+        //     await comp_off.update(
+        //       { usedDays: newUsed.toFixed(1), remainingDays: newRemaining.toFixed(1), status: newRemaining <= 0 ? "used" : "active" },
+        //       { where: { id: existingLeave.compOffId } },
+        //     );
+        //   }
+        // }
     
 
       }
@@ -6160,10 +6162,19 @@ exports.updateRegularizationStatus = async (req, res) => {
           request.originalCheckOut = existingAttendance.check_out_time;
           request.wasNewAttendance = false;
 
+          const prevIn = existingAttendance.check_in_time;
+          const isWoMarker = prevIn === "WEEK_OFF" || prevIn === "WO";
+          // Never keep Week Off marker when regularization supplies real punch times
+          const nextCheckIn = checkIn || (isWoMarker ? null : prevIn);
+          const nextCheckOut =
+            checkOut ||
+            (isWoMarker ? null : existingAttendance.check_out_time);
+
           await attendance.update(
             {
-              check_in_time: checkIn || existingAttendance.check_in_time,
-              check_out_time: checkOut || existingAttendance.check_out_time,
+              check_in_time: nextCheckIn,
+              check_out_time: nextCheckOut,
+              is_present: !!(nextCheckIn && nextCheckOut && nextCheckIn !== "WEEK_OFF" && nextCheckIn !== "WO"),
               updatedBy: approverId,
             },
             {

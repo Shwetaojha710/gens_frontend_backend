@@ -80,6 +80,7 @@ export class PendingEmpListComponent implements OnDestroy {
     const start = (this.currentPage - 1) * this.pageSize;
     const end = start + this.pageSize;
     this.filteredDesignation = this.employees.slice(start, end);
+    this.isAllSelected();
   }
 
   employees: any = []
@@ -89,6 +90,29 @@ export class PendingEmpListComponent implements OnDestroy {
   currentPage = 1
   pageSize = 10
   filteredDesignation: any = []
+  masterSelected = false;
+
+  get selectedPendingCount(): number {
+    return (this.originalList || []).filter((e: any) => e?.isSelected).length;
+  }
+
+  checkUncheckAll(): void {
+    // Toggle only currently filtered/visible list (employees after search)
+    (this.employees || []).forEach((item: any) => {
+      item.isSelected = this.masterSelected;
+    });
+  }
+
+  isAllSelected(): void {
+    const list = this.employees || [];
+    this.masterSelected = list.length > 0 && list.every((item: any) => item.isSelected);
+  }
+
+  getSelectedPendingIds(): string[] {
+    return (this.originalList || [])
+      .filter((e: any) => e?.isSelected && e?.id)
+      .map((e: any) => e.id);
+  }
 
   async getEmploymentTypes() {
     let obj: any = {}
@@ -239,8 +263,9 @@ rejectEmployee(item: any) {
 }
 
 openApproveAll(): void {
-  if (!this.employees?.length) {
-    this.notyf.error('No pending employees to approve');
+  const ids = this.getSelectedPendingIds();
+  if (!ids.length) {
+    this.notyf.error('Please select at least one employee');
     return;
   }
   if (!this.branchList?.length) {
@@ -261,20 +286,22 @@ confirmApproveAll(): void {
     this.notyf.error('Please select a branch');
     return;
   }
-  const count = this.employees?.length || 0;
+  const ids = this.getSelectedPendingIds();
+  if (!ids.length) {
+    this.notyf.error('Please select at least one employee');
+    return;
+  }
+  const count = ids.length;
   Swal.fire({
-    title: 'Approve all pending?',
-    text: `${count} employee(s) will be approved for the selected branch.`,
+    title: 'Approve selected?',
+    text: `${count} selected employee(s) will be approved for the selected branch.`,
     icon: 'question',
     showCancelButton: true,
-    confirmButtonText: 'Yes, approve all',
+    confirmButtonText: 'Yes, approve',
     confirmButtonColor: '#0f766e',
   }).then((result) => {
     if (!result.isConfirmed) return;
     this.approveAllSaving = true;
-    const ids = (this.originalList || this.employees || [])
-      .map((e: any) => e?.id)
-      .filter(Boolean);
     this.employeeService
       .approveAllPendingEmp({
         branchId: this.approveAllBranchId as string,
@@ -295,16 +322,17 @@ confirmApproveAll(): void {
             }
             this.approveAllOpen = false;
             this.approveAllBranchId = null;
+            this.masterSelected = false;
             this.loadEmployees();
           } else if (status === 'expired') {
             this.router.navigate(['login']);
           } else {
-            this.notyf.error(response?.message || 'Approve all failed');
+            this.notyf.error(response?.message || 'Approve selected failed');
           }
         },
         error: (err) => {
           this.approveAllSaving = false;
-          this.notyf.error(err?.error?.message || 'Approve all failed');
+          this.notyf.error(err?.error?.message || 'Approve selected failed');
         },
       });
   });
@@ -359,11 +387,12 @@ rejectform() {
           this.originalList = response.data || [];
         }
 
-        this.employees = this.employees.map((item: any, index: any) => {
+        const mapped = this.employees.map((item: any, index: any) => {
           const rawPhoto = item.profileImage || null;
           return {
             ...item,
             si_no: index + 1,
+            isSelected: false,
             profileImageRaw: rawPhoto,
             profileImage: rawPhoto
               ? `${this.baseurl}${rawPhoto}`
@@ -372,19 +401,10 @@ rejectform() {
                 : '../../assets/img/avatars/1.png',
           };
         });
-        this.originalList = this.originalList.map((item: any, index: any) => {
-          const rawPhoto = item.profileImage || null;
-          return {
-            ...item,
-            si_no: index + 1,
-            profileImageRaw: rawPhoto,
-            profileImage: rawPhoto
-              ? `${this.baseurl}${rawPhoto}`
-              : item.gender == 'Female'
-                ? '../../assets/img/avatars/2.png'
-                : '../../assets/img/avatars/1.png',
-          };
-        });
+        // Same object refs so checkbox selection stays in sync across filter/pagination
+        this.employees = mapped;
+        this.originalList = mapped;
+        this.masterSelected = false;
 
         // pagination
         const start = (this.currentPage - 1) * this.pageSize;

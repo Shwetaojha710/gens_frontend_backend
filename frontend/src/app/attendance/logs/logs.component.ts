@@ -220,21 +220,19 @@ export class LogsComponent {
               let checkInTime = formatTime(match?.checkIn);
               let checkOutTime = formatTime(match?.checkOut);
               if (checkOutTime == "Invalid Date") {
-                checkOutTime = '00:00'
+                checkOutTime = ''
               }
               if (checkInTime == "Invalid Date") {
-                checkInTime = '00:00'
+                checkInTime = ''
               }
-              // Present
-              if (checkInTime || checkOutTime) {
-                employee.dayTime[day] = `${checkInTime} - ${checkOutTime}`;
-              }
-
-              // Week Off
-              else if (match?.status == 'WO') {
+              // Week Off / status first so uploaded WO is not overridden by bad times
+              if (match?.status == 'WO') {
                 employee.dayTime[day] = 'WO';
               }
-
+              // Present
+              else if (checkInTime || checkOutTime) {
+                employee.dayTime[day] = `${checkInTime} - ${checkOutTime}`;
+              }
               // Absent
               else if (match?.status == 'A') {
                 employee.dayTime[day] = 'A';
@@ -403,6 +401,31 @@ export class LogsComponent {
 
   //   }
 
+  /** Same sample file as Upload Attendance (POST /download). */
+  downloadSample(): void {
+    if (!this.obj?.year || !this.obj?.month) {
+      this.notyf?.error('Please select month and year');
+      return;
+    }
+    const payload = {
+      month: Number(this.obj.month),
+      year: Number(this.obj.year),
+    };
+    this.attendanceService.downloadAttendance(payload).subscribe({
+      next: (blob) => {
+        const file = new Blob([blob], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        });
+        FileSaver.saveAs(file, `attendance_${payload.month}_${payload.year}.xlsx`);
+        this.notyf?.success('Download completed');
+      },
+      error: (err) => {
+        const errorMessage = err?.error?.message ? err?.error?.message : err?.message;
+        this.notyf?.error(errorMessage || 'Failed to download sample');
+      },
+    });
+  }
+
   export(): void {
 
     const exportData: any[] = [];
@@ -436,21 +459,17 @@ export class LogsComponent {
         let checkInTime = formatTime(match?.checkIn);
         let checkOutTime = formatTime(match?.checkOut);
         if (checkOutTime == "Invalid Date") {
-          checkOutTime = '00:00'
+          checkOutTime = ''
         }
         if (checkInTime == "Invalid Date") {
-          checkInTime = '00:00'
+          checkInTime = ''
         }
-             if (checkInTime || checkOutTime) {
-                row[day] = `${checkInTime} - ${checkOutTime}`;
-              }
-
-              // Week Off
-              else if (match?.status == 'WO') {
+              if (match?.status == 'WO') {
                 row[day] = 'WO';
               }
-
-              // Absent
+              else if (checkInTime || checkOutTime) {
+                row[day] = `${checkInTime} - ${checkOutTime}`;
+              }
               else if (match?.status == 'A') {
                 row[day] = 'A';
               }

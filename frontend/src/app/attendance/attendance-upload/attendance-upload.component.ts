@@ -156,8 +156,7 @@ export class AttendanceUploadComponent {
         const file = new Blob([blob], {
           type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         });
-        const now = new Date();
-        const fileName = `attendance_${now.getMonth() + 1}_${now.getFullYear()}.xlsx`;
+        const fileName = `attendance_${this.obj.month}_${this.obj.year}.xlsx`;
         saveAs(file, fileName);
         console.log('File downloaded successfully');
       },

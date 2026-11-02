@@ -480,9 +480,10 @@
             type="button"
             class="btn btn-sm btn-primary"
             (click)="openApproveAll()"
-            [disabled]="!employees?.length || approveAllSaving"
+            [disabled]="!selectedPendingCount || approveAllSaving"
           >
-            <i class="fas fa-check-double me-1"></i> Approve All
+            <i class="fas fa-check-double me-1"></i> Approve Selected
+            <span *ngIf="selectedPendingCount">({{ selectedPendingCount }})</span>
           </button>
         </h5>
         <div class="card-body">
@@ -492,6 +493,15 @@
               <table class="table dataTable">
                 <thead>
                   <tr>
+                    <th style="width: 40px;">
+                      <input
+                        type="checkbox"
+                        [(ngModel)]="masterSelected"
+                        (change)="checkUncheckAll()"
+                        [disabled]="!employees?.length"
+                        title="Select all"
+                      />
+                    </th>
                     <th style="width: 10px!important;">SI.NO </th>
 
                     <th>Name/Email/Gender</th>
@@ -508,6 +518,14 @@
                 </thead>
                 <tbody class="table-border-bottom-0">
                   <tr *ngFor="let item of filteredDesignation; let i = index">
+                    <td>
+                      <input
+                        type="checkbox"
+                        [(ngModel)]="item.isSelected"
+                        (change)="isAllSelected()"
+                        [name]="'pendingSel' + item.id"
+                      />
+                    </td>
                     <td style="width: 10px!important;">{{item?.si_no}}</td>
 
                     <td>
@@ -566,7 +584,7 @@
                     </td>
                   </tr>
                   <tr *ngIf="!filteredDesignation?.length">
-                    <td colspan="5" class="text-center text-muted py-4">No pending employee requests found</td>
+                    <td colspan="7" class="text-center text-muted py-4">No pending employee requests found</td>
                   </tr>
                 </tbody>
               </table>
@@ -580,16 +598,16 @@
   </div>
 </div>
 
-<!-- Approve All modal -->
+<!-- Approve Selected modal -->
 <div class="pending-approve-backdrop" *ngIf="approveAllOpen" (click)="closeApproveAll()"></div>
 <div class="pending-approve-modal" *ngIf="approveAllOpen" role="dialog" aria-modal="true">
   <div class="pending-approve-modal__head">
-    <h5 class="mb-0">Approve All</h5>
+    <h5 class="mb-0">Approve Selected</h5>
     <button type="button" class="btn-close" (click)="closeApproveAll()" [disabled]="approveAllSaving"></button>
   </div>
   <div class="pending-approve-modal__body">
     <p class="text-muted mb-3">
-      Select a branch to approve <strong>{{ employees?.length || 0 }}</strong> pending employee(s).
+      Select a branch to approve <strong>{{ selectedPendingCount }}</strong> selected employee(s).
     </p>
     <label class="form-label fw-bold">Branch <span class="text-danger">*</span></label>
     <ng-select
@@ -611,9 +629,9 @@
       type="button"
       class="btn btn-primary"
       (click)="confirmApproveAll()"
-      [disabled]="approveAllSaving || !approveAllBranchId"
+      [disabled]="approveAllSaving || !approveAllBranchId || !selectedPendingCount"
     >
-      {{ approveAllSaving ? 'Approving…' : 'Approve All' }}
+      {{ approveAllSaving ? 'Approving…' : 'Approve Selected' }}
     </button>
   </div>
 </div>

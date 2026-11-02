@@ -1648,15 +1648,22 @@ exports.approveAllPendingEmp = async (req, res) => {
   if (!branchId || branchId === "null") {
     return Helper.response(false, "Please select a branch", {}, res, 400);
   }
+  if (!employeeIds.length) {
+    return Helper.response(
+      false,
+      "Please select at least one employee to approve",
+      {},
+      res,
+      400,
+    );
+  }
 
   try {
     const where = {
       tenantId,
       emp_status: "pending",
+      id: { [Op.in]: employeeIds },
     };
-    if (employeeIds.length) {
-      where.id = { [Op.in]: employeeIds };
-    }
 
     const pending = await empPersonal.findAll({ where });
     if (!pending.length) {
