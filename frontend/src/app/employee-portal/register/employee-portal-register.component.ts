@@ -214,9 +214,10 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
   }
 
   private readonly NO_PERSON_HINT =
-    'A clear uncovered face is required — no bags, bottles, wrappers, or objects.';
+    'No face detected — show your face clearly inside the oval (not hand / bag / object).';
   private readonly FACE_COVERED_HINT =
     'Face is covered — remove objects (bag, wrapper, phone) and show full face.';
+  private faceDetectorReady = false;
 
   /** True if RGB looks like human skin (rejects bottles/bags/walls). */
   private isSkinTone(r: number, g: number, b: number): boolean {
@@ -371,81 +372,112 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
     );
   }
 
-  /** Require a single clear, uncovered person face via MediaPipe face detection. */
+  /** Require a single clear face from ML detector only (hands/bags never pass). */
   private async requirePersonFace(
     canvas: HTMLCanvasElement,
   ): Promise<{ ok: boolean; hint: string }> {
     const { width, height } = canvas;
 
-    const { faces, engine } = await detectFaces(canvas);
+    if (!this.faceDetectorReady) {
+      const det = await loadFaceDetector();
+      this.faceDetectorReady = !!det || !!(window as unknown as { FaceDetector?: unknown }).FaceDetector;
+      if (!this.faceDetectorReady) {
+        return {
+          ok: false,
+          hint: 'Face detection is loading… wait a moment, then try again.',
+        };
+      }
+    }
+
+    const { faces } = await detectFaces(canvas);
 
     if (faces.length > 1) {
       return { ok: false, hint: 'Multiple faces detected — only one person in frame.' };
     }
 
-    if (faces.length === 1) {
-      const box = faces[0];
-      // Low-confidence detections often = partial / covered face
-      if (box.score != null && box.score < 0.55) {
-        return { ok: false, hint: this.FACE_COVERED_HINT };
-      }
-      const cx = box.x + box.width / 2;
-      const cy = box.y + box.height / 2;
-      const aspect = box.height / Math.max(box.width, 1);
-      const inOval =
-        cx > width * 0.12 &&
-        cx < width * 0.88 &&
-        cy > height * 0.08 &&
-        cy < height * 0.92 &&
-        box.width > width * 0.14 &&
-        box.height > height * 0.14 &&
-        aspect > 0.7 &&
-        aspect < 2.2;
-      if (!inOval) {
-        return {
-          ok: false,
-          hint: 'Center your face in the oval — a clear person photo is required.',
-        };
-      }
-
-      const clear = this.faceRegionClear(canvas, box);
-      if (!clear.ok) return clear;
-
-      return { ok: true, hint: 'Looking good — tap Capture.' };
-    }
-
-    // No ML face found
-    if (engine === 'mediapipe' || engine === 'browser') {
+    if (!faces.length) {
+      // No ML face → reject (hand / bag / object will hit this)
       return { ok: false, hint: this.NO_PERSON_HINT };
     }
 
-    // Detector unavailable — strict skin/structure heuristic only
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return { ok: false, hint: 'Could not analyze camera frame.' };
-    const data = ctx.getImageData(0, 0, width, height).data;
-    const x0 = Math.floor(width * 0.22);
-    const y0 = Math.floor(height * 0.18);
-    const x1 = Math.floor(width * 0.78);
-    const y1 = Math.floor(height * 0.78);
-    const gray = new Float32Array(width * height);
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const i = (y * width + x) * 4;
-        gray[y * width + x] =
-          0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-      }
+    const box = faces[0];
+    if (box.score != null && box.score < 0.6) {
+      return { ok: false, hint: this.FACE_COVERED_HINT };
     }
-    if (!this.looksLikePersonHeuristic(data, width, height, x0, y0, x1, y1, gray)) {
-      return { ok: false, hint: this.NO_PERSON_HINT };
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+    const aspect = box.height / Math.max(box.width, 1);
+    const inOval =
+      cx > width * 0.12 &&
+      cx < width * 0.88 &&
+      cy > height * 0.08 &&
+      cy < height * 0.92 &&
+      box.width > width * 0.16 &&
+      box.height > height * 0.16 &&
+      aspect > 0.75 &&
+      aspect < 2.0;
+    if (!inOval) {
+      return {
+        ok: false,
+        hint: 'Center your face in the oval — a clear person photo is required.',
+      };
     }
-    const clear = this.faceRegionClear(canvas, {
-      x: x0,
-      y: y0,
-      width: x1 - x0,
-      height: y1 - y0,
-    });
+
+    const clear = this.faceRegionClear(canvas, box);
     if (!clear.ok) return clear;
+
+    // Hands / flat skin patches lack eye-socket contrast in upper face
+    if (!this.hasEyeLikeContrast(canvas, box)) {
+      return { ok: false, hint: this.NO_PERSON_HINT };
+    }
+
     return { ok: true, hint: 'Looking good — tap Capture.' };
+  }
+
+  /** Eyes create darker patches in upper face — hands usually don't. */
+  private hasEyeLikeContrast(
+    canvas: HTMLCanvasElement,
+    box: { x: number; y: number; width: number; height: number },
+  ): boolean {
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return false;
+    const { width: cw, height: ch } = canvas;
+    const x0 = Math.max(0, Math.floor(box.x + box.width * 0.1));
+    const x1 = Math.min(cw, Math.ceil(box.x + box.width * 0.9));
+    const y0 = Math.max(0, Math.floor(box.y + box.height * 0.12));
+    const y1 = Math.min(ch, Math.ceil(box.y + box.height * 0.48));
+    if (x1 - x0 < 10 || y1 - y0 < 8) return false;
+
+    const data = ctx.getImageData(x0, y0, x1 - x0, y1 - y0).data;
+    const bw = x1 - x0;
+    const midX = Math.floor((x1 - x0) / 2);
+    let leftDark = 0;
+    let rightDark = 0;
+    let leftN = 0;
+    let rightN = 0;
+    let sum = 0;
+    let n = 0;
+    for (let y = 0; y < y1 - y0; y += 2) {
+      for (let x = 0; x < bw; x += 2) {
+        const i = (y * bw + x) * 4;
+        const g = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        sum += g;
+        n++;
+        if (x < midX) {
+          leftN++;
+          if (g < 95) leftDark++;
+        } else {
+          rightN++;
+          if (g < 95) rightDark++;
+        }
+      }
+    }
+    if (n < 30) return false;
+    const mean = sum / n;
+    const leftRatio = leftN ? leftDark / leftN : 0;
+    const rightRatio = rightN ? rightDark / rightN : 0;
+    // Both eye regions need some darkness, and face not uniformly bright (hand palm)
+    return leftRatio > 0.06 && rightRatio > 0.06 && mean < 195;
   }
 
   /** Brightness + sharpness + mandatory person/face check. */
@@ -715,7 +747,19 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
 
     try {
       // Preload MediaPipe face model in parallel with camera open
-      const faceModelReady = loadFaceDetector().catch(() => null);
+      const faceModelReady = loadFaceDetector()
+        .then((d) => {
+          this.faceDetectorReady =
+            !!d ||
+            !!(window as unknown as { FaceDetector?: unknown }).FaceDetector;
+          return d;
+        })
+        .catch(() => {
+          this.faceDetectorReady = !!(
+            window as unknown as { FaceDetector?: unknown }
+          ).FaceDetector;
+          return null;
+        });
 
       this.stopCameraTracksOnly();
       this.stream = await this.requestCameraStream();
@@ -745,6 +789,16 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
 
       await this.waitForVideoFrame(video);
       await faceModelReady;
+
+      if (!this.faceDetectorReady) {
+        this.cameraStarting = false;
+        this.cameraReady = false;
+        this.cameraError =
+          'Face detection could not load. Check internet and refresh, then try again.';
+        this.notyf.error(this.cameraError);
+        this.stopCamera();
+        return;
+      }
 
       this.cameraStarting = false;
       this.cameraReady = true;

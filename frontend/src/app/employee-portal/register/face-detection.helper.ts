@@ -1,6 +1,7 @@
 /**
  * MediaPipe BlazeFace face detection for registration camera.
  * Falls back to browser FaceDetector API when MediaPipe fails to load.
+ * Hands / bags must never pass — only ML-detected faces.
  */
 
 export type FaceBox = { x: number; y: number; width: number; height: number; score?: number };
@@ -19,6 +20,8 @@ type MediaPipeFaceDetector = {
 let detectorPromise: Promise<MediaPipeFaceDetector | null> | null = null;
 let cachedDetector: MediaPipeFaceDetector | null = null;
 
+/** Prefer local wasm (angular assets), then CDN. */
+const WASM_LOCAL = '/assets/mediapipe/wasm';
 const WASM_CDN =
   'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/wasm';
 const MODEL_URL =
@@ -31,23 +34,37 @@ export async function loadFaceDetector(): Promise<MediaPipeFaceDetector | null> 
   detectorPromise = (async () => {
     try {
       const vision = await import('@mediapipe/tasks-vision');
-      const fileset = await vision.FilesetResolver.forVisionTasks(WASM_CDN);
       const optionsBase = {
         runningMode: 'IMAGE' as const,
-        minDetectionConfidence: 0.6,
+        minDetectionConfidence: 0.65,
         minSuppressionThreshold: 0.3,
       };
-      let det;
-      try {
-        det = await vision.FaceDetector.createFromOptions(fileset, {
+
+      const tryCreate = async (wasmPath: string, delegate: 'GPU' | 'CPU') => {
+        const fileset = await vision.FilesetResolver.forVisionTasks(wasmPath);
+        return vision.FaceDetector.createFromOptions(fileset, {
           ...optionsBase,
-          baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
+          baseOptions: { modelAssetPath: MODEL_URL, delegate },
         });
-      } catch {
-        det = await vision.FaceDetector.createFromOptions(fileset, {
-          ...optionsBase,
-          baseOptions: { modelAssetPath: MODEL_URL, delegate: 'CPU' },
-        });
+      };
+
+      let det: Awaited<ReturnType<typeof vision.FaceDetector.createFromOptions>> | null =
+        null;
+      for (const wasm of [WASM_LOCAL, WASM_CDN]) {
+        for (const delegate of ['GPU', 'CPU'] as const) {
+          try {
+            det = await tryCreate(wasm, delegate);
+            break;
+          } catch (e) {
+            console.warn(`FaceDetector load failed (${wasm}, ${delegate}):`, e);
+          }
+        }
+        if (det) break;
+      }
+
+      if (!det) {
+        cachedDetector = null;
+        return null;
       }
       cachedDetector = det as unknown as MediaPipeFaceDetector;
       return cachedDetector;
@@ -84,7 +101,7 @@ export async function detectFacesMediaPipe(
           score,
         } as FaceBox;
       })
-      .filter((b): b is FaceBox => !!b && b.width > 0 && b.height > 0);
+      .filter((b): b is FaceBox => !!b && b.width > 0 && b.height > 0 && (b.score ?? 0) >= 0.55);
   } catch (err) {
     console.warn('MediaPipe detect failed:', err);
     return [];
@@ -124,19 +141,23 @@ export async function detectFacesBrowser(
   }
 }
 
-/** Prefer MediaPipe; fall back to browser FaceDetector. */
+/**
+ * Prefer MediaPipe. If MediaPipe is loaded → trust 0 faces (do not fall back).
+ * Only use browser API when MediaPipe failed to load entirely.
+ */
 export async function detectFaces(
   source: HTMLCanvasElement,
 ): Promise<{ faces: FaceBox[]; engine: 'mediapipe' | 'browser' | 'none' }> {
-  const mp = await detectFacesMediaPipe(source);
-  if (mp.length) return { faces: mp, engine: 'mediapipe' };
-
-  // MediaPipe loaded but 0 faces — trust that (don't fall through to weaker API)
   const det = await loadFaceDetector();
-  if (det) return { faces: [], engine: 'mediapipe' };
+  if (det) {
+    const mp = await detectFacesMediaPipe(source);
+    return { faces: mp, engine: 'mediapipe' };
+  }
 
   const browser = await detectFacesBrowser(source);
-  if (browser.length) return { faces: browser, engine: 'browser' };
+  if (browser.length || (window as unknown as { FaceDetector?: unknown }).FaceDetector) {
+    return { faces: browser, engine: 'browser' };
+  }
   return { faces: [], engine: 'none' };
 }
 

@@ -37,6 +37,11 @@
                 "output": "/assets"
               },
               {
+                "glob": "**/*",
+                "input": "node_modules/@mediapipe/tasks-vision/wasm",
+                "output": "/assets/mediapipe/wasm"
+              },
+              {
                 "glob": "firebase-messaging-sw.js",
                 "input": "src",
                 "output": "/"

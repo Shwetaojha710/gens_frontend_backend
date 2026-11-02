@@ -44,6 +44,20 @@
               />
             </div>
 
+            <div class="col-lg-3 col-sm-12">
+              <label class="form-label">Range (metres)</label>
+              <input
+                type="number"
+                class="form-control"
+                min="1"
+                step="1"
+                placeholder="e.g. 100"
+                [(ngModel)]="obj['range']"
+                name="range"
+              />
+              <small class="text-muted">Allowed distance from lat/long above.</small>
+            </div>
+
             <div class="col-lg-3 col-sm-12" *ngIf="updateFlag">
               <label class="form-label">Status</label>
               <ng-select
@@ -150,12 +164,14 @@
                     name="DataTables_Table_3_length"
                     class="form-select form-select-sm"
                     id="dt-length-3"
+                    [ngModel]="itemsPerPage"
+                    (ngModelChange)="onItemsPerPageChange($event)"
                   >
-                    <option value="7">7</option>
-                    <option value="10">10</option>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
+                    <option [ngValue]="7">7</option>
+                    <option [ngValue]="10">10</option>
+                    <option [ngValue]="25">25</option>
+                    <option [ngValue]="50">50</option>
+                    <option [ngValue]="100">100</option>
                   </select>
                   entries
                 </label>
@@ -185,6 +201,7 @@
                     <th>Name</th>
                     <th>Latitude</th>
                     <th>Longitude</th>
+                    <th>Range (m)</th>
                     <th>Description</th>
                     <th>Status</th>
                     <th>Created At</th>
@@ -193,7 +210,7 @@
                 </thead>
                 <tbody class="table-border-bottom-0">
                   <tr *ngFor="let item of BranchList; let i = index">
-                    <th scope="row">{{ i + 1 }}</th>
+                    <th scope="row">{{ (currentPage - 1) * itemsPerPage + i + 1 }}</th>
                     <td>
                       <img
                         *ngIf="item['image']"
@@ -206,6 +223,7 @@
                     <td>{{ item['name'] }}</td>
                     <td>{{ item['latitude'] || 0 }}</td>
                     <td>{{ item['longitude'] || 0 }}</td>
+                    <td>{{ item['range'] != null && item['range'] !== '' ? item['range'] : '—' }}</td>
                     <td>{{ item['description'] || 'Central administration and monitoring access.' }}</td>
                     <td>
                       <span class="badge overflow-hidden px-2" [ngClass]="getStatusClass(item['status'])">
@@ -232,28 +250,29 @@
           <!-- Pagination & Info -->
           <div class="row mx-3 justify-content-between">
             <div class="d-md-flex justify-content-between align-items-center dt-layout-start col-md-auto me-auto">
-              <div class="dt-info" aria-live="polite" role="status">
+              <div class="dt-info" aria-live="polite" role="status" *ngIf="filteredList.length">
                 Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to
-                {{ getMin(currentPage * itemsPerPage, originalList.length) }} of
-                {{ originalList.length }} entries
+                {{ getMin(currentPage * itemsPerPage, filteredList.length) }} of
+                {{ filteredList.length }} entries
               </div>
+              <div class="dt-info text-muted" *ngIf="!filteredList.length">Showing 0 entries</div>
             </div>
             <div class="d-md-flex justify-content-between align-items-center dt-layout-end col-md-auto mt-0">
-              <div class="dt-paging">
+              <div class="dt-paging" *ngIf="totalPages > 1">
                 <nav aria-label="pagination">
-                  <ul class="pagination">
+                  <ul class="pagination mb-0">
                     <li class="page-item" [class.disabled]="currentPage === 1">
-                      <a class="page-link" (click)="goToPage(currentPage - 1)">Prev</a>
+                      <a class="page-link" href="javascript:void(0)" (click)="goToPage(currentPage - 1)">Prev</a>
                     </li>
                     <li
                       class="page-item"
-                      *ngFor="let p of [].constructor(totalPages); let i = index"
-                      [class.active]="i + 1 === currentPage"
+                      *ngFor="let p of pageNumbers"
+                      [class.active]="p === currentPage"
                     >
-                      <a class="page-link" (click)="goToPage(i + 1)">{{ i + 1 }}</a>
+                      <a class="page-link" href="javascript:void(0)" (click)="goToPage(p)">{{ p }}</a>
                     </li>
                     <li class="page-item" [class.disabled]="currentPage === totalPages">
-                      <a class="page-link" (click)="goToPage(currentPage + 1)">Next</a>
+                      <a class="page-link" href="javascript:void(0)" (click)="goToPage(currentPage + 1)">Next</a>
                     </li>
                   </ul>
                 </nav>
