@@ -208,7 +208,9 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
   }
 
   private readonly NO_PERSON_HINT =
-    'A clear face is required — do not upload bottles, bags, or other objects.';
+    'A clear uncovered face is required — no bags, bottles, wrappers, or objects.';
+  private readonly FACE_COVERED_HINT =
+    'Face is covered — remove objects (bag, wrapper, phone) and show full face.';
 
   /** True if RGB looks like human skin (rejects bottles/bags/walls). */
   private isSkinTone(r: number, g: number, b: number): boolean {
@@ -220,6 +222,92 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
     const cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
     const cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
     return y > 50 && y < 240 && cb >= 77 && cb <= 135 && cr >= 133 && cr <= 180;
+  }
+
+  /** Packaging / object colors (bright purple, neon, solid brand colors). */
+  private isLikelyObjectColor(r: number, g: number, b: number): boolean {
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const sat = max === 0 ? 0 : (max - min) / max;
+    // High saturation non-skin (wrappers, bags, logos)
+    if (sat > 0.35 && (b > r + 20 || (r > 140 && b > 100 && g < 100))) return true;
+    // Near-white paper / packaging patch
+    if (r > 200 && g > 200 && b > 200 && sat < 0.08) return true;
+    return false;
+  }
+
+  /**
+   * Check that the face box is not blocked by an object (wrapper/bag/phone).
+   * Lower half of face (nose+mouth) must show enough skin; packaging fails.
+   */
+  private faceRegionClear(
+    canvas: HTMLCanvasElement,
+    box: { x: number; y: number; width: number; height: number },
+  ): { ok: boolean; hint: string } {
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return { ok: false, hint: 'Could not analyze camera frame.' };
+
+    const { width: cw, height: ch } = canvas;
+    const x0 = Math.max(0, Math.floor(box.x));
+    const y0 = Math.max(0, Math.floor(box.y));
+    const x1 = Math.min(cw, Math.ceil(box.x + box.width));
+    const y1 = Math.min(ch, Math.ceil(box.y + box.height));
+    if (x1 - x0 < 8 || y1 - y0 < 8) {
+      return { ok: false, hint: this.FACE_COVERED_HINT };
+    }
+
+    const midY = y0 + Math.floor((y1 - y0) * 0.42); // below eyes → nose/mouth
+    let total = 0;
+    let skin = 0;
+    let objectish = 0;
+    let lowerTotal = 0;
+    let lowerSkin = 0;
+    let lowerObject = 0;
+
+    const data = ctx.getImageData(x0, y0, x1 - x0, y1 - y0).data;
+    const bw = x1 - x0;
+    for (let y = y0; y < y1; y += 2) {
+      for (let x = x0; x < x1; x += 2) {
+        const lx = x - x0;
+        const ly = y - y0;
+        const i = (ly * bw + lx) * 4;
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        total++;
+        const skinPx = this.isSkinTone(r, g, b);
+        const objPx = this.isLikelyObjectColor(r, g, b);
+        if (skinPx) skin++;
+        if (objPx) objectish++;
+        if (y >= midY) {
+          lowerTotal++;
+          if (skinPx) lowerSkin++;
+          if (objPx) lowerObject++;
+        }
+      }
+    }
+
+    if (total < 40 || lowerTotal < 20) {
+      return { ok: false, hint: this.FACE_COVERED_HINT };
+    }
+
+    const skinRatio = skin / total;
+    const lowerSkinRatio = lowerSkin / lowerTotal;
+    const objectRatio = objectish / total;
+    const lowerObjectRatio = lowerObject / lowerTotal;
+
+    // Covered by wrapper/bag: little skin on lower face, or lots of packaging color
+    if (lowerSkinRatio < 0.18) {
+      return { ok: false, hint: this.FACE_COVERED_HINT };
+    }
+    if (skinRatio < 0.22) {
+      return { ok: false, hint: this.FACE_COVERED_HINT };
+    }
+    if (lowerObjectRatio > 0.28 || objectRatio > 0.32) {
+      return { ok: false, hint: this.FACE_COVERED_HINT };
+    }
+
+    return { ok: true, hint: 'Looking good — tap Capture.' };
   }
 
   /**
@@ -239,13 +327,24 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
     let total = 0;
     let skin = 0;
     let edge = 0;
+    let objectish = 0;
+    let lowerTotal = 0;
+    let lowerSkin = 0;
+    const midY = y0 + Math.floor((y1 - y0) * 0.45);
     for (let y = y0; y < y1; y += 2) {
       for (let x = x0; x < x1; x += 2) {
         const i = (y * width + x) * 4;
         total++;
-        if (this.isSkinTone(data[i], data[i + 1], data[i + 2])) skin++;
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        if (this.isSkinTone(r, g, b)) skin++;
+        if (this.isLikelyObjectColor(r, g, b)) objectish++;
+        if (y >= midY) {
+          lowerTotal++;
+          if (this.isSkinTone(r, g, b)) lowerSkin++;
+        }
         if (x > x0 && y > y0 && x < x1 - 1 && y < y1 - 1) {
-          const c = gray[y * width + x];
           const gx = Math.abs(gray[y * width + (x + 1)] - gray[y * width + (x - 1)]);
           const gy = Math.abs(gray[(y + 1) * width + x] - gray[(y - 1) * width + x]);
           if (gx + gy > 28) edge++;
@@ -255,31 +354,40 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
     if (total < 80) return false;
     const skinRatio = skin / total;
     const edgeRatio = edge / total;
-    // Face: meaningful skin + facial feature edges; objects usually fail one of these
-    return skinRatio >= 0.12 && edgeRatio >= 0.04 && skin >= 40;
+    const objectRatio = objectish / total;
+    const lowerSkinRatio = lowerTotal ? lowerSkin / lowerTotal : 0;
+    return (
+      skinRatio >= 0.2 &&
+      lowerSkinRatio >= 0.16 &&
+      objectRatio < 0.28 &&
+      edgeRatio >= 0.04 &&
+      skin >= 50
+    );
   }
 
-  /** Require a single person face in frame (blocks bottles/bags/etc.). */
+  /** Require a single clear, uncovered person face (blocks bags/wrappers/objects). */
   private async requirePersonFace(
     canvas: HTMLCanvasElement,
   ): Promise<{ ok: boolean; hint: string }> {
     const { width, height } = canvas;
+    type FaceLandmark = { locations: Array<{ x: number; y: number }>; type: string };
+    type DetectedFace = {
+      boundingBox: DOMRectReadOnly;
+      landmarks?: FaceLandmark[];
+    };
     const FaceDetectorCtor = (
       window as unknown as {
         FaceDetector?: new (opts?: {
           fastMode?: boolean;
           maxDetectedFaces?: number;
-        }) => {
-          detect: (src: CanvasImageSource) => Promise<
-            Array<{ boundingBox: DOMRectReadOnly }>
-          >;
-        };
+        }) => { detect: (src: CanvasImageSource) => Promise<DetectedFace[]> };
       }
     ).FaceDetector;
 
     if (FaceDetectorCtor) {
       try {
-        const detector = new FaceDetectorCtor({ fastMode: true, maxDetectedFaces: 3 });
+        // fastMode false → better chance of landmarks + stricter faces
+        const detector = new FaceDetectorCtor({ fastMode: false, maxDetectedFaces: 3 });
         const faces = await detector.detect(canvas);
         if (!faces.length) {
           return { ok: false, hint: this.NO_PERSON_HINT };
@@ -287,7 +395,8 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
         if (faces.length > 1) {
           return { ok: false, hint: 'Multiple faces detected — only one person in frame.' };
         }
-        const box = faces[0].boundingBox;
+        const face = faces[0];
+        const box = face.boundingBox;
         const cx = box.x + box.width / 2;
         const cy = box.y + box.height / 2;
         const aspect = box.height / Math.max(box.width, 1);
@@ -296,16 +405,35 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
           cx < width * 0.85 &&
           cy > height * 0.1 &&
           cy < height * 0.9 &&
-          box.width > width * 0.12 &&
-          box.height > height * 0.12 &&
-          aspect > 0.7 &&
-          aspect < 2.2;
+          box.width > width * 0.14 &&
+          box.height > height * 0.14 &&
+          aspect > 0.75 &&
+          aspect < 2.0;
         if (!inOval) {
           return {
             ok: false,
             hint: 'Center your face in the oval — a clear person photo is required.',
           };
         }
+
+        // Landmarks: require mouth (and ideally nose) so covered lower-face fails
+        const landmarks = face.landmarks || [];
+        if (landmarks.length) {
+          const types = new Set(landmarks.map((l) => String(l.type || '').toLowerCase()));
+          const hasMouth = types.has('mouth');
+          const hasNose = types.has('nose');
+          const hasEye = types.has('eye') || types.has('eyes');
+          if (hasEye && !hasMouth && !hasNose) {
+            return { ok: false, hint: this.FACE_COVERED_HINT };
+          }
+          if (!hasMouth && !hasNose) {
+            return { ok: false, hint: this.FACE_COVERED_HINT };
+          }
+        }
+
+        const clear = this.faceRegionClear(canvas, box);
+        if (!clear.ok) return clear;
+
         return { ok: true, hint: 'Looking good — tap Capture.' };
       } catch {
         return {
@@ -334,6 +462,14 @@ export class EmployeePortalRegisterComponent implements OnDestroy {
     if (!this.looksLikePersonHeuristic(data, width, height, x0, y0, x1, y1, gray)) {
       return { ok: false, hint: this.NO_PERSON_HINT };
     }
+    // Also run lower-face clear check on oval center
+    const clear = this.faceRegionClear(canvas, {
+      x: x0,
+      y: y0,
+      width: x1 - x0,
+      height: y1 - y0,
+    });
+    if (!clear.ok) return clear;
     return { ok: true, hint: 'Looking good — tap Capture.' };
   }
 

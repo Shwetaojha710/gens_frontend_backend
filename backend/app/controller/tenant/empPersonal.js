@@ -1631,6 +1631,151 @@ exports.employeeList = async (req, res) => {
   }
 };
 
+/**
+ * Bulk-approve all (or selected) pending employees into one branch.
+ * body: { branchId, employeeIds?: string[] }
+ */
+exports.approveAllPendingEmp = async (req, res) => {
+  const tenantId = req.users && req.users.tenantId;
+  let branchId = req.body?.branchId;
+  const employeeIds = Array.isArray(req.body?.employeeIds)
+    ? req.body.employeeIds.filter(Boolean)
+    : [];
+
+  if (!tenantId) {
+    return Helper.response(false, "Tenant ID is required", {}, res, 400);
+  }
+  if (!branchId || branchId === "null") {
+    return Helper.response(false, "Please select a branch", {}, res, 400);
+  }
+
+  try {
+    const where = {
+      tenantId,
+      emp_status: "pending",
+    };
+    if (employeeIds.length) {
+      where.id = { [Op.in]: employeeIds };
+    }
+
+    const pending = await empPersonal.findAll({ where });
+    if (!pending.length) {
+      return Helper.response(false, "No pending employees to approve", {}, res, 200);
+    }
+
+    const approved = [];
+    const skipped = [];
+
+    for (const emp of pending) {
+      try {
+        const mobile = emp.mobile;
+        if (mobile) {
+          const dup = await empPersonal.findOne({
+            where: {
+              tenantId,
+              branchId,
+              id: { [Op.ne]: emp.id },
+              emp_status: "approved",
+              mobile,
+            },
+            attributes: ["id", "empCode"],
+            raw: true,
+          });
+          if (dup) {
+            skipped.push({
+              id: emp.id,
+              name: `${emp.firstName || ""} ${emp.lastName || ""}`.trim(),
+              reason: `Mobile already exists in branch${dup.empCode ? ` (${dup.empCode})` : ""}`,
+            });
+            continue;
+          }
+        }
+
+        let empCode = emp.empCode;
+        if (isBlankEmpCode(empCode)) {
+          try {
+            empCode = await generateNextEmpCode(tenantId, branchId);
+          } catch (genErr) {
+            skipped.push({
+              id: emp.id,
+              name: `${emp.firstName || ""} ${emp.lastName || ""}`.trim(),
+              reason: genErr?.message || "Could not generate emp code",
+            });
+            continue;
+          }
+        }
+
+        const oldEmp = toPlain(emp);
+        await emp.update({
+          emp_status: "approved",
+          branchId,
+          branchIds: [branchId],
+          empCode,
+          updatedBy: req.users && req.users.id,
+          deviceId: Helper.getIpAddress(req),
+        });
+
+        try {
+          await Helper.updateEmployeeBranchEverywhere({
+            employeeId: emp.id,
+            tenantId,
+            newBranchId: branchId,
+            updatedBy: req.users && req.users.id,
+          });
+        } catch (_) {
+          /* optional cascade */
+        }
+
+        await writeAudit({
+          req,
+          actionType: "EMP_UPDATE",
+          referenceId: emp.id,
+          employeeId: emp.id,
+          oldValue: oldEmp,
+          newValue: toPlain(emp),
+          remarks: "Bulk approved pending employee",
+        });
+
+        approved.push({
+          id: emp.id,
+          name: `${emp.firstName || ""} ${emp.lastName || ""}`.trim(),
+          empCode,
+        });
+      } catch (rowErr) {
+        skipped.push({
+          id: emp.id,
+          name: `${emp.firstName || ""} ${emp.lastName || ""}`.trim(),
+          reason: rowErr?.message || "Failed to approve",
+        });
+      }
+    }
+
+    const msg =
+      approved.length === 0
+        ? "No employees were approved"
+        : skipped.length
+          ? `${approved.length} approved, ${skipped.length} skipped`
+          : `${approved.length} employee(s) approved successfully`;
+
+    return Helper.response(
+      approved.length > 0,
+      msg,
+      { approved, skipped, branchId },
+      res,
+      200,
+    );
+  } catch (error) {
+    console.error("approveAllPendingEmp error:", error);
+    return Helper.response(
+      false,
+      error?.message || "Internal server error",
+      {},
+      res,
+      500,
+    );
+  }
+};
+
 exports.AppemployeeList = async (req, res) => {
   // console.log("api called");
 

@@ -46,6 +46,11 @@ getCities(data: any): Observable<any> {
 updateEmp(data: any): Observable<any> {
   return this.http.post(`${this.baseUrl}updateEmp`, data);
 }
+
+/** Bulk approve pending employees into a branch: { branchId, employeeIds?: string[] } */
+approveAllPendingEmp(data: { branchId: string; employeeIds?: string[] }): Observable<any> {
+  return this.http.post(`${this.baseUrl}approve-all-pending-emp`, data);
+}
 //   updateEmp(data: any): Observable<any> {
 //   return this.http.post(`http://192.168.23.17:3002/api/updateEmp`, data);
 // }

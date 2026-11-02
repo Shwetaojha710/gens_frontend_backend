@@ -476,9 +476,14 @@
       <div class="card">
         <h5 class="card-header d-flex justify-content-between align-items-center mb-0">
           <span>Employee List</span>
-          <!-- <button type="button" class="btn btn-xs btn-primary float-end" (click)="create()">
-            <i class="fa-solid fa-plus"></i>&nbsp;Create
-          </button> -->
+          <button
+            type="button"
+            class="btn btn-sm btn-primary"
+            (click)="openApproveAll()"
+            [disabled]="!employees?.length || approveAllSaving"
+          >
+            <i class="fas fa-check-double me-1"></i> Approve All
+          </button>
         </h5>
         <div class="card-body">
           <app-search-pagination [totalItems]="employees.length" [pageSize]="itemsPerPage" [currentPage]="currentPage"
@@ -572,5 +577,43 @@
 
 
     </div>
+  </div>
+</div>
+
+<!-- Approve All modal -->
+<div class="pending-approve-backdrop" *ngIf="approveAllOpen" (click)="closeApproveAll()"></div>
+<div class="pending-approve-modal" *ngIf="approveAllOpen" role="dialog" aria-modal="true">
+  <div class="pending-approve-modal__head">
+    <h5 class="mb-0">Approve All</h5>
+    <button type="button" class="btn-close" (click)="closeApproveAll()" [disabled]="approveAllSaving"></button>
+  </div>
+  <div class="pending-approve-modal__body">
+    <p class="text-muted mb-3">
+      Select a branch to approve <strong>{{ employees?.length || 0 }}</strong> pending employee(s).
+    </p>
+    <label class="form-label fw-bold">Branch <span class="text-danger">*</span></label>
+    <ng-select
+      [items]="branchList"
+      bindLabel="name"
+      bindValue="id"
+      placeholder="Select branch"
+      [(ngModel)]="approveAllBranchId"
+      [clearable]="true"
+      name="approveAllBranch"
+    >
+    </ng-select>
+  </div>
+  <div class="pending-approve-modal__foot">
+    <button type="button" class="btn btn-outline-secondary" (click)="closeApproveAll()" [disabled]="approveAllSaving">
+      Cancel
+    </button>
+    <button
+      type="button"
+      class="btn btn-primary"
+      (click)="confirmApproveAll()"
+      [disabled]="approveAllSaving || !approveAllBranchId"
+    >
+      {{ approveAllSaving ? 'Approving…' : 'Approve All' }}
+    </button>
   </div>
 </div>

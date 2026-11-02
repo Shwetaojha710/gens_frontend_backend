@@ -238,6 +238,78 @@ rejectEmployee(item: any) {
   });
 }
 
+openApproveAll(): void {
+  if (!this.employees?.length) {
+    this.notyf.error('No pending employees to approve');
+    return;
+  }
+  if (!this.branchList?.length) {
+    this.getBranchDD();
+  }
+  this.approveAllBranchId = null;
+  this.approveAllOpen = true;
+}
+
+closeApproveAll(): void {
+  if (this.approveAllSaving) return;
+  this.approveAllOpen = false;
+  this.approveAllBranchId = null;
+}
+
+confirmApproveAll(): void {
+  if (!this.approveAllBranchId) {
+    this.notyf.error('Please select a branch');
+    return;
+  }
+  const count = this.employees?.length || 0;
+  Swal.fire({
+    title: 'Approve all pending?',
+    text: `${count} employee(s) will be approved for the selected branch.`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, approve all',
+    confirmButtonColor: '#0f766e',
+  }).then((result) => {
+    if (!result.isConfirmed) return;
+    this.approveAllSaving = true;
+    const ids = (this.originalList || this.employees || [])
+      .map((e: any) => e?.id)
+      .filter(Boolean);
+    this.employeeService
+      .approveAllPendingEmp({
+        branchId: this.approveAllBranchId as string,
+        employeeIds: ids,
+      })
+      .subscribe({
+        next: (response) => {
+          this.approveAllSaving = false;
+          const status = this.statusService.handleResponseStatus(
+            response?.status,
+            response?.message,
+          );
+          if (status === true) {
+            const skipped = response?.data?.skipped?.length || 0;
+            this.notyf.success(response?.message || 'Approved successfully');
+            if (skipped) {
+              this.notyf.error(`${skipped} skipped (duplicate mobile / missing prefix)`);
+            }
+            this.approveAllOpen = false;
+            this.approveAllBranchId = null;
+            this.loadEmployees();
+          } else if (status === 'expired') {
+            this.router.navigate(['login']);
+          } else {
+            this.notyf.error(response?.message || 'Approve all failed');
+          }
+        },
+        error: (err) => {
+          this.approveAllSaving = false;
+          this.notyf.error(err?.error?.message || 'Approve all failed');
+        },
+      });
+  });
+}
+
 rejectform() {
   const dob = new Date(this.personalDetails.dateOfBirth);
   const formattedDob = `${dob.getDate().toString().padStart(2, '0')}/${(dob.getMonth() + 1).toString().padStart(2, '0')}/${dob.getFullYear()}`;
@@ -365,6 +437,9 @@ stats:any
   cameraBusy = false;
   cameraError: string | null = null;
   private cameraStream: MediaStream | null = null;
+  approveAllOpen = false;
+  approveAllSaving = false;
+  approveAllBranchId: string | null = null;
 
   opencreate() {
     this.closeAdminCamera();
