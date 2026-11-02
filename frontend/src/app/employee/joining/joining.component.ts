@@ -1,4 +1,4 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component, HostListener, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { EmployeeService } from '../../services/employee.service';
 import { CommonModule } from '@angular/common';
@@ -22,6 +22,9 @@ export class JoiningComponent {
   @ViewChild(SearchPaginationComponent) searchPaginationRef?: SearchPaginationComponent;
   notyf: Notyf
   maxDate: any
+  openActionMenuId: string | number | null = null;
+  actionMenuStyle: { top: string; left: string } | null = null;
+
   constructor(public dataService: DataService, private employeeService: EmployeeService, private master: MasterService, public statusService: StatusService, private router: Router,) {
     this.notyf = new Notyf();
     const today = new Date();
@@ -29,6 +32,72 @@ export class JoiningComponent {
     const month = (today.getMonth() + 1).toString().padStart(2, '0');
     const day = today.getDate().toString().padStart(2, '0');
     this.maxDate = `${year}-${month}-${day}`;
+  }
+
+  toggleActionMenu(itemId: string | number, event: Event): void {
+    event.stopPropagation();
+    if (this.openActionMenuId === itemId) {
+      this.closeActionMenu();
+      return;
+    }
+    const btn = event.currentTarget as HTMLElement | null;
+    const rect = btn?.getBoundingClientRect();
+    const menuWidth = 260;
+    const pad = 8;
+    let left = (rect?.right ?? 0) - menuWidth;
+    let top = (rect?.bottom ?? 0) + 4;
+    if (left < pad) left = pad;
+    if (left + menuWidth > window.innerWidth - pad) {
+      left = window.innerWidth - menuWidth - pad;
+    }
+    if (top + 320 > window.innerHeight - pad) {
+      top = Math.max(pad, (rect?.top ?? 0) - 4 - 280);
+    }
+    this.actionMenuStyle = { top: `${top}px`, left: `${left}px` };
+    this.openActionMenuId = itemId;
+  }
+
+  closeActionMenu(): void {
+    this.openActionMenuId = null;
+    this.actionMenuStyle = null;
+  }
+
+  @HostListener('document:click')
+  handleDocumentClick(): void {
+    this.closeActionMenu();
+  }
+
+  @HostListener('window:scroll')
+  @HostListener('window:resize')
+  handleViewportChange(): void {
+    if (this.openActionMenuId != null) this.closeActionMenu();
+  }
+
+  runAction(item: any, action: string): void {
+    this.closeActionMenu();
+    switch (action) {
+      case 'attendanceAllTime':
+        this.enableDisableLoc(item, 'attendanceAllTime');
+        break;
+      case 'attendance':
+        this.enableDisableLoc(item, 'attendance');
+        break;
+      case 'location':
+        this.enableDisableLoc(item, 'location');
+        break;
+      case 'view':
+        this.view(item);
+        break;
+      case 'assignBranches':
+        this.openAssignBranches(item);
+        break;
+      case 'update':
+        this.update(item);
+        break;
+      case 'delete':
+        this.delete(item);
+        break;
+    }
   }
   shift: any = [{ value: 'Day', label: 'Day' }, { value: 'Afternoon', label: 'Afternoon' }, { value: 'Night', label: 'Night' }]
   role: any = [
