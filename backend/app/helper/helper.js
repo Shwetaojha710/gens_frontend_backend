@@ -169,17 +169,20 @@ Helper.applySandwichRule = (leaveRecords, holidays, startDate, endDate) => {
   let updatedRecords = [...leaveRecords];
   if (!leaveRecords.length) return updatedRecords;
 
+  // Caller must pass holidays + shift week-offs. Do NOT hardcode Sat/Sun
+  // (some shifts work Saturday / have mid-week offs).
   const holidaySet = new Set(holidays || []);
   const isNonWorkingDay = (date) => {
     const dateKey = date.format("YYYY-MM-DD");
-    return holidaySet.has(dateKey) || date.day() == 0 || date.day() == 6;
+    return holidaySet.has(dateKey);
   };
   const getSandwichStatus = (prevLeave, nextLeave) => {
     // Leave/RH on one side + absent on other → unpaid sandwich (LOP)
     if (prevLeave?.isAbsentAnchor || nextLeave?.isAbsentAnchor) {
       return "pending";
     }
-    if (prevLeave?.status == "approved" || nextLeave?.status == "approved") {
+    // Both sides must be approved for paid sandwich (charge leave balance later)
+    if (prevLeave?.status == "approved" && nextLeave?.status == "approved") {
       return "approved";
     }
     if (
@@ -534,8 +537,18 @@ Helper.adjustLeaveRecords = (leaveBalanceArr, leaveRecordsArr) => {
   const records = leaveRecordsArr.map((rec) => ({ ...rec }));
 
   records.forEach((rec) => {
-    if (rec.status !== "approved") {
+    const st = String(rec.status || "").toLowerCase();
+    // pending / rejected / recommended / self_declined → always unpaid (LOP)
+    if (st !== "approved") {
       rec.leavestatus = "unpaid";
+      if (
+        st === "pending" ||
+        st === "recommended" ||
+        st === "rejected" ||
+        st === "self_declined"
+      ) {
+        rec.isLopLeave = true;
+      }
     }
   });
 
@@ -544,8 +557,8 @@ Helper.adjustLeaveRecords = (leaveBalanceArr, leaveRecordsArr) => {
 
     const matchingRecords = records.filter(
       (rec) =>
-        rec.employeeId === balance.employeeId &&
-        rec.leaveTypeId === balance.leaveTypeId &&
+        rec.employeeId == balance.employeeId &&
+        rec.leaveTypeId == balance.leaveTypeId &&
         rec.status === "approved" &&
         !rec.isSandwich &&
         !rec.isAbsentAnchor,
@@ -613,6 +626,14 @@ Helper.adjustLeaveRecords = (leaveBalanceArr, leaveRecordsArr) => {
       matchingRecords.forEach((rec) => {
         rec.leavestatus = "approved";
       });
+    }
+  });
+
+  // Approved leave with no matching balance / never marked approved → unpaid
+  records.forEach((rec) => {
+    if (rec.isSandwich || rec.isAbsentAnchor) return;
+    if (rec.status === "approved" && rec.leavestatus !== "approved") {
+      rec.leavestatus = "unpaid";
     }
   });
 

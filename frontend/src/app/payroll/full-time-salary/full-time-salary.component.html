@@ -357,20 +357,33 @@
 
           <hr />
 
-          <p>Leave Deductions</p>
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+            <p class="mb-0">Leave Deductions</p>
+            <small class="text-muted salary-metric-hint">
+              <i class="fas fa-hand-pointer me-1"></i>
+              Click a highlighted value to open &amp; edit
+            </small>
+          </div>
 
           <div class="table-responsive">
-            <table class="table table-bordered border-primary">
+            <table class="table table-bordered border-primary salary-metric-table">
               <thead>
                 <tr>
                   <th>Total Working Days</th>
-                  <th>Present Days</th>
-                  <th>Absent Days</th>
-                  <th>Leave Taken</th>
-                  <th>Allowed Leaves</th>
-                  <th>Half days</th>
-                  <th>Late Attendance</th>
-                  <th>Leave Deductions</th>
+                  <th class="salary-metric-th" title="Open Attendance"
+                    (click)="jumpToRelated('attendance', 'present')">Present Days</th>
+                  <th class="salary-metric-th" title="Open Absent Days Record"
+                    (click)="jumpToRelated('absentDays')">Absent Days</th>
+                  <th class="salary-metric-th" title="Open Leave Requests"
+                    (click)="jumpToRelated('leave')">Leave Taken</th>
+                  <th class="salary-metric-th" title="Open Leave Requests"
+                    (click)="jumpToRelated('leave')">Allowed Leaves</th>
+                  <th class="salary-metric-th" title="Open Attendance (half days)"
+                    (click)="jumpToRelated('attendance', 'half')">Half days</th>
+                  <th class="salary-metric-th" title="Open Attendance (late) / Regularization"
+                    (click)="jumpToRelated('attendance', 'late')">Late Attendance</th>
+                  <th class="salary-metric-th" title="Open Absent Days Record"
+                    (click)="jumpToRelated('absentDays')">Leave Deductions</th>
                   <th>Penalty</th>
                   <th>Net Pay</th>
                 </tr>
@@ -378,13 +391,55 @@
               <tbody>
                 <tr>
                   <td>{{personalDetails['totalWorkingDays']}}</td>
-                  <td>{{personalDetails['fullDays']}}</td>
-                  <td>{{personalDetails['absentDays']}}</td>
-                  <td>{{personalDetails['totalLeaveDays']}}</td>
-                  <td>{{personalDetails['allowedLeave']}}</td>
-                  <td>{{personalDetails['halfDays']}}</td>
-                  <td>{{personalDetails['lateDays']}}</td>
-                  <td>{{personalDetails['totalDeduction']}}</td>
+                  <td>
+                    <button type="button" class="salary-metric-link"
+                      title="Open Attendance to edit"
+                      (click)="jumpToRelated('attendance', 'present')">
+                      {{personalDetails['fullDays']}}
+                    </button>
+                  </td>
+                  <td>
+                    <button type="button" class="salary-metric-link"
+                      title="Open Absent Days Record"
+                      (click)="jumpToRelated('absentDays')">
+                      {{personalDetails['absentDays']}}
+                    </button>
+                  </td>
+                  <td>
+                    <button type="button" class="salary-metric-link"
+                      title="Open Leave Requests"
+                      (click)="jumpToRelated('leave')">
+                      {{personalDetails['totalLeaveDays']}}
+                    </button>
+                  </td>
+                  <td>
+                    <button type="button" class="salary-metric-link"
+                      title="Open Leave Requests"
+                      (click)="jumpToRelated('leave')">
+                      {{personalDetails['allowedLeave']}}
+                    </button>
+                  </td>
+                  <td>
+                    <button type="button" class="salary-metric-link"
+                      title="Open Attendance (half days)"
+                      (click)="jumpToRelated('attendance', 'half')">
+                      {{personalDetails['halfDays']}}
+                    </button>
+                  </td>
+                  <td>
+                    <button type="button" class="salary-metric-link"
+                      title="Open Attendance (late)"
+                      (click)="jumpToRelated('attendance', 'late')">
+                      {{personalDetails['lateDays']}}
+                    </button>
+                  </td>
+                  <td>
+                    <button type="button" class="salary-metric-link"
+                      title="Open Absent Days Record"
+                      (click)="jumpToRelated('absentDays')">
+                      {{personalDetails['totalDeduction']}}
+                    </button>
+                  </td>
                   <td>
                     <span *ngIf="personalDetails['penaltyAmount'] > 0" class="text-danger fw-semibold">
                       -{{ personalDetails['penaltyAmount'] }}
@@ -507,6 +562,26 @@
 
         <!-- ================= absentDays Record TAB ================= -->
         <div *ngIf="activeTab=='absentDays'">
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <div>
+              <h6 class="mb-0">Absent Days Record</h6>
+              <small class="text-muted">Fix a day in Attendance, or open Regularization / Leave from here.</small>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+              <button type="button" class="btn btn-sm btn-outline-primary"
+                (click)="jumpToRelated('attendance', 'absent')">
+                <i class="fas fa-edit me-1"></i> Edit in Attendance
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-secondary"
+                (click)="jumpToRelated('leave')">
+                Leave Requests
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-secondary"
+                (click)="jumpToRelated('regularization')">
+                Regularization
+              </button>
+            </div>
+          </div>
 
           <table class="table">
             <thead>
@@ -514,86 +589,99 @@
                 <th>SI.NO</th>
                 <th>Date</th>
                 <th>Reason</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              <tr *ngFor="let item of absentDaysArr; let i = index">
-
-                <td>{{i+1}}</td>
-                <td>{{item.date }}</td>
-                <td>{{item.reason}}</td>
-              </tr>
-            </tbody>
-
-          </table>
-
-        </div>
-
-        <!-- ================= ATTENDANCE TAB ================= -->
-        <div *ngIf="activeTab=='attendance'">
-          <h5 class="card-header d-flex justify-content-between align-items-center">
-            <span>Attendance List</span>
-            <button type="button" class="btn btn-xs btn-primary float-end" (click)="correctAll()">
-              All Attendance Submit
-            </button>
-          </h5>
-
-          <table class="table">
-            <thead>
-              <tr>
-                <th style="width: 20px; font-size: 12px">
-                <input type="checkbox"  [(ngModel)]="attendanceMasterSelected" (change)="checkUncheckAllAttendance()"/>
-                  <!-- <input type="checkbox" [(ngModel)]="masterSelected" (change)="checkUncheckAll()" /> -->
-                </th>
-                <th>Date</th>
-                <th>Check In</th>
-                <th>Check Out</th>
-                <th>Status</th>
                 <th>Action</th>
               </tr>
             </thead>
 
             <tbody>
-              <tr *ngFor="let item of attendanceList">
+              <tr *ngFor="let item of absentDaysArr; let i = index">
+                <td>{{i+1}}</td>
+                <td>{{item.date }}</td>
+                <td>{{item.reason}}</td>
                 <td>
-                <input type="checkbox" [(ngModel)]="item.editable"(change)="isAllAttendanceSelected()"/>
-                  <!-- <input type="checkbox" [(ngModel)]="item.editable" (change)="isAllSelected()" /> -->
-                </td>
-                <td>{{item.date}}</td>
-                <!-- <td>{{ item.checkIn }}</td>
-                <td>{{ item.checkOut }}</td> -->
-                <td style="width: 50px; font-size: 12px">
-                  <input type="time" [(ngModel)]="item.checkIn" class="form-control" [disabled]="!item.editable" />
-                  <!-- {{item?.checkIn}} -->
-                </td>
-
-                <td style="width: 50px; font-size: 12px">
-                  <input type="time" [(ngModel)]="item.checkOut" class="form-control" [disabled]="!item.editable" />
-                  <!-- {{ item?.checkOut }} -->
-                </td>
-                <td>{{item.status}}</td>
-                <td>
-                  <!-- <button *ngIf="!item.editable" type="button" class="btn btn-sm btn-outline-success m-2"
-                      (click)="applyUpdate(item)">
-                      <i class="ri ri-pencil-line"></i>
-                    </button>
-
-                    <button *ngIf="item.editable" type="button" class="btn btn-sm btn-outline-success m-2"
-                      (click)="update(item)">
-                      <i class="ri ri-send-plane-line"></i>
-
-                    </button> -->
-
-                  <button type="button" class="btn btn-sm btn-outline-danger" (click)="deleteAttendance(item)">
-                    <i class="fas fa-trash-alt"></i>
+                  <button type="button" class="btn btn-sm btn-outline-primary"
+                    title="Edit this date in Attendance"
+                    (click)="jumpToRelated('attendance', 'absent', item.date)">
+                    <i class="fas fa-edit"></i> Edit
                   </button>
                 </td>
               </tr>
+              <tr *ngIf="!absentDaysArr?.length">
+                <td colspan="4" class="text-center text-muted">No absent days for this month</td>
+              </tr>
             </tbody>
-
           </table>
+        </div>
 
+        <!-- ================= ATTENDANCE TAB ================= -->
+        <div *ngIf="activeTab=='attendance'">
+          <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span>
+              Attendance List
+              <small class="text-muted fw-normal ms-2" *ngIf="attendanceFocusHint">{{ attendanceFocusHint }}</small>
+            </span>
+            <button type="button" class="btn btn-xs btn-primary float-end" (click)="correctAll()">
+              All Attendance Submit
+            </button>
+          </h5>
+
+          <div class="att-legend mb-2">
+            <span class="att-legend__item att-legend__item--ontime">On Time</span>
+            <span class="att-legend__item att-legend__item--late">Late</span>
+            <span class="att-legend__item att-legend__item--half">Half Day</span>
+            <span class="att-legend__item att-legend__item--absent">Absent</span>
+            <span class="att-legend__item att-legend__item--leave">Leave</span>
+            <span class="att-legend__item att-legend__item--off">Week Off</span>
+            <span class="att-legend__item att-legend__item--holiday">Holiday</span>
+            <span class="att-legend__item att-legend__item--gazetted">Gazetted</span>
+            <span class="att-legend__item att-legend__item--restricted">Restricted</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table att-table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th style="width: 36px">
+                    <input type="checkbox" [(ngModel)]="attendanceMasterSelected" (change)="checkUncheckAllAttendance()"/>
+                  </th>
+                  <th>Date</th>
+                  <th>Check In</th>
+                  <th>Check Out</th>
+                  <th>Status</th>
+                  <th style="width: 64px">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of attendanceList"
+                    [ngClass]="getAttendanceRowClass(item)"
+                    [attr.id]="item._focusRow ? 'salary-att-focus' : null">
+                  <td>
+                    <input type="checkbox" [(ngModel)]="item.editable" (change)="isAllAttendanceSelected()"/>
+                  </td>
+                  <td class="att-date">{{ item.date }}</td>
+                  <td style="width: 120px">
+                    <input type="time" [(ngModel)]="item.checkIn" class="form-control form-control-sm att-time-input"
+                      [disabled]="!item.editable" />
+                  </td>
+                  <td style="width: 120px">
+                    <input type="time" [(ngModel)]="item.checkOut" class="form-control form-control-sm att-time-input"
+                      [disabled]="!item.editable" />
+                  </td>
+                  <td>
+                    <span class="att-status" [ngClass]="getAttendanceStatusClass(item.status)">
+                      {{ item.status }}
+                    </span>
+                  </td>
+                  <td>
+                    <button type="button" class="btn btn-sm btn-outline-danger att-del-btn"
+                      (click)="deleteAttendance(item)" title="Delete">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <!-- ================= LEAVE TAB ================= -->

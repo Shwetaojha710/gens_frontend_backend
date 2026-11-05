@@ -1,4 +1,58 @@
-﻿/* ── Branch Slider ─────────────────────────────── */
+﻿/* Top action buttons — readable default + hover (no bg-white clash) */
+.bw-action-btn {
+  background-color: #fff !important;
+  font-weight: 600;
+  border-width: 1px;
+  border-style: solid;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.bw-action-btn:hover,
+.bw-action-btn:focus,
+.bw-action-btn:focus-visible,
+.bw-action-btn:active {
+  color: #fff !important;
+}
+
+.bw-action-btn--primary {
+  color: #0d9488 !important;
+  border-color: #0d9488 !important;
+}
+.bw-action-btn--primary:hover,
+.bw-action-btn--primary:focus,
+.bw-action-btn--primary:focus-visible,
+.bw-action-btn--primary:active {
+  background-color: #0d9488 !important;
+  border-color: #0d9488 !important;
+  color: #fff !important;
+}
+
+.bw-action-btn--warning {
+  color: #d97706 !important;
+  border-color: #f59e0b !important;
+}
+.bw-action-btn--warning:hover,
+.bw-action-btn--warning:focus,
+.bw-action-btn--warning:focus-visible,
+.bw-action-btn--warning:active {
+  background-color: #f59e0b !important;
+  border-color: #f59e0b !important;
+  color: #fff !important;
+}
+
+.bw-action-btn--success {
+  color: #15803d !important;
+  border-color: #22c55e !important;
+}
+.bw-action-btn--success:hover,
+.bw-action-btn--success:focus,
+.bw-action-btn--success:focus-visible,
+.bw-action-btn--success:active {
+  background-color: #16a34a !important;
+  border-color: #16a34a !important;
+  color: #fff !important;
+}
+
+/* ── Branch Slider ─────────────────────────────── */
 .bw-slider-section {
   width: 100%;
   padding: 0 0.5rem;

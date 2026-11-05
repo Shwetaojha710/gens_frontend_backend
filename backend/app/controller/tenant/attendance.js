@@ -1119,10 +1119,12 @@ exports.getDateWiseAttendance = async (req, res) => {
           where: {
             tenantId,
             branchId,
-            status: "active",
             ...(shiftIds.length ? { shift: { [Op.in]: shiftIds } } : {}),
+            // Week-off days are often saved as status=inactive + is_week_off=true.
+            // Include those or Sunday/Saturday never become WO.
+            [Op.or]: [{ status: "active" }, { is_week_off: true }],
           },
-          attributes: ["shift", "day_of_week", "is_week_off"],
+          attributes: ["shift", "day_of_week", "is_week_off", "status"],
           raw: true,
         }),
         holiday.findAll({
@@ -1200,15 +1202,23 @@ exports.getDateWiseAttendance = async (req, res) => {
       });
     }
 
+    const isWeekOffFlag = (v) =>
+      v === true || v === 1 || v === "1" || String(v).toLowerCase() === "true";
+
     const weekOffByShift = new Map();
     for (const s of shiftMap || []) {
-      if (!s.is_week_off) continue;
+      if (!isWeekOffFlag(s.is_week_off)) continue;
+      const dayKey = String(s.day_of_week || "").trim().toLowerCase();
+      if (!dayKey) continue;
       if (!weekOffByShift.has(s.shift)) weekOffByShift.set(s.shift, new Set());
-      weekOffByShift.get(s.shift).add(s.day_of_week);
+      weekOffByShift.get(s.shift).add(dayKey);
     }
     // Fallback: any week-off day across branch shifts
     const allWeekOffDays = new Set(
-      (shiftMap || []).filter((s) => s.is_week_off).map((s) => s.day_of_week),
+      (shiftMap || [])
+        .filter((s) => isWeekOffFlag(s.is_week_off))
+        .map((s) => String(s.day_of_week || "").trim().toLowerCase())
+        .filter(Boolean),
     );
 
     const groupedRecords = {};
@@ -1249,7 +1259,7 @@ exports.getDateWiseAttendance = async (req, res) => {
       let currentDate = start.clone();
       while (currentDate.isSameOrBefore(end)) {
         const dateStr = currentDate.format("YYYY-MM-DD");
-        const dayName = currentDate.format("dddd");
+        const dayName = currentDate.format("dddd").toLowerCase();
         const entry = recordMap[dateStr];
         const hol = holidayMap.get(dateStr);
         const leaveData = empLeaves.find(
@@ -1258,21 +1268,18 @@ exports.getDateWiseAttendance = async (req, res) => {
             moment(l.toDate).format("YYYY-MM-DD") >= dateStr,
         );
         const leaveStatus = resolveLeaveStatus(leaveData, dateStr);
+        const isShiftWeekOff = empWeekOff.has(dayName);
 
+        // Present (real punch) > Week Off > Holiday > Leave > Absent
         let status = "Absent";
-        // Leave first (First Half / Second Half / Full Day Leave)
-        if (leaveStatus) {
-          status = leaveStatus;
-        } else if (entry?.isWeekOff) {
-          status = "Week Off";
-        } else if (entry?.isPresent) {
+        if (entry?.isPresent && !entry?.isWeekOff) {
           status = "Present";
+        } else if (entry?.isWeekOff || isShiftWeekOff) {
+          status = "Week Off";
         } else if (hol) {
           status = hol.statusLabel; // Restricted Holiday | Gazetted Holiday
-        } else if (empWeekOff.has(dayName)) {
-          status = "Week Off";
-        } else {
-          status = "Absent";
+        } else if (leaveStatus) {
+          status = leaveStatus;
         }
 
         data.push({
