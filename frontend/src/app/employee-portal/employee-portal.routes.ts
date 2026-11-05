@@ -86,6 +86,48 @@ export const employeePortalRoutes: Routes = [
           ),
       },
       {
+        path: 'assets',
+        loadComponent: () =>
+          import('./assets/employee-portal-assets.component').then((m) => m.EmployeePortalAssetsComponent),
+      },
+      {
+        path: 'timesheet',
+        loadComponent: () =>
+          import('./timesheet/employee-portal-timesheet.component').then(
+            (m) => m.EmployeePortalTimesheetComponent,
+          ),
+      },
+      {
+        path: 'projects/:id',
+        data: { ptContext: 'portal' },
+        loadComponent: () =>
+          import('../project/project-detail/pt-project-detail.component').then(
+            (m) => m.PtProjectDetailComponent,
+          ),
+      },
+      {
+        path: 'expenses',
+        loadComponent: () =>
+          import('./expenses/employee-portal-expenses.component').then(
+            (m) => m.EmployeePortalExpensesComponent,
+          ),
+      },
+      {
+        path: 'performance',
+        loadComponent: () =>
+          import('./performance/employee-portal-performance.component').then(
+            (m) => m.EmployeePortalPerformanceComponent,
+          ),
+      },
+      {
+        path: 'performance/review/:id',
+        data: { pmContext: 'portal' },
+        loadComponent: () =>
+          import('../performance/review-detail/pm-review-detail.component').then(
+            (m) => m.PmReviewDetailComponent,
+          ),
+      },
+      {
         path: 'notifications',
         loadComponent: () =>
           import('./notifications/employee-portal-notifications.component').then(

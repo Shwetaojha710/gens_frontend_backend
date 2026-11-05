@@ -26,6 +26,7 @@ const reimbursement = require("../../models/reimbursement");
 const comp_off = require("../../models/comp_off");
 const leave_application = require("../../models/leave_application");
 const { writeAudit, toPlain } = require("../../helper/auditLog");
+const { isWorkflowClaim } = require("../../helper/expense");
 
 exports.attendanceMaster = async (req, res) => {
   const {
@@ -1696,7 +1697,7 @@ exports.updateempattendance = async (req, res) => {
 };
 
 exports.addAttendance = async (req, res) => {
-  const { empCode, check_in_time, date } = req.body;
+  const { empCode, check_in_time, date, eventType } = req.body;
   const tenantId = req.users?.tenantId;
   const branchId = req.users && req.users.branchId;
 
@@ -1716,63 +1717,28 @@ exports.addAttendance = async (req, res) => {
       );
     }
 
-    const employeedetails = await empPersonal.findOne({
-      where: { empCode, tenantId, branchId, status: "active" },
-      attributes: ["id"],
+    const { recordAttendancePunch } = require("../../helper/attendancePunch");
+    const result = await recordAttendancePunch({
+      tenantId,
+      branchId,
+      empCode,
+      datetime: check_in_time,
+      date,
+      ip_address: Helper.getIpAddress(req),
+      imageFilename: req.files?.[0]?.filename || null,
+      eventType: eventType || "auto",
+      actorId: req.users?.id,
     });
 
-    if (!employeedetails) {
-      return Helper.response(false, "Employee not found", [], res, 404);
-    }
-
-    const employeeId = employeedetails.id;
-    const ip_address = Helper.getIpAddress(req);
-
-    let existingAttendance = await attendance.findOne({
-      where: { employeeId, date, tenantId, branchId },
-    });
-
-    if (existingAttendance) {
-      await existingAttendance.update({
-        check_out_time: check_in_time || existingAttendance.check_out_time,
-        is_present: true,
-        ip_address,
-        branchId,
-        updatedBy: req.users?.id,
-      });
-
-      return Helper.response(
-        true,
-        "Attendance updated successfully (Check-out)",
-        existingAttendance,
-        res,
-        200,
-      );
-    } else {
-      const createAttendance = await attendance.create({
-        employeeId,
-        tenantId,
-        check_in_time,
-        is_present: true,
-        date,
-        ip_address,
-        branchId,
-        createdBy: req.users?.id,
-        month: new Date(check_in_time).getMonth() + 1,
-        year: new Date(check_in_time).getFullYear(),
-      });
-
-      return Helper.response(
-        true,
-        "Attendance added successfully (Check-in)",
-        createAttendance,
-        res,
-        200,
-      );
-    }
+    const msg =
+      result.action === "check_out"
+        ? "Attendance updated successfully (Check-out)"
+        : "Attendance added successfully (Check-in)";
+    return Helper.response(true, msg, result.record, res, 200);
   } catch (error) {
     console.error("Error adding/updating attendance:", error);
-    return Helper.response(false, error?.message, null, res, 500);
+    const code = error.message === "Employee not found" ? 404 : 500;
+    return Helper.response(false, error?.message, null, res, code);
   }
 };
 
@@ -3771,6 +3737,10 @@ exports.updateReimbursementStatus = async (req, res) => {
       );
     }
 
+    if (await isWorkflowClaim(id)) {
+      return Helper.response(false, "This is an expense claim; manage it from Expense Claims", null, res, 200);
+    }
+
     const existingDoc = await Reimbursement.findOne({
       where: { id, tenantId, branchId },
     });
@@ -3844,6 +3814,11 @@ exports.updateReimbursement = async (req, res) => {
         res,
         400,
       );
+    }
+
+    if (await isWorkflowClaim(id)) {
+      Helper.deleteUploadedFiles(req.files);
+      return Helper.response(false, "This is an expense claim; manage it from Expense Claims", null, res, 200);
     }
 
     const existingDoc = await Reimbursement.findOne({
@@ -3964,6 +3939,10 @@ exports.deleteReimbursement = async (req, res) => {
         res,
         400,
       );
+    }
+
+    if (await isWorkflowClaim(id)) {
+      return Helper.response(false, "This is an expense claim; manage it from Expense Claims", null, res, 200);
     }
 
     const delteholiday = await Reimbursement.findOne({
