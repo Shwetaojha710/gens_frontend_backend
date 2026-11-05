@@ -67,6 +67,10 @@ export const APP_MENU_ITEMS: MenuItem[] = [
       { title: 'Weekend Employee List',   icon: 'ri-upload-cloud-line',    link: '/layout/attendance/weekend-emp-list',     permKey: 'att.weekend' },
       { title: 'Add Comp Off',            icon: 'ri-upload-cloud-line',    link: '/layout/attendance/add-comp-off',         permKey: 'att.compoff' },
       { title: 'Contractual Approval',    icon: 'ri-checkbox-circle-line', link: '/layout/attendance/contractual-approval', permKey: 'att.contractual' },
+      { title: 'AI Face Recognition',     icon: 'ri-scan-line',            link: '/layout/attendance/ai-face',               permKey: 'att.aiFace' },
+      { title: 'Camera Management',       icon: 'ri-camera-line',          link: '/layout/attendance/camera-management',    permKey: 'att.aiCameras' },
+      { title: 'Face Enrollment',         icon: 'ri-user-smile-line',      link: '/layout/attendance/face-enrollment',      permKey: 'att.aiEnroll' },
+      { title: 'Recognition Logs',        icon: 'ri-file-list-3-line',     link: '/layout/attendance/recognition-logs',     permKey: 'att.aiLogs' },
     ]
   },
   {

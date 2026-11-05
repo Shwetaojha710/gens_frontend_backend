@@ -213,6 +213,42 @@ export const layoutRoutes: Routes = [
           ),
       },
       {
+        path: 'attendance/ai-face',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'att.aiFace' },
+        loadComponent: () =>
+          import('../attendance/ai-face-dashboard/ai-face-dashboard.component').then(
+            (m) => m.AiFaceDashboardComponent,
+          ),
+      },
+      {
+        path: 'attendance/camera-management',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'att.aiCameras' },
+        loadComponent: () =>
+          import('../attendance/ai-camera-management/ai-camera-management.component').then(
+            (m) => m.AiCameraManagementComponent,
+          ),
+      },
+      {
+        path: 'attendance/face-enrollment',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'att.aiEnroll' },
+        loadComponent: () =>
+          import('../attendance/ai-face-enrollment/ai-face-enrollment.component').then(
+            (m) => m.AiFaceEnrollmentComponent,
+          ),
+      },
+      {
+        path: 'attendance/recognition-logs',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'att.aiLogs' },
+        loadComponent: () =>
+          import('../attendance/ai-recognition-logs/ai-recognition-logs.component').then(
+            (m) => m.AiRecognitionLogsComponent,
+          ),
+      },
+      {
         path: 'attendance/salary-master',
         canActivate: [PermissionGuard],
         data: { permKey: 'set.attmaster' },

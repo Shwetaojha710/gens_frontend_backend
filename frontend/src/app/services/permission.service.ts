@@ -59,6 +59,10 @@ export const DEFAULT_PERMISSIONS: PermissionSection[] = [
       { key: 'att.weekend',      label: 'Weekend Employee List', roles: ['admin', 'superadmin', 'hr'] },
       { key: 'att.compoff',      label: 'Add Comp Off',          roles: ['admin', 'superadmin', 'hr'] },
       { key: 'att.contractual',  label: 'Contractual Approval',  roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'att.aiFace',       label: 'AI Face Recognition',   roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'att.aiCameras',    label: 'Camera Management',     roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'att.aiEnroll',     label: 'Face Enrollment',       roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'att.aiLogs',       label: 'Recognition Logs',      roles: ['admin', 'superadmin', 'hr'] },
     ]
   },
   {
@@ -219,7 +223,7 @@ export class PermissionService {
   private readonly ROLE_PERM_KEY   = 'app_role_permissions';
   private readonly USER_PERM_KEY   = 'custom_user_permissions';
   // Bump this version whenever DEFAULT_PERMISSIONS changes — forces a fresh load
-  private readonly PERM_VERSION    = 'v8';
+  private readonly PERM_VERSION    = 'v9';
   private readonly VERSION_KEY     = 'app_role_permissions_version';
 
   // ── Role-based permissions (admin configures per role) ──────────────────
