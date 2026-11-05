@@ -98,6 +98,7 @@ export class LandingHomeComponent {
   goToOnboarding()        { this.router.navigate(['recruitment/recruitment-dashboard']); }
   goToEmployeeManagement(){ this.router.navigate(['layout/dashboard']); }
   goToTracking()          { this.router.navigate(['layout/tracking']); }
+  goToBranchWise()        { this.router.navigate(['/branchwise']); }
 
   // ── Portal card visibility ───────────────────────────────────────────────
   private get _userRole(): string {

@@ -47,8 +47,8 @@
       </div>
     </aside>
 
-    <!-- MIDDLE: hero image -->
-    <div class="gens-login__center">
+    <!-- MIDDLE: hero image (desktop only) -->
+    <div class="gens-login__center epl-hide-md">
       <div class="gens-login__hero-wrap">
         <img class="gens-login__hero-img" src="assets/img/bg-login/Hero.png" alt="HR professional" />
       </div>
@@ -108,6 +108,10 @@
             </button>
           </form>
 
+          <p class="gens-login__footer-text">
+            New employee?
+            <a class="gens-link" routerLink="/employee-portal/register">Register here</a>
+          </p>
           <p class="gens-login__footer-text">
             Company admin?
             <a class="gens-link" routerLink="/login">Admin login</a>

@@ -18,6 +18,11 @@ const LandingSiteContent = require("../../models/landing_site_content");
 const LandingContactSubmission = require("../../models/landing_contact_submission");
 const { mergeLandingPayload } = require("../../lib/landingMerge");
 const { Op } = require("sequelize");
+const path = require("path");
+const fs = require("fs");
+const sequelize = require("../../connection/connection");
+const { writeAudit } = require("../../helper/auditLog");
+const logoUpload = require("../../middleware/logoUpload");
 
 /** If holiday_type looks like a UUID but has no HolidayType row, expose null (UI shows —). */
 const HOLIDAY_TYPE_UUID_RE =
@@ -28,6 +33,42 @@ function hashPassword(password) {
 }
 
 const SYSTEM_TENANT_CODE = "SUPERADMIN";
+
+/** Same rules as the company registration form. */
+const COMPANY_NAME_RE = /^[a-zA-Z0-9\s.\-&']+$/;
+const COMPANY_NAME_MAX = 60;
+const ADMIN_EMAIL_RE = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+const COMPANY_ADDRESS_MAX = 500;
+
+const UPLOAD_DIR = path.join(__dirname, "../../../upload");
+
+function removeUploadFile(filename) {
+  if (!filename) return;
+  try { fs.unlinkSync(path.join(UPLOAD_DIR, path.basename(filename))); } catch (_) {}
+}
+
+/** First admin user of a tenant (the one created at registration). */
+function findTenantAdmin(tenantId, transaction) {
+  return User.findOne({
+    where: { tenantId, role: "admin" },
+    order: [["createdAt", "ASC"]],
+    ...(transaction ? { transaction } : {}),
+  });
+}
+
+/** Editable company details, shaped for the superadmin company dashboard. */
+function tenantDetails(tenant, admin) {
+  return {
+    id: tenant.id,
+    companyName: tenant.companyName,
+    companyCode: tenant.companyCode,
+    status: tenant.status,
+    companyAddress: tenant.companyAddress || "",
+    logo: Tenant.logoUrl(tenant.image),
+    logoDark: Tenant.logoUrl(tenant.imageDark),
+    adminEmail: admin?.email || "",
+  };
+}
 
 exports.login = async (req, res) => {
   try {
@@ -706,6 +747,7 @@ exports.getTenantCompanySnapshot = async (req, res) => {
     if (tenant.companyCode === SYSTEM_TENANT_CODE) {
       return Helper.response(false, "Not allowed for system tenant.", {}, res, 200);
     }
+    const tenantAdmin = await findTenantAdmin(tenantId);
 
     const branchRows = await branch.findAll({
       where: { tenantId },
@@ -852,12 +894,7 @@ exports.getTenantCompanySnapshot = async (req, res) => {
       true,
       "Company snapshot fetched.",
       {
-        tenant: {
-          id: tenant.id,
-          companyName: tenant.companyName,
-          companyCode: tenant.companyCode,
-          status: tenant.status,
-        },
+        tenant: tenantDetails(tenant, tenantAdmin),
         counts: {
           employeesActive: employeeCountActive,
           employeesTotal: employeeCountTotal,
@@ -873,6 +910,113 @@ exports.getTenantCompanySnapshot = async (req, res) => {
     );
   } catch (err) {
     return Helper.response(false, err?.message || "Server error.", {}, res, 500);
+  }
+};
+
+/**
+ * PUT /superadmin/tenants/:tenantId
+ * (multipart: companyName, companyAddress, adminEmail, logo?, removeLogo?, logoDark?, removeLogoDark?)
+ * Company code stays read-only (users log in with it).
+ */
+exports.updateTenantDetails = async (req, res) => {
+  const newLogo = logoUpload.fileOf(req, "logo")?.filename || null;
+  const newLogoDark = logoUpload.fileOf(req, "logoDark")?.filename || null;
+  let saved = false;
+  let t = null;
+  try {
+    const { tenantId } = req.params;
+    if (!tenantId) return Helper.response(false, "tenantId is required.", {}, res, 400);
+
+    const companyName = req.body.companyName !== undefined ? String(req.body.companyName).trim() : undefined;
+    const companyAddress = req.body.companyAddress !== undefined ? String(req.body.companyAddress).trim() : undefined;
+    const adminEmail = req.body.adminEmail !== undefined ? String(req.body.adminEmail).trim() : undefined;
+    const removeLogo = ["true", "1", true].includes(req.body.removeLogo);
+    const removeLogoDark = ["true", "1", true].includes(req.body.removeLogoDark);
+
+    if (companyName !== undefined) {
+      if (!companyName) return Helper.response(false, "Company Name is required", {}, res, 400);
+      if (companyName.length > COMPANY_NAME_MAX) {
+        return Helper.response(false, "Company name cannot exceed 60 characters.", {}, res, 400);
+      }
+      if (!COMPANY_NAME_RE.test(companyName)) {
+        return Helper.response(false, "Company name has invalid characters. Only letters, numbers, spaces, . - & ' are allowed.", {}, res, 400);
+      }
+    }
+    if (companyAddress !== undefined && companyAddress.length > COMPANY_ADDRESS_MAX) {
+      return Helper.response(false, "Company address cannot exceed 500 characters.", {}, res, 400);
+    }
+    if (adminEmail !== undefined) {
+      if (!adminEmail) return Helper.response(false, "Email is required", {}, res, 400);
+      if (!ADMIN_EMAIL_RE.test(adminEmail)) return Helper.response(false, "Enter a valid email address.", {}, res, 400);
+    }
+
+    const tenant = await Tenant.findByPk(tenantId);
+    if (!tenant) return Helper.response(false, "Tenant not found.", {}, res, 404);
+    if (tenant.companyCode === SYSTEM_TENANT_CODE) {
+      return Helper.response(false, "Not allowed for system tenant.", {}, res, 400);
+    }
+
+    t = await sequelize.transaction();
+    const admin = await findTenantAdmin(tenantId, t);
+    const oldValue = tenantDetails(tenant, admin);
+    const oldImage = tenant.image || null;
+    const oldImageDark = tenant.imageDark || null;
+
+    // Same duplicate rule as registration: an email can belong to one user only
+    if (adminEmail !== undefined && admin && adminEmail !== admin.email) {
+      const emailTaken = await User.findOne({
+        where: { email: adminEmail, id: { [Op.ne]: admin.id } },
+        transaction: t,
+      });
+      if (emailTaken) {
+        await t.rollback();
+        t = null;
+        return Helper.response(false, "Email already registered", {}, res, 409);
+      }
+    }
+
+    const patch = { updatedBy: req.users?.id || null };
+    if (companyName !== undefined) patch.companyName = companyName;
+    if (companyAddress !== undefined) patch.companyAddress = companyAddress || null;
+    if (newLogo) patch.image = newLogo;
+    else if (removeLogo) patch.image = null;
+    if (newLogoDark) patch.imageDark = newLogoDark;
+    else if (removeLogoDark) patch.imageDark = null;
+
+    await tenant.update(patch, { transaction: t });
+    if (adminEmail !== undefined && admin && adminEmail !== admin.email) {
+      await admin.update({ email: adminEmail, updatedBy: req.users?.id || null }, { transaction: t });
+    }
+    await t.commit();
+    t = null;
+    saved = true;
+
+    // Old logo file is no longer referenced
+    if (oldImage && oldImage !== tenant.image) removeUploadFile(oldImage);
+    if (oldImageDark && oldImageDark !== tenant.imageDark) removeUploadFile(oldImageDark);
+
+    const newValue = tenantDetails(tenant, admin);
+    // Log against the company itself, not the superadmin's system tenant
+    await writeAudit({
+      req: { users: { ...req.users, tenantId, branchId: null }, ip: req.ip, headers: req.headers },
+      actionType: "SUPERADMIN_TENANT_UPDATE",
+      referenceId: tenantId,
+      oldValue,
+      newValue,
+      remarks: "Company details updated by superadmin",
+    });
+
+    return Helper.response(true, "Company details updated.", newValue, res, 200);
+  } catch (err) {
+    if (t) {
+      try { await t.rollback(); } catch (_) {}
+    }
+    return Helper.response(false, err?.message || "Server error.", {}, res, 500);
+  } finally {
+    if (!saved) {
+      if (newLogo) removeUploadFile(newLogo);
+      if (newLogoDark) removeUploadFile(newLogoDark);
+    }
   }
 };
 

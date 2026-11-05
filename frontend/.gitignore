@@ -53,3 +53,5 @@ gens.zip
 /src/environments/environment.prodtesting.ts
 /src/environments/environment.prod.ts
 /src/environments/environment.ts
+/scripts
+/src/assets/test-docs

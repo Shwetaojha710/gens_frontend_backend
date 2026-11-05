@@ -2543,7 +2543,6 @@ exports.calculateSalaryComponent = async (req, res) => {
 // };
 
 exports.generateSalary = async (req, res) => {
-  const t = await bill_info.sequelize.transaction();
   const tenantId = req.users?.tenantId;
   const createdBy = req.users?.id;
   const branchId = req.users && req.users.branchId;
@@ -2565,11 +2564,15 @@ exports.generateSalary = async (req, res) => {
 
     const skippedEmployees = [];
     const billRecords = [];
-    const billInfoRecords = [];
 
+    // Per-employee transactions avoid Postgres "out of shared memory"
+    // (max_locks_per_transaction) when generating salary for many employees
+    // in one long transaction.
     for (const emp of employees) {
       if (!emp.employeeId || !emp.components) continue;
 
+      const t = await bill_info.sequelize.transaction();
+      try {
       // --- Check if salary already generated ---
       const existing = await bill.findOne({
         where: {
@@ -2583,6 +2586,7 @@ exports.generateSalary = async (req, res) => {
       });
 
       if (existing) {
+        await t.rollback();
         skippedEmployees.push({
           employeeId: emp.employeeId,
           year: emp.year,
@@ -2594,10 +2598,19 @@ exports.generateSalary = async (req, res) => {
       }
 
       // --- Calculate leave used per leaveTypeId ---
+      // Prefer leavestatus (paid vs unpaid split); skip sandwich / absent-anchor pseudo rows
+      const isPaidApprovedLeave = (lv) => {
+        if (!lv || lv.compOffId || lv.isSandwich || lv.isAbsentAnchor) return false;
+        if (lv.leavestatus != null && lv.leavestatus !== "") {
+          return String(lv.leavestatus).toLowerCase() === "approved";
+        }
+        return String(lv.status || "").toLowerCase() === "approved";
+      };
+
       const leaveUsageMap = {};
 
       (emp.applysandwitchleave || []).forEach((lv) => {
-        if (lv.status == "approved" && !lv.compOffId) {
+        if (isPaidApprovedLeave(lv)) {
           if (!leaveUsageMap[lv.leaveTypeId]) leaveUsageMap[lv.leaveTypeId] = 0;
           leaveUsageMap[lv.leaveTypeId] += Number(lv.days || 0);
         }
@@ -2619,7 +2632,7 @@ exports.generateSalary = async (req, res) => {
           await leave_balance.update(
             {
               usedLeaves: newUsed.toFixed(1),
-              remainingLeaves: 0,
+              remainingLeaves: newRemaining.toFixed(1),
             },
             {
               where: {
@@ -2639,7 +2652,11 @@ exports.generateSalary = async (req, res) => {
       // --- Deduct comp-off balance for approved comp-off leaves ---
       const compOffUsageMap = {};
       (emp.applysandwitchleave || []).forEach((lv) => {
-        if (lv.status == "approved" && lv.compOffId) {
+        const approved =
+          lv.leavestatus != null && lv.leavestatus !== ""
+            ? String(lv.leavestatus).toLowerCase() === "approved"
+            : String(lv.status || "").toLowerCase() === "approved";
+        if (approved && lv.compOffId && !lv.isSandwich && !lv.isAbsentAnchor) {
           if (!compOffUsageMap[lv.compOffId]) compOffUsageMap[lv.compOffId] = 0;
           compOffUsageMap[lv.compOffId] += Number(lv.days || 0);
         }
@@ -2668,7 +2685,11 @@ exports.generateSalary = async (req, res) => {
       // --- Also update leave_balance for comp-off leave type ---
       const compOffLeaveTypeUsage = {};
       (emp.applysandwitchleave || []).forEach((lv) => {
-        if (lv.status == "approved" && lv.compOffId && lv.leaveTypeId) {
+        const approved =
+          lv.leavestatus != null && lv.leavestatus !== ""
+            ? String(lv.leavestatus).toLowerCase() === "approved"
+            : String(lv.status || "").toLowerCase() === "approved";
+        if (approved && lv.compOffId && lv.leaveTypeId && !lv.isSandwich && !lv.isAbsentAnchor) {
           if (!compOffLeaveTypeUsage[lv.leaveTypeId]) compOffLeaveTypeUsage[lv.leaveTypeId] = 0;
           compOffLeaveTypeUsage[lv.leaveTypeId] += Number(lv.days || 0);
         }
@@ -2736,23 +2757,24 @@ exports.generateSalary = async (req, res) => {
 
       const billRow = await bill.create(billData, { transaction: t });
 
-      // --- Bill Info ---
-      emp.components.forEach((comp) => {
-        billInfoRecords.push({
-          tenantId,
-          branchId,
-          employeeId: emp.employeeId,
-          year: Number(emp.year),
-          month: Number(emp.month),
-          bill_date: new Date(),
-          bill_id: billRow.bill_id,
-          pay_component_id: comp.id,
-          pay_code: comp.pay_code,
-          amount: comp.pay_amount,
-          status: "active",
-          createdBy,
-        });
-      });
+      // --- Bill Info (create inside this employee's transaction) ---
+      const empBillInfoRecords = (emp.components || []).map((comp) => ({
+        tenantId,
+        branchId,
+        employeeId: emp.employeeId,
+        year: Number(emp.year),
+        month: Number(emp.month),
+        bill_date: new Date(),
+        bill_id: billRow.bill_id,
+        pay_component_id: comp.id,
+        pay_code: comp.pay_code,
+        amount: comp.pay_amount,
+        status: "active",
+        createdBy,
+      }));
+      if (empBillInfoRecords.length > 0) {
+        await bill_info.bulkCreate(empBillInfoRecords, { transaction: t });
+      }
 
       // Mark approved arrears for this payout month as paid (allowance inactivated)
       try {
@@ -2783,11 +2805,11 @@ exports.generateSalary = async (req, res) => {
       for (const leaveData of emp.leavebalance || []) {
         if (leaveData.leave_name?.toLowerCase() !== "cl") continue; // ✅ Only CL
 
-        // Find all approved CL leaves from sandwich leave list
+        // Find all approved paid CL leaves (exclude sandwich / unpaid / anchors)
         const approvedCLLeaves = (emp.applysandwitchleave || []).filter(
           (lv) =>
             lv.leaveTypeId === leaveData.leaveTypeId &&
-            lv.status?.toLowerCase() === "approved",
+            isPaidApprovedLeave(lv),
         );
 
         // Total CL used this month
@@ -2898,64 +2920,26 @@ if (joiningDate) {
         }
       }
 
-      // for (const leaveData of emp.leavebalance || []) {
-      //   if (leaveData.leave_name?.toLowerCase() !== "cl") continue; // ✅ Only CL
-
-      //   // Check if next month record already exists
-      //   const existingLeave = await leave_balance.findOne({
-      //     where: {
-      //       employeeId: emp.employeeId,
-      //       tenantId,
-      //       year: nextYear,
-      //       month: nextMonth,
-      //       leaveTypeId: leaveData.leaveTypeId,
-      //     },
-      //     transaction: t,
-      //   });
-
-      //   if (!existingLeave) {
-      //     const allowedLeave = Number(leaveData.totalAssigned ?? 0);
-      //     const remaining = Number(leaveData.remainingLeaves ?? 0);
-
-      //     // Policy: add +2 CL each month
-      //     const newAssigned = allowedLeave + 2;
-      //     const newRemaining = remaining + 2;
-
-      //     await leave_balance.create(
-      //       {
-      //         tenantId,
-      //         leaveTypeId: leaveData.leaveTypeId,
-      //         employeeId: emp.employeeId,
-      //         year: nextYear,
-      //         month: nextMonth,
-      //         totalAssigned: newAssigned.toFixed(1),
-      //         usedLeaves: 0,
-      //         remainingLeaves: newRemaining.toFixed(1),
-      //         carryForwarded: remaining.toFixed(1),
-      //         prevremainingLeaves: remaining.toFixed(1),
-      //         // prevusedLeaves: leaveData.usedLeaves
-      //         //   ? Number(leaveData.usedLeaves).toFixed(1)
-      //         //   : 0,
-      //         prevusedLeaves: emp?.applysandwitchleave?.days ??0,
-      //         status: "active",
-      //         createdBy,
-      //       },
-      //       { transaction: t }
-      //     );
-
-      //     console.log(
-      //       `Added next month CL leave for ${emp.employeeName} (${emp.empCode})`
-      //     );
-      //   }
-      // }
+      await t.commit();
+      } catch (empErr) {
+        try {
+          await t.rollback();
+        } catch (_) {
+          /* already rolled back */
+        }
+        console.error(
+          `Error generating salary for employee ${emp.employeeId}:`,
+          empErr,
+        );
+        skippedEmployees.push({
+          employeeId: emp.employeeId,
+          year: emp.year,
+          month: emp.month,
+          branchId,
+          reason: empErr?.message || "Salary generation failed",
+        });
+      }
     }
-
-    // --- Bulk insert bill info ---
-    if (billInfoRecords.length > 0) {
-      await bill_info.bulkCreate(billInfoRecords, { transaction: t });
-    }
-
-    await t.commit();
 
     for (const billRow of billRecords) {
       await writeAudit({
@@ -2969,10 +2953,15 @@ if (joiningDate) {
       });
     }
 
-    if (skippedEmployees.length == employees.length) {
+    if (billRecords.length === 0 && skippedEmployees.length > 0) {
+      const allAlreadyGenerated = skippedEmployees.every(
+        (s) => s.reason === "Salary already generated",
+      );
       return Helper.response(
         false,
-        "Salary Already Generated",
+        allAlreadyGenerated
+          ? "Salary Already Generated"
+          : skippedEmployees[0]?.reason || "Salary generation failed",
         {
           generatedCount: billRecords.length,
           skippedCount: skippedEmployees.length,
@@ -2980,7 +2969,7 @@ if (joiningDate) {
           generatedSalaries: billRecords,
         },
         res,
-        200,
+        allAlreadyGenerated ? 200 : 500,
       );
     } else {
       return Helper.response(
@@ -2997,7 +2986,6 @@ if (joiningDate) {
       );
     }
   } catch (error) {
-    await t.rollback();
     console.error("Error saving salaries:", error);
     return Helper.response(false, error?.message, [], res, 500);
   }
@@ -3550,24 +3538,25 @@ console.log("Total Salary:", finalTotal);
 exports.revertSalary = async (req, res) => {
   const tenantId = req.users?.tenantId;
   const createdBy = req.users?.id;
-  const t = await bill.sequelize.transaction();
   const branchId = req.users && req.users.branchId;
   if (!branchId) {
     return Helper.response(false, "branchId is required!", {}, res, 200);
   }
 
-  try {
-    let { employeeId, month, year, id, bill_id } = req.body;
+  let { employeeId, month, year, id, bill_id } = req.body;
 
-    if (!tenantId || !employeeId || !month || !year || !id || !bill_id) {
-      return Helper.response(
-        false,
-        "Required fields are missing",
-        {},
-        res,
-        400,
-      );
-    }
+  if (!tenantId || !employeeId || !month || !year || !id || !bill_id) {
+    return Helper.response(
+      false,
+      "Required fields are missing",
+      {},
+      res,
+      400,
+    );
+  }
+
+  const t = await bill.sequelize.transaction();
+  try {
 
     const oldBill = await bill.findOne({ where: { id }, raw: true, transaction: t });
 
@@ -3629,7 +3618,6 @@ exports.revertSalary = async (req, res) => {
           {
             usedLeaves: Number(prevusedLeaves || 0),
             remainingLeaves: Number(prevremainingLeaves || 0),
-            usedLeaves: 0,
             updatedBy: createdBy,
           },
           {
@@ -4920,6 +4908,7 @@ exports.calculateAttendance = async (req, res) => {
     employeeId = employeeId.filter((item) => {
       return !employees.some((emp) => emp.employeeId == item);
     });
+    // Real punches only — exclude uploaded Week Off markers (check_in_time = WEEK_OFF)
     const attendanceEmployees = await attendance.findAll({
       where: {
         employeeId: { [Op.in]: employeeId },
@@ -4927,6 +4916,17 @@ exports.calculateAttendance = async (req, res) => {
         branchId,
         year,
         tenantId,
+        [Op.or]: [
+          { is_present: true },
+          {
+            check_in_time: {
+              [Op.and]: [
+                { [Op.ne]: null },
+                { [Op.notIn]: ["WEEK_OFF", "WO"] },
+              ],
+            },
+          },
+        ],
       },
       attributes: ["employeeId"],
       raw: true,
@@ -4949,6 +4949,74 @@ exports.calculateAttendance = async (req, res) => {
         200,
       );
     }
+
+    // Preload shifts once — per-day Shift.findOne caused Postgres 53200
+    // (out of shared memory / max_locks_per_transaction).
+    const allShifts = await Shift.findAll({
+      where: { tenantId, branchId },
+      raw: true,
+    });
+    const shiftLookup = {};
+    allShifts.forEach((s) => {
+      if (!s?.shift || !s?.day_of_week) return;
+      if (!shiftLookup[s.shift]) shiftLookup[s.shift] = {};
+      const existing = shiftLookup[s.shift][s.day_of_week];
+      // Prefer active row when duplicates exist for same day
+      if (!existing || s.status === "active") {
+        shiftLookup[s.shift][s.day_of_week] = s;
+      }
+    });
+    const getShiftForDay = (shiftName, dayName, requireActive = false) => {
+      const row = shiftLookup[shiftName]?.[dayName] || null;
+      if (!row) return null;
+      if (requireActive && row.status !== "active") return null;
+      return row;
+    };
+
+    // Holidays are month-scoped and shared across employees
+    const monthStartStr = moment(
+      `${year}-${String(month).padStart(2, "0")}-01`,
+      "YYYY-MM-DD",
+    )
+      .startOf("month")
+      .format("YYYY-MM-DD");
+    const monthEndStr = moment(monthStartStr).endOf("month").format("YYYY-MM-DD");
+    const holidayListShared = await holiday.findAll({
+      where: {
+        tenantId,
+        branchId,
+        date: { [Op.between]: [monthStartStr, monthEndStr] },
+      },
+      raw: true,
+    });
+    const holidayTypeIdsShared = [
+      ...new Set(holidayListShared.map((item) => item.holiday_type).filter(Boolean)),
+    ];
+    const holidayTypeListShared = holidayTypeIdsShared.length
+      ? await HolidayType.findAll({
+          where: {
+            id: { [Op.in]: holidayTypeIdsShared },
+            tenantId,
+            branchId,
+            status: "active",
+          },
+          attributes: ["id", "name"],
+          raw: true,
+        })
+      : [];
+    const holidayTypeMapShared = Object.fromEntries(
+      holidayTypeListShared.map((item) => [item.id, item.name]),
+    );
+
+    // Leave master names for the branch (avoid N+1 leaveMaster.findOne)
+    const leaveMasterRows = await leaveMaster.findAll({
+      where: { branchId },
+      attributes: ["id", "leaveName", "leaveCode"],
+      raw: true,
+    });
+    const leaveMasterById = Object.fromEntries(
+      leaveMasterRows.map((r) => [r.id, r]),
+    );
 
     // console.log("Proceeding salary generation for:", employeeId);
     let absentdaysArr = [];
@@ -5119,51 +5187,14 @@ exports.calculateAttendance = async (req, res) => {
         },
         raw: true,
       });
-      leavebalance = await Promise.all(
-        leavebalance.map(async (item) => {
-          const leaveName = await leaveMaster.findOne({
-            where: {
-              id: item?.leaveTypeId,
-              branchId,
-            },
-          });
-          return {
-            ...item,
-            leave_name: leaveName?.leaveName,
-          };
-        }),
-      );
+      leavebalance = leavebalance.map((item) => ({
+        ...item,
+        leave_name: leaveMasterById[item?.leaveTypeId]?.leaveName || null,
+      }));
 
-      // Collect all holidays for tenant
-      const holidayList = await holiday.findAll({
-        where: {
-          tenantId,
-          branchId,
-          date: {
-            [Op.between]: [
-              startDate.format("YYYY-MM-DD"),
-              endDate.format("YYYY-MM-DD"),
-            ],
-          },
-        },
-        raw: true,
-      });
-      const holidayTypeIds = [...new Set(holidayList.map((item) => item.holiday_type).filter(Boolean))];
-      const holidayTypeList = holidayTypeIds.length
-        ? await HolidayType.findAll({
-            where: {
-              id: { [Op.in]: holidayTypeIds },
-              tenantId,
-              branchId,
-              status: "active",
-            },
-            attributes: ["id", "name"],
-            raw: true,
-          })
-        : [];
-      const holidayTypeMap = Object.fromEntries(
-        holidayTypeList.map((item) => [item.id, item.name]),
-      );
+      // Shared month holidays (preloaded) — same for every employee
+      const holidayList = holidayListShared;
+      const holidayTypeMap = holidayTypeMapShared;
       const holidayMap = Object.fromEntries(
         holidayList.map((item) => {
           const typeName = String(holidayTypeMap[item.holiday_type] || "").trim().toLowerCase();
@@ -5214,19 +5245,71 @@ exports.calculateAttendance = async (req, res) => {
       const restrictedHolidayDates = Object.keys(holidayMap).filter(
         (date) => holidayMap[date]?.isRestrictedHoliday,
       );
+      // Monthly attendance once per employee (used for RH / sandwich / day loop)
+      const monthlyAttRows = await attendance.findAll({
+        where: {
+          employeeId: employeeId[i],
+          tenantId,
+          branchId,
+          [Op.or]: [
+            { month: Number(month), year: Number(year) },
+            {
+              date: {
+                [Op.between]: [
+                  startDate.format("YYYY-MM-DD"),
+                  endDate.format("YYYY-MM-DD"),
+                ],
+              },
+            },
+            {
+              check_in_time: {
+                [Op.between]: [
+                  startDate.format("YYYY-MM-DD 00:00:00"),
+                  endDate.format("YYYY-MM-DD 23:59:59"),
+                ],
+              },
+            },
+          ],
+        },
+        raw: true,
+      });
+      const attendanceByDate = {};
+      monthlyAttRows.forEach((att) => {
+        let dateKey = null;
+        if (att.date) {
+          dateKey = moment(att.date).format("YYYY-MM-DD");
+        } else if (
+          att.check_in_time &&
+          att.check_in_time !== "WEEK_OFF" &&
+          att.check_in_time !== "WO"
+        ) {
+          const parsed = moment(att.check_in_time);
+          if (parsed.isValid()) dateKey = parsed.format("YYYY-MM-DD");
+        }
+        if (!dateKey) return;
+        const existing = attendanceByDate[dateKey];
+        const isWo =
+          att.check_in_time === "WEEK_OFF" || att.check_in_time === "WO";
+        // Prefer real punch over week-off marker if both exist
+        if (!existing || (!isWo && existing.check_in_time === "WEEK_OFF")) {
+          attendanceByDate[dateKey] = att;
+        }
+      });
+
       const presentRestrictedHolidayDates = new Set();
       if (restrictedHolidayDates.length) {
-        const restrictedHolidayAttendance = await attendance.findAll({
-          where: {
-            employeeId: employeeId[i],
-            branchId,
-            check_in_time: { [Op.ne]: null },
-            check_out_time: { [Op.ne]: null },
-          },
-          raw: true,
-        });
-        restrictedHolidayAttendance.forEach((att) => {
-          const dateKey = moment(att.check_in_time).format("YYYY-MM-DD");
+        monthlyAttRows.forEach((att) => {
+          if (
+            !att?.check_in_time ||
+            !att?.check_out_time ||
+            att.check_in_time === "WEEK_OFF" ||
+            att.check_in_time === "WO"
+          ) {
+            return;
+          }
+          const parsed = moment(att.check_in_time);
+          if (!parsed.isValid()) return;
+          const dateKey = parsed.format("YYYY-MM-DD");
           if (restrictedHolidayDates.includes(dateKey)) {
             presentRestrictedHolidayDates.add(dateKey);
           }
@@ -5245,19 +5328,7 @@ exports.calculateAttendance = async (req, res) => {
 
       const shiftWeekOffDates = [];
       for (let d = moment(startDate); d.isSameOrBefore(endDate); d.add(1, "days")) {
-
-        console.log(d.format("dddd"));
-        
-        const shift = await Shift.findOne({
-          where: {
-            day_of_week: d.format("dddd"),
-            branchId,
-            // status: "active",
-            shift: PersonalInfo?.shift_id,
-            tenantId,
-          },
-          raw: true,
-        });
+        const shift = getShiftForDay(PersonalInfo?.shift_id, d.format("dddd"), false);
         if (shift?.is_week_off) {
           shiftWeekOffDates.push(d.format("YYYY-MM-DD"));
         }
@@ -5285,23 +5356,18 @@ exports.calculateAttendance = async (req, res) => {
         }
       });
 
-      const monthAttendanceForSandwich = await attendance.findAll({
-        where: {
-          employeeId: employeeId[i],
-          branchId,
-          check_in_time: {
-            [Op.between]: [
-              startDate.format("YYYY-MM-DD 00:00:00"),
-              endDate.format("YYYY-MM-DD 23:59:59"),
-            ],
-          },
-        },
-        raw: true,
-      });
       const presentDatesForSandwich = new Set();
-      monthAttendanceForSandwich.forEach((att) => {
-        if (att?.check_in_time && att?.check_out_time) {
-          presentDatesForSandwich.add(moment(att.check_in_time).format("YYYY-MM-DD"));
+      monthlyAttRows.forEach((att) => {
+        if (
+          att?.check_in_time &&
+          att?.check_out_time &&
+          att.check_in_time !== "WEEK_OFF" &&
+          att.check_in_time !== "WO"
+        ) {
+          const parsed = moment(att.check_in_time);
+          if (parsed.isValid()) {
+            presentDatesForSandwich.add(parsed.format("YYYY-MM-DD"));
+          }
         }
       });
 
@@ -5588,16 +5654,7 @@ exports.calculateAttendance = async (req, res) => {
 
       for (let d = moment(startDate); d <= endDate; d.add(1, "days")) {
         const dayName = d.format("dddd");
-        const shift = await Shift.findOne({
-          where: {
-            day_of_week: dayName,
-            branchId,
-            status: "active",
-            shift: PersonalInfo?.shift_id,
-            tenantId,
-          },
-          raw: true,
-        });
+        const shift = getShiftForDay(PersonalInfo?.shift_id, dayName, true);
 
         workingDays.push({ date: d.clone(), shift });
         dynamicWorkingDays++;
@@ -5608,6 +5665,7 @@ exports.calculateAttendance = async (req, res) => {
       let lateDays = 0;
       let graceLateCount = 0;
       let absentDays = 0;
+      const getMonthlyAttendance = monthlyAttRows;
 
       for (let entry of workingDays) {
         const date = entry.date;
@@ -5653,16 +5711,6 @@ exports.calculateAttendance = async (req, res) => {
           }
           continue;
         }
-        const getMonthlyAttendance = await attendance.findAll({
-          where: {
-            employeeId: employeeId[i],
-            tenantId,
-            branchId,
-            month,
-            year,
-          },
-          raw: true,
-        });
         if (getMonthlyAttendance && getMonthlyAttendance.length > 0) {
           if (!shift || shift.is_week_off) {
             fullDays++;
@@ -5674,23 +5722,18 @@ exports.calculateAttendance = async (req, res) => {
         //         absentDays++;
         //     continue;
         // }
-        
-       
 
-        const attendances = await attendance.findOne({
-          where: {
-            employeeId: employeeId[i],
-            branchId,
-            check_in_time: {
-              [Op.between]: [startOfDayUTC, endOfDayUTC],
-            },
-          },
-          raw: true,
-        });
+        // In-memory day punch (preloaded) — avoids per-day DB findOne lock pressure
+        let attendances = attendanceByDate[dayStr] || null;
+        const isWeekOffMarker =
+          attendances &&
+          (attendances.check_in_time === "WEEK_OFF" ||
+            attendances.check_in_time === "WO");
         // console.log(attendances,"attendance data")
         // console.log(startOfDayUTC,endOfDayUTC)
         if (
           !attendances ||
+          isWeekOffMarker ||
           !attendances.check_in_time ||
           !attendances.check_out_time
         ) {

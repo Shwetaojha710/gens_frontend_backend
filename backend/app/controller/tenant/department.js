@@ -257,7 +257,7 @@ exports.departmentDD = async (req, res) => {
     } else {
       const departments = await Department.findAll({
         where: { tenantId, branchId },
-        order: [["createdAt", "DESC"]],
+        order: [["name", "ASC"]],
       });
       const data = departments.map((department) => ({
         value: department.id,

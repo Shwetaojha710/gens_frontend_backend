@@ -1,9 +1,26 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Notyf } from 'notyf';
 import { SuperadminService } from '../superadmin.service';
+
+interface SaTenantDetails {
+  id?: string;
+  companyName?: string;
+  companyCode?: string;
+  status?: string;
+  companyAddress?: string;
+  logo?: string | null;
+  logoDark?: string | null;
+  adminEmail?: string;
+}
+
+/** Same rules as the company registration form. */
+const COMPANY_NAME_RE = /^[a-zA-Z0-9\s.\-&']+$/;
+const ADMIN_EMAIL_RE = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
+const LOGO_MAX_SIZE = 2 * 1024 * 1024; // 2MB
 
 @Component({
   selector: 'app-superadmin-company-dashboard',
@@ -12,12 +29,12 @@ import { SuperadminService } from '../superadmin.service';
   templateUrl: './superadmin-company-dashboard.component.html',
   styleUrl: './superadmin-company-dashboard.component.css',
 })
-export class SuperadminCompanyDashboardComponent implements OnInit {
+export class SuperadminCompanyDashboardComponent implements OnInit, OnDestroy {
   notyf = new Notyf();
   loading = true;
   tenantId = '';
   snapshot: {
-    tenant?: { companyName?: string; companyCode?: string; status?: string };
+    tenant?: SaTenantDetails;
     counts?: { employeesActive?: number; employeesTotal?: number };
     branches?: { id: string; name: string; status?: string }[];
     employees?: any[];
@@ -47,11 +64,60 @@ export class SuperadminCompanyDashboardComponent implements OnInit {
   holPage = 0;
   holPageSize = 10;
 
+  /* ----- Edit company ----- */
+  editOpen = false;
+  editSaving = false;
+  editSubmitted = false;
+  editForm = { companyName: '', companyAddress: '', adminEmail: '' };
+  editLogoFile: File | null = null;
+  editLogoPreview: string | null = null;
+  editRemoveLogo = false;
+  editLogoDarkFile: File | null = null;
+  editLogoDarkPreview: string | null = null;
+  editRemoveLogoDark = false;
+
+  /** When the hero <img> fails, fall back to initials. */
+  private heroLogoBroken = false;
+
+  /**
+   * Park edit dialog on document.body so sticky tables / sa-content overflow
+   * cannot paint through or over the modal.
+   */
+  @ViewChild('editBackdrop')
+  set editBackdrop(ref: ElementRef<HTMLElement> | undefined) {
+    const el = ref?.nativeElement;
+    if (el && el.parentElement !== document.body) {
+      document.body.appendChild(el);
+    }
+  }
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private api: SuperadminService,
   ) {}
+
+  /** Prefer light logo (white chip on blue); else dark logo. */
+  get heroLogoSrc(): string | null {
+    if (this.heroLogoBroken) return null;
+    const t = this.snapshot?.tenant;
+    if (!t) return null;
+    return t.logo || t.logoDark || null;
+  }
+
+  onHeroLogoError(): void {
+    this.heroLogoBroken = true;
+  }
+
+  companyInitials(name?: string | null): string {
+    const parts = String(name || '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (!parts.length) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
 
   ngOnInit(): void {
     this.route.paramMap.subscribe((pm) => {
@@ -85,6 +151,7 @@ export class SuperadminCompanyDashboardComponent implements OnInit {
   load(tenantId: string): void {
     this.loading = true;
     this.snapshot = null;
+    this.heroLogoBroken = false;
     this.api.getTenantCompanySnapshot(tenantId).subscribe({
       next: (res) => {
         const data = JSON.parse(res);
@@ -94,6 +161,7 @@ export class SuperadminCompanyDashboardComponent implements OnInit {
           return;
         }
         this.snapshot = data.data || {};
+        this.heroLogoBroken = false;
         this.resetTableUi();
       },
       error: () => {
@@ -106,6 +174,145 @@ export class SuperadminCompanyDashboardComponent implements OnInit {
 
   backToCompanies(): void {
     this.router.navigate(['/superadmin/companies']);
+  }
+
+  openEdit(): void {
+    const t = this.snapshot?.tenant;
+    if (!t) return;
+    this.editForm = {
+      companyName: t.companyName || '',
+      companyAddress: t.companyAddress || '',
+      adminEmail: t.adminEmail || '',
+    };
+    this.editLogoFile = null;
+    this.editLogoPreview = null;
+    this.editRemoveLogo = false;
+    this.editLogoDarkFile = null;
+    this.editLogoDarkPreview = null;
+    this.editRemoveLogoDark = false;
+    this.editSubmitted = false;
+    this.editOpen = true;
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeEdit(): void {
+    if (this.editSaving) return;
+    this.editOpen = false;
+    document.body.style.overflow = '';
+  }
+
+  get editNameError(): string | null {
+    const v = this.editForm.companyName.trim();
+    if (!v) return 'Company name is required.';
+    if (v.length > 60) return 'Company name cannot exceed 60 characters.';
+    if (!COMPANY_NAME_RE.test(v)) return "Special characters are not allowed. Only letters, numbers, spaces, . - & ' are permitted.";
+    return null;
+  }
+
+  get editEmailError(): string | null {
+    const v = this.editForm.adminEmail.trim();
+    if (!this.snapshot?.tenant?.adminEmail && !v) return null; // no admin user to update
+    if (!v) return 'Email is required.';
+    if (!ADMIN_EMAIL_RE.test(v)) return 'Enter a valid email address.';
+    return null;
+  }
+
+  get editAddressError(): string | null {
+    return this.editForm.companyAddress.trim().length > 500 ? 'Address cannot exceed 500 characters.' : null;
+  }
+
+  /** Logo shown in the edit dialog: new pick, else current (unless removed). */
+  get editLogoShown(): string | null {
+    if (this.editLogoPreview) return this.editLogoPreview;
+    if (this.editRemoveLogo) return null;
+    return this.snapshot?.tenant?.logo || null;
+  }
+
+  get editLogoDarkShown(): string | null {
+    if (this.editLogoDarkPreview) return this.editLogoDarkPreview;
+    if (this.editRemoveLogoDark) return null;
+    return this.snapshot?.tenant?.logoDark || null;
+  }
+
+  onEditLogoChange(event: Event, variant: 'light' | 'dark' = 'light'): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    if (!LOGO_TYPES.includes(file.type)) {
+      this.notyf.error('Only JPG, JPEG, and PNG formats are allowed.');
+      input.value = '';
+      return;
+    }
+    if (file.size > LOGO_MAX_SIZE) {
+      this.notyf.error('Maximum allowed file size is 2MB.');
+      input.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    if (variant === 'dark') {
+      this.editLogoDarkFile = file;
+      this.editRemoveLogoDark = false;
+      reader.onload = () => (this.editLogoDarkPreview = reader.result as string);
+    } else {
+      this.editLogoFile = file;
+      this.editRemoveLogo = false;
+      reader.onload = () => (this.editLogoPreview = reader.result as string);
+    }
+    reader.readAsDataURL(file);
+    input.value = '';
+  }
+
+  removeEditLogo(variant: 'light' | 'dark' = 'light'): void {
+    if (variant === 'dark') {
+      this.editLogoDarkFile = null;
+      this.editLogoDarkPreview = null;
+      this.editRemoveLogoDark = true;
+      return;
+    }
+    this.editLogoFile = null;
+    this.editLogoPreview = null;
+    this.editRemoveLogo = true;
+  }
+
+  saveEdit(): void {
+    this.editSubmitted = true;
+    if (this.editNameError || this.editEmailError || this.editAddressError) return;
+
+    const fd = new FormData();
+    fd.append('companyName', this.editForm.companyName.trim());
+    fd.append('companyAddress', this.editForm.companyAddress.trim());
+    if (this.editForm.adminEmail.trim()) fd.append('adminEmail', this.editForm.adminEmail.trim());
+    if (this.editLogoFile) fd.append('logo', this.editLogoFile, this.editLogoFile.name);
+    else if (this.editRemoveLogo) fd.append('removeLogo', 'true');
+    if (this.editLogoDarkFile) fd.append('logoDark', this.editLogoDarkFile, this.editLogoDarkFile.name);
+    else if (this.editRemoveLogoDark) fd.append('removeLogoDark', 'true');
+
+    this.editSaving = true;
+    this.api.updateTenantDetails(this.tenantId, fd).subscribe({
+      next: (res) => {
+        this.editSaving = false;
+        const data = JSON.parse(res);
+        if (!data.status) {
+          this.notyf.error(data.message || 'Could not update company.');
+          return;
+        }
+        if (this.snapshot) this.snapshot.tenant = { ...this.snapshot.tenant, ...(data.data || {}) };
+        this.closeEdit();
+        this.notyf.success(data.message || 'Company details updated.');
+      },
+      error: (err) => {
+        this.editSaving = false;
+        let msg = 'Server error. Please try again.';
+        try {
+          msg = JSON.parse(err?.error)?.message || msg;
+        } catch {}
+        this.notyf.error(msg);
+      },
+    });
+  }
+
+  ngOnDestroy(): void {
+    document.body.style.overflow = '';
   }
 
   get branchesList(): { id: string; name: string; status?: string }[] {

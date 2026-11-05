@@ -4,6 +4,7 @@ const attendance = require("../../models/attendance");
 const attendanceSetting = require("../../models/attendanceSetting");
 const deduction = require("../../models/deductions");
 const moment = require("moment");
+const momentTz = require("moment-timezone");
 const Shift = require("../../models/shift");
 const empPersonal = require("../../models/empPersonal");
 const ContractualDayApproval = require("../../models/contractual_day_approval");
@@ -271,12 +272,28 @@ exports.getMonthlyAttendance = async (req, res) => {
         where: {
           tenantId,
           branchId,
-          check_in_time: {
-            [Op.between]: [
-              startDate.format("YYYY-MM-DD 00:00:00"),
-              endDate.format("YYYY-MM-DD 23:59:59"),
-            ],
-          },
+          [Op.or]: [
+            {
+              date: {
+                [Op.between]: [
+                  startDate.format("YYYY-MM-DD"),
+                  endDate.format("YYYY-MM-DD"),
+                ],
+              },
+            },
+            {
+              month: Number(month),
+              year: Number(year),
+            },
+            {
+              check_in_time: {
+                [Op.between]: [
+                  startDate.format("YYYY-MM-DD 00:00:00"),
+                  endDate.format("YYYY-MM-DD 23:59:59"),
+                ],
+              },
+            },
+          ],
         },
         raw: true,
       });
@@ -305,12 +322,28 @@ exports.getMonthlyAttendance = async (req, res) => {
           employeeId: emp_id,
           tenantId,
           branchId,
-          check_in_time: {
-            [Op.between]: [
-              startDate.format("YYYY-MM-DD 00:00:00"),
-              endDate.format("YYYY-MM-DD 23:59:59"),
-            ],
-          },
+          [Op.or]: [
+            {
+              date: {
+                [Op.between]: [
+                  startDate.format("YYYY-MM-DD"),
+                  endDate.format("YYYY-MM-DD"),
+                ],
+              },
+            },
+            {
+              month: Number(month),
+              year: Number(year),
+            },
+            {
+              check_in_time: {
+                [Op.between]: [
+                  startDate.format("YYYY-MM-DD 00:00:00"),
+                  endDate.format("YYYY-MM-DD 23:59:59"),
+                ],
+              },
+            },
+          ],
         },
         raw: true,
       });
@@ -323,11 +356,23 @@ exports.getMonthlyAttendance = async (req, res) => {
     const groupedRecords = {};
 
     records.forEach((r) => {
-      const day = moment(r.check_in_time).date();
+      const isWeekOffMarker = r.check_in_time === "WEEK_OFF" || r.check_in_time === "WO";
+      let day = null;
+      if (r.date) {
+        day = moment(r.date).date();
+      } else if (r.check_in_time && !isWeekOffMarker) {
+        const parsed = moment(r.check_in_time);
+        if (parsed.isValid()) day = parsed.date();
+      }
+      if (!day) return;
+
       if (!groupedRecords[r.employeeId]) groupedRecords[r.employeeId] = {};
       groupedRecords[r.employeeId][day] = {
-        checkIn: r.check_in_time,
+        checkIn: isWeekOffMarker ? null : r.check_in_time,
         checkOut: r.check_out_time,
+        isWeekOff: isWeekOffMarker,
+        isPresent: !!r.is_present,
+        hasRecord: true,
       };
     });
 
@@ -418,10 +463,15 @@ exports.getMonthlyAttendance = async (req, res) => {
 
         let status = "Absent";
 
-        if (entry) {
+        if (entry?.isWeekOff) {
+          status = "Week Off";
+        } else if (entry?.checkIn || entry?.checkOut) {
           status = "Present";
+        } else if (entry?.hasRecord) {
+          // Explicit Absent uploaded (no check-in / check-out)
+          status = "Absent";
         } else {
-          // priority logic
+          // priority logic when no uploaded attendance row
 
           if (holidayMap[i]) {
             status = "Holiday";
@@ -873,6 +923,36 @@ exports.getLateAttendance = async (req, res) => {
   }
 };
 
+/**
+ * Normalises a stored check-in/out value to "HH:mm:ss" for <input type="time" step="1">.
+ * Handles "YYYY-MM-DD H:mm[:ss]", "H:mm[:ss]", 12-hour "h:mm AM", and ISO /
+ * Date values (shown in IST). Returns null when the value cannot be read.
+ */
+const formatClockTime = (raw) => {
+  if (raw == null || raw === "" || raw === "--") return null;
+  const pad = (n) => String(n).padStart(2, "0");
+
+  if (!(raw instanceof Date)) {
+    const s = String(raw).trim();
+    const m = s.match(/^(?:\d{4}-\d{2}-\d{2}\s+)?(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?\s*([AaPp][Mm])?$/);
+    if (m) {
+      let h = Number(m[1]);
+      const ampm = m[4] && m[4].toLowerCase();
+      if (ampm === "pm" && h < 12) h += 12;
+      if (ampm === "am" && h === 12) h = 0;
+      if (h > 23 || Number(m[2]) > 59 || Number(m[3] || 0) > 59) return null;
+      return `${pad(h)}:${m[2]}:${m[3] || "00"}`;
+    }
+    // ISO without offset is IST wall-clock time; with Z/offset convert to IST
+    const iso = /[zZ]|[+-]\d{2}:?\d{2}$/.test(s)
+      ? momentTz(s, momentTz.ISO_8601).tz("Asia/Kolkata")
+      : momentTz.tz(s, momentTz.ISO_8601, "Asia/Kolkata");
+    return iso.isValid() ? iso.format("HH:mm:ss") : null;
+  }
+  const d = momentTz(raw).tz("Asia/Kolkata");
+  return d.isValid() ? d.format("HH:mm:ss") : null;
+};
+
 exports.getDateWiseAttendance = async (req, res) => {
   const { emp_id, startDate, endDate } = req.body;
   const tenantId = req.users && req.users.tenantId;
@@ -897,28 +977,7 @@ exports.getDateWiseAttendance = async (req, res) => {
     const toStr = end.format("YYYY-MM-DD");
     const monthEnd = new Date(endDate);
 
-    const formatTime = (raw) => {
-      if (!raw) return "--";
-      const s = String(raw).trim();
-      // Prefer HH:mm:ss for time inputs (step=1)
-      if (s.includes(" ")) {
-        const part = s.split(" ")[1] || "";
-        if (part.length >= 8) return part.slice(0, 8);
-        if (part.length >= 5) return `${part.slice(0, 5)}:00`;
-      }
-      if (/^\d{2}:\d{2}:\d{2}/.test(s)) return s.slice(0, 8);
-      if (/^\d{2}:\d{2}$/.test(s)) return `${s}:00`;
-      try {
-        return new Date(raw).toLocaleTimeString("en-IN", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          hour12: false,
-        });
-      } catch {
-        return "--";
-      }
-    };
+    const formatTime = (raw) => formatClockTime(raw) || "--";
 
     const holidayLabel = (typeName) => {
       const n = String(typeName || "").toLowerCase();
@@ -929,15 +988,36 @@ exports.getDateWiseAttendance = async (req, res) => {
 
     let employees = [];
     let records = [];
+    // Null joiningDate must still appear (common for new companies / incomplete profiles).
+    // Pending self-registration is excluded — only real employees.
+    const employeeListWhere = {
+      tenantId,
+      branchId,
+      status: "active",
+      [Op.and]: [
+        {
+          [Op.or]: [
+            { joiningDate: { [Op.is]: null } },
+            { joiningDate: { [Op.lte]: monthEnd } },
+          ],
+        },
+        {
+          [Op.or]: [
+            { emp_status: { [Op.is]: null } },
+            { emp_status: "approved" },
+          ],
+        },
+      ],
+    };
+
     if (emp_id == "All" || emp_id == "all") {
       employees = await empPersonal.findAll({
-        where: {
-          tenantId,
-          branchId,
-          status: "active",
-          joiningDate: { [Op.lte]: monthEnd },
-        },
+        where: employeeListWhere,
         attributes: ["id", "firstName", "lastName", "shift_id"],
+        order: [
+          ["firstName", "ASC"],
+          ["lastName", "ASC"],
+        ],
         raw: true,
       });
       records = await attendance.findAll({
@@ -962,14 +1042,39 @@ exports.getDateWiseAttendance = async (req, res) => {
       const emp = await empPersonal.findOne({
         where: {
           id: emp_id,
-          tenantId,
-          branchId,
-          joiningDate: { [Op.lte]: monthEnd },
+          ...employeeListWhere,
         },
         attributes: ["id", "firstName", "lastName", "shift_id"],
         raw: true,
       });
       if (!emp) {
+        // Distinguish missing vs not yet eligible (pending / future join)
+        const anyEmp = await empPersonal.findOne({
+          where: { id: emp_id, tenantId },
+          attributes: ["id", "branchId", "status", "emp_status", "joiningDate"],
+          raw: true,
+        });
+        if (!anyEmp) {
+          return Helper.response(false, "Employee not found", [], res, 404);
+        }
+        if (String(anyEmp.branchId) !== String(branchId)) {
+          return Helper.response(
+            false,
+            "Employee not found in the selected branch",
+            [],
+            res,
+            404,
+          );
+        }
+        if (String(anyEmp.emp_status || "").toLowerCase() === "pending") {
+          return Helper.response(
+            false,
+            "Employee is still pending approval",
+            [],
+            res,
+            404,
+          );
+        }
         return Helper.response(false, "Employee not found", [], res, 404);
       }
 
@@ -993,6 +1098,16 @@ exports.getDateWiseAttendance = async (req, res) => {
         },
         raw: true,
       });
+    }
+
+    if (!employees.length) {
+      return Helper.response(
+        true,
+        "No active approved employees found for this branch. Add or approve employees first.",
+        [],
+        res,
+        200,
+      );
     }
 
     const shiftIds = [
@@ -1099,15 +1214,30 @@ exports.getDateWiseAttendance = async (req, res) => {
 
     const groupedRecords = {};
     records.forEach((r) => {
+      const isWoMarker =
+        r.check_in_time === "WEEK_OFF" || r.check_in_time === "WO";
       const dateKey = r.date
         ? moment(r.date).format("YYYY-MM-DD")
-        : moment(r.check_in_time).format("YYYY-MM-DD");
+        : !isWoMarker && r.check_in_time
+          ? moment(r.check_in_time).format("YYYY-MM-DD")
+          : null;
+      if (!dateKey || dateKey === "Invalid date") return;
       if (!groupedRecords[r.employeeId]) groupedRecords[r.employeeId] = {};
+      const hasRealPunch =
+        !isWoMarker &&
+        !!(r.check_in_time && String(r.check_in_time).match(/^\d{4}-\d{2}-\d{2}/));
       groupedRecords[r.employeeId][dateKey] = {
         id: r.id,
-        checkIn: r.check_in_time || null,
+        checkIn: isWoMarker ? null : r.check_in_time || null,
         checkOut: r.check_out_time || null,
-        status: r.check_in_time ? "Present" : "Absent",
+        isWeekOff: isWoMarker,
+        // Marked present or real check-in — never treat WEEK_OFF marker as Present
+        isPresent: !!r.is_present || hasRealPunch,
+        status: isWoMarker
+          ? "Week Off"
+          : hasRealPunch || r.is_present
+            ? "Present"
+            : "Absent",
       };
     });
 
@@ -1134,7 +1264,9 @@ exports.getDateWiseAttendance = async (req, res) => {
         // Leave first (First Half / Second Half / Full Day Leave)
         if (leaveStatus) {
           status = leaveStatus;
-        } else if (entry?.checkIn) {
+        } else if (entry?.isWeekOff) {
+          status = "Week Off";
+        } else if (entry?.isPresent) {
           status = "Present";
         } else if (hol) {
           status = hol.statusLabel; // Restricted Holiday | Gazetted Holiday
@@ -1624,17 +1756,24 @@ exports.addHoliday = async (req, res) => {
       );
     }
 
+    // Duplicate = same type, name (case-insensitive) and date in this branch
     const existingHoliday = await Holiday.findOne({
-      where: { tenantId, holiday_type, branchId, holiday_name, date },
+      where: {
+        tenantId,
+        holiday_type,
+        branchId,
+        date,
+        [Op.and]: [where(fn("LOWER", col("holiday_name")), String(holiday_name).trim().toLowerCase())],
+      },
     });
     if (existingHoliday) {
       Helper.deleteUploadedFiles(req.files);
       return Helper.response(
         false,
-        "Holiday already exists for this tenant.",
+        `Holiday "${String(holiday_name).trim()}" already exists on this date. Duplicate records are not allowed.`,
         [],
         res,
-        400,
+        409,
       );
     }
 
@@ -1777,6 +1916,27 @@ exports.updateHoliday = async (req, res) => {
     if (!holidayExists) {
       Helper.deleteUploadedFiles(req.files);
       return Helper.response(false, "Holiday not found", null, res, 404);
+    }
+
+    const duplicateHoliday = await Holiday.findOne({
+      where: {
+        tenantId,
+        holiday_type,
+        branchId,
+        date,
+        id: { [Op.ne]: id },
+        [Op.and]: [where(fn("LOWER", col("holiday_name")), String(holiday_name).trim().toLowerCase())],
+      },
+    });
+    if (duplicateHoliday) {
+      Helper.deleteUploadedFiles(req.files);
+      return Helper.response(
+        false,
+        `Holiday "${String(holiday_name).trim()}" already exists on this date. Duplicate records are not allowed.`,
+        null,
+        res,
+        409,
+      );
     }
 
     const oldHoliday = toPlain(holidayExists);
@@ -2117,9 +2277,16 @@ exports.downloadAttendance = async (req, res) => {
     attendances.forEach((att) => {
       if (!attendanceMap[att.employeeId]) attendanceMap[att.employeeId] = {};
 
-      const day = moment(att.date).date();
+      const day = att.date
+        ? moment(att.date).date()
+        : att.check_in_time && att.check_in_time !== "WEEK_OFF" && att.check_in_time !== "WO"
+          ? moment(att.check_in_time).date()
+          : null;
+      if (!day) return;
 
-      if (att.check_in_time || att.check_out_time) {
+      if (att.check_in_time === "WEEK_OFF" || att.check_in_time === "WO") {
+        attendanceMap[att.employeeId][day] = "WO";
+      } else if (att.check_in_time || att.check_out_time) {
         let checkIn = att.check_in_time
           ? moment(att.check_in_time).format("HH:mm")
           : "";
@@ -2133,9 +2300,10 @@ exports.downloadAttendance = async (req, res) => {
         if (checkIn == "Invalid date") {
           checkIn = "00:00";
         }
-        // console.log(checkIn,checkOut);
 
         attendanceMap[att.employeeId][day] = `${checkIn} ${checkOut}`;
+      } else if (att.is_present === false) {
+        attendanceMap[att.employeeId][day] = "A";
       }
     });
 
@@ -2570,17 +2738,20 @@ exports.uploadAttendance = async (req, res) => {
 
       // 🔁 Loop dates
       for (let d = 0; d < dateColumns.length; d++) {
-        const day = dateColumns[d];
-        const value = row[d + 2];
+        const day = parseInt(dateColumns[d], 10);
+        const rawValue = row[d + 2];
 
-        if (!day || !value) continue;
-        if (value === "WO") continue; // skip weekly off
+        if (!day || rawValue === undefined || rawValue === null || rawValue === "") continue;
+
+        const normalized = String(rawValue).trim().toUpperCase().replace(/\s+/g, " ");
+        const isWO = ["WO", "WEEK OFF", "WEEKOFF", "W/OFF", "WEEK-OFF"].includes(normalized);
+        const isAbsent = ["A", "ABSENT", "AB"].includes(normalized);
 
         const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(
           day,
         ).padStart(2, "0")}`;
 
-        // ✅ collect delete condition
+        // Always clear existing row for this day (including WO / Absent overrides)
         deleteConditions.push({
           tenantId,
           branchId,
@@ -2592,10 +2763,17 @@ exports.uploadAttendance = async (req, res) => {
         let checkOut = null;
         let isPresent = false;
 
-        if (value == "A") {
+        if (isWO) {
+          // Marker so Attendance Logs can show WO even when shift master differs
+          checkIn = "WEEK_OFF";
+          checkOut = null;
+          isPresent = false;
+        } else if (isAbsent) {
+          checkIn = null;
+          checkOut = null;
           isPresent = false;
         } else {
-          const parts = value.split(" ");
+          const parts = String(rawValue).trim().split(/\s+/);
 
           if (parts.length >= 2) {
             const checkInTime = parts[0];
@@ -2608,6 +2786,9 @@ exports.uploadAttendance = async (req, res) => {
               checkOutTime == "00:00" ? null : `${dateStr} ${checkOutTime}`;
 
             isPresent = true;
+          } else {
+            // Unrecognized cell — skip insert but still deleted stale row above
+            continue;
           }
         }
 
@@ -2628,7 +2809,7 @@ exports.uploadAttendance = async (req, res) => {
       }
     }
 
-    if (!bulkData.length) {
+    if (!bulkData.length && !deleteConditions.length) {
       return Helper.response(
         false,
         "No valid attendance records found in Excel",
@@ -2642,16 +2823,21 @@ exports.uploadAttendance = async (req, res) => {
     const transaction = await sequelize.transaction();
 
     try {
-      await attendance.destroy(
-        {
+      // Chunk OR deletes to avoid Postgres "out of shared memory" / lock pressure
+      const DELETE_CHUNK = 100;
+      for (let i = 0; i < deleteConditions.length; i += DELETE_CHUNK) {
+        const chunk = deleteConditions.slice(i, i + DELETE_CHUNK);
+        await attendance.destroy({
           where: {
-            [Op.or]: deleteConditions,
+            [Op.or]: chunk,
           },
-        },
-        { transaction },
-      );
+          transaction,
+        });
+      }
 
-      await attendance.bulkCreate(bulkData, { transaction });
+      if (bulkData.length) {
+        await attendance.bulkCreate(bulkData, { transaction });
+      }
 
       await transaction.commit();
     } catch (err) {

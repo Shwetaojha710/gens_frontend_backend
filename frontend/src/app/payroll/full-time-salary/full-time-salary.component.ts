@@ -212,7 +212,27 @@ isAllAttendanceSelected() {
     })
   }
   delete(data: any) {
-    this.SalaryArr = this.SalaryArr.filter((item: any) => item.employeeId != data.employeeId)
+    Swal.fire({
+      title: 'Are you sure?',
+      text: 'Remove this employee from the salary generation list?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, remove',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+    }).then((result) => {
+      if (!result.isConfirmed) return;
+      const empId = data?.employeeId;
+      this.originalList = (this.originalList || []).filter(
+        (item: any) => item.employeeId != empId,
+      );
+      this.SalaryArr = (this.SalaryArr || []).filter(
+        (item: any) => item.employeeId != empId,
+      );
+      this.applyFilters();
+      this.isAllSelected();
+      this.notyf.success('Employee removed from salary list');
+    });
   }
 
   statuschange(item: any, status: any) {
@@ -341,6 +361,19 @@ isAllAttendanceSelected() {
       this.isLoading = false
       if (this.statusService.handleResponseStatus(response.status, response.message || "Success")) {
         this.masterSelected = false
+        // Remove successfully generated employees so a second click cannot re-submit them
+        const generatedIds = new Set(
+          (response?.data?.generatedSalaries || []).map((b: any) => b.employeeId),
+        );
+        if (generatedIds.size > 0) {
+          this.originalList = (this.originalList || []).filter(
+            (item: any) => !generatedIds.has(item.employeeId),
+          );
+          this.SalaryArr = (this.SalaryArr || []).filter(
+            (item: any) => !generatedIds.has(item.employeeId),
+          );
+          this.applyFilters();
+        }
         Swal.fire({
           title: "Salary Generated Successfully",
           imageUrl: "/assets/img/icons8-success-192.gif",

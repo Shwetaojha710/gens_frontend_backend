@@ -3,7 +3,7 @@ const { login, logout, AIlogin,Applogin, verifyOtp, Applogout, UpdatePassword, c
 const {Admin, AppAdmin} = require('../middleware/auth');
 const { Companyregistration } = require('../controller/auth/register');
 const router = express.Router();
-const upload = require('../middleware/upload');
+const logoUpload = require('../middleware/logoUpload');
 const { snapToRoads } = require('../helper/googlemap');
 
 
@@ -16,7 +16,7 @@ router.post('/AIlogin',AIlogin)
 router.post('/logout',Admin,logout)
 router.post('/app-logout',AppAdmin,Applogout)
 router.post('/snap-to-roads',Admin,snapToRoads)
-router.post('/company-register',upload.single('image'), Companyregistration)
+router.post('/company-register',logoUpload(['image', 'imageDark']), Companyregistration)
 router.post('/send-otp',interViewerlogin)
 router.post('/verify-otp-login',InterviewerverifyOtp)
 module.exports = router

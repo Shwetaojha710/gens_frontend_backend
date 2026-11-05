@@ -257,7 +257,8 @@ exports.getDesignationDD = async (req, res) => {
                      department,tenantId,
                      branchId,
                      status:'active'
-                   }
+                   },
+                   order: [['name', 'ASC']]
         })
        
         const data = getDesignation.map(desig => ({

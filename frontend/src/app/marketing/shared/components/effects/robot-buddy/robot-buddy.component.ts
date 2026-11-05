@@ -19,6 +19,7 @@ interface Bubble {
   x: number;
   y: number;
   text: string;
+  duration: number;
 }
 
 interface QuickAction {
@@ -471,13 +472,21 @@ export class RobotBuddyComponent implements OnInit, OnDestroy {
 
   private spawnBubble(text: string): void {
     const id = this.bubbleId++;
+    // Keep the message on screen long enough to read: at least 6s, longer for long tips.
+    const duration = Math.max(6000, text.length * 90);
+    // Keep the bubble (centred on x, max 220px wide) fully inside the viewport.
+    const halfWidth = 120;
+    const x = Math.min(
+      Math.max(this.robotX() + ROBOT_SIZE / 2, halfWidth),
+      window.innerWidth - halfWidth,
+    );
     this.bubbles.update((list) => [
       ...list.slice(-2),
-      { id, x: this.robotX() + ROBOT_SIZE / 2, y: this.robotY() - 18, text },
+      { id, x, y: this.robotY() - 18, text, duration },
     ]);
     const timer = setTimeout(() => {
       this.bubbles.update((list) => list.filter((item) => item.id !== id));
-    }, 2200);
+    }, duration);
     this.timers.push(timer);
   }
 

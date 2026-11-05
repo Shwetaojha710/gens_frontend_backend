@@ -7,6 +7,7 @@ import { EmployeeService } from '../../../services/employee.service';
 import { MasterService } from '../../../services/master.service';
 import { AssetService } from '../../../services/asset.service';
 import Swal from 'sweetalert2';
+import { CompanyLogoService, DEFAULT_COMPANY_LOGO } from '../../../services/company-logo.service';
 @Component({
   selector: 'app-releving-letter',
   imports: [CommonModule, FormsModule, DatePipe, RouterLink],
@@ -31,7 +32,8 @@ export class RelevingLetterComponent implements OnInit {
   /** Company assets the employee still holds (relieving letter waits for these). */
   assetClearance: any = null;
 
-  constructor(private router: Router, private employeeService: EmployeeService, private masterService: MasterService, private assetService: AssetService) {
+
+  constructor(private router: Router, private employeeService: EmployeeService, private masterService: MasterService, private companyLogoSvc: CompanyLogoService, private assetService: AssetService) {
     this.notyf = new Notyf();
     this.personalDetails = JSON.parse(localStorage.getItem('employeeId') || '{}');
     this.tenant = JSON.parse(localStorage.getItem('tenant') || '{}');
@@ -292,7 +294,13 @@ ${content}
   }
 
   downloadDoc() {
-    const logoPromise = this.getBase64FromSrc('/assets/img/logo/image.png').catch(() => '');
+    // Company logo when set, else the default logo
+    const defaultLogo = '/' + DEFAULT_COMPANY_LOGO;
+    const companyLogoUrl = this.companyLogoSvc.current('admin');
+    const logoPromise = (companyLogoUrl
+      ? this.getBase64FromSrc(companyLogoUrl).catch(() => this.getBase64FromSrc(defaultLogo))
+      : this.getBase64FromSrc(defaultLogo)
+    ).catch(() => '');
     const badge1Promise = this.getBase64FromSrc('/assets/img/logo/Picture1.jpg').catch(() => '');
     const badge2Promise = this.getBase64FromSrc('/assets/img/logo/Picture2.png').catch(() => '');
 

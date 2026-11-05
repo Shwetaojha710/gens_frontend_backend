@@ -100,32 +100,50 @@ export class BranchComponent {
     await this.fetchBranchs();
   }
 
+  filteredList: any[] = [];
+  pageNumbers: number[] = [];
+
   applyFilter(event: any) {
     const value = event?.target?.value || '';
     this.searchText = value.trim();
-    if (this.searchText === '') {
-      this.BranchList = [...this.originalList];
+    this.currentPage = 1;
+    this.applyListFilters();
+  }
+
+  applyListFilters(): void {
+    const q = (this.searchText || '').toLowerCase();
+    if (!q) {
+      this.filteredList = [...this.originalList];
     } else {
-      this.BranchList = this.originalList.filter((item: any) =>
-        JSON.stringify(item).toLowerCase().includes(this.searchText.toLowerCase())
+      this.filteredList = this.originalList.filter((item: any) =>
+        JSON.stringify(item).toLowerCase().includes(q),
       );
     }
+    this.totalPages = Math.max(1, Math.ceil(this.filteredList.length / this.itemsPerPage) || 1);
+    if (this.currentPage > this.totalPages) this.currentPage = this.totalPages;
+    this.pageNumbers = Array.from({ length: this.totalPages }, (_, i) => i + 1);
+    this.slicePage();
+  }
+
+  slicePage(): void {
+    const start = (this.currentPage - 1) * this.itemsPerPage;
+    this.BranchList = this.filteredList.slice(start, start + this.itemsPerPage);
   }
 
   getMin(a: number, b: number): number {
     return Math.min(a, b);
   }
 
-  onItemsPerPageChange(event: any) {
-    this.itemsPerPage = +event.target.value;
+  onItemsPerPageChange(value: number | string) {
+    this.itemsPerPage = Number(value) || 10;
     this.currentPage = 1;
-    this.fetchBranchs();
+    this.applyListFilters();
   }
 
   goToPage(page: number) {
     if (page < 1 || page > this.totalPages) return;
     this.currentPage = page;
-    this.fetchBranchs();
+    this.slicePage();
   }
 
   getStatusClass(status: any): string {
@@ -145,10 +163,12 @@ export class BranchComponent {
   async fetchBranchs() {
     this.BranchList = [];
     this.originalList = [];
+    this.filteredList = [];
     this.BranchService.getBranchs().subscribe(data => {
       if (data['status'] == true) {
-        this.BranchList = data.data;
-        this.originalList = this.BranchList;
+        this.originalList = Array.isArray(data.data) ? data.data : [];
+        this.currentPage = 1;
+        this.applyListFilters();
       } else {
         this.notyf.error(data['message']);
       }
@@ -159,11 +179,18 @@ export class BranchComponent {
     if (!ValidationUtil.showRequiredError('Branch name', this.obj.name, this.notyf)) {
       return;
     }
+    if (!ValidationUtil.showRequiredError('Latitude', this.obj.latitude, this.notyf)) {
+      return;
+    }
+    if (!ValidationUtil.showRequiredError('Longitude', this.obj.longitude, this.notyf)) {
+      return;
+    }
 
     const formData = new FormData();
     formData.append('name', this.obj.name || '');
     formData.append('latitude', this.obj.latitude || '');
     formData.append('longitude', this.obj.longitude || '');
+    formData.append('range', this.obj.range != null && this.obj.range !== '' ? String(this.obj.range) : '');
     formData.append('description', this.obj.description || '');
     if (this.selectedImage) {
       formData.append('image', this.selectedImage);
@@ -201,11 +228,22 @@ export class BranchComponent {
   }
 
   updatedata() {
+    if (!ValidationUtil.showRequiredError('Branch name', this.obj.name, this.notyf)) {
+      return;
+    }
+    if (!ValidationUtil.showRequiredError('Latitude', this.obj.latitude, this.notyf)) {
+      return;
+    }
+    if (!ValidationUtil.showRequiredError('Longitude', this.obj.longitude, this.notyf)) {
+      return;
+    }
+
     const formData = new FormData();
     formData.append('id', this.obj.id);
     formData.append('name', this.obj.name || '');
     formData.append('latitude', this.obj.latitude || '');
     formData.append('longitude', this.obj.longitude || '');
+    formData.append('range', this.obj.range != null && this.obj.range !== '' ? String(this.obj.range) : '');
     formData.append('status', this.obj.status || 'active');
     formData.append('description', this.obj.description || '');
     if (this.selectedImage) {

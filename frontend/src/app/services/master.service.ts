@@ -351,6 +351,20 @@ export class MasterService {
     return this.http.post(`${this.baseUrl}save-brand-colors`, colors);
   }
 
+  getAppConfig(body: { branchId?: string | null } = {}): Observable<any> {
+    return this.http.post(`${this.baseUrl}get-app-config`, body || {});
+  }
+
+  /** body: { branchId?, isEnabled?, values: { imageQuality: '80', ... } } */
+  saveAppConfig(body: {
+    branchId?: string | null;
+    isEnabled?: boolean;
+    values?: Record<string, string | number>;
+    imageQuality?: number;
+  }): Observable<any> {
+    return this.http.post(`${this.baseUrl}save-app-config`, body);
+  }
+
   getCompanyProfile(): Observable<any> {
     return this.http.post(`${this.baseUrl}get-company-profile`, {});
   }
@@ -382,6 +396,32 @@ export class MasterService {
   }
   listHrGenerated(body: any = {}): Observable<any> {
     return this.http.post(`${this.baseUrl}hr-template-generated-list`, body);
+  }
+  getHrGenerated(id: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}hr-template-generated-get`, { id });
+  }
+
+  getCompanyLogo(): Observable<any> {
+    return this.http.post(`${this.baseUrl}get-company-logo`, {});
+  }
+
+  /**
+   * Header profile edit: companyName, name, optional password + logo file.
+   * FormData keys: companyName, name, currentPassword?, newPassword?, logo?
+   */
+  updateCompanyProfile(formData: FormData): Observable<any> {
+    return this.http.post(`${this.baseUrl}update-company-profile`, formData);
+  }
+
+  /** variant 'dark' = logo for dark backgrounds */
+  uploadCompanyLogo(file: File, variant: 'light' | 'dark' = 'light'): Observable<any> {
+    const formData = new FormData();
+    formData.append(variant === 'dark' ? 'logoDark' : 'logo', file);
+    return this.http.post(`${this.baseUrl}upload-company-logo`, formData);
+  }
+
+  removeCompanyLogo(variant: 'light' | 'dark' = 'light'): Observable<any> {
+    return this.http.post(`${this.baseUrl}remove-company-logo`, { variant });
   }
 
   getLetterhead(): Observable<any> {
