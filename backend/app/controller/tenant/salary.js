@@ -4,6 +4,7 @@ const empPersonal = require("../../models/empPersonal");
 const moment = require("moment");
 const Shift = require("../../models/shift");
 const Helper = require("../../helper/helper");
+const WeekOff = require("../../helper/weekOff");
 const attendanceSetting = require("../../models/attendanceSetting");
 const leave_application = require("../../models/leave_application");
 const Basic = require("../../models/basic");
@@ -4434,7 +4435,7 @@ exports.employeeMonthlyLeaveAttendanceDetails = async (req, res) => {
     // Fetch employee joining date
     const empData = await empPersonal.findOne({
       where: { id: employeeId, branchId },
-      attributes: ["joiningDate"],
+      attributes: ["id", "joiningDate", "week_off_days"],
       raw: true,
     });
 
@@ -4633,6 +4634,15 @@ exports.employeeMonthlyLeaveAttendanceDetails = async (req, res) => {
       .filter((s) => s.is_week_off)
       .map((s) => s.day_num);
 
+    // Employee-wise week off (fixed days + roster). No override => old logic.
+    const weekOffEmp = { id: employeeId, week_off_days: empData?.week_off_days };
+    const weekOffRosterMap = await WeekOff.loadRosterMap({
+      tenantId,
+      employeeIds: [employeeId],
+      from: startDate,
+      to: endDate,
+    });
+
     // =============================
     // MAIN LOOP
     // =============================
@@ -4645,6 +4655,21 @@ exports.employeeMonthlyLeaveAttendanceDetails = async (req, res) => {
       const currentDate = moment(`${year}-${month}-${i}`, "YYYY-MM-DD");
       const dateStr = currentDate.format("YYYY-MM-DD");
       const dayNum = currentDate.day();
+      const hasWeekOffOverride = WeekOff.hasOverride({
+        emp: weekOffEmp,
+        date: dateStr,
+        rosterMap: weekOffRosterMap,
+      });
+      const empShiftForDay = WeekOff.effectiveShiftRow({
+        emp: weekOffEmp,
+        date: dateStr,
+        shiftRow: shiftMap.find((s) => s.day_num == dayNum),
+        shiftRows: shiftMap,
+        rosterMap: weekOffRosterMap,
+      });
+      const isWeekOffDay = hasWeekOffOverride
+        ? !!empShiftForDay?.is_week_off
+        : weekOffDays.includes(dayNum);
 
       const entry = attendanceMap[dateStr];
       const holidayData = holidayMap[dateStr];
@@ -4664,7 +4689,7 @@ exports.employeeMonthlyLeaveAttendanceDetails = async (req, res) => {
           status = holidayData.statusLabel || "Holiday";
         } else if (leaveData) {
           status = leaveStatusLabel(leaveData, currentDate);
-        } else if (weekOffDays.includes(dayNum) || isWoMarker) {
+        } else if (isWeekOffDay || isWoMarker) {
           status = "Week Off";
         } else {
           status = "Absent";
@@ -4675,14 +4700,14 @@ exports.employeeMonthlyLeaveAttendanceDetails = async (req, res) => {
       // ATTENDANCE EXISTS
       // =============================
       else {
-        const shiftForDay = shiftMap.find((s) => s.day_num == dayNum);
+        const shiftForDay = empShiftForDay;
 
         if (!shiftForDay || shiftForDay.is_week_off) {
           if (holidayData) {
             status = holidayData.statusLabel || "Holiday";
           } else if (leaveData) {
             status = leaveStatusLabel(leaveData, currentDate);
-          } else if (weekOffDays.includes(dayNum) || shiftForDay?.is_week_off) {
+          } else if (isWeekOffDay || shiftForDay?.is_week_off) {
             status = "Week Off";
           } else {
             status = "Absent";
@@ -4716,7 +4741,7 @@ exports.employeeMonthlyLeaveAttendanceDetails = async (req, res) => {
           if (badPunch) {
             if (holidayData) status = holidayData.statusLabel || "Holiday";
             else if (leaveData) status = leaveStatusLabel(leaveData, currentDate);
-            else if (weekOffDays.includes(dayNum)) status = "Week Off";
+            else if (isWeekOffDay) status = "Week Off";
             else status = "Absent";
           } else {
             const checkIn = moment(entry.check_in_time)
@@ -5009,6 +5034,7 @@ exports.calculateAttendance = async (req, res) => {
         "firstName",
         "lastName",
         "empCode",
+        "week_off_days",
       ],
       raw: true,
     });
@@ -5117,6 +5143,25 @@ exports.calculateAttendance = async (req, res) => {
       if (!row) return null;
       if (requireActive && row.status !== "active") return null;
       return row;
+    };
+
+    // Employee-wise week off (fixed days + date-wise roster). Without overrides
+    // WeekOff.effectiveShiftRow returns the shift row unchanged (old behaviour).
+    const weekOffRosterMap = await WeekOff.loadRosterMap({
+      tenantId,
+      employeeIds: employeeId,
+      from: moment(`${year}-${String(month).padStart(2, "0")}-01`, "YYYY-MM-DD").startOf("month"),
+      to: moment(`${year}-${String(month).padStart(2, "0")}-01`, "YYYY-MM-DD").endOf("month"),
+    });
+    const getEmpShiftForDay = (emp, date, requireActive = false) => {
+      const dayName = moment(date).format("dddd");
+      return WeekOff.effectiveShiftRow({
+        emp,
+        date,
+        shiftRow: getShiftForDay(emp?.shift_id, dayName, requireActive),
+        shiftRows: shiftLookup[emp?.shift_id],
+        rosterMap: weekOffRosterMap,
+      });
     };
 
     // Holidays are month-scoped and shared across employees
@@ -5530,7 +5575,7 @@ exports.calculateAttendance = async (req, res) => {
 
       const shiftWeekOffDates = [];
       for (let d = moment(startDate); d.isSameOrBefore(endDate); d.add(1, "days")) {
-        const shift = getShiftForDay(PersonalInfo?.shift_id, d.format("dddd"), false);
+        const shift = getEmpShiftForDay(PersonalInfo, d, false);
         if (shift?.is_week_off) {
           shiftWeekOffDates.push(d.format("YYYY-MM-DD"));
         }
@@ -5900,8 +5945,7 @@ exports.calculateAttendance = async (req, res) => {
       let dynamicWorkingDays = 0;
 
       for (let d = moment(startDate); d <= endDate; d.add(1, "days")) {
-        const dayName = d.format("dddd");
-        const shift = getShiftForDay(PersonalInfo?.shift_id, dayName, true);
+        const shift = getEmpShiftForDay(PersonalInfo, d, true);
 
         workingDays.push({ date: d.clone(), shift });
         dynamicWorkingDays++;

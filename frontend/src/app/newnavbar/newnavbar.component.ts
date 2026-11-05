@@ -61,6 +61,7 @@ export class NewnavbarComponent {
       icon: 'ri-calendar-check-line',
       children: [
         { title: 'Shift Master', icon: 'ri ri-user-3-line', link: '/layout/attendance/shift' },
+        { title: 'Week Off Roster', icon: 'ri-calendar-event-line', link: '/layout/attendance/week-off-roster' },
         { title: 'Date Wise Attendance', icon: 'ri-calendar-line', link: '/layout/attendance/date-wise-attendance' },
         { title: 'Holiday', icon: 'ri-barricade-fill', link: '/layout/attendance/holiday' },
         { title: 'Attendance Logs', icon: 'ri-calendar-line', link: '/layout/attendance/logs' },

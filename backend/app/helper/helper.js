@@ -1202,6 +1202,9 @@ Helper.calculateAttendanceSummary = (
   shiftArray,
   AttendanceSettings,
   finalWorkingDays,
+  // Optional (employee-wise week off): (dateStr, shiftRow) => boolean.
+  // When omitted, shift.is_week_off is used exactly as before.
+  isWeekOffForDate = null,
 ) => {
   let totalWorkingHours = 0;
   let workingDays = 0;
@@ -1272,7 +1275,11 @@ Helper.calculateAttendanceSummary = (
       }
     } else {
       // ---------- ABSENT ----------
-      if (!shift?.is_week_off) {
+      const isWeekOffDay =
+        typeof isWeekOffForDate === "function"
+          ? isWeekOffForDate(day.date, shift)
+          : shift?.is_week_off;
+      if (!isWeekOffDay) {
         absentDays++;
       }
     }
@@ -1796,7 +1803,14 @@ Helper.formatDuration = (seconds) =>{
  * @param {Array<{date: string; day?: string; checkIn?: string|null; checkOut?: string|null; status?: string}>} dataRowsAsc Oldest → newest
  * @param {{ graceMinutes?: number; lateAllowanceMin?: number; halfDayThreshold?: number; halfdayToAbsentMin?: number }|null} settings attendanceSetting row
  */
-Helper.computeLatePayrollPreview = (shiftMap, dataRowsAsc, settings) => {
+Helper.computeLatePayrollPreview = (
+  shiftMap,
+  dataRowsAsc,
+  settings,
+  // Optional (employee-wise week off): (dateStr, dayName) => shift row.
+  // When omitted, the shift is looked up from shiftMap exactly as before.
+  getShiftForDate = null,
+) => {
   if (!settings || typeof settings !== "object") {
     return null;
   }
@@ -1841,7 +1855,10 @@ Helper.computeLatePayrollPreview = (shiftMap, dataRowsAsc, settings) => {
     if (st.includes("on leave") && !st.includes("late")) continue;
     if (st.includes("first half") || st.includes("second half")) continue;
 
-    const shift = findShift(dateStr, dayName);
+    const shift =
+      typeof getShiftForDate === "function"
+        ? getShiftForDate(dateStr, dayName)
+        : findShift(dateStr, dayName);
     if (!shift || shift.is_week_off) continue;
 
     let shiftStart = moment(

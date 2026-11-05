@@ -1,4 +1,5 @@
 const Helper = require("../../helper/helper");
+const WeekOff = require("../../helper/weekOff");
 const attendance = require("../../models/attendance");
 const Department = require("../../models/department");
 const Designation = require("../../models/designation");
@@ -673,10 +674,32 @@ exports.getAttendance = async (req, res) => {
 
     const emp = await empPersonal.findOne({
       where: { id: emp_id, branchId },
-      attributes: ["id", "firstName", "lastName"],
+      attributes: ["id", "firstName", "lastName", "week_off_days"],
       raw: true,
     });
     if (!emp) return Helper.response(false, "Employee not found", [], res, 404);
+
+    // Employee-wise week off (fixed days + roster). No override => old logic.
+    const weekOffRosterMap = await WeekOff.loadRosterMap({
+      tenantId,
+      employeeIds: [emp.id],
+      from: startDate,
+      to: endDate,
+    });
+    const hasEmpWeekOffConfig =
+      WeekOff.hasFixedWeekOff(emp) || weekOffRosterMap.has(String(emp.id));
+    const getEmpShiftForDate = (dateStr, dayNum) =>
+      WeekOff.effectiveShiftRow({
+        emp,
+        date: dateStr,
+        shiftRow: shiftMap.find((s) => s.day_num == dayNum),
+        shiftRows: shiftMap,
+        rosterMap: weekOffRosterMap,
+      });
+    const isEmpWeekOffDate = (dateStr, dayNum) =>
+      WeekOff.hasOverride({ emp, date: dateStr, rosterMap: weekOffRosterMap })
+        ? !!getEmpShiftForDate(dateStr, dayNum)?.is_week_off
+        : weekOffDays.includes(dayNum);
 
     const records = await attendance.findAll({
       where: {
@@ -771,7 +794,7 @@ exports.getAttendance = async (req, res) => {
             } else {
               status = "On Leave";
             }
-          } else if (weekOffDays.includes(dayNum)) {
+          } else if (isEmpWeekOffDate(currentDate.format("YYYY-MM-DD"), dayNum)) {
             status = "Week Off";
           } else {
             status = "Absent";
@@ -784,7 +807,10 @@ exports.getAttendance = async (req, res) => {
       // }
       // Check shift
       else if (shiftMap.length > 0) {
-        const shiftForDay = shiftMap.find((s) => s.day_num == dayNum);
+        const shiftForDay = getEmpShiftForDate(
+          currentDate.format("YYYY-MM-DD"),
+          dayNum,
+        );
         if (shiftForDay) {
           let shiftStart = moment(
             `${currentDate.format("YYYY-MM-DD")} ${shiftForDay.startTime}`,
@@ -912,7 +938,9 @@ exports.getAttendance = async (req, res) => {
     let workingDays = Helper.getWorkingholidays(
       year,
       month,
-      weekOffDays,
+      WeekOff.hasFixedWeekOff(emp)
+        ? WeekOff.getFixedWeekOffDays(emp).map((d) => dayMap[d])
+        : weekOffDays,
       holidayData,
     );
 
@@ -921,6 +949,9 @@ exports.getAttendance = async (req, res) => {
       shiftMap,
       AttendanceSettings,
       workingDays,
+      hasEmpWeekOffConfig
+        ? (dateStr) => isEmpWeekOffDate(dateStr, moment(dateStr).day())
+        : null,
     );
 
     const dataAsc = [...data].sort(
@@ -930,6 +961,9 @@ exports.getAttendance = async (req, res) => {
       shiftMap,
       dataAsc,
       AttendanceSettings,
+      hasEmpWeekOffConfig
+        ? (dateStr) => getEmpShiftForDate(dateStr, moment(dateStr).day())
+        : null,
     );
 
     return Helper.response(
@@ -2110,6 +2144,7 @@ exports.TeamsAttendance = async (req, res) => {
         "dateOfBirth",
         "profileImage",
         "branchId", // ✅ IMPORTANT
+        "week_off_days",
       ],
       raw: true,
       order: [["createdAt", "desc"]],
@@ -2185,6 +2220,13 @@ exports.TeamsAttendance = async (req, res) => {
       }),
     ]);
 
+    // Employee-wise week off (fixed days + roster) for today
+    const weekOffRosterMap = await WeekOff.loadRosterMap({
+      tenantId,
+      employeeIds,
+      from: today,
+    });
+
     // Build lookup maps
     const settingsMap   = new Map(allSettings.map((s) => [s.branchId, s]));
     const designMap     = new Map(allDesignations.map((d) => [d.id, d]));
@@ -2200,7 +2242,14 @@ exports.TeamsAttendance = async (req, res) => {
       const branchDetails     = branchMapLkp.get(emp.branchId);
       const department        = deptMap.get(emp.departmentId);
       const empShifts         = allShifts.filter((s) => s.shift === emp.shift_id && s.branchId === emp.branchId);
-      const todayShift        = empShifts.find((s) => s.day_of_week == currentDay);
+      // No week-off override => same row as before
+      const todayShift        = WeekOff.effectiveShiftRow({
+        emp,
+        date: today,
+        shiftRow: empShifts.find((s) => s.day_of_week == currentDay) || null,
+        shiftRows: empShifts,
+        rosterMap: weekOffRosterMap,
+      });
 
       let status  = "Absent";
       let checkIn  = null;
@@ -2210,7 +2259,7 @@ exports.TeamsAttendance = async (req, res) => {
         checkIn  = record.check_in_time  ? record.check_in_time.split(" ")[1]  : null;
         checkOut = record.check_out_time ? record.check_out_time.split(" ")[1] : null;
 
-        if (checkIn && todayShift) {
+        if (checkIn && todayShift && !todayShift.is_week_off) {
           const allowedTime  = moment(todayShift.startTime, "HH:mm:ss");
           const actualCheckIn = moment(checkIn, "HH:mm:ss");
           const graceMinutes = attendanceSettings?.graceMinutes || 0;
@@ -5704,6 +5753,7 @@ exports.getEmployeeMonthlyAttendance = async (req, res) => {
         "empCode",
         "branchId",
         "shift_id",
+        "week_off_days",
       ],
       raw: true,
     });
@@ -5824,6 +5874,26 @@ exports.getEmployeeMonthlyAttendance = async (req, res) => {
       .filter((s) => s.is_week_off)
       .map((s) => s.day_num);
 
+    // Employee-wise week off (fixed days + roster). No override => old logic.
+    const weekOffRosterMap = await WeekOff.loadRosterMap({
+      tenantId,
+      employeeIds: [emp.id],
+      from: fromStr,
+      to: toStr,
+    });
+    const getEmpShiftForDate = (dateStr, dayNum) =>
+      WeekOff.effectiveShiftRow({
+        emp,
+        date: dateStr,
+        shiftRow: shiftMap.find((s) => s.day_num == dayNum),
+        shiftRows: shiftMap,
+        rosterMap: weekOffRosterMap,
+      });
+    const isEmpWeekOffDate = (dateStr, dayNum) =>
+      WeekOff.hasOverride({ emp, date: dateStr, rosterMap: weekOffRosterMap })
+        ? !!getEmpShiftForDate(dateStr, dayNum)?.is_week_off
+        : weekOffDays.includes(dayNum);
+
     const rhTypeIds = new Set((rhTypes || []).map((t) => String(t.id)));
     const holidayMap = new Map();
     for (const h of holidaysInRange || []) {
@@ -5905,7 +5975,7 @@ exports.getEmployeeMonthlyAttendance = async (req, res) => {
           const leaveStatus = resolveLeaveStatus(leaveData, dateStr);
           if (leaveStatus) {
             status = leaveStatus;
-          } else if (weekOffDays.includes(dayNum)) {
+          } else if (isEmpWeekOffDate(dateStr, dayNum)) {
             status = "Week Off";
           } else {
             status = "Absent";
@@ -5913,7 +5983,7 @@ exports.getEmployeeMonthlyAttendance = async (req, res) => {
         }
       } else {
         const leaveStatus = resolveLeaveStatus(leaveData, dateStr);
-        const shiftForDay = shiftMap.find((s) => s.day_num == dayNum);
+        const shiftForDay = getEmpShiftForDate(dateStr, dayNum);
         if (leaveStatus && (leaveStatus === "First Half" || leaveStatus === "Second Half")) {
           status = leaveStatus;
         } else if (shiftForDay && checkIn) {

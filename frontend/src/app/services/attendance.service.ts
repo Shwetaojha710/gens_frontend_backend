@@ -52,6 +52,19 @@ export class AttendanceService {
     getLateAttendance(obj:any): Observable<any> {
     return this.http.post(`${this.baseUrl}get-late-attendance`, obj);
   }
+  // Employee-wise week off roster
+  getWeekOffRoster(obj: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}weekoff/roster/list`, obj);
+  }
+  saveWeekOffRoster(obj: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}weekoff/roster/save`, obj);
+  }
+  deleteWeekOffRoster(obj: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}weekoff/roster/delete`, obj);
+  }
+  uploadWeekOffRoster(data: FormData): Observable<any> {
+    return this.http.post(`${this.baseUrl}weekoff/roster/upload`, data);
+  }
     getweekendAttendance(obj:any): Observable<any> {
     return this.http.post(`${this.baseUrl}get-weekend-attendance`, obj);
   }

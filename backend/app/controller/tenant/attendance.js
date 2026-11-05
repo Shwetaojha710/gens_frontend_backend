@@ -1,5 +1,6 @@
 const { Op, Sequelize, fn, where, col, literal } = require("sequelize");
 const Helper = require("../../helper/helper");
+const WeekOff = require("../../helper/weekOff");
 const attendance = require("../../models/attendance");
 const attendanceSetting = require("../../models/attendanceSetting");
 const deduction = require("../../models/deductions");
@@ -264,7 +265,7 @@ exports.getMonthlyAttendance = async (req, res) => {
           ["lastName", "ASC"],
         ],
 
-        attributes: ["id", "firstName", "lastName", "shift_id", "empCode"],
+        attributes: ["id", "firstName", "lastName", "shift_id", "empCode", "week_off_days"],
         raw: true,
       });
 
@@ -308,7 +309,7 @@ exports.getMonthlyAttendance = async (req, res) => {
             [Op.lte]: monthEnd,
           },
         },
-        attributes: ["id", "firstName", "lastName", "shift_id", "empCode"],
+        attributes: ["id", "firstName", "lastName", "shift_id", "empCode", "week_off_days"],
         raw: true,
       });
 
@@ -434,6 +435,14 @@ exports.getMonthlyAttendance = async (req, res) => {
 
     const finalResult = [];
 
+    // Employee-wise week off overrides (fixed days + roster)
+    const weekOffRosterMap = await WeekOff.loadRosterMap({
+      tenantId,
+      employeeIds: employees.map((e) => e.id),
+      from: moment(`${year}-${month}-01`, "YYYY-MM-DD").startOf("month"),
+      to: moment(`${year}-${month}-01`, "YYYY-MM-DD").endOf("month"),
+    });
+
     for (const emp of employees) {
       const recordMap = groupedRecords[emp.id] || {};
       const empLeaveMap = leaveMap[emp.id] || {};
@@ -482,7 +491,14 @@ exports.getMonthlyAttendance = async (req, res) => {
             else if (leave.duration_type === "second_half")
               status = "Second Half";
             else status = "On Leave";
-          } else if (weekOffDays.includes(dayName)) {
+          } else if (
+            WeekOff.resolveWeekOff({
+              emp,
+              date: currentDate,
+              shiftIsWeekOff: weekOffDays.includes(dayName),
+              rosterMap: weekOffRosterMap,
+            })
+          ) {
             status = "Week Off";
           } else {
             status = "Absent";
@@ -794,13 +810,13 @@ exports.getLateAttendance = async (req, res) => {
     if (emp_id == "All" || emp_id == "all") {
       employees = await empPersonal.findAll({
         where: { tenantId, branchId },
-        attributes: ["id", "firstName", "lastName", "shift_id", "empCode"],
+        attributes: ["id", "firstName", "lastName", "shift_id", "empCode", "week_off_days"],
         raw: true,
       });
     } else {
       const emp = await empPersonal.findOne({
         where: { id: emp_id, tenantId, branchId },
-        attributes: ["id", "firstName", "lastName", "shift_id", "empCode"],
+        attributes: ["id", "firstName", "lastName", "shift_id", "empCode", "week_off_days"],
         raw: true,
       });
       if (!emp)
@@ -837,6 +853,12 @@ exports.getLateAttendance = async (req, res) => {
 
     const finalLateData = [];
     let status;
+    const weekOffRosterMap = await WeekOff.loadRosterMap({
+      tenantId,
+      employeeIds: employees.map((e) => e.id),
+      from: startDate,
+      to: endDate,
+    });
     for (const emp of employees) {
       const empRecords = attendanceRecords.filter(
         (r) => r.employeeId == emp.id,
@@ -850,6 +872,8 @@ exports.getLateAttendance = async (req, res) => {
             "day_of_week",
             "is_week_off",
             "startTime",
+            "endTime",
+            "status",
             "shift",
           ],
           raw: true,
@@ -859,10 +883,17 @@ exports.getLateAttendance = async (req, res) => {
         const dayName = checkInTime.format("dddd");
         shiftMap = shiftMap.filter((item) => item.shift == emp?.shift_id);
 
-        const empShift = shiftMap.find(
-          (s) => s.day_of_week == dayName && !s.is_week_off,
-        );
-        if (!empShift) continue;
+        // Employee-wise week off: unchanged row when no override
+        const empShift = WeekOff.effectiveShiftRow({
+          emp,
+          date: checkInTime,
+          shiftRow:
+            shiftMap.find((s) => s.day_of_week == dayName && !s.is_week_off) ||
+            null,
+          shiftRows: shiftMap,
+          rosterMap: weekOffRosterMap,
+        });
+        if (!empShift || empShift.is_week_off) continue;
 
         const shiftStart = moment(
           `${checkInTime.format("YYYY-MM-DD")} ${empShift.startTime}`,
@@ -1013,7 +1044,7 @@ exports.getDateWiseAttendance = async (req, res) => {
     if (emp_id == "All" || emp_id == "all") {
       employees = await empPersonal.findAll({
         where: employeeListWhere,
-        attributes: ["id", "firstName", "lastName", "shift_id"],
+        attributes: ["id", "firstName", "lastName", "shift_id", "week_off_days"],
         order: [
           ["firstName", "ASC"],
           ["lastName", "ASC"],
@@ -1044,7 +1075,7 @@ exports.getDateWiseAttendance = async (req, res) => {
           id: emp_id,
           ...employeeListWhere,
         },
-        attributes: ["id", "firstName", "lastName", "shift_id"],
+        attributes: ["id", "firstName", "lastName", "shift_id", "week_off_days"],
         raw: true,
       });
       if (!emp) {
@@ -1251,6 +1282,13 @@ exports.getDateWiseAttendance = async (req, res) => {
       };
     });
 
+    const weekOffRosterMap = await WeekOff.loadRosterMap({
+      tenantId,
+      employeeIds: employees.map((e) => e.id),
+      from: start,
+      to: end,
+    });
+
     for (const emp of employees) {
       const recordMap = groupedRecords[emp.id] || {};
       const empWeekOff =
@@ -1269,7 +1307,12 @@ exports.getDateWiseAttendance = async (req, res) => {
             moment(l.toDate).format("YYYY-MM-DD") >= dateStr,
         );
         const leaveStatus = resolveLeaveStatus(leaveData, dateStr);
-        const isShiftWeekOff = empWeekOff.has(dayName);
+        const isShiftWeekOff = WeekOff.resolveWeekOff({
+          emp,
+          date: dateStr,
+          shiftIsWeekOff: empWeekOff.has(dayName),
+          rosterMap: weekOffRosterMap,
+        });
 
         // Present (real punch) > Week Off > Holiday > Leave > Absent
         let status = "Absent";
@@ -2252,7 +2295,7 @@ exports.downloadAttendance = async (req, res) => {
 
     const employees = await empPersonal.findAll({
       where: { tenantId, status: "active", branchId },
-      attributes: ["id", "firstName", "lastName", "empCode", "shift_id"],
+      attributes: ["id", "firstName", "lastName", "empCode", "shift_id", "week_off_days"],
       raw: true,
       order: [["firstName", "ASC"]],
     });
@@ -2314,6 +2357,13 @@ exports.downloadAttendance = async (req, res) => {
       }
     });
 
+    const weekOffRosterMap = await WeekOff.loadRosterMap({
+      tenantId,
+      employeeIds: employees.map((e) => e.id),
+      from: moment(`${year}-${month}-01`, "YYYY-MM-DD").startOf("month"),
+      to: moment(`${year}-${month}-01`, "YYYY-MM-DD").endOf("month"),
+    });
+
     /* ================= BUILD EXCEL ================= */
 
     const rows = [];
@@ -2341,7 +2391,14 @@ exports.downloadAttendance = async (req, res) => {
         // Check week off from shift table
         const shiftDay = shiftMap?.[emp.shift_id]?.[dayName];
 
-        if (shiftDay && shiftDay.is_week_off) {
+        if (
+          WeekOff.resolveWeekOff({
+            emp,
+            date,
+            shiftIsWeekOff: !!(shiftDay && shiftDay.is_week_off),
+            rosterMap: weekOffRosterMap,
+          })
+        ) {
           value = "WO";
         }
 
@@ -4012,13 +4069,13 @@ exports.getWeekendAttendance = async (req, res) => {
     if (emp_id == "All" || emp_id == "all") {
       employees = await empPersonal.findAll({
         where: { tenantId, branchId },
-        attributes: ["id", "firstName", "lastName", "shift_id", "empCode"],
+        attributes: ["id", "firstName", "lastName", "shift_id", "empCode", "week_off_days"],
         raw: true,
       });
     } else {
       const emp = await empPersonal.findOne({
         where: { id: emp_id, tenantId, branchId },
-        attributes: ["id", "firstName", "lastName", "shift_id", "empCode"],
+        attributes: ["id", "firstName", "lastName", "shift_id", "empCode", "week_off_days"],
         raw: true,
       });
 
@@ -4083,6 +4140,12 @@ exports.getWeekendAttendance = async (req, res) => {
     }
 
     const weekendAttendance = [];
+    const weekOffRosterMap = await WeekOff.loadRosterMap({
+      tenantId,
+      employeeIds: employees.map((e) => e.id),
+      from: startDate,
+      to: endDate,
+    });
 
     for (const emp of employees) {
       const empRecords = attendanceMap[emp.id] || [];
@@ -4103,12 +4166,26 @@ exports.getWeekendAttendance = async (req, res) => {
 
         const duration = `${hours} hr ${minutes} min`;
 
+        // Employee-wise week off (fixed days / roster) overrides shift week off
+        const isEmpWeekOff = WeekOff.hasOverride({
+          emp,
+          date: checkInTime,
+          rosterMap: weekOffRosterMap,
+        })
+          ? WeekOff.resolveWeekOff({
+              emp,
+              date: checkInTime,
+              shiftIsWeekOff: !!empShift?.is_week_off,
+              rosterMap: weekOffRosterMap,
+            })
+          : !!(empShift && empShift.is_week_off);
+
         // console.log(duration);
-        if (!empShift) continue;
+        if (!empShift && !isEmpWeekOff) continue;
 
         // 🎯 MAIN CONDITION:
         // If week off BUT employee present
-        if (empShift.is_week_off) {
+        if (isEmpWeekOff) {
           weekendAttendance.push({
             id: rec.id,
             employeeId: emp.id,
