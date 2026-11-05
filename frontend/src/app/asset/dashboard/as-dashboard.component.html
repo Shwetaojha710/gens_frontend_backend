@@ -1,0 +1,58 @@
+<div class="container-fluid mt-5">
+  <div *ngIf="!data" class="text-center py-5 text-muted">Loading…</div>
+  <ng-container *ngIf="data">
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-lg-2"><div class="card h-100"><div class="card-body"><div class="small text-muted">Assets in service</div><div class="fs-3 fw-bold">{{ data.totalAssets }}</div></div></div></div>
+      <div class="col-6 col-lg-2"><div class="card h-100"><div class="card-body"><div class="small text-muted">Inventory value</div><div class="fs-4 fw-bold">{{ fmtMoney(data.totalValue) }}</div></div></div></div>
+      <div class="col-6 col-lg-2"><div class="card h-100"><div class="card-body"><div class="small text-muted">Allocated</div><div class="fs-3 fw-bold">{{ data.utilizationPct }}%</div><div class="small text-muted">{{ data.byStatus.available || 0 }} available</div></div></div></div>
+      <div class="col-6 col-lg-2"><div class="card h-100"><div class="card-body"><div class="small text-muted">Awaiting acknowledgement</div><div class="fs-3 fw-bold">{{ data.pendingAcknowledgements }}</div></div></div></div>
+      <div class="col-6 col-lg-2"><div class="card h-100"><div class="card-body"><div class="small text-muted">Open maintenance</div><div class="fs-3 fw-bold">{{ data.openMaintenance }}</div><div class="small text-muted">{{ fmtMoney(data.maintenanceCostYtd) }} this year</div></div></div></div>
+      <div class="col-6 col-lg-2">
+        <div class="card h-100" [class.border-danger]="data.pendingClearance.employees" [class.border]="data.pendingClearance.employees"><div class="card-body">
+          <div class="small text-muted">Exit clearance pending</div>
+          <div class="fs-3 fw-bold" [class.text-danger]="data.pendingClearance.employees">{{ data.pendingClearance.employees }}</div>
+          <a class="small" routerLink="/layout/assets/clearance">{{ data.pendingClearance.assets }} assets →</a>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+      <div class="col-lg-4"><div class="card h-100"><h6 class="card-header">By status</h6><div class="card-body">
+        <apx-chart *ngIf="statusChart" [series]="statusChart.series" [chart]="statusChart.chart" [labels]="statusChart.labels" [colors]="statusChart.colors" [legend]="statusChart.legend"></apx-chart>
+      </div></div></div>
+      <div class="col-lg-8"><div class="card h-100"><h6 class="card-header">By category</h6><div class="card-body">
+        <apx-chart *ngIf="categoryChart" [series]="categoryChart.series" [chart]="categoryChart.chart" [xaxis]="categoryChart.xaxis" [colors]="categoryChart.colors" [dataLabels]="categoryChart.dataLabels"></apx-chart>
+        <p *ngIf="!categoryChart" class="text-muted small mb-0">No assets yet.</p>
+      </div></div></div>
+    </div>
+
+    <div class="row g-4 mb-5">
+      <div class="col-lg-4"><div class="card h-100"><h6 class="card-header">Condition</h6><div class="card-body">
+        <apx-chart *ngIf="conditionChart" [series]="conditionChart.series" [chart]="conditionChart.chart" [xaxis]="conditionChart.xaxis" [plotOptions]="conditionChart.plotOptions" [colors]="conditionChart.colors" [legend]="conditionChart.legend" [dataLabels]="conditionChart.dataLabels"></apx-chart>
+      </div></div></div>
+      <div class="col-lg-4">
+        <div class="card h-100">
+          <h6 class="card-header d-flex justify-content-between"><span>Warranty ending (60 days)</span><a class="small" [routerLink]="['/layout/assets/inventory']" [queryParams]="{ warranty: 'expiring' }">All →</a></h6>
+          <ul class="list-group list-group-flush">
+            <li *ngIf="!data.warrantyExpiring.length" class="list-group-item small text-muted">Nothing expiring soon.</li>
+            <li *ngFor="let w of data.warrantyExpiring.slice(0, 8)" class="list-group-item small d-flex justify-content-between">
+              <a [routerLink]="['/layout/assets', w.id]">{{ w.assetTag }} <span class="text-muted">{{ w.name }}</span></a>
+              <span [class.text-danger]="w.daysLeft <= 15">{{ w.daysLeft }} d</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card h-100">
+          <h6 class="card-header">Needs attention</h6>
+          <ul class="list-group list-group-flush">
+            <li *ngIf="!data.disputed.length && !data.returnRequests.length && !data.overdueReturns.length" class="list-group-item small text-muted">All clear.</li>
+            <li *ngFor="let x of data.disputed" class="list-group-item small"><span class="badge bg-label-danger me-1">Disputed</span><a [routerLink]="['/layout/assets', x.id]">{{ x.assetTag }}</a> · {{ x.holder }}</li>
+            <li *ngFor="let x of data.returnRequests" class="list-group-item small"><span class="badge bg-label-info me-1">Return requested</span><a [routerLink]="['/layout/assets', x.id]">{{ x.assetTag }}</a> · {{ x.holder }}</li>
+            <li *ngFor="let x of data.overdueReturns" class="list-group-item small"><span class="badge bg-label-warning me-1">Overdue</span><a [routerLink]="['/layout/assets', x.id]">{{ x.assetTag }}</a> · {{ x.holder }}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>

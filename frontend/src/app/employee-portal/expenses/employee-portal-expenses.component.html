@@ -1,0 +1,252 @@
+<div class="container-fluid ep-ep-page">
+  <a routerLink="/employee-portal/dashboard" class="ep-ep-page__back">
+    <i class="icon-base ri ri-arrow-left-line me-1"></i> Back to dashboard
+  </a>
+
+  <header class="mb-4">
+    <h4 class="ep-page-title mb-1">Expenses</h4>
+    <p class="ep-page-sub mb-0">
+      Claim expenses with receipts. Amounts and dates are read from your receipt automatically.
+      <a routerLink="/employee-portal/reimbursement" class="ms-1">Older reimbursements →</a>
+    </p>
+  </header>
+
+  <ul class="nav nav-pills mb-4 gap-2 flex-wrap">
+    <li class="nav-item"><button class="nav-link" [class.active]="tab === 'claims'" (click)="tab = 'claims'">My claims</button></li>
+    <li class="nav-item"><button class="nav-link" [class.active]="tab === 'new'" (click)="tab = 'new'"><i class="icon-base ri ri-add-line"></i> New claim</button></li>
+    <li class="nav-item" *ngIf="approvals.length">
+      <button class="nav-link" [class.active]="tab === 'approvals'" (click)="tab = 'approvals'">
+        To approve <span class="badge bg-danger ms-1">{{ approvals.length }}</span>
+      </button>
+    </li>
+    <li class="nav-item" *ngIf="isFinance">
+      <button class="nav-link" [class.active]="tab === 'payables'" (click)="tab = 'payables'">To pay ({{ payables.length }})</button>
+    </li>
+  </ul>
+
+  <!-- ── My claims ── -->
+  <div *ngIf="tab === 'claims'" class="card ep-glass-card border-0">
+    <div class="card-body">
+      <div *ngIf="loading" class="text-center py-4 text-muted">Loading…</div>
+      <div *ngIf="!loading && !claims.length" class="text-muted">No claims yet. Use <strong>New claim</strong> to submit one.</div>
+      <div class="table-responsive" *ngIf="!loading && claims.length">
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr><th>Claim</th><th>Expenses</th><th class="text-end">Amount</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <tr *ngFor="let c of claims">
+              <td>
+                <div class="fw-semibold">{{ c.claimNo || 'Reimbursement' }}</div>
+                <div class="small text-muted text-truncate" style="max-width: 260px">{{ c.title }}</div>
+              </td>
+              <td class="small">{{ c.fromDate | date: 'dd MMM' }}<span *ngIf="c.toDate !== c.fromDate"> – {{ c.toDate | date: 'dd MMM' }}</span>
+                <div class="text-muted">{{ c.categories.join(', ') }}</div></td>
+              <td class="text-end fw-semibold">{{ fmtMoney(c.amount) }}</td>
+              <td>
+                <span class="badge" [ngClass]="statusBadge(c.status)">{{ statusLabel(c.status) }}</span>
+                <div class="small text-muted" *ngIf="c.pendingWith">with {{ levelLabel(c.pendingWith) }}</div>
+              </td>
+              <td><button class="btn btn-sm btn-outline-primary" (click)="open(c.id)">View</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── New claim ── -->
+  <ng-container *ngIf="tab === 'new'">
+    <div *ngIf="!categories.length" class="alert alert-warning">HR has not set up expense categories yet.</div>
+    <div class="card ep-glass-card border-0 mb-3">
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Claim title</label>
+            <input class="form-control" [(ngModel)]="draft.title" placeholder="Client visit to Mumbai, Oct 2026" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Purpose / notes</label>
+            <input class="form-control" [(ngModel)]="draft.description" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div *ngFor="let item of draft.items; let i = index" class="card ep-glass-card border-0 mb-3">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="mb-0">Expense {{ i + 1 }}</h6>
+          <button *ngIf="draft.items.length > 1" class="btn btn-sm btn-link text-danger p-0" (click)="removeItem(i)">Remove</button>
+        </div>
+
+        <!-- Receipt first: OCR fills the rest -->
+        <div class="ep-exp-receipt mb-3">
+          <ng-container *ngIf="!item.receipt">
+            <label class="btn btn-sm btn-outline-primary mb-0" [class.disabled]="item.uploading">
+              <i class="icon-base ri ri-camera-line me-1"></i>{{ item.uploading ? 'Reading receipt…' : 'Upload receipt (JPG, PNG, PDF)' }}
+              <input type="file" hidden accept="image/jpeg,image/png,application/pdf" (change)="onReceiptSelected(item, $event)" [disabled]="item.uploading" />
+            </label>
+            <span class="small text-muted ms-2">We'll read the amount, date and merchant for you.</span>
+          </ng-container>
+          <div *ngIf="item.receipt" class="d-flex flex-wrap align-items-center gap-2 small">
+            <i class="icon-base ri ri-file-check-line text-success"></i>
+            <span>Receipt attached</span>
+            <span *ngIf="item.receipt.ocrStatus !== 'done'" class="text-muted">· could not read it, enter details manually</span>
+            <span *ngIf="item.ocrFilled.length" class="badge bg-label-info">Auto-filled: {{ item.ocrFilled.join(', ') }}</span>
+            <span *ngIf="item.receipt.alreadyClaimed" class="badge bg-label-danger">Already claimed before</span>
+            <button class="btn btn-sm btn-link p-0" (click)="removeReceipt(item)">Replace</button>
+          </div>
+        </div>
+
+        <div class="row g-2">
+          <div class="col-md-4">
+            <label class="form-label small">Category</label>
+            <select class="form-select" [(ngModel)]="item.categoryId" (change)="scheduleValidate()">
+              <option [ngValue]="null" disabled>Select</option>
+              <option *ngFor="let c of categories" [ngValue]="c.id">{{ c.name }}</option>
+            </select>
+            <div class="small text-muted mt-1" *ngIf="item.categoryId">{{ policyHint(item.categoryId) }}</div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small">Date</label>
+            <input type="date" class="form-control" [(ngModel)]="item.expenseDate" (change)="scheduleValidate()" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small">Amount (₹)</label>
+            <input type="number" min="0" step="0.01" class="form-control" [(ngModel)]="item.amount" (change)="scheduleValidate()" />
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small">Invoice no.</label>
+            <input class="form-control" [(ngModel)]="item.invoiceNo" (change)="scheduleValidate()" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small">Merchant</label>
+            <input class="form-control" [(ngModel)]="item.merchant" />
+          </div>
+          <div class="col-md-8">
+            <label class="form-label small">Description</label>
+            <input class="form-control" [(ngModel)]="item.description" />
+          </div>
+        </div>
+
+        <div *ngFor="let e of itemErrors(i)" class="small text-danger mt-2"><i class="icon-base ri ri-close-circle-line me-1"></i>{{ e }}</div>
+        <div *ngFor="let f of itemFlags(i)" class="small text-warning mt-2"><i class="icon-base ri ri-flag-line me-1"></i>{{ f.message }} — your approvers will see this.</div>
+      </div>
+    </div>
+
+    <div class="card ep-glass-card border-0 mb-5">
+      <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+          <button class="btn btn-sm btn-outline-primary me-2" (click)="addItem()">+ Add another expense</button>
+          <span class="small text-muted" *ngIf="check?.approvalLevels?.length">
+            Approval: <span *ngFor="let l of check!.approvalLevels; let last = last">{{ l.label }}<span *ngIf="!last"> → </span></span>
+          </span>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+          <span class="fs-5 fw-bold">Total {{ fmtMoney(draftTotal) }}</span>
+          <button class="btn btn-primary" (click)="submit()" [disabled]="busy || !categories.length">Submit claim</button>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ── Approvals ── -->
+  <div *ngIf="tab === 'approvals'" class="card ep-glass-card border-0">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr><th>Claim</th><th>Employee</th><th class="text-end">Amount</th><th>Flags</th><th></th></tr></thead>
+          <tbody>
+            <tr *ngFor="let c of approvals">
+              <td><div class="fw-semibold">{{ c.claimNo }}</div><div class="small text-muted">{{ c.title }}</div></td>
+              <td>{{ c.employeeName }}<div class="small text-muted">{{ c.department }}</div></td>
+              <td class="text-end fw-semibold">{{ fmtMoney(c.amount) }}</td>
+              <td><span *ngIf="c.flagCount" class="badge bg-label-warning">{{ c.flagCount }}</span></td>
+              <td><button class="btn btn-sm btn-primary" (click)="open(c.id)">Review</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Payables (finance) ── -->
+  <div *ngIf="tab === 'payables'" class="card ep-glass-card border-0">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="mb-0">Approved claims awaiting payment</h6>
+        <button *ngIf="selectedPayables.size" class="btn btn-sm btn-primary" (click)="openBulkPay()">
+          Mark {{ selectedPayables.size }} paid ({{ fmtMoney(selectedPayableTotal) }})
+        </button>
+      </div>
+      <div *ngIf="!payables.length" class="text-muted small">Nothing to pay.</div>
+      <div class="table-responsive" *ngIf="payables.length">
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr><th></th><th>Claim</th><th>Employee</th><th>Approved</th><th class="text-end">Amount</th><th></th></tr></thead>
+          <tbody>
+            <tr *ngFor="let c of payables">
+              <td><input type="checkbox" class="form-check-input" [checked]="selectedPayables.has(c.id)" (change)="togglePayable(c.id, $any($event.target).checked)" /></td>
+              <td>{{ c.claimNo || 'Reimbursement' }}</td>
+              <td>{{ c.employeeName }}</td>
+              <td class="small">{{ c.approvedAt | date: 'dd MMM yyyy' }}</td>
+              <td class="text-end fw-semibold">{{ fmtMoney(c.amount) }}</td>
+              <td><button class="btn btn-sm btn-outline-primary" (click)="open(c.id)">View</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Claim modal -->
+  <div *ngIf="openId" class="modal d-block" style="background: rgba(15, 23, 42, 0.45); overflow-y: auto" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Expense claim</h5>
+          <button type="button" class="btn-close" (click)="close()"></button>
+        </div>
+        <div class="modal-body">
+          <div *ngIf="!detail" class="text-center text-muted py-4">Loading…</div>
+          <app-ex-claim-detail [detail]="detail" [permissions]="permissions" [busy]="busy"
+            (decide)="onDecide($event)" (pay)="onPay($event)" (cancelClaim)="onCancel()"></app-ex-claim-detail>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk payment -->
+  <div *ngIf="bulkPayment" class="modal d-block" style="background: rgba(15, 23, 42, 0.45)" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Record payment</h5>
+          <button type="button" class="btn-close" (click)="bulkPayment = null"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label small">Mode</label>
+          <select class="form-select mb-2" [(ngModel)]="bulkPayment.paymentMode">
+            <option value="bank_transfer">Bank transfer</option>
+            <option value="upi">UPI</option>
+            <option value="cheque">Cheque</option>
+            <option value="cash">Cash</option>
+            <option value="payroll">With salary (payroll)</option>
+          </select>
+          <ng-container *ngIf="bulkPayment.paymentMode !== 'payroll'">
+            <label class="form-label small">Reference</label>
+            <input class="form-control mb-2" [(ngModel)]="bulkPayment.paymentReference" />
+            <label class="form-label small">Paid on</label>
+            <input type="date" class="form-control" [(ngModel)]="bulkPayment.paidAt" />
+          </ng-container>
+          <div class="row g-2" *ngIf="bulkPayment.paymentMode === 'payroll'">
+            <div class="col"><label class="form-label small">Salary month</label><input type="number" min="1" max="12" class="form-control" [(ngModel)]="bulkPayment.payrollMonth" /></div>
+            <div class="col"><label class="form-label small">Year</label><input type="number" class="form-control" [(ngModel)]="bulkPayment.payrollYear" /></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="bulkPayment = null">Cancel</button>
+          <button class="btn btn-primary" (click)="submitBulkPay()" [disabled]="busy">Mark paid</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

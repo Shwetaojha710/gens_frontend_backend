@@ -1,0 +1,44 @@
+@import '../employee-portal-glass.css';
+
+.ep-ep-page__back {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #0081c9;
+  text-decoration: none;
+  margin-bottom: 1rem;
+}
+
+.ep-page-title {
+  color: #0f172a;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.ep-page-sub {
+  color: rgba(15, 23, 42, 0.62);
+  font-size: 0.9rem;
+}
+
+.ep-ts-clock {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ep-ts-cell {
+  width: 72px;
+  margin: 0 auto;
+}
+
+.ep-ts-today {
+  background: rgba(0, 129, 201, 0.08);
+}
+
+.ep-ts-form {
+  background: rgba(0, 129, 201, 0.05);
+  border-radius: 8px;
+  padding: 12px;
+}

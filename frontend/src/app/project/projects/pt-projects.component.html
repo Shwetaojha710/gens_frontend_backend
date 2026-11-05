@@ -1,0 +1,110 @@
+<div class="container-fluid mt-5">
+  <div class="card mb-4">
+    <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span>Projects</span>
+      <button class="btn btn-sm btn-primary" (click)="open()"><i class="icon-base ri ri-add-line me-1"></i> New project</button>
+    </h5>
+    <div class="card-body">
+      <div class="row g-2">
+        <div class="col-md-3">
+          <label class="form-label small">Status</label>
+          <select class="form-select" [(ngModel)]="filters.status" (change)="load()">
+            <option value="">All</option>
+            <option *ngFor="let s of statuses" [value]="s.value">{{ s.label }}</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Client</label>
+          <ng-select [items]="clients" bindLabel="name" bindValue="id" [(ngModel)]="filters.clientId" (change)="load()" placeholder="All clients"></ng-select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Search</label>
+          <input class="form-control" [(ngModel)]="search" placeholder="Name, code, PM…" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div *ngIf="loading" class="text-center py-5 text-muted">Loading projects…</div>
+    <div class="table-responsive" *ngIf="!loading">
+      <table class="table table-striped text-nowrap mb-0">
+        <thead>
+          <tr><th>Project</th><th>Client</th><th>PM</th><th>Team</th><th class="text-end">Actual / est.</th><th style="min-width: 160px">Hours budget</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="!filtered.length"><td colspan="8" class="text-center text-muted py-4">No projects.</td></tr>
+          <tr *ngFor="let p of filtered">
+            <td>
+              <a [routerLink]="['/layout/project/projects', p.id]" class="fw-semibold">{{ p.name }}</a>
+              <div class="small text-muted">{{ p.code || '' }} · {{ billingLabel(p.billingType) }}</div>
+            </td>
+            <td>{{ p.clientName }}</td>
+            <td>{{ p.managerName || '—' }}</td>
+            <td>{{ p.members }}</td>
+            <td class="text-end">{{ fmtHours(p.actualHours) }} <span class="text-muted">/ {{ fmtHours(p.estimatedHours) }}</span></td>
+            <td>
+              <ng-container *ngIf="p.hoursBudget; else noBudget">
+                <div class="progress" style="height: 6px"><div class="progress-bar" [ngClass]="'bg-' + budgetTone(p.hoursBudget.state)" [style.width.%]="p.hoursBudget.pct > 100 ? 100 : p.hoursBudget.pct"></div></div>
+                <div class="small" [ngClass]="'text-' + budgetTone(p.hoursBudget.state)">{{ p.hoursBudget.pct | number: '1.0-0' }}% of {{ fmtHours(p.budgetHours) }}</div>
+              </ng-container>
+              <ng-template #noBudget><span class="small text-muted">No budget</span></ng-template>
+            </td>
+            <td><span class="badge" [ngClass]="statusBadge(p.status)">{{ statusLabel(p.status) }}</span></td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-secondary me-1" (click)="open(p)">Edit</button>
+              <a class="btn btn-sm btn-outline-primary" [routerLink]="['/layout/project/projects', p.id]">Open</a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div *ngIf="form" class="modal d-block" style="background: rgba(15, 23, 42, 0.45); overflow-y: auto" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ form.id ? 'Edit project' : 'New project' }}</h5>
+          <button type="button" class="btn-close" (click)="form = null"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-8"><label class="form-label">Name</label><input class="form-control" [(ngModel)]="form.name" /></div>
+            <div class="col-md-4"><label class="form-label">Code</label><input class="form-control" [(ngModel)]="form.code" placeholder="WEB-2026" /></div>
+            <div class="col-md-6">
+              <label class="form-label">Client</label>
+              <ng-select [items]="activeClients" bindLabel="name" bindValue="id" [(ngModel)]="form.clientId" placeholder="Internal project" appendTo="body"></ng-select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Project manager</label>
+              <ng-select [items]="employeeOptions" bindLabel="label" bindValue="value" [(ngModel)]="form.managerId" placeholder="Select employee" appendTo="body"></ng-select>
+            </div>
+            <div class="col-12"><label class="form-label">Description</label><textarea class="form-control" rows="2" [(ngModel)]="form.description"></textarea></div>
+            <div class="col-md-3"><label class="form-label">Start</label><input type="date" class="form-control" [(ngModel)]="form.startDate" /></div>
+            <div class="col-md-3"><label class="form-label">End</label><input type="date" class="form-control" [(ngModel)]="form.endDate" /></div>
+            <div class="col-md-3">
+              <label class="form-label">Status</label>
+              <select class="form-select" [(ngModel)]="form.status"><option *ngFor="let s of statuses" [value]="s.value">{{ s.label }}</option></select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Billing</label>
+              <select class="form-select" [(ngModel)]="form.billingType"><option *ngFor="let b of billingTypes" [value]="b.value">{{ b.label }}</option></select>
+            </div>
+            <div class="col-md-3"><label class="form-label">Budget (hours)</label><input type="number" min="0" class="form-control" [(ngModel)]="form.budgetHours" /></div>
+            <div class="col-md-3">
+              <label class="form-label">Budget (₹)</label><input type="number" min="0" class="form-control" [(ngModel)]="form.budgetAmount" />
+              <div class="small text-muted">{{ form.billingType === 'time_material' ? 'Cap on billing' : 'Cost budget' }}</div>
+            </div>
+            <div class="col-md-3" *ngIf="form.billingType !== 'non_billable'"><label class="form-label">Default bill rate ₹/h</label><input type="number" min="0" class="form-control" [(ngModel)]="form.defaultBillRate" /></div>
+            <div class="col-md-3"><label class="form-label">Default cost rate ₹/h</label><input type="number" min="0" class="form-control" [(ngModel)]="form.defaultCostRate" /></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="form = null">Cancel</button>
+          <button class="btn btn-primary" (click)="save()" [disabled]="saving">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

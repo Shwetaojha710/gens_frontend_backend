@@ -1,0 +1,57 @@
+<div class="container-fluid mt-5">
+  <div class="card mb-4">
+    <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span>Exit Asset Clearance</span>
+      <span class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-success" (click)="export('excel')" [disabled]="!rows.length"><i class="icon-base ri ri-file-excel-2-line me-1"></i> Excel</button>
+        <button class="btn btn-sm btn-outline-danger" (click)="export('pdf')" [disabled]="!rows.length"><i class="icon-base ri ri-file-pdf-2-line me-1"></i> PDF</button>
+      </span>
+    </h5>
+    <div class="card-body">
+      <p class="small text-muted">
+        Employees with a relieving letter on file, an exit date, or a deactivated profile. Their relieving letter can't be issued
+        until every asset is returned or recorded as lost (HR can override; overrides are audit-logged).
+      </p>
+      <div class="row g-3 mb-2">
+        <div class="col-6 col-md-3"><div class="border rounded p-2"><div class="small text-muted">Employees pending</div><div class="fs-4 fw-bold text-danger">{{ totals.employees }}</div></div></div>
+        <div class="col-6 col-md-3"><div class="border rounded p-2"><div class="small text-muted">Assets outstanding</div><div class="fs-4 fw-bold">{{ totals.assets }}</div></div></div>
+        <div class="col-6 col-md-3"><div class="border rounded p-2"><div class="small text-muted">Value outstanding</div><div class="fs-4 fw-bold">{{ fmtMoney(totals.value) }}</div></div></div>
+        <div class="col-6 col-md-3"><div class="border rounded p-2"><div class="small text-muted">To recover (damage / loss)</div><div class="fs-4 fw-bold">{{ fmtMoney(totals.recovery) }}</div></div></div>
+      </div>
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="onlyPending" [(ngModel)]="onlyPending" (change)="load()" />
+        <label class="form-check-label" for="onlyPending">Only employees with assets still out</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div *ngIf="loading" class="text-center py-5 text-muted">Loading…</div>
+    <div class="table-responsive" *ngIf="!loading">
+      <table class="table table-striped text-nowrap mb-0">
+        <thead><tr><th>Employee</th><th>Exit</th><th>Assets still out</th><th class="text-end">Value</th><th class="text-end">Recovery</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr *ngIf="!rows.length"><td colspan="6" class="text-center text-muted py-4">{{ onlyPending ? 'No pending clearance.' : 'No separating employees.' }}</td></tr>
+          <tr *ngFor="let r of rows">
+            <td>{{ r.employeeName }} <span class="small text-muted">{{ r.empCode }}</span><div class="small text-muted">{{ r.department }}</div></td>
+            <td class="small">
+              {{ r.lastWorkingDay ? (r.lastWorkingDay | date: 'dd MMM yyyy') : 'Date not set' }}
+              <div class="text-muted">{{ sourceLabel(r.exitSource) }}<span *ngIf="r.daysSinceExit !== null"> · {{ r.daysSinceExit }} days ago</span></div>
+            </td>
+            <td>
+              <div *ngFor="let a of r.pendingAssets">
+                <a [routerLink]="['/layout/assets', a.assetId]">{{ a.assetTag }}</a> <span class="small">{{ a.name }}</span>
+                <span *ngIf="a.returnRequested" class="badge bg-label-info ms-1">return requested</span>
+              </div>
+              <span *ngIf="!r.pendingAssets.length" class="text-muted small">—</span>
+            </td>
+            <td class="text-end">{{ fmtMoney(r.pendingValue) }}</td>
+            <td class="text-end" [class.text-danger]="r.recoveryTotal > 0">{{ r.recoveryTotal ? fmtMoney(r.recoveryTotal) : '—' }}</td>
+            <td><span class="badge" [ngClass]="r.cleared ? 'bg-label-success' : (r.daysSinceExit ?? -1) > 0 ? 'bg-label-danger' : 'bg-label-warning'">
+              {{ r.cleared ? 'Cleared' : (r.daysSinceExit ?? -1) > 0 ? 'Overdue' : 'Pending' }}</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,47 @@
+.pm-nb__grid {
+  display: grid;
+  grid-template-columns: 72px repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.pm-nb__rowlabel,
+.pm-nb__collabel {
+  font-size: 0.75rem;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pm-nb__ylabel,
+.pm-nb__xlabel {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6c757d;
+  margin-bottom: 4px;
+}
+.pm-nb__xlabel {
+  text-align: center;
+  margin: 4px 0 0 72px;
+}
+.pm-nb__cell {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  min-height: 78px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+.pm-nb__cell:hover { transform: translateY(-1px); }
+.pm-nb__cell--active { border-color: #212529; }
+.pm-nb__cell--success { background: rgba(40, 199, 111, 0.16); color: #1b7a45; }
+.pm-nb__cell--primary { background: rgba(102, 108, 255, 0.14); color: #4146c7; }
+.pm-nb__cell--warning { background: rgba(255, 171, 0, 0.18); color: #9a6700; }
+.pm-nb__cell--danger { background: rgba(255, 77, 73, 0.15); color: #b42318; }
+.pm-nb__count { font-size: 1.4rem; font-weight: 700; line-height: 1.1; }
+.pm-nb__label { font-size: 0.72rem; font-weight: 600; }
+.pm-nb__list { max-height: 240px; overflow-y: auto; }

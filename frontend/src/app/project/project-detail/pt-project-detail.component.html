@@ -1,0 +1,266 @@
+<div class="container-fluid mt-4">
+  <a [routerLink]="backLink" [queryParams]="backQuery" class="small fw-semibold d-inline-flex align-items-center mb-3">
+    <i class="icon-base ri ri-arrow-left-line me-1"></i> Back
+  </a>
+
+  <div *ngIf="loading && !detail" class="text-center py-5 text-muted">Loading project…</div>
+
+  <ng-container *ngIf="detail">
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between gap-3">
+          <div>
+            <h4 class="mb-1">{{ project.name }} <span class="text-muted fs-6" *ngIf="project.code">{{ project.code }}</span></h4>
+            <div class="small text-muted">
+              {{ project.clientName || 'Internal' }} · PM: {{ project.managerName || '—' }} · {{ billingLabel(project.billingType) }}
+              <span *ngIf="project.startDate"> · {{ project.startDate | date: 'dd MMM yyyy' }} – {{ project.endDate ? (project.endDate | date: 'dd MMM yyyy') : 'ongoing' }}</span>
+            </div>
+            <p class="small mb-0 mt-2" *ngIf="project.description">{{ project.description }}</p>
+          </div>
+          <span class="badge align-self-start" [ngClass]="statusBadge(project.status)">{{ statusLabel(project.status) }}</span>
+        </div>
+        <div class="row g-2 mt-3 align-items-end">
+          <div class="col-auto"><label class="form-label small mb-0">From</label><input type="date" class="form-control form-control-sm" [(ngModel)]="range.from" (change)="load()" /></div>
+          <div class="col-auto"><label class="form-label small mb-0">To</label><input type="date" class="form-control form-control-sm" [(ngModel)]="range.to" (change)="load()" /></div>
+          <div class="col-auto">
+            <div class="form-check mb-1">
+              <input class="form-check-input" type="checkbox" id="apOnly" [(ngModel)]="range.approvedOnly" (change)="load()" />
+              <label class="form-check-label small" for="apOnly">Approved timesheets only</label>
+            </div>
+          </div>
+          <div class="col small text-muted">Figures count submitted and approved weeks; drafts are excluded.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-lg-3">
+        <div class="card h-100"><div class="card-body">
+          <div class="small text-muted">Actual vs estimated</div>
+          <div class="fs-4 fw-bold">{{ fmtHours(figures.actualHours) }} <span class="fs-6 text-muted">/ {{ fmtHours(figures.estimatedHours) }}</span></div>
+          <div class="small" [class.text-danger]="figures.estimatedHours && figures.actualHours > figures.estimatedHours">
+            {{ figures.estimatedHours ? ((figures.actualHours / figures.estimatedHours) * 100 | number: '1.0-0') + '% of estimate' : 'No task estimates' }}
+          </div>
+        </div></div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="card h-100"><div class="card-body">
+          <div class="small text-muted">Hours budget</div>
+          <ng-container *ngIf="figures.hoursBudget; else noHB">
+            <div class="fs-4 fw-bold">{{ figures.hoursBudget.pct | number: '1.0-1' }}%</div>
+            <div class="progress" style="height: 6px"><div class="progress-bar" [ngClass]="'bg-' + budgetTone(figures.hoursBudget.state)" [style.width.%]="figures.hoursBudget.pct > 100 ? 100 : figures.hoursBudget.pct"></div></div>
+            <div class="small text-muted mt-1">{{ fmtHours(figures.hoursBudget.used) }} of {{ fmtHours(figures.hoursBudget.budget) }}</div>
+          </ng-container>
+          <ng-template #noHB><div class="text-muted small mt-2">No hours budget set</div></ng-template>
+        </div></div>
+      </div>
+      <ng-container *ngIf="perms.canSeeMoney">
+        <div class="col-6 col-lg-3">
+          <div class="card h-100"><div class="card-body">
+            <div class="small text-muted">{{ project.billingType === 'time_material' ? 'Billing vs cap' : 'Cost vs budget' }}</div>
+            <ng-container *ngIf="figures.amountBudget; else noAB">
+              <div class="fs-4 fw-bold">{{ figures.amountBudget.pct | number: '1.0-1' }}%</div>
+              <div class="progress" style="height: 6px"><div class="progress-bar" [ngClass]="'bg-' + budgetTone(figures.amountBudget.state)" [style.width.%]="figures.amountBudget.pct > 100 ? 100 : figures.amountBudget.pct"></div></div>
+              <div class="small text-muted mt-1">{{ fmtMoney(figures.amountBudget.used) }} of {{ fmtMoney(figures.amountBudget.budget) }}</div>
+            </ng-container>
+            <ng-template #noAB><div class="text-muted small mt-2">No amount budget set</div></ng-template>
+          </div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div class="card h-100"><div class="card-body">
+            <div class="small text-muted">Billable value / cost</div>
+            <div class="fs-5 fw-bold">{{ fmtMoney(figures.billableValue) }}</div>
+            <div class="small text-muted">cost {{ fmtMoney(figures.cost) }} · {{ fmtHours(figures.billableHours) }} billable</div>
+          </div></div>
+        </div>
+      </ng-container>
+    </div>
+
+    <div class="card mb-4" *ngIf="weeklyChart">
+      <h6 class="card-header">Hours per week</h6>
+      <div class="card-body">
+        <apx-chart [series]="weeklyChart.series" [chart]="weeklyChart.chart" [xaxis]="weeklyChart.xaxis" [dataLabels]="weeklyChart.dataLabels" [plotOptions]="weeklyChart.plotOptions"></apx-chart>
+      </div>
+    </div>
+
+    <ul class="nav nav-pills mb-3 gap-2">
+      <li class="nav-item"><button class="nav-link" [class.active]="tab === 'tasks'" (click)="tab = 'tasks'">Tasks</button></li>
+      <li class="nav-item"><button class="nav-link" [class.active]="tab === 'team'" (click)="tab = 'team'">Team ({{ activeMembers.length }})</button></li>
+    </ul>
+
+    <!-- Tasks -->
+    <div class="card mb-5" *ngIf="tab === 'tasks'">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="small text-muted">Time logged without a task: {{ fmtHours(detail.unassignedHours) }}</span>
+        <button *ngIf="perms.canManage" class="btn btn-sm btn-primary" (click)="openTask()"><i class="icon-base ri ri-add-line me-1"></i> Add task</button>
+      </div>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead><tr><th>Task</th><th>Assignee</th><th>Due</th><th>Status</th><th class="text-end">Est.</th><th class="text-end">Actual</th><th class="text-end">Variance</th><th></th></tr></thead>
+          <tbody>
+            <tr *ngIf="!detail.tasks.length"><td colspan="8" class="text-center text-muted py-4">No tasks yet.</td></tr>
+            <ng-container *ngFor="let t of detail.tasks">
+              <ng-container *ngTemplateOutlet="taskRow; context: { $implicit: t, sub: false }"></ng-container>
+              <ng-container *ngFor="let s of t.subtasks">
+                <ng-container *ngTemplateOutlet="taskRow; context: { $implicit: s, sub: true }"></ng-container>
+              </ng-container>
+            </ng-container>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <ng-template #taskRow let-t let-sub="sub">
+      <tr>
+        <td [class.ps-5]="sub">
+          <span [class.text-decoration-line-through]="t.status === 'done'" [class.fw-semibold]="!sub">{{ t.title }}</span>
+          <span *ngIf="!t.isBillable" class="badge bg-label-secondary ms-1">Non-billable</span>
+        </td>
+        <td class="small">{{ t.assigneeName || '—' }}</td>
+        <td class="small">{{ t.dueDate ? (t.dueDate | date: 'dd MMM') : '—' }}</td>
+        <td>
+          <select *ngIf="perms.canManage" class="form-select form-select-sm" style="width: 130px" [ngModel]="t.status" (ngModelChange)="setTaskStatus(t, $event)">
+            <option *ngFor="let s of taskStatuses" [value]="s.value">{{ s.label }}</option>
+          </select>
+          <span *ngIf="!perms.canManage" class="small">{{ taskStatusLabel(t.status) }}</span>
+        </td>
+        <td class="text-end">{{ fmtHours(t.estimatedHours) }}</td>
+        <td class="text-end">{{ fmtHours(sub ? t.actualHours : t.rolledActual) }}</td>
+        <td class="text-end" [class.text-danger]="(variance(t) ?? 0) > 0" [class.text-success]="(variance(t) ?? 0) < 0">
+          {{ variance(t) === null ? '—' : ((variance(t)! > 0 ? '+' : '') + fmtHours(variance(t))) }}
+        </td>
+        <td class="text-end text-nowrap">
+          <ng-container *ngIf="perms.canManage">
+            <button *ngIf="!sub" class="btn btn-sm btn-link p-0 me-2" (click)="openTask(undefined, t.id)" title="Add subtask">+ Subtask</button>
+            <button class="btn btn-sm btn-outline-secondary me-1" (click)="openTask(t)"><i class="icon-base ri ri-pencil-line"></i></button>
+            <button class="btn btn-sm btn-outline-danger" (click)="deleteTask(t)"><i class="icon-base ri ri-delete-bin-line"></i></button>
+          </ng-container>
+        </td>
+      </tr>
+    </ng-template>
+
+    <!-- Team -->
+    <div class="card mb-5" *ngIf="tab === 'team'">
+      <div class="card-header d-flex justify-content-end" *ngIf="perms.canManage">
+        <button class="btn btn-sm btn-primary" (click)="openMember()"><i class="icon-base ri ri-user-add-line me-1"></i> Add member</button>
+      </div>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0 text-nowrap">
+          <thead>
+            <tr>
+              <th>Member</th><th>Role</th>
+              <ng-container *ngIf="perms.canManage"><th>Allocation</th><th>Period</th><th>Billable</th></ng-container>
+              <ng-container *ngIf="perms.canSeeMoney"><th>Bill / cost rate</th></ng-container>
+              <th *ngIf="perms.canManage" class="text-end">Hours</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="!detail.members.length"><td colspan="8" class="text-center text-muted py-4">No members yet. Only members can log time on this project.</td></tr>
+            <tr *ngFor="let m of detail.members" [class.text-muted]="m.status !== 'active'">
+              <td>{{ m.employeeName }} <span class="badge bg-label-secondary ms-1" *ngIf="m.status !== 'active'">removed</span></td>
+              <td>{{ m.role || '—' }}</td>
+              <ng-container *ngIf="perms.canManage">
+                <td>{{ m.allocationPercent }}%</td>
+                <td class="small">{{ m.startDate ? (m.startDate | date: 'dd MMM yy') : 'start' }} – {{ m.endDate ? (m.endDate | date: 'dd MMM yy') : 'open' }}</td>
+                <td>{{ m.isBillable ? 'Yes' : 'No' }}</td>
+              </ng-container>
+              <ng-container *ngIf="perms.canSeeMoney">
+                <td class="small">{{ fmtMoney(m.billRate ?? project.defaultBillRate) }} / {{ fmtMoney(m.costRate ?? project.defaultCostRate) }}</td>
+              </ng-container>
+              <td *ngIf="perms.canManage" class="text-end">{{ fmtHours(m.hours) }}</td>
+              <td class="text-end">
+                <ng-container *ngIf="perms.canManage && m.status === 'active'">
+                  <button class="btn btn-sm btn-outline-secondary me-1" (click)="openMember(m)"><i class="icon-base ri ri-pencil-line"></i></button>
+                  <button class="btn btn-sm btn-outline-danger" (click)="removeMember(m)"><i class="icon-base ri ri-user-unfollow-line"></i></button>
+                </ng-container>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- Task modal -->
+  <div *ngIf="taskForm" class="modal d-block" style="background: rgba(15, 23, 42, 0.45); overflow-y: auto" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ taskForm.id ? 'Edit task' : taskForm.parentId ? 'Add subtask' : 'Add task' }}</h5>
+          <button type="button" class="btn-close" (click)="taskForm = null"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label">Title</label>
+          <input class="form-control mb-2" [(ngModel)]="taskForm.title" />
+          <label class="form-label">Parent task</label>
+          <select class="form-select mb-2" [(ngModel)]="taskForm.parentId">
+            <option [ngValue]="null">None (top-level task)</option>
+            <option *ngFor="let t of parentOptions" [ngValue]="t.id">{{ t.title }}</option>
+          </select>
+          <label class="form-label">Description</label>
+          <textarea class="form-control mb-2" rows="2" [(ngModel)]="taskForm.description"></textarea>
+          <div class="row g-2 mb-2">
+            <div class="col-6">
+              <label class="form-label">Assignee</label>
+              <select class="form-select" [(ngModel)]="taskForm.assigneeId">
+                <option [ngValue]="null">Unassigned</option>
+                <option *ngFor="let m of activeMembers" [ngValue]="m.employeeId">{{ m.employeeName }}</option>
+              </select>
+            </div>
+            <div class="col-6"><label class="form-label">Estimate (hours)</label><input type="number" min="0" class="form-control" [(ngModel)]="taskForm.estimatedHours" /></div>
+            <div class="col-6"><label class="form-label">Due date</label><input type="date" class="form-control" [(ngModel)]="taskForm.dueDate" /></div>
+            <div class="col-6">
+              <label class="form-label">Status</label>
+              <select class="form-select" [(ngModel)]="taskForm.status"><option *ngFor="let s of taskStatuses" [value]="s.value">{{ s.label }}</option></select>
+            </div>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="taskBill" [(ngModel)]="taskForm.isBillable" />
+            <label class="form-check-label" for="taskBill">Billable</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="taskForm = null">Cancel</button>
+          <button class="btn btn-primary" (click)="saveTask()" [disabled]="saving">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Member modal -->
+  <div *ngIf="memberForm" class="modal d-block" style="background: rgba(15, 23, 42, 0.45); overflow-y: auto" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ memberForm.id ? 'Edit ' + memberForm.employeeName : 'Add team member' }}</h5>
+          <button type="button" class="btn-close" (click)="memberForm = null"></button>
+        </div>
+        <div class="modal-body">
+          <ng-container *ngIf="!memberForm.id">
+            <label class="form-label">Employee</label>
+            <ng-select class="mb-2" [items]="employeeOptions" bindLabel="label" bindValue="value" [(ngModel)]="memberForm.employeeId" appendTo="body" placeholder="Select employee"></ng-select>
+          </ng-container>
+          <div class="row g-2 mb-2">
+            <div class="col-8"><label class="form-label">Role</label><input class="form-control" [(ngModel)]="memberForm.role" placeholder="Developer, QA…" /></div>
+            <div class="col-4"><label class="form-label">Allocation %</label><input type="number" min="1" max="100" class="form-control" [(ngModel)]="memberForm.allocationPercent" /></div>
+            <div class="col-6"><label class="form-label">From</label><input type="date" class="form-control" [(ngModel)]="memberForm.startDate" /></div>
+            <div class="col-6"><label class="form-label">To</label><input type="date" class="form-control" [(ngModel)]="memberForm.endDate" /></div>
+            <ng-container *ngIf="perms.canSeeMoney">
+              <div class="col-6"><label class="form-label">Bill rate ₹/h</label><input type="number" min="0" class="form-control" [(ngModel)]="memberForm.billRate" placeholder="Project default" /></div>
+              <div class="col-6"><label class="form-label">Cost rate ₹/h</label><input type="number" min="0" class="form-control" [(ngModel)]="memberForm.costRate" placeholder="Project default" /></div>
+            </ng-container>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="memBill" [(ngModel)]="memberForm.isBillable" />
+            <label class="form-check-label" for="memBill">Hours are billable to the client</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="memberForm = null">Cancel</button>
+          <button class="btn btn-primary" (click)="saveMember()" [disabled]="saving">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,166 @@
+<div class="container-fluid mt-5">
+  <div class="card mb-4">
+    <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span>Performance Reviews</span>
+      <span class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-primary" (click)="exportExcel()" [disabled]="!rows.length">
+          <i class="icon-base ri ri-file-excel-2-line me-1"></i> Excel
+        </button>
+        <button class="btn btn-sm btn-primary" (click)="openBulkGoal()" [disabled]="cycle?.status !== 'active'">
+          <i class="icon-base ri ri-flag-line me-1"></i> Assign goal to group
+        </button>
+      </span>
+    </h5>
+    <div class="card-body">
+      <div *ngIf="!cycles.length" class="text-muted">No launched cycles yet. Launch one from <a routerLink="/layout/performance/cycles">Appraisal Cycles</a>.</div>
+      <div class="row g-2" *ngIf="cycles.length">
+        <div class="col-md-3">
+          <label class="form-label small">Cycle</label>
+          <select class="form-select" [(ngModel)]="cycleId" (change)="load()">
+            <option *ngFor="let c of cycles" [value]="c.id">{{ c.name }} ({{ c.status }})</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Department</label>
+          <ng-select [items]="departmentOptions" bindLabel="label" bindValue="value" [(ngModel)]="departmentId"
+            (change)="load()" placeholder="All departments"></ng-select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Status</label>
+          <select class="form-select" [(ngModel)]="status" (change)="load()">
+            <option value="">All statuses</option>
+            <option *ngFor="let s of statuses" [value]="s.value">{{ s.label }}</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Search</label>
+          <input class="form-control" [(ngModel)]="search" placeholder="Name, code, manager…" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2" *ngIf="cycle">
+      <span>{{ filtered.length }} review(s)</span>
+      <button *ngIf="selected.size" class="btn btn-sm btn-primary" (click)="lockSelected()" [disabled]="saving">
+        <i class="icon-base ri ri-lock-line me-1"></i> Lock goals for {{ selected.size }} selected
+      </button>
+    </div>
+    <div *ngIf="loading" class="text-center py-5 text-muted">Loading reviews…</div>
+    <div class="table-responsive" *ngIf="!loading && cycle">
+      <table class="table table-striped text-nowrap mb-0">
+        <thead>
+          <tr>
+            <th>
+              <input type="checkbox" class="form-check-input" title="Select all in goal setting"
+                [checked]="selectableIds.length > 0 && selected.size === selectableIds.length"
+                (change)="toggleAll($any($event.target).checked)" [disabled]="cycle.status !== 'active'" />
+            </th>
+            <th>Employee</th><th>Department</th><th>Manager</th><th>Status</th>
+            <th>Goals</th><th>Self</th><th>Manager</th><th>360</th><th>Final</th><th>Nine-box</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="!filtered.length"><td colspan="12" class="text-center text-muted py-4">No reviews match.</td></tr>
+          <tr *ngFor="let r of filtered">
+            <td>
+              <input type="checkbox" class="form-check-input" *ngIf="r.status === 'goal_setting' && cycle.status === 'active'"
+                [checked]="selected.has(r.reviewId)" (change)="toggle(r.reviewId, $any($event.target).checked)" />
+            </td>
+            <td>
+              <a [routerLink]="['/layout/performance/review', r.reviewId]" class="fw-semibold">{{ r.employeeName }}</a>
+              <div class="small text-muted">{{ r.empCode }} · {{ r.designation }}</div>
+            </td>
+            <td>{{ r.department }}</td>
+            <td>{{ r.managerName || '—' }}</td>
+            <td>
+              <span class="badge" [ngClass]="statusBadge(r.status)">{{ r.statusLabel }}</span>
+              <div class="small text-muted" *ngIf="r.pendingWith">with {{ approvalLevelLabel(r.pendingWith) }}</div>
+            </td>
+            <td>{{ fmtPct(r.goalAchievement) }}</td>
+            <td>{{ fmtRating(r.selfRating) }}</td>
+            <td>{{ fmtRating(r.managerRating) }}</td>
+            <td>{{ fmtRating(r.feedbackRating) }}</td>
+            <td class="fw-semibold">{{ fmtRating(r.finalRating) }}</td>
+            <td>{{ r.nineBox || '—' }}</td>
+            <td><a [routerLink]="['/layout/performance/review', r.reviewId]" class="btn btn-sm btn-outline-primary">Open</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Bulk goal modal -->
+  <div *ngIf="bulkGoal" class="modal d-block" style="background: rgba(15, 23, 42, 0.45); overflow-y: auto" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Assign goal to a group</h5>
+          <button type="button" class="btn-close" (click)="bulkGoal = null"></button>
+        </div>
+        <div class="modal-body">
+          <p class="small text-muted">Adds this goal to every review still in goal setting for the selected department (or everyone).</p>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Department</label>
+              <ng-select [items]="departmentOptions" bindLabel="label" bindValue="value" [(ngModel)]="bulkGoal.departmentId"
+                placeholder="All departments" appendTo="body"></ng-select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Type</label>
+              <select class="form-select" [(ngModel)]="bulkGoal.goal.type" (change)="bulkGoal.goal.type === 'okr' && !bulkGoal.goal.keyResults.length && addKr()">
+                <option value="kpi">KPI</option>
+                <option value="okr">OKR</option>
+              </select>
+            </div>
+            <div class="col-md-9">
+              <label class="form-label">{{ bulkGoal.goal.type === 'okr' ? 'Objective' : 'KPI name' }}</label>
+              <input class="form-control" [(ngModel)]="bulkGoal.goal.title" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Weightage %</label>
+              <input type="number" class="form-control" [(ngModel)]="bulkGoal.goal.weightage" />
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description</label>
+              <textarea class="form-control" rows="2" [(ngModel)]="bulkGoal.goal.description"></textarea>
+            </div>
+            <ng-container *ngIf="bulkGoal.goal.type === 'kpi'">
+              <div class="col-md-4">
+                <label class="form-label">Target</label>
+                <input type="number" class="form-control" [(ngModel)]="bulkGoal.goal.targetValue" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Unit</label>
+                <input class="form-control" [(ngModel)]="bulkGoal.goal.unit" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Direction</label>
+                <select class="form-select" [(ngModel)]="bulkGoal.goal.higherIsBetter">
+                  <option [ngValue]="true">Higher is better</option>
+                  <option [ngValue]="false">Lower is better</option>
+                </select>
+              </div>
+            </ng-container>
+            <div class="col-12" *ngIf="bulkGoal.goal.type === 'okr'">
+              <label class="form-label">Key results</label>
+              <div *ngFor="let k of bulkGoal.goal.keyResults; let i = index" class="row g-2 mb-2">
+                <div class="col-md-5"><input class="form-control form-control-sm" [(ngModel)]="k.title" placeholder="Key result" /></div>
+                <div class="col-md-2"><input type="number" class="form-control form-control-sm" [(ngModel)]="k.startValue" placeholder="Start" /></div>
+                <div class="col-md-2"><input type="number" class="form-control form-control-sm" [(ngModel)]="k.targetValue" placeholder="Target" /></div>
+                <div class="col-md-2"><input class="form-control form-control-sm" [(ngModel)]="k.unit" placeholder="Unit" /></div>
+                <div class="col-md-1"><button class="btn btn-sm btn-outline-danger w-100" (click)="bulkGoal.goal.keyResults.splice(i, 1)">×</button></div>
+              </div>
+              <button class="btn btn-sm btn-outline-primary" (click)="addKr()">+ Add key result</button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="bulkGoal = null">Cancel</button>
+          <button class="btn btn-primary" (click)="saveBulkGoal()" [disabled]="saving">Assign</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
