@@ -67,6 +67,10 @@ export const APP_MENU_ITEMS: MenuItem[] = [
       { title: 'Weekend Employee List',   icon: 'ri-upload-cloud-line',    link: '/layout/attendance/weekend-emp-list',     permKey: 'att.weekend' },
       { title: 'Add Comp Off',            icon: 'ri-upload-cloud-line',    link: '/layout/attendance/add-comp-off',         permKey: 'att.compoff' },
       { title: 'Contractual Approval',    icon: 'ri-checkbox-circle-line', link: '/layout/attendance/contractual-approval', permKey: 'att.contractual' },
+      { title: 'AI Face Recognition',     icon: 'ri-scan-line',            link: '/layout/attendance/ai-face',               permKey: 'att.aiFace' },
+      { title: 'Camera Management',       icon: 'ri-camera-line',          link: '/layout/attendance/camera-management',    permKey: 'att.aiCameras' },
+      { title: 'Face Enrollment',         icon: 'ri-user-smile-line',      link: '/layout/attendance/face-enrollment',      permKey: 'att.aiEnroll' },
+      { title: 'Recognition Logs',        icon: 'ri-file-list-3-line',     link: '/layout/attendance/recognition-logs',     permKey: 'att.aiLogs' },
     ]
   },
   {
@@ -81,6 +85,49 @@ export const APP_MENU_ITEMS: MenuItem[] = [
       { title: 'Employee Appraisal',    icon: 'ri-percent-line',            link: '/layout/payroll/employee-appraisal', permKey: 'pay.appraisal' },
       { title: 'Appraisal List',        icon: 'ri-file-list-3-line',        link: '/layout/payroll/appraisal-list',     permKey: 'pay.appraisalList' },
       { title: 'Arrear Management',     icon: 'ri-refund-2-line',           link: '/layout/payroll/arrear-management', permKey: 'pay.arrear' },
+    ]
+  },
+  {
+    title: 'Assets',
+    icon: 'ri-macbook-line',
+    permKey: 'assets',
+    children: [
+      { title: 'Asset Dashboard',  icon: 'ri-pie-chart-2-line',  link: '/layout/assets/dashboard',  permKey: 'asset.dashboard' },
+      { title: 'Inventory',        icon: 'ri-archive-line',      link: '/layout/assets/inventory',  permKey: 'asset.inventory' },
+      { title: 'Asset Categories', icon: 'ri-price-tag-3-line',  link: '/layout/assets/categories', permKey: 'asset.categories' },
+      { title: 'Exit Clearance',   icon: 'ri-logout-box-r-line', link: '/layout/assets/clearance',  permKey: 'asset.clearance' },
+    ]
+  },
+  {
+    title: 'Projects & Timesheets',
+    icon: 'ri-briefcase-4-line',
+    permKey: 'projects',
+    children: [
+      { title: 'Projects',          icon: 'ri-folder-chart-line', link: '/layout/project/projects',   permKey: 'proj.projects' },
+      { title: 'Clients',           icon: 'ri-building-line',     link: '/layout/project/clients',    permKey: 'proj.clients' },
+      { title: 'Timesheets',        icon: 'ri-time-line',         link: '/layout/project/timesheets', permKey: 'proj.timesheets' },
+      { title: 'Project Reports',   icon: 'ri-bar-chart-2-line',  link: '/layout/project/reports',    permKey: 'proj.reports' },
+    ]
+  },
+  {
+    title: 'Expenses',
+    icon: 'ri-wallet-3-line',
+    permKey: 'expenses',
+    children: [
+      { title: 'Expense Dashboard', icon: 'ri-pie-chart-line',     link: '/layout/expense/dashboard', permKey: 'exp.dashboard' },
+      { title: 'Expense Claims',    icon: 'ri-receipt-line',       link: '/layout/expense/claims',    permKey: 'exp.claims' },
+      { title: 'Expense Policies',  icon: 'ri-shield-check-line',  link: '/layout/expense/policies',  permKey: 'exp.policies' },
+    ]
+  },
+  {
+    title: 'Performance',
+    icon: 'ri-line-chart-line',
+    permKey: 'performance',
+    children: [
+      { title: 'Dashboard & Analytics', icon: 'ri-dashboard-3-line',  link: '/layout/performance/dashboard', permKey: 'perf.dashboard' },
+      { title: 'Appraisal Cycles',      icon: 'ri-repeat-line',       link: '/layout/performance/cycles',    permKey: 'perf.cycles' },
+      { title: 'Reviews & Goals',       icon: 'ri-flag-line',         link: '/layout/performance/reviews',   permKey: 'perf.reviews' },
+      { title: 'Employee History',      icon: 'ri-history-line',      link: '/layout/performance/history',   permKey: 'perf.history' },
     ]
   },
   {
