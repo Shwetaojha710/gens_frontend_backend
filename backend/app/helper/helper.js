@@ -81,7 +81,18 @@ Helper.validateAccountNumber = (accountNumber) => {
   return accountRegex.test(accountNumber);
 };
 
-Helper.isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+Helper.isValidEmail = (email) =>
+  /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)+$/.test(
+    String(email || "").trim(),
+  );
+
+/** Person name: letters, spaces, apostrophe, hyphen; min 2 chars; no digits. */
+Helper.isValidPersonName = (name) => {
+  const v = String(name || "").trim();
+  if (v.length < 2 || v.length > 60) return false;
+  if (/\d/.test(v)) return false;
+  return /^[\p{L}](?:[\p{L}\s'.-]{0,58}[\p{L}])?$/u.test(v);
+};
 Helper.isValidAadhaar = (aadhaar) => /^\d{12}$/.test(aadhaar);
 Helper.isValidPAN = (pan) => /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan);
 Helper.isValidMobile = (mobile) => /^[6-9]\d{9}$/.test(mobile);
@@ -158,17 +169,20 @@ Helper.applySandwichRule = (leaveRecords, holidays, startDate, endDate) => {
   let updatedRecords = [...leaveRecords];
   if (!leaveRecords.length) return updatedRecords;
 
+  // Caller must pass holidays + shift week-offs. Do NOT hardcode Sat/Sun
+  // (some shifts work Saturday / have mid-week offs).
   const holidaySet = new Set(holidays || []);
   const isNonWorkingDay = (date) => {
     const dateKey = date.format("YYYY-MM-DD");
-    return holidaySet.has(dateKey) || date.day() == 0 || date.day() == 6;
+    return holidaySet.has(dateKey);
   };
   const getSandwichStatus = (prevLeave, nextLeave) => {
     // Leave/RH on one side + absent on other → unpaid sandwich (LOP)
     if (prevLeave?.isAbsentAnchor || nextLeave?.isAbsentAnchor) {
       return "pending";
     }
-    if (prevLeave?.status == "approved" || nextLeave?.status == "approved") {
+    // Both sides must be approved for paid sandwich (charge leave balance later)
+    if (prevLeave?.status == "approved" && nextLeave?.status == "approved") {
       return "approved";
     }
     if (
@@ -523,8 +537,18 @@ Helper.adjustLeaveRecords = (leaveBalanceArr, leaveRecordsArr) => {
   const records = leaveRecordsArr.map((rec) => ({ ...rec }));
 
   records.forEach((rec) => {
-    if (rec.status !== "approved") {
+    const st = String(rec.status || "").toLowerCase();
+    // pending / rejected / recommended / self_declined → always unpaid (LOP)
+    if (st !== "approved") {
       rec.leavestatus = "unpaid";
+      if (
+        st === "pending" ||
+        st === "recommended" ||
+        st === "rejected" ||
+        st === "self_declined"
+      ) {
+        rec.isLopLeave = true;
+      }
     }
   });
 
@@ -533,8 +557,8 @@ Helper.adjustLeaveRecords = (leaveBalanceArr, leaveRecordsArr) => {
 
     const matchingRecords = records.filter(
       (rec) =>
-        rec.employeeId === balance.employeeId &&
-        rec.leaveTypeId === balance.leaveTypeId &&
+        rec.employeeId == balance.employeeId &&
+        rec.leaveTypeId == balance.leaveTypeId &&
         rec.status === "approved" &&
         !rec.isSandwich &&
         !rec.isAbsentAnchor,
@@ -602,6 +626,14 @@ Helper.adjustLeaveRecords = (leaveBalanceArr, leaveRecordsArr) => {
       matchingRecords.forEach((rec) => {
         rec.leavestatus = "approved";
       });
+    }
+  });
+
+  // Approved leave with no matching balance / never marked approved → unpaid
+  records.forEach((rec) => {
+    if (rec.isSandwich || rec.isAbsentAnchor) return;
+    if (rec.status === "approved" && rec.leavestatus !== "approved") {
+      rec.leavestatus = "unpaid";
     }
   });
 
@@ -1436,6 +1468,75 @@ Helper.convertNumberToWords = (amount) => {
   return numToWords(Math.floor(amount));
 };
 
+const { Op } = require("sequelize");
+
+/** Normalize branchIds JSON / array + optional primary branchId. */
+Helper.normalizeBranchIds = (raw, primaryBranchId) => {
+  let ids = [];
+  if (Array.isArray(raw)) {
+    ids = raw;
+  } else if (typeof raw === "string" && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) ids = parsed;
+      else ids = [raw];
+    } catch {
+      ids = [raw];
+    }
+  }
+  ids = [...new Set(ids.filter(Boolean).map(String))];
+  const primary =
+    primaryBranchId && primaryBranchId !== "null" && primaryBranchId !== 0
+      ? String(primaryBranchId)
+      : null;
+  if (!ids.length && primary) ids = [primary];
+  return ids;
+};
+
+/** Branches the logged-in portal user may access (director multi-branch). */
+Helper.getAccessibleBranchIds = (user) => {
+  return Helper.normalizeBranchIds(user?.branchIds, user?.branchId);
+};
+
+/** True when emp.branchIds was explicitly assigned (not only home branchId). */
+Helper.hasExplicitBranchIds = (user) => {
+  const raw = user?.branchIds;
+  if (Array.isArray(raw) && raw.length > 0) return true;
+  if (typeof raw === "string" && raw.trim() && raw !== "null") {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) && parsed.length > 0;
+    } catch {
+      return true;
+    }
+  }
+  return false;
+};
+
+/**
+ * Director, or manager with assigned branchIds → see all employees in those branches.
+ */
+Helper.isBranchAccessRole = (user) => {
+  const role = String(user?.role || "").toLowerCase();
+  if (role === "director") return true;
+  if (role === "manager" && Helper.hasExplicitBranchIds(user)) return true;
+  return false;
+};
+
+/**
+ * Restrict requested branch filter to accessible set.
+ * requested: undefined | null | "All" | uuid
+ */
+Helper.resolveBranchScope = (requested, accessibleIds) => {
+  const accessible = (accessibleIds || []).map(String).filter(Boolean);
+  if (!accessible.length) return [];
+  if (!requested || requested === "All" || requested === "null") {
+    return accessible;
+  }
+  const req = String(requested);
+  return accessible.includes(req) ? [req] : [];
+};
+
 Helper.getAllSubordinates = async (directorId, branchId, tenantId) => {
 
   let result = [];
@@ -1448,7 +1549,9 @@ Helper.getAllSubordinates = async (directorId, branchId, tenantId) => {
   };
 
   // Apply branch filter ONLY if not "All"
-  if (branchId && branchId != "All") {
+  if (Array.isArray(branchId) && branchId.length) {
+    whereCondition.branchId = { [Op.in]: branchId };
+  } else if (branchId && branchId != "All") {
     whereCondition.branchId = branchId;
   }
 

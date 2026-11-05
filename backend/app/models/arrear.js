@@ -139,12 +139,13 @@ const Arrear = sequelize.define(
   }
 );
 
-Arrear.sync({ alter: true })
-  .then(() => {
-    console.log("Arrear model synced successfully");
-  })
-  .catch((error) => {
-    console.error("Error syncing Arrear model:", error);
-  });
+// Disabled: sync({ alter: true }) exhausts Postgres locks (53200 out of shared memory)
+// Arrear.sync({ alter: true })
+//   .then(() => {
+//     console.log("Arrear model synced successfully");
+//   })
+//   .catch((error) => {
+//     console.error("Error syncing Arrear model:", error);
+//   });
 
 module.exports = Arrear;

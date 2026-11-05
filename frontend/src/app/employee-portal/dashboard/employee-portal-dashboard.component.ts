@@ -18,6 +18,7 @@ import {
 } from 'ng-apexcharts';
 import { Notyf } from 'notyf';
 import { EmployeePortalService } from '../services/employee-portal.service';
+import { LocationsService } from '../../services/locations.service';
 import { environment } from '../../../environments/environment';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 type EpDonutOptions = Partial<{
@@ -434,7 +435,17 @@ export class EmployeePortalDashboardComponent implements OnInit, AfterViewChecke
   }
   // ─────────────────────────────────────────────────────────────────────────
 
-  constructor(private api: EmployeePortalService, private http: HttpClient, private sanitizer: DomSanitizer) {}
+  constructor(
+    private api: EmployeePortalService,
+    private http: HttpClient,
+    private sanitizer: DomSanitizer,
+    private location: LocationsService,
+  ) {}
+
+  /** Branch IDs this user may see (director multi-branch / primary). */
+  private accessibleBranchIds: string[] = [];
+  /** True when emp.branchIds was explicitly assigned (not just home branchId). */
+  private hasExplicitBranchIds = false;
 
   ngOnInit(): void {
     try {
@@ -442,10 +453,15 @@ export class EmployeePortalDashboardComponent implements OnInit, AfterViewChecke
         id?: string;
         role?: string;
         branchId?: string;
+        branchIds?: string[] | string | null;
       };
       this.myEmployeeId = u.id != null ? String(u.id) : '';
       this.userRole = u.role != null ? String(u.role).toLowerCase().trim() : '';
       this.userBranchId = u.branchId != null ? String(u.branchId) : '';
+      this.hasExplicitBranchIds =
+        (Array.isArray(u.branchIds) && u.branchIds.length > 0) ||
+        (typeof u.branchIds === 'string' && u.branchIds.trim().length > 0 && u.branchIds !== 'null');
+      this.accessibleBranchIds = this.normalizeAccessibleBranchIds(u.branchIds, u.branchId);
     } catch {
       this.myEmployeeId = '';
     }
@@ -462,6 +478,31 @@ export class EmployeePortalDashboardComponent implements OnInit, AfterViewChecke
     console.log(this.chartsLoading, this.latePolicyVisible, '>>>>>');
   }
 
+  private normalizeAccessibleBranchIds(
+    raw: string[] | string | null | undefined,
+    primary?: string | null,
+  ): string[] {
+    let ids: string[] = [];
+    if (Array.isArray(raw)) ids = raw.map(String).filter(Boolean);
+    else if (typeof raw === 'string' && raw.trim()) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) ids = parsed.map(String).filter(Boolean);
+        else ids = [raw];
+      } catch {
+        ids = [raw];
+      }
+    }
+    ids = [...new Set(ids)];
+    if (!ids.length && primary) ids = [String(primary)];
+    return ids;
+  }
+
+  /** Director always; others only when branchIds explicitly assigned. */
+  private get scopeBranchesToAccess(): boolean {
+    return this.userRole === 'director' || this.hasExplicitBranchIds;
+  }
+
   get showTeamAttendance(): boolean {
     return ['manager', 'director', 'teamleader'].includes(this.userRole);
   }
@@ -476,22 +517,31 @@ export class EmployeePortalDashboardComponent implements OnInit, AfterViewChecke
     for (const r of this.teamAttendanceRaw) {
       const name = String(r['branchName'] || 'Unknown');
       const id = String(r['branchId'] || '');
+      if (this.scopeBranchesToAccess && this.accessibleBranchIds.length && id
+        && !this.accessibleBranchIds.includes(id)) {
+        continue;
+      }
       if (id && !this.teamBranchIdMap.has(name)) {
         this.teamBranchIdMap.set(name, id);
       }
     }
-    this.teamBranchNames = ['All', ...new Set(this.teamAttendanceRaw.map((r) => String(r['branchName'] || 'Unknown')))];
+    this.teamBranchNames = ['All', ...this.teamBranchIdMap.keys()];
   }
 
   loadTenantBranches(): void {
     this.api.getTenantBranches().subscribe({
       next: (branches) => {
-        if (branches.length === 0) return;
+        let list = Array.isArray(branches) ? branches : [];
+        // Never show branches outside assigned access (director / branchIds)
+        if (this.scopeBranchesToAccess && this.accessibleBranchIds.length) {
+          list = list.filter((b) => this.accessibleBranchIds.includes(String(b.id)));
+        }
+        if (list.length === 0) return;
         this.teamBranchIdMap.clear();
-        for (const b of branches) {
+        for (const b of list) {
           this.teamBranchIdMap.set(b.name, b.id);
         }
-        this.teamBranchNames = ['All', ...branches.map((b) => b.name)];
+        this.teamBranchNames = ['All', ...list.map((b) => b.name)];
       },
       error: () => { /* pills fall back to attendance-derived list */ },
     });
@@ -502,12 +552,20 @@ export class EmployeePortalDashboardComponent implements OnInit, AfterViewChecke
     const filter = this.isBranchView ? 'All' : undefined;
     this.api.getTeamsAttendance(filter).subscribe({
       next: (rows) => {
-        this.teamAttendanceRaw = rows;
+        let scoped = rows;
+        if (this.scopeBranchesToAccess && this.accessibleBranchIds.length) {
+          scoped = rows.filter((r) => {
+            const id = String(r['branchId'] || '');
+            return !id || this.accessibleBranchIds.includes(id);
+          });
+        }
+        this.teamAttendanceRaw = scoped;
         if (this.teamBranchNames.length <= 1) {
           this.refreshTeamBranchNames();
         }
+        // Only seed accessible branch chips — not entire tenant
         const required = this.isBranchView ? [...this.teamBranchIdMap.keys()] : undefined;
-        this.teamBranchGroups = this.buildBranchGroups(rows, required);
+        this.teamBranchGroups = this.buildBranchGroups(scoped, required);
         this.teamAttendanceLoading = false;
         if (this.teamBranchGroups.length > 0) {
           this.expandedTeamBranches.add(this.teamBranchGroups[0].branchName);
@@ -532,15 +590,22 @@ export class EmployeePortalDashboardComponent implements OnInit, AfterViewChecke
 
     this.api.getTeamsAttendance(branchId).subscribe({
       next: (rows) => {
-        this.teamAttendanceRaw = rows;
-        if (branchName === 'All') {
+        let scoped = rows;
+        if (this.scopeBranchesToAccess && this.accessibleBranchIds.length) {
+          scoped = rows.filter((r) => {
+            const id = String(r['branchId'] || '');
+            return !id || this.accessibleBranchIds.includes(id);
+          });
+        }
+        this.teamAttendanceRaw = scoped;
+        // Keep assigned-branch pills; do not rebuild from full tenant
+        if (branchName === 'All' && this.teamBranchIdMap.size === 0) {
           this.refreshTeamBranchNames();
         }
-        // For "All": seed every known branch. For specific branch: seed just that one.
         const required = branchName === 'All'
           ? [...this.teamBranchIdMap.keys()]
           : [branchName];
-        this.teamBranchGroups = this.buildBranchGroups(rows, required);
+        this.teamBranchGroups = this.buildBranchGroups(scoped, required);
         if (this.teamBranchGroups.length > 0) {
           this.expandedTeamBranches.add(this.teamBranchGroups[0].branchName);
         }
@@ -1033,7 +1098,30 @@ export class EmployeePortalDashboardComponent implements OnInit, AfterViewChecke
   profileLine(key: string): string {
     const v = this.profile?.[key];
     if (v == null || v === '') return '—';
-    return String(v);
+    const s = String(v).trim();
+    if (!s || s === 'undefined' || /^undefined(\s+undefined)?$/i.test(s)) return '—';
+    return s;
+  }
+
+  /** Designation from API, else role label (Manager / Director). */
+  get displayDesignation(): string {
+    const fromApi = this.profileLine('designation');
+    if (fromApi !== '—') return fromApi;
+    const named = this.profileLine('designation_name');
+    if (named !== '—') return named;
+    const role = this.profileLine('role');
+    if (role === '—') return '—';
+    const map: Record<string, string> = {
+      manager: 'Manager',
+      director: 'Director',
+      teamleader: 'Team Lead',
+      team_leader: 'Team Lead',
+      project_manager: 'Project Manager',
+      employee: 'Employee',
+      hr: 'HR',
+    };
+    const key = role.toLowerCase();
+    return map[key] || role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
   holidayTypeLabel(h: Record<string, unknown>): string {
@@ -1418,17 +1506,26 @@ export class EmployeePortalDashboardComponent implements OnInit, AfterViewChecke
     if (el) (window as any).bootstrap.Modal.getInstance(el)?.hide();
   }
 
-  mark(): void {
+  async mark(): Promise<void> {
     this.marking = true;
-    this.api.markAttendance().subscribe({
+    // Branches with a range check the distance; without location the server decides
+    // (branches with no range accept it, like before)
+    let coords: { latitude: number; longitude: number } | null = null;
+    try {
+      coords = await this.location.getCurrentLocation();
+    } catch {
+      coords = null;
+    }
+    this.api.markAttendance(coords?.latitude, coords?.longitude).subscribe({
       next: () => {
         this.marking = false;
         this.notyf.success('Attendance updated.');
         this.refresh();
       },
-      error: (err: Error) => {
+      error: (err: any) => {
         this.marking = false;
-        this.notyf.error(err.message || 'Could not mark attendance.');
+        // HTTP errors (e.g. 403 out of range) carry the server message in err.error
+        this.notyf.error(err?.error?.message || err?.message || 'Could not mark attendance.');
       },
     });
   }

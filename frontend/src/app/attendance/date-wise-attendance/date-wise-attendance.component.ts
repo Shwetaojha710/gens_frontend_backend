@@ -38,22 +38,28 @@ export class DateWiseAttendanceComponent {
   ];
 
   checkUncheckAll() {
-    this.AttendanceMasterList.forEach((item: any) => item.editable = this.masterSelected);
+    // Header checkbox applies to full list (all pages), not just current page
+    (this.originalList || this.AttendanceMasterList).forEach(
+      (item: any) => (item.editable = this.masterSelected),
+    );
   }
   masterSelected: boolean = false;
 
   isAllSelected() {
-    this.masterSelected = this.AttendanceMasterList.every((item: any) => item.editable);
-
+    const list = this.originalList?.length
+      ? this.originalList
+      : this.AttendanceMasterList;
+    this.masterSelected =
+      list.length > 0 && list.every((item: any) => item.editable);
   }
 
   getMin(a: number, b: number): number {
     return Math.min(a, b);
   }
-  onItemsPerPageChange(event: any) {
-    this.itemsPerPage = +event.target.value;
-    this.currentPage = 1; // Reset to first page
-    this.updateDisplayedList();
+  onItemsPerPageChange(value: number | string) {
+    this.itemsPerPage = Number(value) || 10;
+    this.currentPage = 1;
+    this.applyListFilters();
   }
   dayList: string[] = [];
 
@@ -112,9 +118,12 @@ export class DateWiseAttendanceComponent {
       const year = today.getFullYear();
       const month = (today.getMonth() + 1).toString().padStart(2, '0');
       const day = today.getDate().toString().padStart(2, '0');
+      // Use the date selected in the dashboard date filter, if any
+      const dashboardDate = this.route.snapshot.queryParamMap.get('date') || '';
+      const selectedDay = /^\d{4}-\d{2}-\d{2}$/.test(dashboardDate) ? dashboardDate : `${year}-${month}-${day}`;
 
-      this.obj['startDate'] = `${year}-${month}-${day}`;
-      this.obj['endDate'] = `${year}-${month}-${day}`;
+      this.obj['startDate'] = selectedDay;
+      this.obj['endDate'] = selectedDay;
       this.fetchAttendance();
 
 
@@ -140,51 +149,64 @@ export class DateWiseAttendanceComponent {
   yearList: any = [];
   EmpList: any = []
   AttendanceList: any = []
-  searchText: any
+  searchText: any = ''
   originalList: any = []
   currentPage = 1;
   itemsPerPage = 10;
-  totalPages = 0;
-  updateDisplayedList() {
-    const start = (this.currentPage - 1) * this.itemsPerPage;
-    const end = start + this.itemsPerPage;
-    this.AttendanceMasterList = this.filteredList.slice(start, end);
-    this.totalPages = Math.ceil(this.filteredList.length / this.itemsPerPage);
-  }
+  totalPages = 1;
+  pageNumbers: number[] = [];
 
-  goToPage(page: number) {
-    if (page < 1 || page > this.totalPages) return;
-    this.currentPage = page;
-    this.updateVisiblePages();
-    this.updateDisplayedList();
-  }
-  applyFilter(event: any) {
-    this.searchText = event?.target.value;
-
-    if (!this.searchText || this.searchText.trim() === '') {
-      this.filteredList = [...this.originalList];
+  /** Recompute filtered rows + page slice + page numbers */
+  applyListFilters(): void {
+    const q = String(this.searchText || '').trim().toLowerCase();
+    if (!q) {
+      this.filteredList = [...(this.originalList || [])];
     } else {
-      const search = this.searchText.toLowerCase();
-      this.filteredList = this.originalList.filter((item: any) =>
-        item.employee_name?.toLowerCase().includes(search) ||
-        (item.date && item.date.toLowerCase().includes(search)) ||
-        (item.status && item.status.toLowerCase().includes(search)) ||
-        (item.checkIn && String(item.checkIn).toLowerCase().includes(search)) ||
-        (item.checkOut && String(item.checkOut).toLowerCase().includes(search))
+      this.filteredList = (this.originalList || []).filter((item: any) =>
+        item.employee_name?.toLowerCase().includes(q) ||
+        (item.date && String(item.date).toLowerCase().includes(q)) ||
+        (item.status && String(item.status).toLowerCase().includes(q)) ||
+        (item.checkIn && String(item.checkIn).toLowerCase().includes(q)) ||
+        (item.checkOut && String(item.checkOut).toLowerCase().includes(q))
       );
     }
 
-    this.currentPage = 1;
-    this.updateDisplayedList();
+    this.totalPages = Math.max(1, Math.ceil(this.filteredList.length / this.itemsPerPage) || 1);
+    if (this.currentPage > this.totalPages) this.currentPage = this.totalPages;
+    if (this.currentPage < 1) this.currentPage = 1;
+    this.pageNumbers = Array.from({ length: this.totalPages }, (_, i) => i + 1);
+    this.slicePage();
     this.updateVisiblePages();
+  }
+
+  slicePage(): void {
+    const start = (this.currentPage - 1) * this.itemsPerPage;
+    this.AttendanceMasterList = this.filteredList.slice(start, start + this.itemsPerPage);
+  }
+
+  updateDisplayedList() {
+    this.applyListFilters();
+  }
+
+  goToPage(page: number, event?: Event) {
+    event?.preventDefault();
+    if (page < 1 || page > this.totalPages) return;
+    this.currentPage = page;
+    this.slicePage();
+    this.updateVisiblePages();
+  }
+
+  applyFilter(event: any) {
+    this.searchText = event?.target?.value || '';
+    this.currentPage = 1;
+    this.applyListFilters();
   }
 
   async ngOnInit() {
 
     await this.empList();
     await this.getYear();
-    this.updateDisplayedList();
-    this.updateVisiblePages();
+    this.applyListFilters();
 
   }
 
@@ -197,18 +219,32 @@ export class DateWiseAttendanceComponent {
       let message = response.message ? response.message : 'Data found Successfully';
       let status = this.statusService.handleResponseStatus(response.status, message);
       if (status == true) {
-        this.notyf.success(response.message || 'Employees loaded successfully');
+        const rows = response.data || [];
+        if (rows.length) {
+          this.notyf.success(response.message || 'Employees loaded successfully');
+        }
         this.AttendanceMasterList = [];
-        this.AttendanceMasterList = response.data || [];
+        this.AttendanceMasterList = rows;
         const statusMap: Record<string, string> = {
           'Week Off': 'WO',
           'Present': 'P',
-          'Absent': 'A'
+          'Absent': 'A',
+          'Restricted Holiday': 'RH',
+          'Gazetted Holiday': 'GH',
+          'Holiday': 'GH',
+          'Full Day Leave': 'L',
+          'On Leave': 'L',
+          'First Half': 'FH',
+          'Second Half': 'SH',
+          'First Half Leave': 'FH',
+          'Second Half Leave': 'SH',
         };
         this.AttendanceMasterList = this.AttendanceMasterList.map((item: any) => ({
           ...item,
-          status: statusMap[item.status] || item.status
-
+          status: statusMap[item.status] || item.status,
+          // UI shows HH:mm only (no seconds)
+          checkIn: this.toTimeWithoutSeconds(item.checkIn),
+          checkOut: this.toTimeWithoutSeconds(item.checkOut),
         }));
 
         // When navigating from dashboard with a status filter, keep only matching rows
@@ -216,18 +252,39 @@ export class DateWiseAttendanceComponent {
           const filterMap: Record<string, string> = { present: 'P', absent: 'A', leave: 'L' };
           const target = filterMap[this.dashboardStatusFilter.toLowerCase()];
           if (target) {
+            const before = this.AttendanceMasterList.length;
             this.AttendanceMasterList = this.AttendanceMasterList.filter((item: any) => item.status === target);
+            if (before > 0 && this.AttendanceMasterList.length === 0) {
+              this.notyf.error(
+                target === 'P'
+                  ? 'No employees are Present for this date'
+                  : target === 'A'
+                    ? 'No employees are Absent for this date'
+                    : 'No matching attendance records for this date',
+              );
+            }
           }
+        }
+
+        if (!(response.data || []).length) {
+          this.notyf.error(
+            response.message ||
+              'No active approved employees found for this branch. Add or approve employees first.',
+          );
         }
 
         this.originalList = [...this.AttendanceMasterList];
         this.filteredList = [...this.originalList];
         this.searchText = '';
         this.currentPage = 1;
+        this.masterSelected = false;
         this.generateDayList(this.obj['startDate'], this.obj['endDate']);
-        this.updateDisplayedList();
-        this.updateVisiblePages();
+        this.applyListFilters();
       } else if (status == false) {
+        this.originalList = [];
+        this.filteredList = [];
+        this.AttendanceMasterList = [];
+        this.applyListFilters();
         this.notyf.error(response.message)
       }
       else if (status == 'expired') {
@@ -236,10 +293,12 @@ export class DateWiseAttendanceComponent {
       }
     },
       (error: any) => {
+        this.originalList = [];
+        this.filteredList = [];
         this.AttendanceMasterList = [];
+        this.applyListFilters();
         console.error('Error loading employees:', error);
         this.notyf.error(error?.error?.message || 'Failed to load employees. Please try again.');
-        // alert('Failed to load employees. Please try again.');
       }
     );
 
@@ -310,10 +369,17 @@ export class DateWiseAttendanceComponent {
     this.master.getemployeeList().subscribe((data: { [x: string]: any; data: any; }) => {
       console.log(data)
       if (data['status'] == true) {
-        // this.notyf.success(data['message']);
-        this.EmpList = data.data;
-        this.EmpList = this.EmpList.filter((item: any) => item.label != 'All')
-
+        // Keep "All" so date-wise can load every employee in the branch
+        const list = data.data || [];
+        const hasAll = list.some(
+          (item: any) => item?.value === 'All' || item?.label === 'All',
+        );
+        this.EmpList = hasAll
+          ? list
+          : [{ label: 'All', value: 'All' }, ...list];
+        if (!this.obj['emp_id']) {
+          this.obj['emp_id'] = 'All';
+        }
       }
       else if (data['status'] == 'expired') {
         this.router.navigate(['login'])
@@ -394,10 +460,10 @@ export class DateWiseAttendanceComponent {
     }).then((result) => {
       if (result.isConfirmed) {
 
-        this.newObj = data;
+        this.newObj = { ...data };
         this.editingId = data.id;
-        this.newObj.checkIn = `${data?.date} ${data?.checkIn}`
-        this.newObj.checkOut = `${data?.date} ${data?.checkOut}`
+        this.newObj.checkIn = this.toDateTimeWithSeconds(data?.date, data?.checkIn);
+        this.newObj.checkOut = this.toDateTimeWithSeconds(data?.date, data?.checkOut);
         this.newObj.startDate = new Date(data.startDate);
         this.newObj.endDate = new Date(data.endDate);
         this.generateDayList(this.newObj.startDate, this.newObj.endDate);
@@ -442,13 +508,45 @@ export class DateWiseAttendanceComponent {
   }
 
 
+  /** Display / bind as HH:mm (drop seconds for type=time step=60). */
+  toTimeWithoutSeconds(time: string | null | undefined): string {
+    if (!time || time === '--') return '';
+    const raw = String(time).trim();
+    // "YYYY-MM-DD HH:mm:ss" or "HH:mm:ss" / "HH:mm"
+    const m = raw.match(/(?:^|\s)(\d{1,2}):(\d{2})(?::\d{2})?/);
+    if (!m) return raw;
+    return `${m[1].padStart(2, '0')}:${m[2]}`;
+  }
+
+  /** Build "YYYY-MM-DD HH:mm:ss" (adds :00 if seconds missing). */
+  toDateTimeWithSeconds(date: string, time: string | null | undefined): string | null {
+    if (!time || time === '--') return null;
+    const raw = String(time).trim();
+    if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(raw)) {
+      const [d, t] = raw.split(/\s+/);
+      if (/^\d{2}:\d{2}:\d{2}/.test(t)) return `${d} ${t.slice(0, 8)}`;
+      if (/^\d{2}:\d{2}$/.test(t)) return `${d} ${t}:00`;
+      return `${d} ${t}`;
+    }
+    if (/^\d{2}:\d{2}:\d{2}/.test(raw)) return `${date} ${raw.slice(0, 8)}`;
+    if (/^\d{2}:\d{2}$/.test(raw)) return `${date} ${raw}:00`;
+    return `${date} ${raw}`;
+  }
+
   correctAll() {
-    const selectedEmployees = this.AttendanceMasterList.filter((item: any) => item.editable);
+    // All pages: only rows whose checkbox is checked
+    const selectedEmployees = (this.originalList || this.AttendanceMasterList)
+      .filter((item: any) => item.editable === true)
+      .map((item: any) => ({
+        ...item,
+        checkIn: this.toDateTimeWithSeconds(item.date, item.checkIn) ?? '--',
+        checkOut: this.toDateTimeWithSeconds(item.date, item.checkOut) ?? '--',
+      }));
     if (selectedEmployees.length == 0) {
       this.notyf.error('Please Select CheckBox');
       return;
     }
-    this.attendanceService.BulkUpdateAttendance(this.AttendanceMasterList).subscribe((data: {
+    this.attendanceService.BulkUpdateAttendance(selectedEmployees).subscribe((data: {
       [x: string]: any;
     }) => {
       if (data['status'] == true) {
@@ -478,9 +576,7 @@ export class DateWiseAttendanceComponent {
       if (data['status'] == true) {
         this.notyf.success(data['message']);
         this.originalList = this.originalList.filter((row: any) => row.id !== item.id);
-        this.filteredList = this.filteredList.filter((row: any) => row.id !== item.id);
-        this.updateDisplayedList();
-        this.updateVisiblePages();
+        this.applyListFilters();
       } else if (data['status'] == 'expired') {
         this.router.navigate(['login'])
       } else {
@@ -490,7 +586,11 @@ export class DateWiseAttendanceComponent {
   }
   visiblePages: number[] = [];
   updateVisiblePages() {
-    const chunkSize = 3;
+    if (!this.totalPages || this.totalPages < 1) {
+      this.visiblePages = [];
+      return;
+    }
+    const chunkSize = 5;
     const startPage = Math.floor((this.currentPage - 1) / chunkSize) * chunkSize + 1;
     const endPage = Math.min(startPage + chunkSize - 1, this.totalPages);
 

@@ -1,0 +1,170 @@
+<div class="container-fluid mt-5">
+  <div class="card mb-4">
+    <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span>Asset Inventory</span>
+      <span class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-success" (click)="export('excel')" [disabled]="!assets.length"><i class="icon-base ri ri-file-excel-2-line me-1"></i> Excel</button>
+        <button class="btn btn-sm btn-outline-danger" (click)="export('pdf')" [disabled]="!assets.length"><i class="icon-base ri ri-file-pdf-2-line me-1"></i> PDF</button>
+        <button class="btn btn-sm btn-primary" (click)="openRegister()" [disabled]="!activeCategories.length" [title]="activeCategories.length ? '' : 'Create a category first'">
+          <i class="icon-base ri ri-add-line me-1"></i> Register asset
+        </button>
+      </span>
+    </h5>
+    <div class="card-body">
+      <div *ngIf="!categories.length" class="alert alert-info py-2 small">Start by creating asset categories (Laptop, Phone, ID card…) under Asset Categories.</div>
+      <div class="row g-2">
+        <div class="col-md-3">
+          <label class="form-label small">Search</label>
+          <input class="form-control" [(ngModel)]="filters.search" (keyup.enter)="load()" (blur)="load()" placeholder="Asset ID, name, serial…" />
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Category</label>
+          <ng-select [items]="categories" bindLabel="name" bindValue="id" [(ngModel)]="filters.categoryId" (change)="load()" placeholder="All"></ng-select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Status</label>
+          <select class="form-select" [(ngModel)]="filters.status" (change)="load()">
+            <option value="">All</option>
+            <option *ngFor="let s of statuses" [value]="s.value">{{ s.label }}</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Condition</label>
+          <select class="form-select" [(ngModel)]="filters.condition" (change)="load()">
+            <option value="">All</option>
+            <option *ngFor="let c of conditions" [value]="c.value">{{ c.label }}</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Warranty</label>
+          <select class="form-select" [(ngModel)]="filters.warranty" (change)="load()">
+            <option value="">Any</option>
+            <option value="expiring">Expiring in 60 days</option>
+            <option value="expired">Expired</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span>{{ assets.length }} asset(s)</span>
+      <button *ngIf="selected.size" class="btn btn-sm btn-outline-primary" (click)="print()"><i class="icon-base ri ri-qr-code-line me-1"></i> Print {{ selected.size }} QR label(s)</button>
+    </div>
+    <div *ngIf="loading" class="text-center py-5 text-muted">Loading…</div>
+    <div class="table-responsive" *ngIf="!loading">
+      <table class="table table-striped table-hover text-nowrap mb-0">
+        <thead>
+          <tr>
+            <th><input type="checkbox" class="form-check-input" [checked]="assets.length > 0 && selected.size === assets.length" (change)="toggleAll($any($event.target).checked)" /></th>
+            <th>Asset</th><th>Category</th><th>Serial</th><th>Status</th><th>Condition</th><th>Holder</th><th>Warranty</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="!assets.length"><td colspan="9" class="text-center text-muted py-4">No assets match.</td></tr>
+          <tr *ngFor="let a of assets">
+            <td><input type="checkbox" class="form-check-input" [checked]="selected.has(a.id)" (change)="toggle(a.id, $any($event.target).checked)" /></td>
+            <td><a [routerLink]="['/layout/assets', a.id]" class="fw-semibold">{{ a.assetTag }}</a><div class="small text-muted">{{ a.name }}</div></td>
+            <td>{{ a.category }}</td>
+            <td class="small">{{ a.serialNumber || '—' }}</td>
+            <td><span class="badge" [ngClass]="statusBadge(a.status)">{{ statusLabel(a.status) }}</span></td>
+            <td><span class="badge" [ngClass]="conditionBadge(a.condition)">{{ conditionLabel(a.condition) }}</span></td>
+            <td>
+              <ng-container *ngIf="a.holder; else noHolder">
+                {{ a.holder.name }}
+                <div class="small">
+                  <span class="badge" [ngClass]="ackBadge(a.holder.ackStatus)" *ngIf="a.holder.ackStatus !== 'not_required' && a.holder.ackStatus !== 'acknowledged'">{{ ackLabel(a.holder.ackStatus) }}</span>
+                  <span class="badge bg-label-info" *ngIf="a.holder.returnRequested">Return requested</span>
+                  <span class="badge bg-label-danger" *ngIf="a.holder.overdue">Return overdue</span>
+                </div>
+              </ng-container>
+              <ng-template #noHolder><span class="text-muted">—</span></ng-template>
+            </td>
+            <td class="small" [class.text-danger]="a.warranty?.state === 'expired'" [class.text-warning]="a.warranty?.state === 'expiring'">
+              {{ a.warrantyExpiry ? (a.warrantyExpiry | date: 'dd MMM yyyy') : '—' }}
+            </td>
+            <td class="text-end">
+              <button *ngIf="a.status === 'available'" class="btn btn-sm btn-outline-primary me-1" (click)="openAllocate(a)">Allocate</button>
+              <a class="btn btn-sm btn-outline-secondary" [routerLink]="['/layout/assets', a.id]">Open</a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Register -->
+  <div *ngIf="registerForm" class="modal d-block" style="background: rgba(15, 23, 42, 0.45); overflow-y: auto" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Register asset</h5>
+          <button type="button" class="btn-close" (click)="registerForm = null"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Category</label>
+              <select class="form-select" [(ngModel)]="registerForm.categoryId">
+                <option *ngFor="let c of activeCategories" [value]="c.id">{{ c.name }} ({{ c.code }})</option>
+              </select>
+            </div>
+            <div class="col-md-6"><label class="form-label">Name</label><input class="form-control" [(ngModel)]="registerForm.name" placeholder="Dell Latitude 5440" /></div>
+            <div class="col-md-2"><label class="form-label">Quantity</label><input type="number" min="1" max="200" class="form-control" [(ngModel)]="registerForm.quantity" /></div>
+            <div class="col-md-4"><label class="form-label">Brand</label><input class="form-control" [(ngModel)]="registerForm.brand" /></div>
+            <div class="col-md-4"><label class="form-label">Model</label><input class="form-control" [(ngModel)]="registerForm.model" /></div>
+            <div class="col-md-4">
+              <label class="form-label">Serial / IMEI</label>
+              <input class="form-control" [(ngModel)]="registerForm.serialNumber" [disabled]="registerForm.quantity > 1" [placeholder]="registerForm.quantity > 1 ? 'Add per asset later' : ''" />
+            </div>
+            <div class="col-md-3"><label class="form-label">Purchase date</label><input type="date" class="form-control" [(ngModel)]="registerForm.purchaseDate" /></div>
+            <div class="col-md-3"><label class="form-label">Cost (₹, each)</label><input type="number" min="0" class="form-control" [(ngModel)]="registerForm.purchaseCost" /></div>
+            <div class="col-md-3"><label class="form-label">Vendor</label><input class="form-control" [(ngModel)]="registerForm.vendor" /></div>
+            <div class="col-md-3"><label class="form-label">Invoice no.</label><input class="form-control" [(ngModel)]="registerForm.invoiceNo" /></div>
+            <div class="col-md-3"><label class="form-label">Warranty until</label><input type="date" class="form-control" [(ngModel)]="registerForm.warrantyExpiry" /></div>
+            <div class="col-md-3"><label class="form-label">Location</label><input class="form-control" [(ngModel)]="registerForm.location" placeholder="Pune office, IT store" /></div>
+            <div class="col-md-3">
+              <label class="form-label">Condition</label>
+              <select class="form-select" [(ngModel)]="registerForm.condition"><option *ngFor="let c of conditions" [value]="c.value">{{ c.label }}</option></select>
+            </div>
+            <div class="col-12"><label class="form-label">Notes</label><textarea class="form-control" rows="2" [(ngModel)]="registerForm.notes"></textarea></div>
+          </div>
+          <p class="small text-muted mt-2 mb-0">Each asset gets a unique ID from the category code (e.g. LAP-0007) and its own QR code.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="registerForm = null">Cancel</button>
+          <button class="btn btn-outline-primary" (click)="saveRegister(true)" [disabled]="saving">Register &amp; print labels</button>
+          <button class="btn btn-primary" (click)="saveRegister(false)" [disabled]="saving">Register</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Allocate -->
+  <div *ngIf="allocateForm" class="modal d-block" style="background: rgba(15, 23, 42, 0.45)" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Allocate {{ allocateForm.assetTag }}</h5>
+          <button type="button" class="btn-close" (click)="allocateForm = null"></button>
+        </div>
+        <div class="modal-body">
+          <p class="small text-muted">{{ allocateForm.name }}</p>
+          <label class="form-label">Employee</label>
+          <ng-select class="mb-2" [items]="employeeOptions" bindLabel="label" bindValue="value" [(ngModel)]="allocateForm.employeeId" appendTo="body" placeholder="Select employee"></ng-select>
+          <div class="row g-2 mb-2">
+            <div class="col"><label class="form-label">Handed over on</label><input type="date" class="form-control" [(ngModel)]="allocateForm.allocatedOn" /></div>
+            <div class="col"><label class="form-label">Return by <span class="text-muted small">(optional)</span></label><input type="date" class="form-control" [(ngModel)]="allocateForm.expectedReturnDate" /></div>
+          </div>
+          <label class="form-label">Notes (accessories, remarks)</label>
+          <textarea class="form-control" rows="2" [(ngModel)]="allocateForm.notes" placeholder="Charger, bag, mouse"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="allocateForm = null">Cancel</button>
+          <button class="btn btn-primary" (click)="saveAllocate()" [disabled]="saving || !allocateForm.employeeId">Allocate</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

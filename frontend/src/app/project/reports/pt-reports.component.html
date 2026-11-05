@@ -1,0 +1,176 @@
+<div class="container-fluid mt-5">
+  <div class="card mb-4">
+    <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span>Project &amp; Timesheet Reports</span>
+      <span class="d-flex gap-2" *ngIf="tab !== 'settings'">
+        <button class="btn btn-sm btn-outline-success" (click)="export('excel')"><i class="icon-base ri ri-file-excel-2-line me-1"></i> Excel</button>
+        <button class="btn btn-sm btn-outline-danger" (click)="export('pdf')"><i class="icon-base ri ri-file-pdf-2-line me-1"></i> PDF</button>
+      </span>
+    </h5>
+    <div class="card-body">
+      <ul class="nav nav-pills gap-2 mb-3">
+        <li class="nav-item"><button class="nav-link" [class.active]="tab === 'utilization'" (click)="setTab('utilization')">Utilization</button></li>
+        <li class="nav-item"><button class="nav-link" [class.active]="tab === 'projects'" (click)="setTab('projects')">Project-wise</button></li>
+        <li class="nav-item"><button class="nav-link" [class.active]="tab === 'clients'" (click)="setTab('clients')">Client-wise</button></li>
+        <li class="nav-item"><button class="nav-link" [class.active]="tab === 'reconciliation'" (click)="setTab('reconciliation')">Attendance vs timesheet</button></li>
+        <li class="nav-item"><button class="nav-link" [class.active]="tab === 'settings'" (click)="setTab('settings')">Settings</button></li>
+      </ul>
+      <div class="row g-2 align-items-end" *ngIf="tab !== 'settings'">
+        <div class="col-md-2"><label class="form-label small">From</label><input type="date" class="form-control" [(ngModel)]="filters.from" (change)="load()" /></div>
+        <div class="col-md-2"><label class="form-label small">To</label><input type="date" class="form-control" [(ngModel)]="filters.to" (change)="load()" /></div>
+        <div class="col-md-3" *ngIf="tab === 'utilization' || tab === 'reconciliation'">
+          <label class="form-label small">Department</label>
+          <ng-select [items]="departmentOptions" bindLabel="label" bindValue="value" [(ngModel)]="filters.departmentId" (change)="load()" placeholder="All"></ng-select>
+        </div>
+        <div class="col-md-3" *ngIf="tab === 'projects'">
+          <label class="form-label small">Client</label>
+          <ng-select [items]="clients" bindLabel="name" bindValue="id" [(ngModel)]="filters.clientId" (change)="load()" placeholder="All"></ng-select>
+        </div>
+        <div class="col-md-3" *ngIf="tab !== 'reconciliation'">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="rApproved" [(ngModel)]="filters.approvedOnly" (change)="load()" />
+            <label class="form-check-label small" for="rApproved">Approved timesheets only</label>
+          </div>
+        </div>
+        <div class="col-md-3" *ngIf="tab === 'reconciliation'">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="rFlagged" [(ngModel)]="filters.flaggedOnly" (change)="load()" />
+            <label class="form-check-label small" for="rFlagged">Only days that don't match</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="text-center py-4 text-muted">Loading…</div>
+
+  <!-- Utilization -->
+  <ng-container *ngIf="tab === 'utilization' && !loading">
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Capacity</div><div class="fs-4 fw-bold">{{ fmtHours(totals.capacity) }}</div></div></div></div>
+      <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Logged</div><div class="fs-4 fw-bold">{{ fmtHours(totals.logged) }}</div></div></div></div>
+      <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Utilization</div><div class="fs-4 fw-bold">{{ fmtPct(totals.utilization) }}</div></div></div></div>
+      <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Billable utilization</div><div class="fs-4 fw-bold text-success">{{ fmtPct(totals.billableUtilization) }}</div></div></div></div>
+    </div>
+    <div class="card mb-4" *ngIf="chart">
+      <h6 class="card-header">Utilization by employee (top 20)</h6>
+      <div class="card-body">
+        <apx-chart [series]="chart.series" [chart]="chart.chart" [plotOptions]="chart.plotOptions" [xaxis]="chart.xaxis" [colors]="chart.colors" [dataLabels]="chart.dataLabels"></apx-chart>
+      </div>
+    </div>
+    <div class="card mb-5">
+      <div class="card-body py-2 small text-muted">Capacity = working days in the range, minus holidays and approved leave, × {{ settings?.hoursPerDay || 8 }}h.</div>
+      <div class="table-responsive">
+        <table class="table table-striped text-nowrap mb-0">
+          <thead><tr><th>Employee</th><th>Department</th><th class="text-end">Capacity</th><th class="text-end">Logged</th><th class="text-end">Billable</th><th class="text-end">Utilization</th><th class="text-end">Billable %</th><th class="text-end">Projects</th></tr></thead>
+          <tbody>
+            <tr *ngIf="!utilization.length"><td colspan="8" class="text-center text-muted py-4">No employees in scope.</td></tr>
+            <tr *ngFor="let r of utilization">
+              <td>{{ r.employeeName }} <span class="small text-muted">{{ r.empCode }}</span></td>
+              <td>{{ r.department }}</td>
+              <td class="text-end">{{ fmtHours(r.capacityHours) }}</td>
+              <td class="text-end">{{ fmtHours(r.loggedHours) }}</td>
+              <td class="text-end">{{ fmtHours(r.billableHours) }}</td>
+              <td class="text-end fw-semibold" [class.text-danger]="r.utilization !== null && r.utilization < 50" [class.text-warning]="r.utilization > 110">{{ fmtPct(r.utilization) }}</td>
+              <td class="text-end">{{ fmtPct(r.billableUtilization) }}</td>
+              <td class="text-end">{{ r.projects }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- Projects -->
+  <ng-container *ngIf="tab === 'projects' && !loading">
+    <div class="card mb-4" *ngIf="chart">
+      <h6 class="card-header">Estimated vs actual hours</h6>
+      <div class="card-body"><apx-chart [series]="chart.series" [chart]="chart.chart" [xaxis]="chart.xaxis" [dataLabels]="chart.dataLabels"></apx-chart></div>
+    </div>
+    <div class="card mb-5">
+      <div class="table-responsive">
+        <table class="table table-striped text-nowrap mb-0">
+          <thead><tr><th>Project</th><th>Client</th><th class="text-end">Est.</th><th class="text-end">Actual</th><th class="text-end">Billable</th><th>Hours budget</th><th class="text-end">Billable value</th><th class="text-end">Cost</th><th>Amount budget</th></tr></thead>
+          <tbody>
+            <tr *ngIf="!projects.length"><td colspan="9" class="text-center text-muted py-4">No project activity in this range.</td></tr>
+            <tr *ngFor="let p of projects">
+              <td><a [routerLink]="['/layout/project/projects', p.projectId]" class="fw-semibold">{{ p.name }}</a><div class="small text-muted">{{ p.managerName }}</div></td>
+              <td>{{ p.clientName }}</td>
+              <td class="text-end">{{ fmtHours(p.estimatedHours) }}</td>
+              <td class="text-end" [class.text-danger]="p.estimatedHours && p.actualHours > p.estimatedHours">{{ fmtHours(p.actualHours) }}</td>
+              <td class="text-end">{{ fmtHours(p.billableHours) }}</td>
+              <td><span *ngIf="p.hoursBudget" [ngClass]="'text-' + budgetTone(p.hoursBudget.state)">{{ p.hoursBudget.pct | number: '1.0-0' }}%</span><span *ngIf="!p.hoursBudget" class="text-muted">—</span></td>
+              <td class="text-end">{{ fmtMoney(p.billableValue) }}</td>
+              <td class="text-end">{{ fmtMoney(p.cost) }}</td>
+              <td><span *ngIf="p.amountBudget" [ngClass]="'text-' + budgetTone(p.amountBudget.state)">{{ p.amountBudget.pct | number: '1.0-0' }}%</span><span *ngIf="!p.amountBudget" class="text-muted">—</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card-body py-2 small text-muted">Budget % uses hours booked in the selected range against the full project budget.</div>
+    </div>
+  </ng-container>
+
+  <!-- Clients -->
+  <div class="card mb-5" *ngIf="tab === 'clients' && !loading">
+    <div class="table-responsive">
+      <table class="table table-striped text-nowrap mb-0">
+        <thead><tr><th>Client</th><th class="text-end">Projects</th><th class="text-end">Hours</th><th class="text-end">Billable</th><th class="text-end">Billable value</th><th class="text-end">Cost</th><th class="text-end">Margin</th></tr></thead>
+        <tbody>
+          <tr *ngIf="!clientRows.length"><td colspan="7" class="text-center text-muted py-4">No data.</td></tr>
+          <tr *ngFor="let c of clientRows">
+            <td class="fw-semibold">{{ c.clientName }}</td>
+            <td class="text-end">{{ c.activeProjects }} active / {{ c.projects }}</td>
+            <td class="text-end">{{ fmtHours(c.hours) }}</td>
+            <td class="text-end">{{ fmtHours(c.billableHours) }}</td>
+            <td class="text-end">{{ fmtMoney(c.billableValue) }}</td>
+            <td class="text-end">{{ fmtMoney(c.cost) }}</td>
+            <td class="text-end fw-semibold" [class.text-danger]="c.margin < 0">{{ fmtMoney(c.margin) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Reconciliation -->
+  <div class="card mb-5" *ngIf="tab === 'reconciliation' && !loading">
+    <div class="card-body py-2 small text-muted">
+      Attendance and timesheets are kept separate. This compares them: hours logged without attendance or on leave,
+      more than {{ settings?.reconcileToleranceHours ?? 0.5 }}h above attended time, or present on a working day with nothing logged.
+    </div>
+    <div class="table-responsive">
+      <table class="table table-striped text-nowrap mb-0">
+        <thead><tr><th>Employee</th><th>Date</th><th class="text-end">Attendance</th><th class="text-end">Logged</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr *ngIf="!reconciliation.length"><td colspan="5" class="text-center text-muted py-4">Everything matches.</td></tr>
+          <tr *ngFor="let r of reconciliation">
+            <td>{{ r.employeeName }}</td>
+            <td>{{ r.date | date: 'EEE dd MMM' }}</td>
+            <td class="text-end">{{ r.holiday ? 'Holiday' : r.leave ? 'Leave (' + r.leave + ')' : fmtHours(r.attendanceHours) }}</td>
+            <td class="text-end">{{ fmtHours(r.logged) }}</td>
+            <td class="small"><div *ngFor="let f of r.flags" class="text-warning">{{ f.message }}</div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="card mb-5" *ngIf="tab === 'settings' && settings">
+    <div class="card-body">
+      <label class="form-label">Working days</label>
+      <div class="d-flex flex-wrap gap-3 mb-3">
+        <div class="form-check" *ngFor="let d of weekdays">
+          <input class="form-check-input" type="checkbox" [id]="'wd-' + d.value" [checked]="settings.workingDays.includes(d.value)" (change)="toggleDay(d.value, $any($event.target).checked)" />
+          <label class="form-check-label" [for]="'wd-' + d.value">{{ d.label }}</label>
+        </div>
+      </div>
+      <div class="row g-3" style="max-width: 520px">
+        <div class="col-6"><label class="form-label">Hours per working day</label><input type="number" min="1" max="24" class="form-control" [(ngModel)]="settings.hoursPerDay" /></div>
+        <div class="col-6"><label class="form-label">Reconciliation tolerance (h)</label><input type="number" min="0" max="8" step="0.25" class="form-control" [(ngModel)]="settings.reconcileToleranceHours" /></div>
+      </div>
+      <p class="small text-muted mt-2">Used for utilization capacity and the attendance comparison.</p>
+      <button class="btn btn-primary" (click)="saveSettings()">Save settings</button>
+    </div>
+  </div>
+</div>

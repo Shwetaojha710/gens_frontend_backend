@@ -59,6 +59,10 @@ export const DEFAULT_PERMISSIONS: PermissionSection[] = [
       { key: 'att.weekend',      label: 'Weekend Employee List', roles: ['admin', 'superadmin', 'hr'] },
       { key: 'att.compoff',      label: 'Add Comp Off',          roles: ['admin', 'superadmin', 'hr'] },
       { key: 'att.contractual',  label: 'Contractual Approval',  roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'att.aiFace',       label: 'AI Face Recognition',   roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'att.aiCameras',    label: 'Camera Management',     roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'att.aiEnroll',     label: 'Face Enrollment',       roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'att.aiLogs',       label: 'Recognition Logs',      roles: ['admin', 'superadmin', 'hr'] },
     ]
   },
   {
@@ -72,6 +76,45 @@ export const DEFAULT_PERMISSIONS: PermissionSection[] = [
       { key: 'pay.appraisal',  label: 'Employee Appraisal',    roles: ['admin', 'superadmin', 'hr'] },
       { key: 'pay.appraisalList', label: 'Appraisal List',     roles: ['admin', 'superadmin', 'hr'] },
       { key: 'pay.arrear',     label: 'Arrear Management',     roles: ['admin', 'superadmin', 'hr'] },
+    ]
+  },
+  {
+    key: 'assets', label: 'Assets', icon: 'ri-macbook-line',
+    roles: ['admin', 'superadmin', 'hr'],
+    children: [
+      { key: 'asset.dashboard',  label: 'Asset Dashboard',  roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'asset.inventory',  label: 'Inventory',        roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'asset.categories', label: 'Asset Categories', roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'asset.clearance',  label: 'Exit Clearance',   roles: ['admin', 'superadmin', 'hr'] },
+    ]
+  },
+  {
+    key: 'projects', label: 'Projects & Timesheets', icon: 'ri-briefcase-4-line',
+    roles: ['admin', 'superadmin', 'hr'],
+    children: [
+      { key: 'proj.projects',   label: 'Projects',        roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'proj.clients',    label: 'Clients',         roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'proj.timesheets', label: 'Timesheets',      roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'proj.reports',    label: 'Project Reports', roles: ['admin', 'superadmin', 'hr'] },
+    ]
+  },
+  {
+    key: 'expenses', label: 'Expenses', icon: 'ri-wallet-3-line',
+    roles: ['admin', 'superadmin', 'hr'],
+    children: [
+      { key: 'exp.dashboard', label: 'Expense Dashboard', roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'exp.claims',    label: 'Expense Claims',    roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'exp.policies',  label: 'Expense Policies',  roles: ['admin', 'superadmin'] },
+    ]
+  },
+  {
+    key: 'performance', label: 'Performance', icon: 'ri-line-chart-line',
+    roles: ['admin', 'superadmin', 'hr'],
+    children: [
+      { key: 'perf.dashboard', label: 'Dashboard & Analytics', roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'perf.cycles',    label: 'Appraisal Cycles',      roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'perf.reviews',   label: 'Reviews & Goals',       roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'perf.history',   label: 'Employee History',      roles: ['admin', 'superadmin', 'hr'] },
     ]
   },
   {
@@ -109,6 +152,7 @@ export const DEFAULT_PERMISSIONS: PermissionSection[] = [
       { key: 'set.prefix',       label: 'Company Prefix',    roles: ['admin', 'superadmin'] },
       { key: 'set.brand',        label: 'Brand & Colors',    roles: ['admin', 'superadmin'] },
       { key: 'set.handbook',     label: 'Employee Handbook', roles: ['admin', 'superadmin'] },
+      { key: 'set.appconfig',    label: 'App Config',        roles: ['admin', 'superadmin'] },
       { key: 'set.roleperm',     label: 'Role Permissions',  roles: ['admin', 'superadmin'] },
       { key: 'set.userperm',     label: 'User Permissions',  roles: ['admin', 'superadmin'] },
       { key: 'set.sidebaraccess',label: 'My Sidebar Access', roles: ['admin', 'superadmin', 'hr', 'manager', 'director', 'recruiter'] },
@@ -180,7 +224,7 @@ export class PermissionService {
   private readonly ROLE_PERM_KEY   = 'app_role_permissions';
   private readonly USER_PERM_KEY   = 'custom_user_permissions';
   // Bump this version whenever DEFAULT_PERMISSIONS changes — forces a fresh load
-  private readonly PERM_VERSION    = 'v8';
+  private readonly PERM_VERSION    = 'v9';
   private readonly VERSION_KEY     = 'app_role_permissions_version';
 
   // ── Role-based permissions (admin configures per role) ──────────────────

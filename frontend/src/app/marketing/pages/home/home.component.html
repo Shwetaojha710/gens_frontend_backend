@@ -1,7 +1,7 @@
 <!-- ═══ HERO ═══ -->
 <app-hero-section />
 
-<!-- ═══ TRUSTED BY ═══ -->
+<!-- ═══ TRUSTED BY (logos only — stats live once in hero proof bar) ═══ -->
 <section class="py-12 bg-[var(--bg-secondary)] border-y border-[var(--border-color)]">
   <div class="container-gens mb-4">
     <p class="text-center text-sm font-semibold uppercase tracking-widest text-[var(--text-muted)]" appScrollReveal>
@@ -9,15 +9,6 @@
     </p>
   </div>
   <app-logo-marquee [companies]="trustedCompanies" />
-  <div class="container-gens mt-12">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8" appStaggerReveal>
-      @for (stat of stats; track stat.label) {
-        <div class="text-center p-6 rounded-2xl lattice-card">
-          <app-counter [stat]="stat" />
-        </div>
-      }
-    </div>
-  </div>
 </section>
 
 <!-- ═══ PLATFORM ═══ -->
@@ -65,18 +56,28 @@
   </div>
 </section>
 
-<!-- ═══ KEY FEATURES ═══ -->
+<!-- ═══ KEY FEATURES (grouped) ═══ -->
 <section class="section-padding">
   <div class="container-gens">
     <app-section-heading
       badge="Features"
       titleBefore="Powerful tools for"
       highlight="every HR need"
-      subtitle="Attendance, payroll, recruitment, and more — in one AI-powered suite."
+      subtitle="Workforce, talent, and operations — grouped clearly in one AI-powered suite."
     />
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5" appStaggerReveal [stagger]="0.05">
-      @for (feature of keyFeatures; track feature.title) {
-        <app-feature-card [feature]="feature" />
+    <div class="space-y-12" appStaggerReveal [stagger]="0.08">
+      @for (group of featureGroups; track group.title) {
+        <div>
+          <h3 class="text-lg font-semibold mb-5 text-[var(--text-primary)] flex items-center gap-2">
+            <span class="w-1.5 h-5 rounded-full bg-gens-500 inline-block"></span>
+            {{ group.title }}
+          </h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            @for (feature of group.features; track feature.title) {
+              <app-feature-card [feature]="feature" />
+            }
+          </div>
+        </div>
       }
     </div>
   </div>
@@ -106,7 +107,7 @@
       badge="Pricing"
       titleBefore="Simple,"
       highlight="transparent pricing"
-      subtitle="GPS attendance, AI Face ID, payroll, ATS, and AI analytics — pick the plan that fits your team."
+      subtitle="Basic for small teams · Most Popular for growing businesses · Professional for advanced HR · Enterprise for custom needs."
     />
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 max-w-7xl mx-auto" appStaggerReveal [stagger]="0.08">
       @for (plan of pricingTeaser; track plan.name) {
@@ -131,11 +132,11 @@
   </div>
 </section>
 
-<!-- ═══ CONTACT ═══ -->
+<!-- ═══ CONTACT / REQUEST A DEMO (same form) ═══ -->
 <section id="contact" class="section-padding">
   <div class="container-gens">
     <app-section-heading
-      badge="Contact"
+      badge="Request a Demo"
       titleBefore="Ready to"
       highlight="get started?"
       subtitle="Tell us about your team — we'll recommend the right GENS plan."

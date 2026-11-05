@@ -53,12 +53,13 @@ const log = sequelize.define("log", {
   tableName: "log",
 });
 
-log.sync({alter: true})
-    .then(() => {
-        console.log("log model synced successfully");
-    })
-    .catch((error) => {
-        console.error("Error syncing log model:", error);
-    });
+// Disabled: sync({ alter: true }) exhausts Postgres locks (53200 out of shared memory)
+// log.sync({alter: true})
+//     .then(() => {
+//         console.log("log model synced successfully");
+//     })
+//     .catch((error) => {
+//         console.error("Error syncing log model:", error);
+//     });
 
 module.exports = log;

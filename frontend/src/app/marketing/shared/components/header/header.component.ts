@@ -14,6 +14,8 @@ export class HeaderComponent {
   readonly navLinks = NAV_LINKS;
   readonly scrolled = signal(false);
   readonly mobileOpen = signal(false);
+  readonly desktopOpen = signal<string | null>(null);
+  readonly mobileSection = signal<string | null>(null);
 
   constructor(readonly themeService: MarketingThemeService) {}
 
@@ -22,7 +24,24 @@ export class HeaderComponent {
     this.scrolled.set(window.scrollY > 20);
   }
 
+  openDesktopMenu(key: string): void {
+    this.desktopOpen.set(key);
+  }
+
+  closeDesktopMenu(): void {
+    this.desktopOpen.set(null);
+  }
+
+  toggleDesktopMenu(key: string): void {
+    this.desktopOpen.update((cur) => (cur === key ? null : key));
+  }
+
+  toggleMobileSection(key: string): void {
+    this.mobileSection.update((cur) => (cur === key ? null : key));
+  }
+
   closeMobileMenu(): void {
     this.mobileOpen.set(false);
+    this.mobileSection.set(null);
   }
 }

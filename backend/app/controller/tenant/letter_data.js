@@ -1,5 +1,6 @@
 const LetterData = require('../../models/letter_data');
 const Helper = require('../../helper/helper');
+const { clearanceFor, clearanceMessage } = require('../../helper/assets');
 const empPersonal = require('../../models/empPersonal');
 const Designation = require('../../models/designation');
 const Department = require('../../models/department');
@@ -491,7 +492,12 @@ exports.generateAllLettersPdf = async (req, res) => {
 
         const result = { appointment: null, offer: null, relieving: null };
 
+        // The employee's own relieving letter waits for asset clearance
+        const clearance = records.some((r) => r.type === 'relieving') ? await clearanceFor(tenantId, employeeId) : null;
+        if (clearance && !clearance.cleared) result.relievingBlocked = `Return company assets first — ${clearanceMessage(clearance)}`;
+
         for (const record of records) {
+            if (record.type === 'relieving' && result.relievingBlocked) continue;
             const lhB64 = getLetterheadBase64(record.type, tenant && tenant.letterhead);
             const built = buildLetterDoc(record.type, emp, record.data || {}, designation, department, tenant, lhB64);
             if (built) {
@@ -499,8 +505,9 @@ exports.generateAllLettersPdf = async (req, res) => {
             }
         }
 
-        const generated = Object.values(result).filter(Boolean).length;
+        const generated = ['appointment', 'offer', 'relieving'].filter((k) => result[k]).length;
         if (generated === 0) {
+            if (result.relievingBlocked) return Helper.response(false, result.relievingBlocked, result, res, 200);
             return Helper.response(false, 'No letter data found. Please generate letters first.', result, res, 404);
         }
 
@@ -530,6 +537,24 @@ exports.generateLetterPdf = async (req, res) => {
 
         if (!emp) return Helper.response(false, 'Employee not found', {}, res, 404);
         if (!record) return Helper.response(false, 'Letter data not found. Please generate the letter first.', {}, res, 404);
+
+        // Asset clearance: no relieving letter while company assets are still with the employee
+        if (type === 'relieving') {
+            const clearance = await clearanceFor(tenantId, employeeId);
+            if (!clearance.cleared && !req.body.overrideAssetClearance) {
+                return Helper.response(false, `Asset clearance pending — ${clearanceMessage(clearance)}`, { assetClearance: clearance }, res, 200);
+            }
+            if (!clearance.cleared) {
+                await writeAudit({
+                    req,
+                    actionType: 'RELIEVING_LETTER_ASSET_OVERRIDE',
+                    referenceId: employeeId,
+                    employeeId,
+                    newValue: { pendingAssets: clearance.pending.map((p) => p.assetTag) },
+                    remarks: 'Relieving letter generated with assets pending return',
+                });
+            }
+        }
 
         const [designation, department] = await Promise.all([
             emp.designationId ? Designation.findOne({ where: { id: emp.designationId, tenantId }, raw: true }) : null,

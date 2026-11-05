@@ -212,7 +212,27 @@ isAllAttendanceSelected() {
     })
   }
   delete(data: any) {
-    this.SalaryArr = this.SalaryArr.filter((item: any) => item.employeeId != data.employeeId)
+    Swal.fire({
+      title: 'Are you sure?',
+      text: 'Remove this employee from the salary generation list?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, remove',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+    }).then((result) => {
+      if (!result.isConfirmed) return;
+      const empId = data?.employeeId;
+      this.originalList = (this.originalList || []).filter(
+        (item: any) => item.employeeId != empId,
+      );
+      this.SalaryArr = (this.SalaryArr || []).filter(
+        (item: any) => item.employeeId != empId,
+      );
+      this.applyFilters();
+      this.isAllSelected();
+      this.notyf.success('Employee removed from salary list');
+    });
   }
 
   statuschange(item: any, status: any) {
@@ -341,6 +361,19 @@ isAllAttendanceSelected() {
       this.isLoading = false
       if (this.statusService.handleResponseStatus(response.status, response.message || "Success")) {
         this.masterSelected = false
+        // Remove successfully generated employees so a second click cannot re-submit them
+        const generatedIds = new Set(
+          (response?.data?.generatedSalaries || []).map((b: any) => b.employeeId),
+        );
+        if (generatedIds.size > 0) {
+          this.originalList = (this.originalList || []).filter(
+            (item: any) => !generatedIds.has(item.employeeId),
+          );
+          this.SalaryArr = (this.SalaryArr || []).filter(
+            (item: any) => !generatedIds.has(item.employeeId),
+          );
+          this.applyFilters();
+        }
         Swal.fire({
           title: "Salary Generated Successfully",
           imageUrl: "/assets/img/icons8-success-192.gif",
@@ -442,6 +475,28 @@ isAllAttendanceSelected() {
     });
   }
   newVar: any = false
+  attendanceFocusHint = '';
+  private pendingAttendanceFocus: string | null = null;
+  private pendingAttendanceDate: string | null = null;
+
+  /** From Salary Breakup metrics → related tab (and unlock rows for quick edit). */
+  jumpToRelated(tab: string, focus?: string, date?: string): void {
+    this.pendingAttendanceFocus = focus || null;
+    this.pendingAttendanceDate = date || null;
+    if (tab === 'attendance') {
+      const labels: Record<string, string> = {
+        absent: 'Absent rows unlocked for edit — update check-in/out then Submit',
+        late: 'Late rows unlocked for edit — update times then Submit',
+        half: 'Half-day rows unlocked for edit — update times then Submit',
+        present: 'Select rows to edit check-in/out, then Submit',
+      };
+      this.attendanceFocusHint = labels[focus || ''] || 'Select rows to edit, then Submit';
+    } else {
+      this.attendanceFocusHint = '';
+    }
+    this.changeTab(tab);
+  }
+
   changeTab(tab: string) {
 
     this.activeTab = tab;
@@ -473,6 +528,76 @@ isAllAttendanceSelected() {
 
     }
 
+  }
+
+  private attendanceStatusKey(status: any): string {
+    const s = String(status ?? '').toLowerCase().trim();
+    if (!s) return 'default';
+    if (s.includes('absent')) return 'absent';
+    if (s.includes('half day') || (s.includes('half') && s.includes('late'))) return 'half';
+    if (s.startsWith('late') || s.includes('late by')) return 'late';
+    if (s.includes('on time') || s === 'present') return 'ontime';
+    if (s.includes('week off') || s.includes('week-off') || s === 'wo') return 'weekoff';
+    if (s.includes('restrict')) return 'restricted';
+    if (s.includes('gazett')) return 'gazetted';
+    if (s.includes('holiday')) return 'holiday';
+    if (
+      s.startsWith('leave') ||
+      s.includes('first half') ||
+      s.includes('second half') ||
+      s.includes('full day')
+    ) {
+      return 'leave';
+    }
+    return 'default';
+  }
+
+  getAttendanceRowClass(item: any): string {
+    const key = this.attendanceStatusKey(item?.status);
+    const classes = [`att-row`, `att-row--${key}`];
+    if (item?._focusRow) classes.push('att-row--focus');
+    if (item?.editable) classes.push('att-row--editable');
+    return classes.join(' ');
+  }
+
+  getAttendanceStatusClass(status: any): string {
+    return `att-status--${this.attendanceStatusKey(status)}`;
+  }
+
+  private applyAttendanceFocus(): void {
+    const focus = this.pendingAttendanceFocus;
+    const focusDate = this.pendingAttendanceDate;
+    this.pendingAttendanceFocus = null;
+    this.pendingAttendanceDate = null;
+    if (!this.attendanceList?.length) return;
+
+    const norm = (v: any) => String(v ?? '').toLowerCase().trim();
+    const dateKey = (v: any) => String(v ?? '').slice(0, 10);
+
+    this.attendanceList.forEach((row: any) => {
+      row._focusRow = false;
+      const status = norm(row.status);
+      let match = false;
+      if (focusDate && dateKey(row.date) === dateKey(focusDate)) {
+        match = true;
+      } else if (!focusDate && focus === 'absent') {
+        match = status.includes('absent');
+      } else if (!focusDate && focus === 'late') {
+        // Only pure late rows (salary lateDays) — not "Half Day (Late by…)"
+        match = status.startsWith('late') && !status.includes('half');
+      } else if (!focusDate && focus === 'half') {
+        match = status.includes('half');
+      }
+      if (match) {
+        row.editable = true;
+        row._focusRow = true;
+      }
+    });
+
+    this.isAllAttendanceSelected();
+    setTimeout(() => {
+      document.getElementById('salary-att-focus')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 80);
   }
 
   approveRegularization(item: any, status: string) {
@@ -868,8 +993,12 @@ this.modal.show();
           this.attendanceList = (response.data?.attendanceList || []).map((a: any) => ({
             ...a,
             editable: !!a.editable,
+            _focusRow: false,
           }));
           this.attendanceMasterSelected = false;
+          if (this.pendingAttendanceFocus || this.pendingAttendanceDate) {
+            this.applyAttendanceFocus();
+          }
         }
         else if (status == "expired") {
           this.router.navigate(["login"]);

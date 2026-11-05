@@ -1,0 +1,70 @@
+<div class="container-fluid py-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h4 class="mb-0">AI Face Recognition</h4>
+      <small class="text-muted">Live attendance via IP cameras (CPU)</small>
+    </div>
+    <div class="d-flex gap-2">
+      <span class="badge" [class.bg-success]="serviceOk === true" [class.bg-danger]="serviceOk === false" [class.bg-secondary]="serviceOk === null">
+        Face service: {{ serviceOk === true ? 'Online' : serviceOk === false ? 'Offline' : '…' }}
+      </span>
+      <button class="btn btn-sm btn-outline-primary" (click)="refresh()" [disabled]="loading">Refresh</button>
+      <a class="btn btn-sm btn-primary" routerLink="/layout/attendance/camera-management">Cameras</a>
+      <a class="btn btn-sm btn-primary" routerLink="/layout/attendance/face-enrollment">Enrollment</a>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3" *ngFor="let card of [
+      { label: 'Registered Faces', value: data.registeredFaces },
+      { label: 'Total Cameras', value: data.totalCameras },
+      { label: 'Online Cameras', value: data.onlineCameras },
+      { label: 'Offline Cameras', value: data.offlineCameras },
+      { label: 'Today Recognized', value: data.todayRecognizedEmployees },
+      { label: 'Today Successful', value: data.todaySuccessful },
+      { label: 'Today Unknown', value: data.todayUnknown }
+    ]">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="text-muted small">{{ card.label }}</div>
+          <div class="fs-3 fw-semibold">{{ card.value ?? 0 }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">Camera status</div>
+    <div class="card-body p-0">
+      <table class="table mb-0">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Event</th>
+            <th>Location</th>
+            <th>Status</th>
+            <th>Active</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of cameras">
+            <td>{{ c.name }}</td>
+            <td>{{ c.cameraType }}</td>
+            <td>{{ c.eventType }}</td>
+            <td>{{ c.location || '—' }}</td>
+            <td>
+              <span class="badge" [class.bg-success]="c.lastStatus === 'online'" [class.bg-secondary]="c.lastStatus !== 'online'">
+                {{ c.lastStatus || 'offline' }}
+              </span>
+            </td>
+            <td>{{ c.isActive ? 'Yes' : 'No' }}</td>
+          </tr>
+          <tr *ngIf="!cameras?.length">
+            <td colspan="6" class="text-center text-muted py-4">No cameras configured</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

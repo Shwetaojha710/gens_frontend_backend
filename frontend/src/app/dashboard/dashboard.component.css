@@ -1590,6 +1590,21 @@
       background: #ff4f5e;
     }
 
+    /* Scoped so the generic .present/.leave badge rules further down
+       (pale backgrounds) cannot wash out the legend dots. Colours match
+       the per-card progress bar segments. */
+    .legend-dot.present {
+      background: #20b992;
+    }
+
+    .legend-dot.leave {
+      background: #ffad2f;
+    }
+
+    .legend-dot.absent {
+      background: #ff5260;
+    }
+
     /* ---------- Cards Grid ---------- */
 
     .teams-grid {
@@ -1650,7 +1665,13 @@
       font-weight: 700;
       color: #1b3152;
       margin-bottom: 3px;
-      white-space: nowrap;
+      line-height: 1.3;
+      /* Wrap long department names onto two lines, then ellipsis */
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      overflow-wrap: anywhere;
     }
 
     .members {
@@ -2423,4 +2444,20 @@
 .emp-badge--success {
   color: #13986f;
   background: #e5f7ef;
+}
+
+/* Dashboard date filter: native date input laid invisibly over the button */
+.dashboard-date-filter {
+  position: relative;
+  cursor: pointer;
+}
+
+.dashboard-date-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: 0;
 }

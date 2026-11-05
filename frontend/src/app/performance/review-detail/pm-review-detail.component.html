@@ -1,0 +1,441 @@
+<div class="container-fluid mt-4 pm-review">
+  <a [routerLink]="backLink" [queryParams]="backQuery" class="small fw-semibold d-inline-flex align-items-center mb-3">
+    <i class="icon-base ri ri-arrow-left-line me-1"></i> Back
+  </a>
+
+  <div *ngIf="loading && !detail" class="text-center py-5 text-muted">Loading review…</div>
+
+  <ng-container *ngIf="detail">
+    <!-- ── Header ── -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between gap-3">
+          <div>
+            <h4 class="mb-1">{{ detail.employee.name }}
+              <span class="text-muted fs-6" *ngIf="detail.employee.empCode">({{ detail.employee.empCode }})</span>
+            </h4>
+            <div class="text-muted small">
+              {{ detail.employee.designation || '—' }} · {{ detail.employee.department || '—' }}
+              · Manager: {{ detail.employee.managerName || '—' }}
+            </div>
+            <div class="small mt-1">
+              <span class="fw-semibold">{{ detail.cycle.name }}</span>
+              <span class="text-muted"> ({{ cycleTypeLabel(detail.cycle.cycleType) }},
+                {{ detail.cycle.startDate | date: 'dd MMM yyyy' }} – {{ detail.cycle.endDate | date: 'dd MMM yyyy' }})</span>
+            </div>
+          </div>
+          <div class="text-end">
+            <span class="badge" [ngClass]="statusBadge(review.status)">{{ review.statusLabel }}</span>
+            <div class="small text-muted mt-1" *ngIf="detail.currentApprover">
+              Waiting on: {{ approvalLevelLabel(detail.currentApprover.type) }}
+              <span *ngIf="detail.currentApprover.approverName"> ({{ detail.currentApprover.approverName }})</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- status stepper -->
+        <div class="pm-steps mt-4">
+          <div *ngFor="let s of statuses; let i = index" class="pm-step"
+            [class.pm-step--done]="stepDone(i)" [class.pm-step--current]="i === stepIndex">
+            <span class="pm-step__dot">{{ stepDone(i) ? '✓' : i + 1 }}</span>
+            <span class="pm-step__label">{{ s.label }}</span>
+          </div>
+        </div>
+
+        <!-- deadlines -->
+        <div class="d-flex flex-wrap gap-3 small text-muted mt-3">
+          <span *ngIf="detail.cycle.goalSettingDeadline">Goals by {{ detail.cycle.goalSettingDeadline | date: 'dd MMM' }}</span>
+          <span *ngIf="detail.cycle.selfReviewDeadline">Self review by {{ detail.cycle.selfReviewDeadline | date: 'dd MMM' }}</span>
+          <span *ngIf="detail.cycle.feedbackDeadline">360 feedback by {{ detail.cycle.feedbackDeadline | date: 'dd MMM' }}</span>
+          <span *ngIf="detail.cycle.managerReviewDeadline">Manager review by {{ detail.cycle.managerReviewDeadline | date: 'dd MMM' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Score cards ── -->
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-4 col-xl-2">
+        <div class="card h-100"><div class="card-body py-3">
+          <div class="small text-muted">Goal achievement</div>
+          <div class="fs-4 fw-bold">{{ fmtPct(review.goalAchievement) }}</div>
+          <div class="small text-muted">Weight {{ detail.cycle.weightGoals }}%</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-md-4 col-xl-2">
+        <div class="card h-100"><div class="card-body py-3">
+          <div class="small text-muted">Self rating</div>
+          <div class="fs-4 fw-bold">{{ fmtRating(review.selfRating) }}</div>
+          <div class="small text-muted">Not scored</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-md-4 col-xl-2">
+        <div class="card h-100"><div class="card-body py-3">
+          <div class="small text-muted">Manager rating</div>
+          <div class="fs-4 fw-bold">{{ fmtRating(review.managerRating) }}</div>
+          <div class="small text-muted">Weight {{ detail.cycle.weightManager }}%</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-md-4 col-xl-2">
+        <div class="card h-100"><div class="card-body py-3">
+          <div class="small text-muted">360 rating</div>
+          <div class="fs-4 fw-bold">{{ fmtRating(review.feedbackRating) }}</div>
+          <div class="small text-muted">{{ detail.feedbackStats.submitted }}/{{ detail.feedbackStats.requested }} responses · {{ detail.cycle.weightFeedback }}%</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-md-4 col-xl-2">
+        <div class="card h-100 border" [ngClass]="'border-' + ratingTone(review.finalRating)"><div class="card-body py-3">
+          <div class="small text-muted">Final rating</div>
+          <div class="fs-4 fw-bold" [ngClass]="'text-' + ratingTone(review.finalRating)">{{ fmtRating(review.finalRating) }}</div>
+          <div class="small text-muted">{{ review.ratingLabel || (perms.viewer === 'self' ? 'Shown after approval' : '—') }}</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-md-4 col-xl-2">
+        <div class="card h-100"><div class="card-body py-3">
+          <div class="small text-muted">Nine-box</div>
+          <div class="fs-6 fw-bold mt-1">{{ review.nineBox || '—' }}</div>
+          <div class="small text-muted">Potential: {{ potentialLabel(review.potentialRating) }}</div>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- ── Goals ── -->
+    <div class="card mb-4">
+      <h5 class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span>Goals (OKRs &amp; KPIs)
+          <span class="badge ms-2" [ngClass]="detail.goalWeightTotal === 100 ? 'bg-label-success' : 'bg-label-warning'">
+            Weightage {{ detail.goalWeightTotal }}% / 100%
+          </span>
+        </span>
+        <span class="d-flex gap-2">
+          <button *ngIf="perms.canEditGoals" class="btn btn-sm btn-primary" (click)="openGoal()" [disabled]="saving">
+            <i class="icon-base ri ri-add-line me-1"></i> Add goal
+          </button>
+          <button *ngIf="perms.canLockGoals" class="btn btn-sm btn-outline-primary" (click)="lockGoals()" [disabled]="saving">
+            <i class="icon-base ri ri-lock-line me-1"></i> Lock goals
+          </button>
+        </span>
+      </h5>
+      <div class="card-body">
+        <p class="text-muted small" *ngIf="review.status === 'goal_setting'">
+          Goal weightages must add up to 100% before goals can be locked. Locking opens self review.
+        </p>
+        <div *ngIf="!detail.goals.length" class="text-muted text-center py-3">No goals yet.</div>
+
+        <div *ngFor="let g of detail.goals" class="pm-goal">
+          <div class="d-flex flex-wrap justify-content-between gap-2">
+            <div>
+              <span class="badge me-2" [ngClass]="g.type === 'okr' ? 'bg-label-primary' : 'bg-label-info'">{{ g.type | uppercase }}</span>
+              <span class="fw-semibold">{{ g.title }}</span>
+              <span class="text-muted small ms-2">Weight {{ g.weightage }}%</span>
+              <span class="text-muted small ms-2" *ngIf="g.assignedByRole">· set by {{ g.assignedByRole }}</span>
+              <div class="small text-muted mt-1" *ngIf="g.description">{{ g.description }}</div>
+            </div>
+            <div class="d-flex align-items-start gap-1">
+              <button *ngIf="perms.canUpdateProgress" class="btn btn-sm btn-outline-primary" (click)="openProgress(g)">Update progress</button>
+              <button *ngIf="canTouchGoal(g)" class="btn btn-sm btn-outline-secondary" (click)="openGoal(g)" title="Edit">
+                <i class="icon-base ri ri-pencil-line"></i>
+              </button>
+              <button *ngIf="canTouchGoal(g)" class="btn btn-sm btn-outline-danger" (click)="deleteGoal(g)" title="Delete">
+                <i class="icon-base ri ri-delete-bin-line"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center gap-2 mt-2">
+            <div class="progress flex-grow-1" style="height: 8px">
+              <div class="progress-bar" [ngClass]="'bg-' + ratingTone(g.achievement / 20)" [style.width.%]="barWidth(g.achievement)"></div>
+            </div>
+            <span class="small fw-semibold" style="min-width: 52px">{{ fmtPct(g.achievement) }}</span>
+          </div>
+
+          <div *ngIf="g.type === 'kpi'" class="small text-muted mt-1">
+            Target {{ g.targetValue }} {{ g.unit }} · Actual {{ g.actualValue ?? '—' }} {{ g.unit }}
+            · {{ g.higherIsBetter ? 'Higher is better' : 'Lower is better' }}
+          </div>
+          <table *ngIf="g.type === 'okr'" class="table table-sm mt-2 mb-0">
+            <thead><tr><th>Key result</th><th>Start</th><th>Target</th><th>Current</th><th>Weight</th><th>Progress</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let k of g.keyResults">
+                <td>{{ k.title }}</td>
+                <td>{{ k.startValue }} {{ k.unit }}</td>
+                <td>{{ k.targetValue }} {{ k.unit }}</td>
+                <td>{{ k.currentValue }} {{ k.unit }}</td>
+                <td>{{ k.weightage }}</td>
+                <td>{{ fmtPct(k.progress) }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="small mt-1" *ngIf="g.selfComment"><span class="text-muted">Employee:</span> {{ g.selfComment }}</div>
+          <div class="small" *ngIf="g.managerComment"><span class="text-muted">Manager:</span> {{ g.managerComment }}</div>
+
+          <!-- inline progress editor -->
+          <div *ngIf="progressGoalId === g.id && progressForm" class="pm-inline mt-2">
+            <div *ngIf="g.type === 'kpi'" class="row g-2 align-items-end">
+              <div class="col-sm-4">
+                <label class="form-label small">Actual value ({{ g.unit || 'value' }})</label>
+                <input type="number" class="form-control form-control-sm" [(ngModel)]="progressForm.actualValue" />
+              </div>
+            </div>
+            <div *ngIf="g.type === 'okr'" class="row g-2">
+              <div class="col-sm-6" *ngFor="let k of progressForm.keyResults">
+                <label class="form-label small">{{ k.title }} — current value</label>
+                <input type="number" class="form-control form-control-sm" [(ngModel)]="k.currentValue" />
+              </div>
+            </div>
+            <div class="mt-2" *ngIf="ctx === 'portal'">
+              <label class="form-label small">Comment</label>
+              <textarea class="form-control form-control-sm" rows="2" [(ngModel)]="progressForm.comment"></textarea>
+            </div>
+            <div class="mt-2 d-flex gap-2">
+              <button class="btn btn-sm btn-primary" (click)="saveProgress()" [disabled]="saving">Save</button>
+              <button class="btn btn-sm btn-outline-secondary" (click)="progressGoalId = null; progressForm = null">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+      <!-- ── Self assessment ── -->
+      <div class="col-lg-6">
+        <div class="card h-100">
+          <h5 class="card-header">Self assessment</h5>
+          <div class="card-body">
+            <ng-container *ngIf="perms.canSelfAssess; else selfView">
+              <label class="form-label">Overall self rating</label>
+              <div class="btn-group mb-3 d-flex" role="group">
+                <button *ngFor="let n of ratingScale" type="button" class="btn btn-sm"
+                  [ngClass]="selfForm.selfRating === n ? 'btn-primary' : 'btn-outline-primary'"
+                  (click)="selfForm.selfRating = n">{{ n }}</button>
+              </div>
+              <label class="form-label">Achievements, challenges and development needs</label>
+              <textarea class="form-control mb-3" rows="5" [(ngModel)]="selfForm.selfComments"></textarea>
+              <button class="btn btn-primary" (click)="submitSelf()" [disabled]="saving">Submit self review</button>
+              <p class="small text-muted mt-2 mb-0">Update your goal progress first. You cannot edit after submitting.</p>
+            </ng-container>
+            <ng-template #selfView>
+              <div *ngIf="review.selfSubmittedAt; else selfPending">
+                <div class="mb-2">Rating: <strong>{{ fmtRating(review.selfRating) }}</strong>
+                  <span class="text-muted small ms-2">submitted {{ review.selfSubmittedAt | date: 'dd MMM yyyy' }}</span></div>
+                <p class="mb-0 pm-pre">{{ review.selfComments }}</p>
+              </div>
+              <ng-template #selfPending>
+                <p class="text-muted mb-2">Self review not submitted yet.</p>
+                <button *ngIf="perms.canSkipSelfReview" class="btn btn-sm btn-outline-warning" (click)="skipSelf()" [disabled]="saving">
+                  Skip self review (deadline missed)
+                </button>
+              </ng-template>
+            </ng-template>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Manager assessment ── -->
+      <div class="col-lg-6">
+        <div class="card h-100">
+          <h5 class="card-header">Manager assessment</h5>
+          <div class="card-body">
+            <ng-container *ngIf="perms.canManagerAssess; else managerView">
+              <label class="form-label">Performance rating</label>
+              <div class="btn-group mb-3 d-flex" role="group">
+                <button *ngFor="let n of ratingScale" type="button" class="btn btn-sm"
+                  [ngClass]="managerForm.managerRating === n ? 'btn-primary' : 'btn-outline-primary'"
+                  (click)="managerForm.managerRating = n">{{ n }}</button>
+              </div>
+              <label class="form-label">Potential (for the nine-box grid)</label>
+              <div class="btn-group mb-3 d-flex" role="group">
+                <button *ngFor="let p of potentialOptions" type="button" class="btn btn-sm"
+                  [ngClass]="managerForm.potentialRating === p.value ? 'btn-primary' : 'btn-outline-primary'"
+                  (click)="managerForm.potentialRating = p.value">{{ p.label }}</button>
+              </div>
+              <label class="form-label">Comments</label>
+              <textarea class="form-control mb-3" rows="4" [(ngModel)]="managerForm.managerComments"></textarea>
+              <button class="btn btn-primary" (click)="submitManager()" [disabled]="saving">Submit manager review</button>
+            </ng-container>
+            <ng-template #managerView>
+              <div *ngIf="review.managerSubmittedAt || review.managerRating; else managerPending">
+                <div class="mb-1">Rating: <strong>{{ fmtRating(review.managerRating) }}</strong></div>
+                <div class="mb-2">Potential: <strong>{{ potentialLabel(review.potentialRating) }}</strong></div>
+                <p class="mb-0 pm-pre">{{ review.managerComments }}</p>
+              </div>
+              <ng-template #managerPending>
+                <p class="text-muted mb-0">
+                  {{ perms.viewer === 'self' && review.status !== 'approved' ? 'Visible after the review is approved.' : 'Manager review not submitted yet.' }}
+                </p>
+              </ng-template>
+            </ng-template>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 360 feedback ── -->
+    <div class="card mb-4">
+      <h5 class="card-header">360° feedback</h5>
+      <div class="card-body">
+        <div class="row g-4">
+          <div class="col-lg-5">
+            <h6 class="mb-2">Competency averages</h6>
+            <table class="table table-sm mb-0">
+              <tbody>
+                <tr *ngFor="let c of detail.competencySummary">
+                  <td>{{ c.competency }}</td>
+                  <td class="text-end fw-semibold" [ngClass]="'text-' + ratingTone(c.average)">{{ fmtRating(c.average) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="col-lg-7">
+            <h6 class="mb-2">Responses</h6>
+            <div *ngIf="!detail.feedback.length" class="text-muted small">No feedback yet.</div>
+            <div *ngFor="let f of detail.feedback" class="pm-feedback">
+              <div class="d-flex justify-content-between">
+                <span>
+                  <strong *ngIf="f.reviewerName">{{ f.reviewerName }}</strong>
+                  <span class="text-muted small ms-1">{{ relationshipLabel(f.relationship) }}</span>
+                </span>
+                <span>
+                  <span *ngIf="f.status === 'pending'" class="badge bg-label-warning">Pending</span>
+                  <strong *ngIf="f.overallRating">{{ fmtRating(f.overallRating) }}</strong>
+                  <button *ngIf="ctx === 'hr' && f.status === 'pending' && perms.canRequestFeedback"
+                    class="btn btn-sm btn-link text-danger p-0 ms-2" (click)="removeFeedback(f)">Remove</button>
+                </span>
+              </div>
+              <div class="small" *ngIf="f.strengths"><span class="text-muted">Strengths:</span> {{ f.strengths }}</div>
+              <div class="small" *ngIf="f.improvements"><span class="text-muted">Improve:</span> {{ f.improvements }}</div>
+            </div>
+            <p *ngIf="perms.viewer === 'self'" class="small text-muted mt-2 mb-0">Reviewer names are hidden to keep feedback anonymous.</p>
+          </div>
+        </div>
+
+        <div *ngIf="perms.canRequestFeedback" class="pm-inline mt-4">
+          <h6 class="mb-2">Request feedback</h6>
+          <div *ngFor="let r of newReviewers; let i = index" class="row g-2 mb-2">
+            <div class="col-md-7">
+              <ng-select [items]="reviewerOptions" bindLabel="label" bindValue="value" [(ngModel)]="r.reviewerId"
+                placeholder="Select employee" appendTo="body"></ng-select>
+            </div>
+            <div class="col-md-4">
+              <select class="form-select" [(ngModel)]="r.relationship">
+                <option *ngFor="let o of relationshipOptions" [value]="o.value">{{ o.label }}</option>
+              </select>
+            </div>
+            <div class="col-md-1">
+              <button class="btn btn-outline-danger w-100" (click)="newReviewers.splice(i, 1)"><i class="icon-base ri ri-close-line"></i></button>
+            </div>
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-primary" (click)="addReviewerRow()">+ Add reviewer</button>
+            <button *ngIf="newReviewers.length" class="btn btn-sm btn-primary" (click)="sendFeedbackRequests()" [disabled]="saving">Send requests</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Approvals ── -->
+    <div class="card mb-5">
+      <h5 class="card-header">Approval chain</h5>
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          <span *ngFor="let l of detail.cycle.approvalLevels; let i = index" class="badge"
+            [ngClass]="review.status === 'approved' || i < review.currentApprovalLevel ? 'bg-label-success'
+              : (review.status === 'in_approval' && i === review.currentApprovalLevel ? 'bg-label-primary' : 'bg-label-secondary')">
+            {{ i + 1 }}. {{ approvalLevelLabel(l) }}
+          </span>
+        </div>
+
+        <div *ngIf="!detail.approvals.length" class="text-muted small mb-2">No approval actions yet.</div>
+        <ul class="list-unstyled mb-0">
+          <li *ngFor="let a of detail.approvals" class="pm-feedback">
+            <span class="badge me-2" [ngClass]="a.action === 'approved' ? 'bg-label-success' : 'bg-label-danger'">{{ a.action }}</span>
+            <strong>{{ a.approverName }}</strong>
+            <span class="text-muted small"> · {{ approvalLevelLabel(a.approverType) }} · {{ a.createdAt | date: 'dd MMM yyyy, HH:mm' }}</span>
+            <div class="small" *ngIf="a.comments">{{ a.comments }}</div>
+          </li>
+        </ul>
+
+        <div *ngIf="perms.canApprove" class="pm-inline mt-3">
+          <label class="form-label">Comments <span class="text-muted small">(required to reject)</span></label>
+          <textarea class="form-control mb-2" rows="2" [(ngModel)]="approvalComment"></textarea>
+          <div class="d-flex gap-2">
+            <button class="btn btn-success" (click)="decide('approved')" [disabled]="saving">Approve</button>
+            <button class="btn btn-outline-danger" (click)="decide('rejected')" [disabled]="saving">Reject (send back to manager)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ── Goal modal ── -->
+  <div *ngIf="goalForm" class="modal d-block pm-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ goalForm.id ? 'Edit goal' : 'Add goal' }}</h5>
+          <button type="button" class="btn-close" (click)="goalForm = null"></button>
+        </div>
+        <div class="modal-body">
+          <div class="btn-group mb-3" role="group">
+            <button type="button" class="btn btn-sm" [ngClass]="goalForm.type === 'kpi' ? 'btn-primary' : 'btn-outline-primary'"
+              (click)="setGoalType('kpi')">KPI (measurable target)</button>
+            <button type="button" class="btn btn-sm" [ngClass]="goalForm.type === 'okr' ? 'btn-primary' : 'btn-outline-primary'"
+              (click)="setGoalType('okr')">OKR (objective + key results)</button>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-9">
+              <label class="form-label">{{ goalForm.type === 'okr' ? 'Objective' : 'KPI name' }}</label>
+              <input class="form-control" [(ngModel)]="goalForm.title" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Weightage %</label>
+              <input type="number" class="form-control" [(ngModel)]="goalForm.weightage" min="0" max="100" />
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description</label>
+              <textarea class="form-control" rows="2" [(ngModel)]="goalForm.description"></textarea>
+            </div>
+
+            <ng-container *ngIf="goalForm.type === 'kpi'">
+              <div class="col-md-3">
+                <label class="form-label">Target</label>
+                <input type="number" class="form-control" [(ngModel)]="goalForm.targetValue" />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Actual</label>
+                <input type="number" class="form-control" [(ngModel)]="goalForm.actualValue" />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Unit</label>
+                <input class="form-control" [(ngModel)]="goalForm.unit" placeholder="₹, %, deals…" />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Direction</label>
+                <select class="form-select" [(ngModel)]="goalForm.higherIsBetter">
+                  <option [ngValue]="true">Higher is better</option>
+                  <option [ngValue]="false">Lower is better</option>
+                </select>
+              </div>
+            </ng-container>
+
+            <div class="col-12" *ngIf="goalForm.type === 'okr'">
+              <label class="form-label">Key results</label>
+              <div *ngFor="let k of goalForm.keyResults; let i = index" class="row g-2 mb-2 align-items-end">
+                <div class="col-md-4"><input class="form-control form-control-sm" [(ngModel)]="k.title" placeholder="Key result" /></div>
+                <div class="col-md-2"><input type="number" class="form-control form-control-sm" [(ngModel)]="k.startValue" placeholder="Start" title="Start" /></div>
+                <div class="col-md-2"><input type="number" class="form-control form-control-sm" [(ngModel)]="k.targetValue" placeholder="Target" title="Target" /></div>
+                <div class="col-md-1"><input class="form-control form-control-sm" [(ngModel)]="k.unit" placeholder="Unit" /></div>
+                <div class="col-md-2"><input type="number" class="form-control form-control-sm" [(ngModel)]="k.weightage" placeholder="Weight" title="Relative weight" /></div>
+                <div class="col-md-1"><button class="btn btn-sm btn-outline-danger w-100" (click)="removeKeyResult(i)"><i class="icon-base ri ri-close-line"></i></button></div>
+              </div>
+              <button class="btn btn-sm btn-outline-primary" (click)="addKeyResult()">+ Add key result</button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="goalForm = null">Cancel</button>
+          <button class="btn btn-primary" (click)="saveGoal()" [disabled]="saving">Save goal</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

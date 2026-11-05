@@ -14,16 +14,28 @@ import {
   AiChatMessage,
 } from './site.models';
 
-/** Primary navigation links */
+/** Primary navigation — Home & Contact tabs removed (logo → Home, CTA → Demo form). */
 export const NAV_LINKS: NavLink[] = [
-  { label: 'Home', path: '/Home' },
-  { label: 'Features', path: '/features' },
-  { label: 'Solutions', path: '/solutions' },
+  {
+    label: 'Product',
+    children: [
+      { label: 'About Gens.AI', path: '/about' },
+      { label: 'Features', path: '/features' },
+      { label: 'AI Assistant', path: '/Home#ai-assistant' },
+      { label: 'Attendance', path: '/features' },
+      { label: 'Payroll', path: '/features' },
+      { label: 'Solutions', path: '/solutions' },
+    ],
+  },
   { label: 'Industries', path: '/industries' },
   { label: 'Pricing', path: '/pricing' },
-  { label: 'About', path: '/about' },
-  { label: 'Blog', path: '/blog' },
-  { label: 'Contact', path: '/contact' },
+  {
+    label: 'Resources',
+    children: [
+      { label: 'Blog', path: '/blog' },
+      { label: 'FAQs', path: '/faqs' },
+    ],
+  },
 ];
 
 /** Trusted company names (logo placeholders) */
@@ -32,12 +44,19 @@ export const TRUSTED_COMPANIES = [
   'BuildPro', 'LogiTrack', 'GovServe', 'NGO Alliance', 'ManuTech',
 ];
 
-/** Animated stat counters */
+/** Single proof / statistics bar (reuse everywhere — do not duplicate conflicting values). */
 export const STATS: StatCounter[] = [
-  { value: 1000, suffix: '+', label: 'Employees Managed' },
   { value: 100, suffix: '+', label: 'Organizations' },
+  { value: 1000, suffix: '+', label: 'Employees' },
   { value: 99.9, suffix: '%', label: 'Uptime' },
+  { value: 70, suffix: '%', label: 'HR Time Saved' },
 ];
+
+/** Display strings for the hero proof bar (derived from STATS). */
+export const PROOF_STATS = STATS.map((s) => ({
+  value: `${s.value}${s.suffix}`,
+  label: s.label,
+}));
 
 /** Why Choose GENS cards */
 export const WHY_CHOOSE: Feature[] = [
@@ -53,20 +72,43 @@ export const WHY_CHOOSE: Feature[] = [
   { icon: 'ri-shield-check-line', title: 'Secure Platform', description: 'Enterprise-grade encryption, RBAC, and compliance standards.' },
 ];
 
-/** Key features grid */
+/** Key features grid (flat list — still used by Features page). */
 export const KEY_FEATURES: Feature[] = [
   { icon: 'ri-team-line', title: 'Employee Management', description: 'Centralized employee database with org charts and profiles.' },
-  { icon: 'ri-fingerprint-line', title: 'Attendance Tracking', description: 'Multi-mode attendance with overtime and shift management.' },
-  { icon: 'ri-plane-line', title: 'Leave Management', description: 'Configurable leave policies with automated accruals.' },
-  { icon: 'ri-wallet-3-line', title: 'Payroll', description: 'One-click payroll runs with statutory compliance.' },
+  { icon: 'ri-fingerprint-line', title: 'Attendance', description: 'Multi-mode attendance with overtime and shift management.' },
+  { icon: 'ri-plane-line', title: 'Leave', description: 'Configurable leave policies with automated accruals.' },
   { icon: 'ri-briefcase-line', title: 'Recruitment', description: 'ATS with resume parsing and interview scheduling.' },
   { icon: 'ri-star-line', title: 'Performance', description: 'OKRs, KPIs, and continuous performance management.' },
   { icon: 'ri-graduation-cap-line', title: 'Training', description: 'LMS integration for employee skill development.' },
-  { icon: 'ri-archive-line', title: 'Asset Management', description: 'Track and assign company assets to employees.' },
+  { icon: 'ri-wallet-3-line', title: 'Payroll', description: 'One-click payroll runs with statutory compliance.' },
+  { icon: 'ri-archive-line', title: 'Assets', description: 'Track and assign company assets to employees.' },
+  { icon: 'ri-file-text-line', title: 'Documentation', description: 'HR letters, policies, and employee document vault.' },
   { icon: 'ri-bar-chart-box-line', title: 'Reports', description: '50+ pre-built reports with custom report builder.' },
   { icon: 'ri-pie-chart-line', title: 'Analytics', description: 'Real-time dashboards with drill-down capabilities.' },
   { icon: 'ri-smartphone-line', title: 'Mobile App', description: 'Full-featured mobile apps for employees and managers.' },
   { icon: 'ri-robot-line', title: 'AI Assistant', description: 'Natural language HR queries with instant insights.' },
+];
+
+/** Homepage “Powerful tools” grouping — reuses KEY_FEATURES titles. */
+export const FEATURE_GROUPS: { title: string; features: Feature[] }[] = [
+  {
+    title: 'Workforce',
+    features: KEY_FEATURES.filter((f) =>
+      ['Employee Management', 'Attendance', 'Leave'].includes(f.title),
+    ),
+  },
+  {
+    title: 'Talent',
+    features: KEY_FEATURES.filter((f) =>
+      ['Recruitment', 'Performance', 'Training'].includes(f.title),
+    ),
+  },
+  {
+    title: 'Operations',
+    features: KEY_FEATURES.filter((f) =>
+      ['Payroll', 'Assets', 'Documentation'].includes(f.title),
+    ),
+  },
 ];
 
 /** Benefits list */
@@ -131,8 +173,8 @@ export const PRICING_PLANS: PricingPlan[] = [
     price: '₹99',
     period: '/employee/month',
     description: 'Core HR essentials to digitize attendance, leave, and employee records.',
-    bestFor: 'Startups & small businesses',
-    badge: 'Essentials',
+    bestFor: 'Small teams',
+    badge: 'Small teams',
     employees: 'Up to 50',
     support: 'Email support',
     options: [
@@ -154,10 +196,11 @@ export const PRICING_PLANS: PricingPlan[] = [
     price: '₹149',
     period: '/employee/month',
     description: 'Add payroll, shifts, face recognition, and basic recruitment.',
-    bestFor: 'Growing companies',
-    badge: 'Growth',
+    bestFor: 'Growing businesses',
+    badge: 'Growing businesses',
     employees: '50 – 200',
     support: 'Priority support',
+    highlighted: true,
     options: [
       { label: 'Attendance', included: true },
       { label: 'GPS', included: true },
@@ -178,11 +221,10 @@ export const PRICING_PLANS: PricingPlan[] = [
     price: '₹199',
     period: '/employee/month',
     description: 'Full HR + AI analytics, ATS, performance, and multi-branch control.',
-    bestFor: 'Mid & large organizations',
-    badge: 'Most Popular',
+    bestFor: 'Advanced HR operations',
+    badge: 'Advanced HR',
     employees: '200 – 500',
     support: 'Dedicated AM',
-    highlighted: true,
     options: [
       { label: 'Attendance', included: true },
       { label: 'GPS', included: true },
@@ -191,7 +233,7 @@ export const PRICING_PLANS: PricingPlan[] = [
       { label: 'AI Analytics', included: true },
     ],
     features: [
-      'Everything in Standard', 'Complete Recruitment ATS', 'Interview Scheduling',
+      'Everything in Most Popular', 'Complete Recruitment ATS', 'Interview Scheduling',
       'Candidate Pipeline', 'Performance Management', 'KPI Dashboard', 'AI Analytics',
       'Real-Time Dashboards', 'Geo-Fencing', 'Multi Branch Management', 'Company Branding',
       'API Integration', 'Dedicated Account Manager',
@@ -199,12 +241,12 @@ export const PRICING_PLANS: PricingPlan[] = [
     cta: 'Book a Demo',
   },
   {
-    name: 'Custom Enterprise Package',
+    name: 'Enterprise',
     price: 'Custom Pricing',
     period: '',
     description: 'Everything in Professional, plus custom features and integrations.',
-    bestFor: 'Enterprise (500+ employees)',
-    badge: 'Enterprise Package',
+    bestFor: 'Custom requirements',
+    badge: 'Custom',
     employees: '500+',
     support: 'Priority SLA Support Custom',
     features: [

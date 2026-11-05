@@ -90,6 +90,34 @@ export class DashboardComponent {
   isEmployeeTableRangeOpen = false;
   isAttendanceChartRangeOpen = false;
   isAttendanceDepartmentRangeOpen = false;
+  /** Dashboard date filter (YYYY-MM-DD); attendance cards are computed for this day. */
+  readonly todayStr = DashboardComponent.toDateStr(new Date());
+  selectedDate = this.todayStr;
+
+  static toDateStr(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  get isTodaySelected(): boolean {
+    return this.selectedDate === this.todayStr;
+  }
+
+  onDashboardDateChange(value: string) {
+    // Ignore cleared / future dates; fall back to today
+    this.selectedDate = value && value <= this.todayStr ? value : this.todayStr;
+    this.loadDashboard();
+    if (this.isManagerRole) {
+      this.loadTeamwiseAttendance(this.selectedDate);
+    }
+  }
+
+  openDatePicker(input: HTMLInputElement) {
+    try {
+      (input as any).showPicker?.();
+    } catch {
+      input.focus();
+    }
+  }
 
   constructor(
     private dashboardService: DashboardService,
@@ -155,7 +183,7 @@ export class DashboardComponent {
   setTeamBranch(branchId: string) {
     this.selectedTeamBranch = branchId;
     this.expandedDepartments.clear();
-    this.loadTeamwiseAttendance();
+    this.loadTeamwiseAttendance(this.selectedDate);
   }
 
   get teamwiseBranches(): string[] {
@@ -198,7 +226,9 @@ export class DashboardComponent {
   loadDashboard() {
     const dashboardRange = this.activeEmployeeSectionTab === 'leave' ? this.selectedEmployeeTableRange : 'All';
 
-    this.dashboardService.getDashboardData(dashboardRange, this.activeEmployeeSectionTab).subscribe({
+    this.dashboardService.getDashboardData(
+      dashboardRange, this.activeEmployeeSectionTab, this.selectedDate, this.selectedAttendanceChartRange
+    ).subscribe({
       next: (res: any) => {
         if (res.status === true) {
           this.stats = res.data.stats || [];
@@ -409,13 +439,24 @@ export class DashboardComponent {
   }
 
   private formatCelebrationDateLong(item: any): string {
-    const raw = item?.nextOccurrence || item?.eventDate || item?.dateOfBirth || item?.joiningDate;
-    if (!raw) return '';
-    const d = new Date(raw);
-    if (Number.isNaN(d.getTime())) return '';
-    const day = d.getDate();
-    const month = d.toLocaleDateString('en-GB', { month: 'long' });
-    const year = new Date().getFullYear();
+    // Day/month from next occurrence (or DOB/joining); year must be the person's real year
+    const displayRaw =
+      item?.nextOccurrence || item?.eventDate || item?.dateOfBirth || item?.joiningDate;
+    if (!displayRaw) return '';
+    const display = new Date(displayRaw);
+    if (Number.isNaN(display.getTime())) return '';
+
+    const yearSourceRaw =
+      item?.cardKind === 'anniversary'
+        ? item?.joiningDate || item?.eventDate || displayRaw
+        : item?.dateOfBirth || item?.eventDate || displayRaw;
+    const yearSource = new Date(yearSourceRaw);
+    const year = !Number.isNaN(yearSource.getTime())
+      ? yearSource.getFullYear()
+      : display.getFullYear();
+
+    const day = display.getDate();
+    const month = display.toLocaleDateString('en-GB', { month: 'long' });
     return `${day} ${month} ${year}`;
   }
 
@@ -646,7 +687,7 @@ export class DashboardComponent {
   }
 
   loadAttendanceChart() {
-    this.dashboardService.getAttendanceChart(this.selectedAttendanceChartRange).subscribe({
+    this.dashboardService.getAttendanceChart(this.selectedAttendanceChartRange, this.selectedDate).subscribe({
       next: (res: any) => {
         if (res.status === true) {
           this.attendanceChart = res.data || null;
@@ -681,7 +722,7 @@ export class DashboardComponent {
   }
 
   loadAttendanceByDepartment() {
-    this.dashboardService.getAttendanceByDepartment(this.selectedAttendanceDepartmentRange).subscribe({
+    this.dashboardService.getAttendanceByDepartment(this.selectedAttendanceDepartmentRange, this.selectedDate).subscribe({
       next: (res: any) => {
         if (res.status === true) {
           this.attendanceByDepartment = res.data || [];

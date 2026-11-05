@@ -39,10 +39,11 @@ const LetterData = sequelize.define('letter_data', {
     timestamps: true
 });
 
-LetterData.sync({ alter: true }).then(() => {
-    console.log('LetterData model synced');
-}).catch((err) => {
-    console.error('LetterData sync error:', err);
-});
+// Disabled: sync({ alter: true }) exhausts Postgres locks (53200 out of shared memory)
+// LetterData.sync({ alter: true }).then(() => {
+//     console.log('LetterData model synced');
+// }).catch((err) => {
+//     console.error('LetterData sync error:', err);
+// });
 
 module.exports = LetterData;

@@ -1,16 +1,157 @@
-.auth-shell {
-  padding: 50px 40px;
-  background: linear-gradient(110.78deg, rgba(255, 255, 255, 0.41) 7.01%, rgba(255, 255, 255, 0.01) 106.22%),
-    linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));
-  border-radius: 8px;
-  height: 800px;
+/* SuperAdmin login — polish on top of shared login.component.css */
+
+:host {
+  display: block;
+  min-height: 100vh;
 }
 
-.auth-shell-inner {
-  padding: 80px 40px;
-  background: linear-gradient(110.78deg, rgba(255, 255, 255, 0.41) 7.01%, rgba(255, 255, 255, 0.01) 106.22%),
-    linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));
-  border-radius: 8px;
-  height: 720px;
+.gens-login {
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
+/* Full usable height; avoid cutting the left column / wave */
+.gens-login__shell {
+  display: grid !important;
+  grid-template-columns: minmax(260px, 0.95fr) minmax(280px, 1.1fr) minmax(300px, 0.85fr);
+  align-items: center !important;
+  gap: 28px !important;
+  max-width: 1360px !important;
+  min-height: 100vh !important;
+  max-height: none !important;
+  margin: 0 auto !important;
+  padding: 48px 28px 56px !important;
+}
+
+.gens-login__left {
+  padding-top: 0 !important;
+}
+
+/* Secure strip — was absolute white text (invisible / cut off) */
+.gens-login__secure {
+  position: relative !important;
+  bottom: auto !important;
+  margin-top: 28px !important;
+  padding: 14px 16px !important;
+  border-radius: 14px;
+  background: rgba(0, 175, 161, 0.08);
+  border: 1px solid rgba(0, 175, 161, 0.22);
+  color: #1a8075 !important;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.gens-login__secure i {
+  color: #00afa1 !important;
+  font-size: 22px;
+  margin-top: 2px;
+}
+
+.gens-login__secure strong {
+  color: #134e4a !important;
+}
+
+.gens-login__secure small {
+  color: #3f6f6a !important;
+  opacity: 1 !important;
+}
+
+/* Hero: kill baked-in panel / dark backdrop against white page */
+.gens-login__center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent !important;
+}
+
+.gens-login__hero-wrap {
+  background: transparent !important;
+  max-width: 480px;
+  width: 100%;
+  padding-top: 0 !important;
+}
+
+.gens-login__hero-arch {
+  display: none !important;
+}
+
+.gens-login__hero-img {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  height: auto !important;
+  max-height: 520px;
+  width: 100%;
+  object-fit: contain;
+}
+
+.sa-badge {
+  /* display: inline-flex; */
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  margin: 0 auto 10px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #1a8075;
+  background: rgba(0, 175, 161, 0.12);
+  border: 1px solid rgba(0, 175, 161, 0.35);
+}
+
+.gens-login__card {
+  margin-left: auto;
+}
+
+.gens-login__card h2 {
+  text-align: center;
+}
+
+.gens-login__sub {
+  text-align: center;
+}
+
+.gens-login__card-logo {
+  text-align: center;
+}
+
+/* Soften wave so it doesn't fight the layout */
+.gens-login__wave {
+  opacity: 0.9;
+  background-size: contain !important;
+  background-position: left bottom !important;
+  height: 42vh !important;
+  min-height: 220px !important;
+}
+
+@media (max-width: 1100px) {
+  .gens-login__shell {
+    grid-template-columns: 1fr 1fr !important;
+    padding: 32px 20px !important;
+  }
+
+  .gens-login__left {
+    display: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .gens-login__shell {
+    grid-template-columns: 1fr !important;
+    padding: 24px 16px !important;
+  }
+
+  .gens-login__center,
+  .gens-login__wave {
+    display: none !important;
+  }
+
+  .gens-login__card {
+    margin: 0 auto;
+  }
+}

@@ -66,6 +66,7 @@ exports.sendEmployeePortalOtp = async (req, res) => {
     if (mobile == "8687651183") {
       otps.otp = "6669";
     } else {
+      // otps.otp = "1234";
       otps.otp = String(Math.floor(1000 + Math.random() * 9000));
     }
     otps.phone = mobile;
@@ -85,14 +86,13 @@ exports.sendEmployeePortalOtp = async (req, res) => {
     const templateId = "1107164267135286674";
     try {
       if (mobile != "8687651183") {
-        await Helper.sendSMS(mobile, otps.otp, templateId);
-      } 
-      // return Helper.response("success", "OTP Send Successfully", {}, res, 200);
+        // await Helper.sendSMS(mobile, otps.otp, templateId);
+      }
     } catch (e) {
       console.warn("Employee portal SMS:", e?.message || e);
     }
-
-    return Helper.response(true, "OTP sent successfully.", { masked: true }, res, 200);
+    await Helper.sendSMS(mobile, otps.otp, templateId);
+    return Helper.response(true, "OTP Send Successfully", { masked: true }, res, 200);
   } catch (error) {
     console.error("sendEmployeePortalOtp:", error);
     return Helper.response(false, error?.message || "Server error", [], res, 500);
@@ -202,6 +202,8 @@ exports.verifyEmployeePortalOtp = async (req, res) => {
               id: tenant.id,
               companyName: tenant.companyName,
               companyCode: tenant.companyCode,
+              logo: Tenant.logoUrl(tenant.image),
+              logoDark: Tenant.logoUrl(tenant.imageDark),
             }
           : null,
         branch,

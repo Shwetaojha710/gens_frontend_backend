@@ -4,6 +4,7 @@ const attendance = require("../../models/attendance");
 const attendanceSetting = require("../../models/attendanceSetting");
 const deduction = require("../../models/deductions");
 const moment = require("moment");
+const momentTz = require("moment-timezone");
 const Shift = require("../../models/shift");
 const empPersonal = require("../../models/empPersonal");
 const ContractualDayApproval = require("../../models/contractual_day_approval");
@@ -25,6 +26,7 @@ const reimbursement = require("../../models/reimbursement");
 const comp_off = require("../../models/comp_off");
 const leave_application = require("../../models/leave_application");
 const { writeAudit, toPlain } = require("../../helper/auditLog");
+const { isWorkflowClaim } = require("../../helper/expense");
 
 exports.attendanceMaster = async (req, res) => {
   const {
@@ -61,7 +63,15 @@ exports.attendanceMaster = async (req, res) => {
     attendanceSettings.graceMinutes = graceMinutes;
     attendanceSettings.halfDayThreshold = lateToHalfdayMin;
     attendanceSettings.halfdayToAbsentMin = halfdayToAbsentMin;
-    if (attendanceSettings.save()) {
+    if (await attendanceSettings.save()) {
+      await writeAudit({
+        req,
+        actionType: "ATTENDANCE_SETTING_CREATE",
+        referenceId: attendanceSettings.id,
+        oldValue: null,
+        newValue: attendanceSettings,
+        remarks: "Attendance settings created",
+      });
       return Helper.response(
         true,
         "Attendance settings created successfully.",
@@ -151,6 +161,8 @@ exports.updateAttendanceSettings = async (req, res) => {
       );
     }
 
+    const oldSettings = toPlain(settings);
+
     settings.lateAllowanceMin = lateAllowanceMin;
     settings.graceMinutes = graceMinutes;
     settings.halfDayThreshold = halfDayThreshold;
@@ -158,6 +170,14 @@ exports.updateAttendanceSettings = async (req, res) => {
     settings.branchId = branchId;
 
     if (await settings.save()) {
+      await writeAudit({
+        req,
+        actionType: "ATTENDANCE_SETTING_UPDATE",
+        referenceId: settings.id,
+        oldValue: oldSettings,
+        newValue: settings,
+        remarks: "Attendance settings updated",
+      });
       return Helper.response(
         true,
         "Attendance settings updated successfully.",
@@ -252,12 +272,28 @@ exports.getMonthlyAttendance = async (req, res) => {
         where: {
           tenantId,
           branchId,
-          check_in_time: {
-            [Op.between]: [
-              startDate.format("YYYY-MM-DD 00:00:00"),
-              endDate.format("YYYY-MM-DD 23:59:59"),
-            ],
-          },
+          [Op.or]: [
+            {
+              date: {
+                [Op.between]: [
+                  startDate.format("YYYY-MM-DD"),
+                  endDate.format("YYYY-MM-DD"),
+                ],
+              },
+            },
+            {
+              month: Number(month),
+              year: Number(year),
+            },
+            {
+              check_in_time: {
+                [Op.between]: [
+                  startDate.format("YYYY-MM-DD 00:00:00"),
+                  endDate.format("YYYY-MM-DD 23:59:59"),
+                ],
+              },
+            },
+          ],
         },
         raw: true,
       });
@@ -286,12 +322,28 @@ exports.getMonthlyAttendance = async (req, res) => {
           employeeId: emp_id,
           tenantId,
           branchId,
-          check_in_time: {
-            [Op.between]: [
-              startDate.format("YYYY-MM-DD 00:00:00"),
-              endDate.format("YYYY-MM-DD 23:59:59"),
-            ],
-          },
+          [Op.or]: [
+            {
+              date: {
+                [Op.between]: [
+                  startDate.format("YYYY-MM-DD"),
+                  endDate.format("YYYY-MM-DD"),
+                ],
+              },
+            },
+            {
+              month: Number(month),
+              year: Number(year),
+            },
+            {
+              check_in_time: {
+                [Op.between]: [
+                  startDate.format("YYYY-MM-DD 00:00:00"),
+                  endDate.format("YYYY-MM-DD 23:59:59"),
+                ],
+              },
+            },
+          ],
         },
         raw: true,
       });
@@ -304,11 +356,23 @@ exports.getMonthlyAttendance = async (req, res) => {
     const groupedRecords = {};
 
     records.forEach((r) => {
-      const day = moment(r.check_in_time).date();
+      const isWeekOffMarker = r.check_in_time === "WEEK_OFF" || r.check_in_time === "WO";
+      let day = null;
+      if (r.date) {
+        day = moment(r.date).date();
+      } else if (r.check_in_time && !isWeekOffMarker) {
+        const parsed = moment(r.check_in_time);
+        if (parsed.isValid()) day = parsed.date();
+      }
+      if (!day) return;
+
       if (!groupedRecords[r.employeeId]) groupedRecords[r.employeeId] = {};
       groupedRecords[r.employeeId][day] = {
-        checkIn: r.check_in_time,
+        checkIn: isWeekOffMarker ? null : r.check_in_time,
         checkOut: r.check_out_time,
+        isWeekOff: isWeekOffMarker,
+        isPresent: !!r.is_present,
+        hasRecord: true,
       };
     });
 
@@ -399,10 +463,15 @@ exports.getMonthlyAttendance = async (req, res) => {
 
         let status = "Absent";
 
-        if (entry) {
+        if (entry?.isWeekOff) {
+          status = "Week Off";
+        } else if (entry?.checkIn || entry?.checkOut) {
           status = "Present";
+        } else if (entry?.hasRecord) {
+          // Explicit Absent uploaded (no check-in / check-out)
+          status = "Absent";
         } else {
-          // priority logic
+          // priority logic when no uploaded attendance row
 
           if (holidayMap[i]) {
             status = "Holiday";
@@ -854,6 +923,36 @@ exports.getLateAttendance = async (req, res) => {
   }
 };
 
+/**
+ * Normalises a stored check-in/out value to "HH:mm:ss" for <input type="time" step="1">.
+ * Handles "YYYY-MM-DD H:mm[:ss]", "H:mm[:ss]", 12-hour "h:mm AM", and ISO /
+ * Date values (shown in IST). Returns null when the value cannot be read.
+ */
+const formatClockTime = (raw) => {
+  if (raw == null || raw === "" || raw === "--") return null;
+  const pad = (n) => String(n).padStart(2, "0");
+
+  if (!(raw instanceof Date)) {
+    const s = String(raw).trim();
+    const m = s.match(/^(?:\d{4}-\d{2}-\d{2}\s+)?(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?\s*([AaPp][Mm])?$/);
+    if (m) {
+      let h = Number(m[1]);
+      const ampm = m[4] && m[4].toLowerCase();
+      if (ampm === "pm" && h < 12) h += 12;
+      if (ampm === "am" && h === 12) h = 0;
+      if (h > 23 || Number(m[2]) > 59 || Number(m[3] || 0) > 59) return null;
+      return `${pad(h)}:${m[2]}:${m[3] || "00"}`;
+    }
+    // ISO without offset is IST wall-clock time; with Z/offset convert to IST
+    const iso = /[zZ]|[+-]\d{2}:?\d{2}$/.test(s)
+      ? momentTz(s, momentTz.ISO_8601).tz("Asia/Kolkata")
+      : momentTz.tz(s, momentTz.ISO_8601, "Asia/Kolkata");
+    return iso.isValid() ? iso.format("HH:mm:ss") : null;
+  }
+  const d = momentTz(raw).tz("Asia/Kolkata");
+  return d.isValid() ? d.format("HH:mm:ss") : null;
+};
+
 exports.getDateWiseAttendance = async (req, res) => {
   const { emp_id, startDate, endDate } = req.body;
   const tenantId = req.users && req.users.tenantId;
@@ -869,53 +968,73 @@ exports.getDateWiseAttendance = async (req, res) => {
 
   try {
     let data = [];
-    const shiftMap = await Shift.findAll({
-      where: {
-        status: "active",
+    const start = moment(startDate, "YYYY-MM-DD");
+    const end = moment(endDate, "YYYY-MM-DD");
+    if (!start.isValid() || !end.isValid()) {
+      return Helper.response(false, "Invalid startDate / endDate", [], res, 200);
+    }
+    const fromStr = start.format("YYYY-MM-DD");
+    const toStr = end.format("YYYY-MM-DD");
+    const monthEnd = new Date(endDate);
 
-        tenantId,
-        branchId,
-      },
-      attributes: ["day_of_week", "is_week_off"],
-      raw: true,
-    });
+    const formatTime = (raw) => formatClockTime(raw) || "--";
 
-    const weekOffDays = shiftMap
-      .filter((shift) => shift.is_week_off == true)
-      .map((shift) => shift.day_of_week);
-
-    const start = moment(startDate); // convert string to moment
-    const end = moment(endDate);
-    // const totalDays = end.date() - start.date() + 1;
-    const totalDays = end.diff(start, "days") + 1;
+    const holidayLabel = (typeName) => {
+      const n = String(typeName || "").toLowerCase();
+      if (n.includes("restricted")) return "Restricted Holiday";
+      // Gazetted / National / Public / any other non-RH holiday type
+      return "Gazetted Holiday";
+    };
 
     let employees = [];
     let records = [];
-    const monthEnd = new Date(endDate);
+    // Null joiningDate must still appear (common for new companies / incomplete profiles).
+    // Pending self-registration is excluded — only real employees.
+    const employeeListWhere = {
+      tenantId,
+      branchId,
+      status: "active",
+      [Op.and]: [
+        {
+          [Op.or]: [
+            { joiningDate: { [Op.is]: null } },
+            { joiningDate: { [Op.lte]: monthEnd } },
+          ],
+        },
+        {
+          [Op.or]: [
+            { emp_status: { [Op.is]: null } },
+            { emp_status: "approved" },
+          ],
+        },
+      ],
+    };
+
     if (emp_id == "All" || emp_id == "all") {
       employees = await empPersonal.findAll({
-        where: {
-          tenantId,
-          branchId,
-          status: "active",
-          joiningDate: {
-            [Op.lte]: monthEnd, // joined on or before month end
-          },
-        },
-        attributes: ["id", "firstName", "lastName"],
+        where: employeeListWhere,
+        attributes: ["id", "firstName", "lastName", "shift_id"],
+        order: [
+          ["firstName", "ASC"],
+          ["lastName", "ASC"],
+        ],
         raw: true,
       });
       records = await attendance.findAll({
         where: {
-          check_in_time: {
-            [Op.between]: [
-              start.format("YYYY-MM-DD 00:00:00"),
-              end.format("YYYY-MM-DD 23:59:59"),
-            ],
-          },
-
-          tenantId: tenantId,
-          branchId: branchId,
+          tenantId,
+          branchId,
+          [Op.or]: [
+            { date: { [Op.between]: [fromStr, toStr] } },
+            {
+              check_in_time: {
+                [Op.between]: [
+                  start.format("YYYY-MM-DD 00:00:00"),
+                  end.format("YYYY-MM-DD 23:59:59"),
+                ],
+              },
+            },
+          ],
         },
         raw: true,
       });
@@ -923,101 +1042,261 @@ exports.getDateWiseAttendance = async (req, res) => {
       const emp = await empPersonal.findOne({
         where: {
           id: emp_id,
-          tenantId,
-          branchId,
-          joiningDate: {
-            [Op.lte]: monthEnd, // joined on or before month end
-          },
+          ...employeeListWhere,
         },
-        attributes: ["id", "firstName", "lastName"],
+        attributes: ["id", "firstName", "lastName", "shift_id"],
         raw: true,
       });
-      // console.log(emp, "ddd");
-      if (!emp)
+      if (!emp) {
+        // Distinguish missing vs not yet eligible (pending / future join)
+        const anyEmp = await empPersonal.findOne({
+          where: { id: emp_id, tenantId },
+          attributes: ["id", "branchId", "status", "emp_status", "joiningDate"],
+          raw: true,
+        });
+        if (!anyEmp) {
+          return Helper.response(false, "Employee not found", [], res, 404);
+        }
+        if (String(anyEmp.branchId) !== String(branchId)) {
+          return Helper.response(
+            false,
+            "Employee not found in the selected branch",
+            [],
+            res,
+            404,
+          );
+        }
+        if (String(anyEmp.emp_status || "").toLowerCase() === "pending") {
+          return Helper.response(
+            false,
+            "Employee is still pending approval",
+            [],
+            res,
+            404,
+          );
+        }
         return Helper.response(false, "Employee not found", [], res, 404);
+      }
 
       employees = [emp];
       records = await attendance.findAll({
         where: {
           employeeId: emp_id,
-          tenantId: tenantId,
-          branchId: branchId,
-          check_in_time: {
-            [Op.between]: [
-              start.format("YYYY-MM-DD 00:00:00"),
-              end.format("YYYY-MM-DD 23:59:59"),
-            ],
-          },
+          tenantId,
+          branchId,
+          [Op.or]: [
+            { date: { [Op.between]: [fromStr, toStr] } },
+            {
+              check_in_time: {
+                [Op.between]: [
+                  start.format("YYYY-MM-DD 00:00:00"),
+                  end.format("YYYY-MM-DD 23:59:59"),
+                ],
+              },
+            },
+          ],
         },
         raw: true,
       });
     }
 
+    if (!employees.length) {
+      return Helper.response(
+        true,
+        "No active approved employees found for this branch. Add or approve employees first.",
+        [],
+        res,
+        200,
+      );
+    }
+
+    const shiftIds = [
+      ...new Set(employees.map((e) => e.shift_id).filter(Boolean)),
+    ];
+    const employeeIds = employees.map((e) => e.id);
+    const [shiftMap, holidaysInRange, holidayTypes, leavesInRange] =
+      await Promise.all([
+        Shift.findAll({
+          where: {
+            tenantId,
+            branchId,
+            ...(shiftIds.length ? { shift: { [Op.in]: shiftIds } } : {}),
+            // Week-off days are often saved as status=inactive + is_week_off=true.
+            // Include those or Sunday/Saturday never become WO.
+            [Op.or]: [{ status: "active" }, { is_week_off: true }],
+          },
+          attributes: ["shift", "day_of_week", "is_week_off", "status"],
+          raw: true,
+        }),
+        holiday.findAll({
+          where: {
+            tenantId,
+            branchId,
+            status: "active",
+            date: { [Op.between]: [fromStr, toStr] },
+          },
+          raw: true,
+        }),
+        HolidayType.findAll({
+          where: { tenantId, branchId, status: "active" },
+          attributes: ["id", "name"],
+          raw: true,
+        }),
+        employeeIds.length
+          ? leave_application.findAll({
+              where: {
+                employeeId: { [Op.in]: employeeIds },
+                tenantId,
+                branchId,
+                fromDate: { [Op.lte]: toStr },
+                toDate: { [Op.gte]: fromStr },
+                status: { [Op.notIn]: ["rejected", "self_declined"] },
+              },
+              raw: true,
+            })
+          : Promise.resolve([]),
+      ]);
+
+    const resolveLeaveStatus = (leaveData, dateStr) => {
+      if (!leaveData) return null;
+      const from = moment(leaveData.fromDate).format("YYYY-MM-DD");
+      const to = moment(leaveData.toDate).format("YYYY-MM-DD");
+      if (from == dateStr && to == dateStr) {
+        if (leaveData.duration_type == "first_half") return "First Half";
+        if (leaveData.duration_type == "second_half") return "Second Half";
+        return "Full Day Leave";
+      }
+      if (from == dateStr) {
+        return leaveData.duration_type == "second_half"
+          ? "Second Half"
+          : leaveData.duration_type == "first_half"
+            ? "First Half"
+            : "Full Day Leave";
+      }
+      if (to == dateStr) {
+        return leaveData.to_duration_type == "first_half"
+          ? "First Half"
+          : leaveData.to_duration_type == "second_half"
+            ? "Second Half"
+            : "Full Day Leave";
+      }
+      return "Full Day Leave";
+    };
+
+    const leavesByEmp = new Map();
+    for (const l of leavesInRange || []) {
+      if (!leavesByEmp.has(l.employeeId)) leavesByEmp.set(l.employeeId, []);
+      leavesByEmp.get(l.employeeId).push(l);
+    }
+
+    const typeMap = new Map(
+      (holidayTypes || []).map((t) => [String(t.id), t.name]),
+    );
+    const holidayMap = new Map();
+    for (const h of holidaysInRange || []) {
+      const d = moment(h.date).format("YYYY-MM-DD");
+      const typeName = typeMap.get(String(h.holiday_type)) || "";
+      holidayMap.set(d, {
+        ...h,
+        holiday_type_name: typeName,
+        statusLabel: holidayLabel(typeName),
+      });
+    }
+
+    const isWeekOffFlag = (v) =>
+      v === true || v === 1 || v === "1" || String(v).toLowerCase() === "true";
+
+    const weekOffByShift = new Map();
+    for (const s of shiftMap || []) {
+      if (!isWeekOffFlag(s.is_week_off)) continue;
+      const dayKey = String(s.day_of_week || "").trim().toLowerCase();
+      if (!dayKey) continue;
+      if (!weekOffByShift.has(s.shift)) weekOffByShift.set(s.shift, new Set());
+      weekOffByShift.get(s.shift).add(dayKey);
+    }
+    // Fallback: any week-off day across branch shifts
+    const allWeekOffDays = new Set(
+      (shiftMap || [])
+        .filter((s) => isWeekOffFlag(s.is_week_off))
+        .map((s) => String(s.day_of_week || "").trim().toLowerCase())
+        .filter(Boolean),
+    );
+
     const groupedRecords = {};
     records.forEach((r) => {
-      const day = moment(r.check_in_time).date();
+      const isWoMarker =
+        r.check_in_time === "WEEK_OFF" || r.check_in_time === "WO";
+      const dateKey = r.date
+        ? moment(r.date).format("YYYY-MM-DD")
+        : !isWoMarker && r.check_in_time
+          ? moment(r.check_in_time).format("YYYY-MM-DD")
+          : null;
+      if (!dateKey || dateKey === "Invalid date") return;
       if (!groupedRecords[r.employeeId]) groupedRecords[r.employeeId] = {};
-      groupedRecords[r.employeeId][day] = {
+      const hasRealPunch =
+        !isWoMarker &&
+        !!(r.check_in_time && String(r.check_in_time).match(/^\d{4}-\d{2}-\d{2}/));
+      groupedRecords[r.employeeId][dateKey] = {
         id: r.id,
-        checkIn: r.check_in_time || null,
+        checkIn: isWoMarker ? null : r.check_in_time || null,
         checkOut: r.check_out_time || null,
-        status: r.check_in_time ? "Present" : "Absent",
+        isWeekOff: isWoMarker,
+        // Marked present or real check-in — never treat WEEK_OFF marker as Present
+        isPresent: !!r.is_present || hasRealPunch,
+        status: isWoMarker
+          ? "Week Off"
+          : hasRealPunch || r.is_present
+            ? "Present"
+            : "Absent",
       };
     });
 
     for (const emp of employees) {
       const recordMap = groupedRecords[emp.id] || {};
+      const empWeekOff =
+        (emp.shift_id && weekOffByShift.get(emp.shift_id)) || allWeekOffDays;
+      const empLeaves = leavesByEmp.get(emp.id) || [];
 
-      const startDate1 = moment(startDate, "YYYY-MM-DD");
-      const endDate1 = moment(endDate, "YYYY-MM-DD");
-      let currentDate = startDate1.clone();
-      while (currentDate.isSameOrBefore(endDate1)) {
-        const dayName = currentDate.format("dddd");
+      let currentDate = start.clone();
+      while (currentDate.isSameOrBefore(end)) {
+        const dateStr = currentDate.format("YYYY-MM-DD");
+        const dayName = currentDate.format("dddd").toLowerCase();
+        const entry = recordMap[dateStr];
+        const hol = holidayMap.get(dateStr);
+        const leaveData = empLeaves.find(
+          (l) =>
+            moment(l.fromDate).format("YYYY-MM-DD") <= dateStr &&
+            moment(l.toDate).format("YYYY-MM-DD") >= dateStr,
+        );
+        const leaveStatus = resolveLeaveStatus(leaveData, dateStr);
+        const isShiftWeekOff = empWeekOff.has(dayName);
 
-        if (weekOffDays.includes(dayName)) {
-          data.push({
-            date: currentDate.format("YYYY-MM-DD"),
-            checkIn: "--",
-            checkOut: "--",
-            status: "Week Off",
-            employee_name: Helper.capitalizeFirstLetter(
-              `${emp.firstName} ${emp.lastName}`,
-            ),
-            employeeId: emp?.id,
-          });
-        } else {
-          // Here you can map data by date instead of day index
-          // const entry = recordMap[currentDate.format("YYYY-MM-DD")];
-          const dayKey = String(currentDate.date());
-          const entry = recordMap[dayKey];
-          data.push({
-            date: currentDate.format("YYYY-MM-DD"),
-            //  checkIn: entry?.checkIn?.split(" ")[1] || "--",
-            // checkOut: entry?.checkOut?.split(" ")[1] || "--",
-            checkIn: entry?.checkIn?.split(" ")[1]
-              ? new Date(entry.checkIn).toLocaleTimeString("en-IN", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: false,
-                  // second: '2-digit'
-                })
-              : "--",
-            checkOut: entry?.checkOut?.split(" ")[1]
-              ? new Date(entry.checkOut).toLocaleTimeString("en-IN", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: false,
-                  // second: '2-digit'
-                })
-              : "--",
-            status: entry?.status || "Absent",
-            id: entry?.id,
-            employee_name: Helper.capitalizeFirstLetter(
-              `${emp.firstName} ${emp.lastName}`,
-            ),
-            employeeId: emp?.id,
-          });
+        // Present (real punch) > Week Off > Holiday > Leave > Absent
+        let status = "Absent";
+        if (entry?.isPresent && !entry?.isWeekOff) {
+          status = "Present";
+        } else if (entry?.isWeekOff || isShiftWeekOff) {
+          status = "Week Off";
+        } else if (hol) {
+          status = hol.statusLabel; // Restricted Holiday | Gazetted Holiday
+        } else if (leaveStatus) {
+          status = leaveStatus;
         }
+
+        data.push({
+          date: dateStr,
+          checkIn: entry?.checkIn ? formatTime(entry.checkIn) : "--",
+          checkOut: entry?.checkOut ? formatTime(entry.checkOut) : "--",
+          status,
+          holidayName: hol?.holiday_name ?? null,
+          holidayType: hol?.holiday_type_name ?? null,
+          leaveType: leaveData?.duration_type ?? null,
+          id: entry?.id,
+          employee_name: Helper.capitalizeFirstLetter(
+            `${emp.firstName} ${emp.lastName}`,
+          ),
+          employeeId: emp?.id,
+        });
 
         currentDate.add(1, "day");
       }
@@ -1057,6 +1336,23 @@ exports.getAttendanceYears = async (req, res) => {
   }
 };
 
+/** Normalize to "YYYY-MM-DD HH:mm:ss" */
+const toDateTimeWithSeconds = (date, time) => {
+  if (time == null || time === "" || time === "--") return null;
+  const raw = String(time).trim();
+  // Already full datetime
+  if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(raw)) {
+    const [d, t] = raw.split(/\s+/);
+    if (/^\d{2}:\d{2}:\d{2}/.test(t)) return `${d} ${t.slice(0, 8)}`;
+    if (/^\d{2}:\d{2}$/.test(t)) return `${d} ${t}:00`;
+    return `${d} ${t}`;
+  }
+  // Time only
+  if (/^\d{2}:\d{2}:\d{2}/.test(raw)) return `${date} ${raw.slice(0, 8)}`;
+  if (/^\d{2}:\d{2}$/.test(raw)) return `${date} ${raw}:00`;
+  return `${date} ${raw}`;
+};
+
 exports.updateAttendance = async (req, res) => {
   const {
     id,
@@ -1087,11 +1383,14 @@ exports.updateAttendance = async (req, res) => {
       );
     }
 
+    const checkInTime = toDateTimeWithSeconds(date, checkIn);
+    const checkOutTime = toDateTimeWithSeconds(date, checkOut);
+
     const employeeExists = await attendance.findOne({
       where: { employeeId: employeeId, tenantId, branchId, date },
     });
     if (!employeeExists) {
-      await attendance.create({
+      const createdAttendance = await attendance.create({
         employeeId,
         tenantId,
         branchId,
@@ -1099,12 +1398,22 @@ exports.updateAttendance = async (req, res) => {
         year: parseInt(year),
         month: parseInt(month),
         branchId,
-        check_in_time: checkIn,
-        check_out_time: checkOut,
+        check_in_time: checkInTime,
+        check_out_time: checkOutTime,
         date,
         is_present: true,
         ip_address,
         createdBy: req.users?.id,
+      });
+
+      await writeAudit({
+        req,
+        actionType: "ATTENDANCE_CREATE",
+        referenceId: createdAttendance.id,
+        employeeId,
+        oldValue: null,
+        newValue: createdAttendance,
+        remarks: `Attendance added for ${date}`,
       });
 
       return Helper.response(
@@ -1117,16 +1426,28 @@ exports.updateAttendance = async (req, res) => {
       // return Helper.response(false, "Atendance not found", null, res, 404);
     }
 
+    const oldAttendance = toPlain(employeeExists);
+
     employeeExists.updatedBy = req.users?.id;
     employeeExists.branchId = branchId;
     employeeExists.updatedAt = new Date();
-    employeeExists.check_in_time = checkIn??  employeeExists.check_in_time ;
-    employeeExists.check_out_time = checkOut??  employeeExists.check_out_time ;
+    employeeExists.check_in_time = checkInTime ?? employeeExists.check_in_time;
+    employeeExists.check_out_time = checkOutTime ?? employeeExists.check_out_time;
     employeeExists.date = date;
     employeeExists.month = new Date(date).getMonth() + 1;
     employeeExists.year = new Date(date).getFullYear();
     employeeExists.status = status || "active";
     await employeeExists.save();
+
+    await writeAudit({
+      req,
+      actionType: "ATTENDANCE_UPDATE",
+      referenceId: employeeExists.id,
+      employeeId,
+      oldValue: oldAttendance,
+      newValue: employeeExists,
+      remarks: `Attendance updated for ${date}`,
+    });
 
     return Helper.response(
       true,
@@ -1159,17 +1480,17 @@ exports.BulkupdateAttendance = async (req, res) => {
       return Helper.response(false, "Invalid data format", {}, res, 200);
     }
 
+    const auditEntries = [];
+
     for (const item of attendanceList) {
       const { date, checkIn, checkOut, status, employeeId } = item;
 
       const month = date.split("-")[1];
       const year = date.split("-")[0];
 
-      // Replace "--" with null
-      const checkInTime = checkIn == "--" ? null : `${date} ${checkIn}`;
-      const checkOutTime = checkOut == "--" ? null : `${date} ${checkOut}`;
-      // this.newObj.checkIn = `${data?.date} ${data?.checkIn}`
-      //       this.newObj.checkOut = `${data?.date} ${data?.checkOut}`
+      // Always store as "YYYY-MM-DD HH:mm:ss"
+      const checkInTime = toDateTimeWithSeconds(date, checkIn);
+      const checkOutTime = toDateTimeWithSeconds(date, checkOut);
       const employeeExists = await attendance.findOne({
         where: {
           employeeId,
@@ -1181,7 +1502,7 @@ exports.BulkupdateAttendance = async (req, res) => {
       });
 
       if (!employeeExists) {
-        await attendance.create(
+        const createdAttendance = await attendance.create(
           {
             employeeId,
             tenantId,
@@ -1198,7 +1519,15 @@ exports.BulkupdateAttendance = async (req, res) => {
           },
           { transaction: t },
         );
+
+        auditEntries.push({
+          actionType: "ATTENDANCE_CREATE",
+          oldValue: null,
+          record: createdAttendance,
+        });
       } else {
+        const oldAttendance = toPlain(employeeExists);
+
         employeeExists.updatedBy = req.users?.id;
         employeeExists.check_in_time = checkInTime;
         employeeExists.check_out_time = checkOutTime;
@@ -1206,11 +1535,36 @@ exports.BulkupdateAttendance = async (req, res) => {
         employeeExists.month = parseInt(month);
         employeeExists.year = parseInt(year);
 
+        // Screen sends every row, so log only the ones whose attendance actually changed
+        const isChanged = ["check_in_time", "check_out_time", "status"].some(
+          (field) => employeeExists.changed(field),
+        );
+
         await employeeExists.save({ transaction: t });
+
+        if (isChanged) {
+          auditEntries.push({
+            actionType: "ATTENDANCE_UPDATE",
+            oldValue: oldAttendance,
+            record: employeeExists,
+          });
+        }
       }
     }
 
     await t.commit();
+
+    for (const { actionType, oldValue, record } of auditEntries) {
+      await writeAudit({
+        req,
+        actionType,
+        referenceId: record.id,
+        employeeId: record.employeeId,
+        oldValue,
+        newValue: record,
+        remarks: `Attendance bulk ${oldValue ? "updated" : "added"} for ${record.date}`,
+      });
+    }
 
     return Helper.response(
       true,
@@ -1257,7 +1611,19 @@ exports.deleteAttendance = async (req, res) => {
       return Helper.response(false, "Data not found", null, res, 404);
     }
 
+    const oldAttendance = toPlain(delteAttendance);
+
     await delteAttendance.destroy();
+
+    await writeAudit({
+      req,
+      actionType: "ATTENDANCE_DELETE",
+      referenceId: id,
+      employeeId: oldAttendance?.employeeId,
+      oldValue: oldAttendance,
+      newValue: null,
+      remarks: `Attendance deleted for ${oldAttendance?.date}`,
+    });
 
     return Helper.response(
       true,
@@ -1301,9 +1667,21 @@ exports.updateempattendance = async (req, res) => {
       // return Helper.response(false, "Atendance not found", null, res, 404);
     }
 
+    const oldAttendance = toPlain(employeeExists);
+
     employeeExists.check_in_time = `${date} ${allowedTill}`;
 
     await employeeExists.save();
+
+    await writeAudit({
+      req,
+      actionType: "ATTENDANCE_UPDATE",
+      referenceId: employeeExists.id,
+      employeeId: employeeExists.employeeId,
+      oldValue: oldAttendance,
+      newValue: employeeExists,
+      remarks: `Weekend attendance check-in updated for ${date}`,
+    });
 
     return Helper.response(
       true,
@@ -1319,7 +1697,7 @@ exports.updateempattendance = async (req, res) => {
 };
 
 exports.addAttendance = async (req, res) => {
-  const { empCode, check_in_time, date } = req.body;
+  const { empCode, check_in_time, date, eventType } = req.body;
   const tenantId = req.users?.tenantId;
   const branchId = req.users && req.users.branchId;
 
@@ -1339,63 +1717,28 @@ exports.addAttendance = async (req, res) => {
       );
     }
 
-    const employeedetails = await empPersonal.findOne({
-      where: { empCode, tenantId, branchId, status: "active" },
-      attributes: ["id"],
+    const { recordAttendancePunch } = require("../../helper/attendancePunch");
+    const result = await recordAttendancePunch({
+      tenantId,
+      branchId,
+      empCode,
+      datetime: check_in_time,
+      date,
+      ip_address: Helper.getIpAddress(req),
+      imageFilename: req.files?.[0]?.filename || null,
+      eventType: eventType || "auto",
+      actorId: req.users?.id,
     });
 
-    if (!employeedetails) {
-      return Helper.response(false, "Employee not found", [], res, 404);
-    }
-
-    const employeeId = employeedetails.id;
-    const ip_address = Helper.getIpAddress(req);
-
-    let existingAttendance = await attendance.findOne({
-      where: { employeeId, date, tenantId, branchId },
-    });
-
-    if (existingAttendance) {
-      await existingAttendance.update({
-        check_out_time: check_in_time || existingAttendance.check_out_time,
-        is_present: true,
-        ip_address,
-        branchId,
-        updatedBy: req.users?.id,
-      });
-
-      return Helper.response(
-        true,
-        "Attendance updated successfully (Check-out)",
-        existingAttendance,
-        res,
-        200,
-      );
-    } else {
-      const createAttendance = await attendance.create({
-        employeeId,
-        tenantId,
-        check_in_time,
-        is_present: true,
-        date,
-        ip_address,
-        branchId,
-        createdBy: req.users?.id,
-        month: new Date(check_in_time).getMonth() + 1,
-        year: new Date(check_in_time).getFullYear(),
-      });
-
-      return Helper.response(
-        true,
-        "Attendance added successfully (Check-in)",
-        createAttendance,
-        res,
-        200,
-      );
-    }
+    const msg =
+      result.action === "check_out"
+        ? "Attendance updated successfully (Check-out)"
+        : "Attendance added successfully (Check-in)";
+    return Helper.response(true, msg, result.record, res, 200);
   } catch (error) {
     console.error("Error adding/updating attendance:", error);
-    return Helper.response(false, error?.message, null, res, 500);
+    const code = error.message === "Employee not found" ? 404 : 500;
+    return Helper.response(false, error?.message, null, res, code);
   }
 };
 
@@ -1420,17 +1763,24 @@ exports.addHoliday = async (req, res) => {
       );
     }
 
+    // Duplicate = same type, name (case-insensitive) and date in this branch
     const existingHoliday = await Holiday.findOne({
-      where: { tenantId, holiday_type, branchId, holiday_name, date },
+      where: {
+        tenantId,
+        holiday_type,
+        branchId,
+        date,
+        [Op.and]: [where(fn("LOWER", col("holiday_name")), String(holiday_name).trim().toLowerCase())],
+      },
     });
     if (existingHoliday) {
       Helper.deleteUploadedFiles(req.files);
       return Helper.response(
         false,
-        "Holiday already exists for this tenant.",
+        `Holiday "${String(holiday_name).trim()}" already exists on this date. Duplicate records are not allowed.`,
         [],
         res,
-        400,
+        409,
       );
     }
 
@@ -1573,6 +1923,27 @@ exports.updateHoliday = async (req, res) => {
     if (!holidayExists) {
       Helper.deleteUploadedFiles(req.files);
       return Helper.response(false, "Holiday not found", null, res, 404);
+    }
+
+    const duplicateHoliday = await Holiday.findOne({
+      where: {
+        tenantId,
+        holiday_type,
+        branchId,
+        date,
+        id: { [Op.ne]: id },
+        [Op.and]: [where(fn("LOWER", col("holiday_name")), String(holiday_name).trim().toLowerCase())],
+      },
+    });
+    if (duplicateHoliday) {
+      Helper.deleteUploadedFiles(req.files);
+      return Helper.response(
+        false,
+        `Holiday "${String(holiday_name).trim()}" already exists on this date. Duplicate records are not allowed.`,
+        null,
+        res,
+        409,
+      );
     }
 
     const oldHoliday = toPlain(holidayExists);
@@ -1913,9 +2284,16 @@ exports.downloadAttendance = async (req, res) => {
     attendances.forEach((att) => {
       if (!attendanceMap[att.employeeId]) attendanceMap[att.employeeId] = {};
 
-      const day = moment(att.date).date();
+      const day = att.date
+        ? moment(att.date).date()
+        : att.check_in_time && att.check_in_time !== "WEEK_OFF" && att.check_in_time !== "WO"
+          ? moment(att.check_in_time).date()
+          : null;
+      if (!day) return;
 
-      if (att.check_in_time || att.check_out_time) {
+      if (att.check_in_time === "WEEK_OFF" || att.check_in_time === "WO") {
+        attendanceMap[att.employeeId][day] = "WO";
+      } else if (att.check_in_time || att.check_out_time) {
         let checkIn = att.check_in_time
           ? moment(att.check_in_time).format("HH:mm")
           : "";
@@ -1929,9 +2307,10 @@ exports.downloadAttendance = async (req, res) => {
         if (checkIn == "Invalid date") {
           checkIn = "00:00";
         }
-        // console.log(checkIn,checkOut);
 
         attendanceMap[att.employeeId][day] = `${checkIn} ${checkOut}`;
+      } else if (att.is_present === false) {
+        attendanceMap[att.employeeId][day] = "A";
       }
     });
 
@@ -2366,17 +2745,20 @@ exports.uploadAttendance = async (req, res) => {
 
       // 🔁 Loop dates
       for (let d = 0; d < dateColumns.length; d++) {
-        const day = dateColumns[d];
-        const value = row[d + 2];
+        const day = parseInt(dateColumns[d], 10);
+        const rawValue = row[d + 2];
 
-        if (!day || !value) continue;
-        if (value === "WO") continue; // skip weekly off
+        if (!day || rawValue === undefined || rawValue === null || rawValue === "") continue;
+
+        const normalized = String(rawValue).trim().toUpperCase().replace(/\s+/g, " ");
+        const isWO = ["WO", "WEEK OFF", "WEEKOFF", "W/OFF", "WEEK-OFF"].includes(normalized);
+        const isAbsent = ["A", "ABSENT", "AB"].includes(normalized);
 
         const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(
           day,
         ).padStart(2, "0")}`;
 
-        // ✅ collect delete condition
+        // Always clear existing row for this day (including WO / Absent overrides)
         deleteConditions.push({
           tenantId,
           branchId,
@@ -2388,10 +2770,17 @@ exports.uploadAttendance = async (req, res) => {
         let checkOut = null;
         let isPresent = false;
 
-        if (value == "A") {
+        if (isWO) {
+          // Marker so Attendance Logs can show WO even when shift master differs
+          checkIn = "WEEK_OFF";
+          checkOut = null;
+          isPresent = false;
+        } else if (isAbsent) {
+          checkIn = null;
+          checkOut = null;
           isPresent = false;
         } else {
-          const parts = value.split(" ");
+          const parts = String(rawValue).trim().split(/\s+/);
 
           if (parts.length >= 2) {
             const checkInTime = parts[0];
@@ -2404,6 +2793,9 @@ exports.uploadAttendance = async (req, res) => {
               checkOutTime == "00:00" ? null : `${dateStr} ${checkOutTime}`;
 
             isPresent = true;
+          } else {
+            // Unrecognized cell — skip insert but still deleted stale row above
+            continue;
           }
         }
 
@@ -2424,7 +2816,7 @@ exports.uploadAttendance = async (req, res) => {
       }
     }
 
-    if (!bulkData.length) {
+    if (!bulkData.length && !deleteConditions.length) {
       return Helper.response(
         false,
         "No valid attendance records found in Excel",
@@ -2438,16 +2830,21 @@ exports.uploadAttendance = async (req, res) => {
     const transaction = await sequelize.transaction();
 
     try {
-      await attendance.destroy(
-        {
+      // Chunk OR deletes to avoid Postgres "out of shared memory" / lock pressure
+      const DELETE_CHUNK = 100;
+      for (let i = 0; i < deleteConditions.length; i += DELETE_CHUNK) {
+        const chunk = deleteConditions.slice(i, i + DELETE_CHUNK);
+        await attendance.destroy({
           where: {
-            [Op.or]: deleteConditions,
+            [Op.or]: chunk,
           },
-        },
-        { transaction },
-      );
+          transaction,
+        });
+      }
 
-      await attendance.bulkCreate(bulkData, { transaction });
+      if (bulkData.length) {
+        await attendance.bulkCreate(bulkData, { transaction });
+      }
 
       await transaction.commit();
     } catch (err) {
@@ -3124,6 +3521,16 @@ exports.addReimbursement = async (req, res) => {
 
     await t.commit();
 
+    await writeAudit({
+      req,
+      actionType: "REIMBURSEMENT_CREATE",
+      referenceId: reimbursementData.id,
+      employeeId: reimbursementData.employeeId,
+      oldValue: null,
+      newValue: { ...toPlain(reimbursementData), files: createdDocs.map((f) => f.image) },
+      remarks: `Reimbursement added: ${reimbursementData.amount}`,
+    });
+
     return res.status(200).json({
       status: true,
       message: "Reimbursement added successfully",
@@ -3330,6 +3737,10 @@ exports.updateReimbursementStatus = async (req, res) => {
       );
     }
 
+    if (await isWorkflowClaim(id)) {
+      return Helper.response(false, "This is an expense claim; manage it from Expense Claims", null, res, 200);
+    }
+
     const existingDoc = await Reimbursement.findOne({
       where: { id, tenantId, branchId },
     });
@@ -3337,6 +3748,8 @@ exports.updateReimbursementStatus = async (req, res) => {
     if (!existingDoc) {
       return Helper.response(false, "Reimbursement not found", null, res, 404);
     }
+
+    const oldReimbursement = toPlain(existingDoc);
 
     await existingDoc.update({
       status,
@@ -3349,6 +3762,16 @@ exports.updateReimbursementStatus = async (req, res) => {
       { status, branchId, updatedBy: req.users?.id, updatedAt: new Date() },
       { where: { reimbursementId: id, tenantId } },
     );
+
+    await writeAudit({
+      req,
+      actionType: "REIMBURSEMENT_STATUS_UPDATE",
+      referenceId: existingDoc.id,
+      employeeId: existingDoc.employeeId,
+      oldValue: oldReimbursement,
+      newValue: existingDoc,
+      remarks: `Reimbursement ${status}`,
+    });
 
     return Helper.response(
       true,
@@ -3393,6 +3816,11 @@ exports.updateReimbursement = async (req, res) => {
       );
     }
 
+    if (await isWorkflowClaim(id)) {
+      Helper.deleteUploadedFiles(req.files);
+      return Helper.response(false, "This is an expense claim; manage it from Expense Claims", null, res, 200);
+    }
+
     const existingDoc = await Reimbursement.findOne({
       where: { id, tenantId, branchId },
     });
@@ -3401,6 +3829,8 @@ exports.updateReimbursement = async (req, res) => {
       Helper.deleteUploadedFiles(req.files);
       return Helper.response(false, "Reimbursement not found", null, res, 404);
     }
+
+    const oldReimbursement = toPlain(existingDoc);
 
     if (!req.files || req.files.length === 0) {
       existingDoc.amount = amount;
@@ -3413,6 +3843,16 @@ exports.updateReimbursement = async (req, res) => {
       existingDoc.updatedAt = new Date();
 
       await existingDoc.save();
+
+      await writeAudit({
+        req,
+        actionType: "REIMBURSEMENT_UPDATE",
+        referenceId: existingDoc.id,
+        employeeId: existingDoc.employeeId,
+        oldValue: oldReimbursement,
+        newValue: existingDoc,
+        remarks: "Reimbursement updated",
+      });
 
       return Helper.response(
         true,
@@ -3458,6 +3898,16 @@ exports.updateReimbursement = async (req, res) => {
       console.log("New file uploaded:", file.filename);
     }
 
+    await writeAudit({
+      req,
+      actionType: "REIMBURSEMENT_UPDATE",
+      referenceId: existingDoc.id,
+      employeeId: existingDoc.employeeId,
+      oldValue: oldReimbursement,
+      newValue: existingDoc,
+      remarks: "Reimbursement updated with new file",
+    });
+
     return Helper.response(
       true,
       "Reimbursement updated successfully",
@@ -3491,6 +3941,10 @@ exports.deleteReimbursement = async (req, res) => {
       );
     }
 
+    if (await isWorkflowClaim(id)) {
+      return Helper.response(false, "This is an expense claim; manage it from Expense Claims", null, res, 200);
+    }
+
     const delteholiday = await Reimbursement.findOne({
       where: { id: id, tenantId, branchId },
     });
@@ -3512,7 +3966,19 @@ exports.deleteReimbursement = async (req, res) => {
       }
     }
 
+    const oldReimbursement = toPlain(delteholiday);
+
     await delteholiday.destroy();
+
+    await writeAudit({
+      req,
+      actionType: "REIMBURSEMENT_DELETE",
+      referenceId: id,
+      employeeId: oldReimbursement?.employeeId,
+      oldValue: oldReimbursement,
+      newValue: null,
+      remarks: `Reimbursement deleted: ${oldReimbursement?.amount}`,
+    });
 
     return Helper.response(
       true,
@@ -3785,6 +4251,18 @@ exports.CreateManuallyCompoff = async (req, res) => {
     }
 
     await transaction.commit();
+
+    for (const entry of createdEntries) {
+      await writeAudit({
+        req,
+        actionType: "COMP_OFF_CREATE",
+        referenceId: entry.id,
+        employeeId: entry.employeeId,
+        oldValue: null,
+        newValue: entry,
+        remarks: `Comp-off added manually for ${earnedDate}`,
+      });
+    }
 
     return Helper.response(
       true,

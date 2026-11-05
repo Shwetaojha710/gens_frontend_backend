@@ -98,7 +98,7 @@ export class EmployeePortalLeaveComponent implements OnInit {
   approvingId: string | null = null;
   decliningTeamId: string | null = null;
   branches: any = [];
-  selectedBranchId = '';
+  selectedBranchId = 'All';
 
   form: FormGroup;
 
@@ -155,12 +155,39 @@ export class EmployeePortalLeaveComponent implements OnInit {
 
 
     if (this.isDirectorOrManager) {
+      let accessibleIds: string[] = [];
+      let hasExplicitBranchIds = false;
+      try {
+        const u = JSON.parse(localStorage.getItem('empPortalUser') || '{}');
+        const raw = u.branchIds;
+        hasExplicitBranchIds =
+          (Array.isArray(raw) && raw.length > 0) ||
+          (typeof raw === 'string' && !!raw.trim() && raw !== 'null');
+        if (Array.isArray(raw)) accessibleIds = raw.map(String).filter(Boolean);
+        else if (typeof raw === 'string' && raw.trim()) {
+          try {
+            const p = JSON.parse(raw);
+            accessibleIds = Array.isArray(p) ? p.map(String) : [raw];
+          } catch {
+            accessibleIds = [raw];
+          }
+        }
+        if (!accessibleIds.length && u.branchId) accessibleIds = [String(u.branchId)];
+      } catch { /* ignore */ }
+
       this.api.getBranches().subscribe({
-        next: (b) => (this.branches = b),
+        next: (b) => {
+          let list = Array.isArray(b) ? b : [];
+          const scopeAccess =
+            this.userDesignation.includes('director') ||
+            (this.userDesignation.includes('manager') && hasExplicitBranchIds);
+          if (scopeAccess && accessibleIds.length) {
+            list = list.filter((x: { id?: string }) => accessibleIds.includes(String(x.id)));
+          }
+          this.branches = list;
+        },
         error: () => {},
       });
-      console.log(this.branches,"branches");
-
     }
 
     this.loadList();

@@ -27,11 +27,48 @@ UserPermission.sync({ alter: false }).catch(err =>
   console.error('UserPermission sync error:', err)
 );
 
+// alter:false — alter:true exhausts Postgres locks (53200 out of shared memory)
 DocumentTemplate.sync({ alter: false }).catch(err =>
   console.error('DocumentTemplate sync error:', err)
 );
 GeneratedDocument.sync({ alter: false }).catch(err =>
   console.error('GeneratedDocument sync error:', err)
+);
+
+// Performance, expense, project/timesheet and asset tables — create if missing
+[
+  require('./app/models/pm_cycle'),
+  require('./app/models/pm_goal'),
+  require('./app/models/pm_key_result'),
+  require('./app/models/pm_review'),
+  require('./app/models/pm_review_approval'),
+  require('./app/models/pm_feedback'),
+  // Expense management
+  require('./app/models/expense_category'),
+  require('./app/models/expense_approval_rule'),
+  require('./app/models/expense_setting'),
+  require('./app/models/expense_receipt'),
+  require('./app/models/expense_item'),
+  require('./app/models/expense_claim'),
+  require('./app/models/expense_approval'),
+  // Projects & timesheets
+  require('./app/models/pt_client'),
+  require('./app/models/pt_project'),
+  require('./app/models/pt_allocation'),
+  require('./app/models/pt_task'),
+  require('./app/models/pt_timesheet'),
+  require('./app/models/pt_time_entry'),
+  require('./app/models/pt_setting'),
+  // Asset management
+  require('./app/models/as_category'),
+  require('./app/models/as_asset'),
+  require('./app/models/as_allocation'),
+  require('./app/models/as_maintenance'),
+  require('./app/models/as_event'),
+].forEach((model) =>
+  model.sync({ alter: false }).catch(err =>
+    console.error(`${model.getTableName()} sync error:`, err)
+  )
 );
 
 // const skills = require('./app/models/skills');
@@ -70,6 +107,15 @@ app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 
 app.use(express.static(path.join(__dirname, 'upload')));
 app.use('/upload', express.static(path.join(__dirname, 'upload')));
+
+// Employee face / profile photos (attendance facedata)
+try {
+  const { faceDataDir } = require('./app/helper/faceData');
+  const faceDir = faceDataDir();
+  app.use('/attendance/facedata', express.static(faceDir));
+} catch (e) {
+  console.error('faceData static mount failed:', e?.message || e);
+}
 
 
 app.use((req, res, next) => {

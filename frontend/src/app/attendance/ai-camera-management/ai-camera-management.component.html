@@ -1,0 +1,132 @@
+<div class="container-fluid py-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h4 class="mb-0">Camera Management</h4>
+      <small class="text-muted">View = live preview only. Click <strong>Start</strong> to recognize faces &amp; mark attendance.</small>
+    </div>
+    <button class="btn btn-primary btn-sm" (click)="openCreate()" *ngIf="!showForm">Add Camera</button>
+  </div>
+
+  <div class="card mb-3" *ngIf="showForm">
+    <div class="card-header">{{ editingId ? 'Edit Camera' : 'Add Camera' }}</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Name</label>
+          <input class="form-control" [(ngModel)]="form.name" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Type</label>
+          <select class="form-select" [(ngModel)]="form.cameraType">
+            <option *ngFor="let t of cameraTypes" [value]="t">{{ t }}</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Event</label>
+          <select class="form-select" [(ngModel)]="form.eventType">
+            <option *ngFor="let e of eventTypes" [value]="e.value">{{ e.label }}</option>
+          </select>
+        </div>
+        <div class="col-md-12">
+          <label class="form-label">RTSP URL {{ editingId ? '(leave blank to keep)' : '' }}</label>
+          <input class="form-control" [(ngModel)]="form.rtspUrl" placeholder="rtsp://user:pass@ip:554/stream1" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Location</label>
+          <input class="form-control" [(ngModel)]="form.location" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Direction</label>
+          <input class="form-control" [(ngModel)]="form.direction" />
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" [(ngModel)]="form.isActive" id="camActive" />
+            <label class="form-check-label" for="camActive">Active</label>
+          </div>
+        </div>
+      </div>
+      <div class="mt-3 d-flex gap-2">
+        <button class="btn btn-primary btn-sm" (click)="save()">Save</button>
+        <button class="btn btn-outline-secondary btn-sm" (click)="cancel()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body p-0">
+      <table class="table mb-0 align-middle">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Event</th>
+            <th>Location</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of cameras">
+            <td>{{ c.name }}</td>
+            <td>{{ c.cameraType }}</td>
+            <td>{{ c.eventType }}</td>
+            <td>{{ c.location || '—' }}</td>
+            <td>
+              <span class="badge me-1" [ngClass]="c.recognizing ? 'bg-success' : (c.lastStatus === 'online' ? 'bg-info' : 'bg-secondary')">
+                {{ c.recognizing ? 'recognizing' : (c.workerStatus || c.lastStatus || 'stopped') }}
+              </span>
+              <small class="text-muted d-block" *ngIf="c.lastRecognition?.at">
+                last: {{ c.lastRecognition.employee_id | slice:0:8 }}… ({{ c.lastRecognition.similarity | number:'1.2-2' }})
+              </small>
+            </td>
+            <td class="text-nowrap">
+              <button class="btn btn-sm btn-outline-info me-1" (click)="openPreview(c)" title="View stream">
+                View
+              </button>
+              <button class="btn btn-sm btn-outline-secondary me-1" (click)="test(c)" [disabled]="busyId === c.id">Test</button>
+              <button class="btn btn-sm btn-success me-1" (click)="start(c)" [disabled]="busyId === c.id || c.recognizing" title="Start face recognition">
+                {{ c.recognizing ? 'Running' : 'Start' }}
+              </button>
+              <button class="btn btn-sm btn-outline-warning me-1" (click)="stop(c)" [disabled]="busyId === c.id || !c.recognizing">Stop</button>
+              <button class="btn btn-sm btn-outline-primary me-1" (click)="openEdit(c)">Edit</button>
+              <button class="btn btn-sm btn-outline-danger" (click)="remove(c)">Delete</button>
+            </td>
+          </tr>
+          <tr *ngIf="!cameras.length">
+            <td colspan="6" class="text-center text-muted py-4">No cameras yet</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Live stream preview modal -->
+<div class="ai-preview-backdrop" *ngIf="previewOpen" (click)="closePreview()"></div>
+<div class="ai-preview-modal card" *ngIf="previewOpen" role="dialog" aria-modal="true">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <div>
+      <strong>{{ previewCamera?.name || 'Camera' }}</strong>
+      <small class="text-muted ms-2">{{ previewCamera?.location || '' }} · {{ previewCamera?.eventType }}</small>
+    </div>
+    <button type="button" class="btn-close" aria-label="Close" (click)="closePreview()"></button>
+  </div>
+  <div class="card-body p-2">
+    <div class="ai-preview-stage bg-dark rounded d-flex align-items-center justify-content-center">
+      <img *ngIf="previewImgUrl && !previewError" [src]="previewImgUrl" alt="Camera preview" class="ai-preview-img" />
+      <div *ngIf="previewLoading && !previewImgUrl" class="text-white-50 py-5">Loading stream…</div>
+      <div *ngIf="previewError" class="text-danger text-center px-3 py-5">{{ previewError }}</div>
+    </div>
+    <div class="d-flex justify-content-between align-items-center mt-2 px-1">
+      <small class="text-muted">{{ previewInfo || 'Smooth JPEG preview (~8 fps, persistent RTSP). Face service must be running.' }}</small>
+      <div class="d-flex gap-2">
+        <button class="btn btn-sm" [class.btn-success]="previewLive" [class.btn-outline-secondary]="!previewLive" (click)="togglePreviewLive()">
+          {{ previewLive ? 'Live' : 'Paused' }}
+        </button>
+        <button class="btn btn-sm btn-outline-primary" (click)="refreshPreviewOnce()" [disabled]="previewLoading">Refresh</button>
+        <button class="btn btn-sm btn-outline-secondary" (click)="closePreview()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>

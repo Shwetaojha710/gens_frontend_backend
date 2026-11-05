@@ -93,8 +93,9 @@ const OfferLetter = sequelize.define("offer_letter", {
   },
 });
 
-OfferLetter.sync({ alter: true })
-  .then(() => console.log("offer_letter model synced successfully"))
-  .catch((error) => console.error("Error syncing offer_letter model:", error));
+// Disabled: sync({ alter: true }) exhausts Postgres locks (53200 out of shared memory)
+// OfferLetter.sync({ alter: true })
+//   .then(() => console.log("offer_letter model synced successfully"))
+//   .catch((error) => console.error("Error syncing offer_letter model:", error));
 
 module.exports = OfferLetter;

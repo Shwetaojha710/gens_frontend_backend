@@ -1,0 +1,58 @@
+<div class="container-fluid mt-5">
+  <div class="card mb-4">
+    <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span>Employee Performance History</span>
+      <span class="d-flex gap-2" *ngIf="rows.length">
+        <button class="btn btn-sm btn-outline-success" (click)="export('excel')"><i class="icon-base ri ri-file-excel-2-line me-1"></i> Excel</button>
+        <button class="btn btn-sm btn-outline-danger" (click)="export('pdf')"><i class="icon-base ri ri-file-pdf-2-line me-1"></i> PDF</button>
+      </span>
+    </h5>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-5">
+          <label class="form-label small">Employee</label>
+          <ng-select [items]="employeeOptions" bindLabel="label" bindValue="value" [(ngModel)]="employeeId"
+            (change)="load()" placeholder="Select employee"></ng-select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="text-center py-5 text-muted">Loading…</div>
+  <div *ngIf="!loading && employeeId && !rows.length" class="card"><div class="card-body text-muted">No reviews for this employee yet.</div></div>
+
+  <ng-container *ngIf="!loading && rows.length">
+    <div class="card mb-4" *ngIf="trendChart">
+      <h6 class="card-header">Rating trend</h6>
+      <div class="card-body">
+        <apx-chart [series]="trendChart.series" [chart]="trendChart.chart" [xaxis]="trendChart.xaxis" [yaxis]="trendChart.yaxis"
+          [stroke]="trendChart.stroke" [markers]="trendChart.markers"></apx-chart>
+      </div>
+    </div>
+
+    <div class="card mb-5">
+      <div class="table-responsive">
+        <table class="table table-striped text-nowrap mb-0">
+          <thead>
+            <tr><th>Cycle</th><th>Period</th><th>Status</th><th>Goals</th><th>Self</th><th>Manager</th><th>360</th><th>Final</th><th>Rating</th><th>Nine-box</th><th></th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of rows">
+              <td class="fw-semibold">{{ r.cycleName }}<div class="small text-muted">{{ cycleTypeLabel(r.cycleType) }}</div></td>
+              <td>{{ r.cycleStart | date: 'MMM yy' }} – {{ r.cycleEnd | date: 'MMM yy' }}</td>
+              <td><span class="badge" [ngClass]="statusBadge(r.status)">{{ r.statusLabel }}</span></td>
+              <td>{{ fmtPct(r.goalAchievement) }}</td>
+              <td>{{ fmtRating(r.selfRating) }}</td>
+              <td>{{ fmtRating(r.managerRating) }}</td>
+              <td>{{ fmtRating(r.feedbackRating) }}</td>
+              <td class="fw-bold">{{ fmtRating(r.finalRating) }}</td>
+              <td>{{ r.ratingLabel || '—' }}</td>
+              <td>{{ r.nineBox || '—' }}</td>
+              <td><a [routerLink]="['/layout/performance/review', r.reviewId]" class="btn btn-sm btn-outline-primary">Open</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+</div>

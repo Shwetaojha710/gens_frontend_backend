@@ -15,7 +15,7 @@
             <div class="col-md-3">
               <div class="form-group">
                 <label class="col-form-label fw-bold">First Name
-                  <span *ngIf="!updateFlag" style="color: red">*</span>
+                  <span style="color: red">*</span>
                 </label>
                 <input type="text" class="form-control" placeholder="Enter First Name"
                   [(ngModel)]="personalDetails.firstName" name="firstName" required #firstNameRef="ngModel" />
@@ -28,7 +28,7 @@
 
             <div class="col-md-3">
               <label class="col-form-label fw-bold">Last Name
-                <span *ngIf="!updateFlag" style="color: red"> *</span>
+                <span style="color: red"> *</span>
               </label>
               <input type="text" class="form-control" placeholder="Enter Last Name"
                 [(ngModel)]="personalDetails.lastName" name="lastName" required #lastNameRef="ngModel" />
@@ -39,7 +39,7 @@
 
             <div class="col-md-3">
               <label class="col-form-label fw-bold">Phone Number
-                <span *ngIf="!updateFlag" style="color: red"> *</span>
+                <span style="color: red"> *</span>
               </label>
               <input type="tel" class="form-control" placeholder="Enter Phone Number"
   [(ngModel)]="personalDetails.mobile" name="phoneNumber"
@@ -62,8 +62,8 @@
                 <!-- <span *ngIf="!updateFlag" style="color: red"> * </span> -->
               </label>
               <input type="tel" class="form-control" placeholder="Enter Phone Number"
-                [(ngModel)]="personalDetails.alternateMobile" name="phoneNumber" pattern="^[6-9]\d{9}$" maxlength="10"
-                required #alternateMobileRef="ngModel" (keypress)="
+                [(ngModel)]="personalDetails.alternateMobile" name="alternateMobile" pattern="^[6-9]\d{9}$" maxlength="10"
+                #alternateMobileRef="ngModel" (keypress)="
                   preventMoreThanTenDigits(
                     $event,
                     personalDetails.alternateMobile
@@ -71,7 +71,7 @@
                 " />
 
               <small class="text-danger"
-                *ngIf="updateFlag==false && alternateMobileRef.invalid && alternateMobileRef.touched">
+                *ngIf="personalDetails.alternateMobile && alternateMobileRef.invalid && alternateMobileRef.touched">
                 Enter valid 10-digit Alternate Mobile number
               </small>
             </div>
@@ -85,25 +85,27 @@
             </div>
             <div class="col-md-3">
               <label class="col-form-label fw-bold">Email
-                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+                <span style="color: red"> *</span>
               </label>
 
               <input type="email" class="form-control" placeholder="Enter Email" [(ngModel)]="personalDetails.email"
                 name="email" required  #emailRef="ngModel" />
-              <small class="text-danger" *ngIf="updateFlag==false && emailRef.invalid && emailRef.touched">
-                Enter valid Email
+              <small class="text-danger" *ngIf="emailRef.touched && !isValidEmail(personalDetails.email)">
+                {{ personalDetails.email ? 'Enter a valid email (e.g. name@example.com)' : 'Email is required' }}
               </small>
             </div>
             <div class="col-md-3">
               <label class="col-form-label fw-bold">Aadhaar Number
                 <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
               </label>
-              <input type="text" class="form-control" placeholder="Enter Aadhaar Number" maxlength="14"
+              <input type="text" class="form-control" placeholder="Enter Aadhaar Number (optional)" maxlength="14"
                 [(ngModel)]="personalDetails.adhaarNo" name="aadhaarNumber" (input)="onAadhaarInput($event, 'space')"
-                (keypress)="adhaarvalidaiton($event, personalDetails.mobile)" pattern="^\d{4}\s\d{4}\s\d{4}$"
+                (keypress)="adhaarvalidaiton($event, personalDetails.adhaarNo)"
+                pattern="^$|^\d{4}\s\d{4}\s\d{4}$"
                 #aadhaarRef="ngModel" />
-              <small class="text-danger" *ngIf="updateFlag==false && aadhaarRef.invalid && aadhaarRef.touched">
-                Enter valid 12-digit Aadhaar number
+              <small class="text-danger"
+                *ngIf="aadhaarRef.touched && personalDetails.adhaarNo && !isValidAadhaar(personalDetails.adhaarNo)">
+                Enter valid 12-digit Aadhaar number (e.g. 1234 5678 9012)
               </small>
             </div>
 
@@ -111,10 +113,11 @@
               <label class="col-form-label fw-bold">PAN
                 <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
               </label>
-              <input type="text" class="form-control text-uppercase" placeholder="Enter PAN Number"
+              <input type="text" class="form-control text-uppercase" placeholder="Enter PAN Number (optional)"
                 [(ngModel)]="personalDetails.panNo" (ngModelChange)="toUppercase()" name="pan"
-                pattern="^[A-Z]{5}[0-9]{4}[A-Z]{1}$" maxlength="10"  #panRef="ngModel" />
-              <small class="text-danger" *ngIf="updateFlag==false && panRef.invalid && panRef.touched">
+                pattern="^$|^[A-Z]{5}[0-9]{4}[A-Z]$" maxlength="10" #panRef="ngModel" />
+              <small class="text-danger"
+                *ngIf="panRef.touched && personalDetails.panNo && !isValidPan(personalDetails.panNo)">
                 Enter valid PAN (e.g., ABCDE1234F)
               </small>
             </div>
@@ -122,11 +125,9 @@
               <label class="col-form-label fw-bold">Blood Group
                 <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
               </label>
-              <input type="text" class="form-control" placeholder="Enter Blood Group"
-                [(ngModel)]="personalDetails.bloodGroup" name="bloodGroup"  #bloodGroupRef="ngModel" />
-              <small class="text-danger" *ngIf="updateFlag==false && bloodGroupRef.invalid && bloodGroupRef.touched">
-                Enter valid First Name
-              </small>
+              <ng-select [items]="bloodGroupList" bindLabel="label" bindValue="value"
+                [(ngModel)]="personalDetails.bloodGroup" placeholder="Select Blood Group" name="bloodGroup">
+              </ng-select>
             </div>
             <div class="col-md-3">
               <label class="col-form-label fw-bold">Marital Status
@@ -204,7 +205,7 @@
             </div>
             <div class="col-md-3">
               <label class="col-form-label fw-bold">DOB
-                <span *ngIf="!updateFlag" style="color: red"> *</span>
+                <span style="color: red"> *</span>
               </label>
               <input type="date" class="form-control" [(ngModel)]="personalDetails.dateOfBirth" [max]="maxDate"
                 name="dateOfBirth"  #dateOfBirthRef="ngModel" (ngModelChange)="calculateAge($event)" />
@@ -225,15 +226,27 @@
             </div>
             <div class="col-md-3">
               <label class="col-form-label fw-bold"> Select Branch
-                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+                <span style="color: red"> *</span>
               </label>
-              <ng-select [items]="branchList" bindLabel="name" bindValue="id" placeholder="Select Branch"
-                class=" me-sm-2 " name="branch" [(ngModel)]="personalDetails['branchId']"
-                (ngModelChange)="onBranchChange($event)" #branchRef="ngModel">
+              <!-- Multiple branches only for Director / Manager (multi-branch access roles) -->
+              <ng-select
+                [items]="branchList"
+                bindLabel="name"
+                bindValue="id"
+                [placeholder]="allowMultiBranch ? 'Select Branch(es)' : 'Select Branch'"
+                class="me-sm-2"
+                name="branch"
+                [multiple]="true"
+                [maxSelectedItems]="allowMultiBranch ? branchList?.length : 1"
+                [closeOnSelect]="!allowMultiBranch"
+                [(ngModel)]="personalDetails['branchIds']"
+                (ngModelChange)="onBranchChange($event)"
+                #branchRef="ngModel"
+              >
               </ng-select>
 
-              <small class="text-danger" *ngIf="branchRef.invalid && branchRef.touched">
-                Select Branch
+              <small class="text-danger" *ngIf="branchRef.touched && !personalDetails['branchIds']?.length">
+                Select a Branch
               </small>
             </div>
             <div class="col-md-3">
@@ -306,7 +319,7 @@
                 <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
               </label>
               <ng-select [items]="role" bindLabel="label" bindValue="value" [(ngModel)]="personalDetails['role']"
-                [multiple]="false" placeholder="Select Role" name="role" id="select2Danger">
+                [multiple]="false" placeholder="Select Role" name="role" id="select2Danger" (change)="onRoleChange()">
               </ng-select>
             </div>
             <div class="col-md-3">
@@ -315,7 +328,7 @@
               </label>
               <ng-select [items]="employeeList" bindLabel="label" bindValue="value"
                 [(ngModel)]="personalDetails['reportingPersonId']" [multiple]="false"
-                placeholder="Select Employment Types" name="country" id="select2Danger">
+                placeholder="Select Reporting Person" name="reportingPerson" id="select2Danger">
               </ng-select>
             </div>
 
@@ -533,9 +546,9 @@
   <div class="row mb-6" *ngIf="!createFlag">
     <div class="col-md">
       <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-header emp-list-header d-flex justify-content-between align-items-center flex-wrap gap-2">
           <span style="font-weight: bold">Employee List</span>
-          <button *ngIf="createFlag == false" type="button" class="btn btn-xs btn-primary float-end"
+          <button *ngIf="createFlag == false" type="button" class="btn btn-xs btn-primary"
             (click)="opencreate()">
             <i class="fa-solid fa-plus"></i>&nbsp;Add
           </button>
@@ -543,129 +556,148 @@
 
         <app-search-pagination [totalItems]="employees.length" [pageSize]="pageSize" [currentPage]="currentPage"
           (search)="onSearch($event)" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)">
-          <div class="table-responsive">
-            <table class="table dataTable">
+          <div class="table-responsive emp-list-wrap">
+            <table class="table dataTable emp-list-table">
               <thead>
                 <tr>
-                  <th style="width: 10px!important;">SI.NO </th>
-
-                  <th>Name / Designation</th>
-                  <th>Gender</th>
-                  <th>Phone / Email</th>
-                  <th>Aadhaar No.</th>
-                  <th>DOB</th>
-                  <th>Status</th>
-                  <th>Location</th>
-                  <th>Atten.</th>
-                  <th>All Time Atten.</th>
-                  <th>Actions</th>
+                  <th class="col-sno">SI.NO</th>
+                  <th class="col-name">Name / Designation</th>
+                  <th class="col-gender">Gender</th>
+                  <th class="col-contact">Phone / Email</th>
+                  <th class="col-aadhaar">Aadhaar No.</th>
+                  <th class="col-dob">DOB</th>
+                  <th class="col-status">Status</th>
+                  <th class="col-location">Location</th>
+                  <th class="col-atten">Atten.</th>
+                  <th class="col-alltime">All Time Atten.</th>
+                  <th class="col-actions">Actions</th>
                 </tr>
-
               </thead>
               <tbody class="table-border-bottom-0">
                 <tr *ngFor="let item of filteredDesignation; let i = index">
-                  <td style="width: 10px!important;">{{item?.si_no}}</td>
+                  <td class="col-sno" data-label="SI.NO">{{item?.si_no}}</td>
 
-                  <td>
-                    <div class="d-flex align-items-center" (click)="view(item)">
-                      <div class="avatar avatar-sm me-4">
-
-                        <img [src]="item?.profileImage" width="100" height="auto" alt="Avatar" class="rounded-circle" />
-
+                  <td class="col-name" data-label="Name">
+                    <div class="d-flex align-items-center emp-name-cell" (click)="view(item)">
+                      <div class="avatar avatar-sm me-3 flex-shrink-0">
+                        <img [src]="item?.profileImage" width="40" height="40" alt="Avatar" class="rounded-circle" />
                       </div>
-                      <div>
+                      <div class="emp-name-meta min-w-0">
                         <h6 class="mb-0 text-truncate link-primary">
                           {{ item["firstName"] }} {{ item["lastName"] }}
                         </h6>
-                        <small class="text-truncate">{{item?.['designation']}}</small>
-
-                          <br>
-                        <small class="text-truncate">{{item?.empCode}}</small>
-
-
-
-
+                        <small class="text-truncate d-block">{{item?.['designation']}}</small>
+                        <small class="text-truncate d-block">{{item?.empCode}}</small>
                       </div>
                     </div>
                   </td>
-                  <td>
-                   <small class="text-truncate">{{item?.gender}}</small>
-
+                  <td class="col-gender" data-label="Gender">
+                    <small>{{item?.gender}}</small>
                   </td>
-                  <td>
-                    {{ item["mobile"] }}<br><small class="text-truncate">  {{ item["email"] }}</small>
+                  <td class="col-contact" data-label="Phone / Email">
+                    <span class="d-block">{{ item["mobile"] }}</span>
+                    <small class="text-truncate d-block">{{ item["email"] }}</small>
                   </td>
-                  <td>
+                  <td class="col-aadhaar" data-label="Aadhaar No.">
                     {{ item["adhaarNo"] }}
                   </td>
-                  <td>
+                  <td class="col-dob" data-label="DOB">
                     {{ item["dateOfBirth"] | date : "dd-MM-yyyy" }}
                   </td>
-
-                  <td>
-                       <span
-                    class="badge badge-outline-success px-2"
-                    [ngClass]="getUserStatusClass(item.status)"
-                  >
-                    {{ item.status =='active' ? 'Active' : 'InActive' }}
-                  </span>
+                  <td class="col-status" data-label="Status">
+                    <span
+                      class="badge badge-outline-success px-2"
+                      [ngClass]="getUserStatusClass(item.status)"
+                    >
+                      {{ item.status =='active' ? 'Active' : 'InActive' }}
+                    </span>
                   </td>
-                  <td>
-                       <span
-                    class="badge badge-outline-success px-2"
-                    [ngClass]="getStatusClass(item.isLocation)"
-                  >
-                    {{ item.isLocation ? 'Active' : 'Inactive' }}
-                  </span>
+                  <td class="col-location" data-label="Location">
+                    <span
+                      class="badge badge-outline-success px-2"
+                      [ngClass]="getStatusClass(item.isLocation)"
+                    >
+                      {{ item.isLocation ? 'Active' : 'Inactive' }}
+                    </span>
                   </td>
-                  <td>
-                      <span
-                    class="badge badge-outline-success px-2"
-                    [ngClass]="getStatusClass(item.isofflineAtt)"
-                  >
-                    {{ item.isofflineAtt ? 'Active' : 'Inactive' }}
-                  </span>
+                  <td class="col-atten" data-label="Atten.">
+                    <span
+                      class="badge badge-outline-success px-2"
+                      [ngClass]="getStatusClass(item.isofflineAtt)"
+                    >
+                      {{ item.isofflineAtt ? 'Active' : 'Inactive' }}
+                    </span>
                   </td>
-                  <td>
-                     <span
-                    class="badge badge-outline-success px-2"
-                    [ngClass]="getStatusClass(item.isofflineAllTimeAtt)"
-                  >
-                   {{ item.isofflineAllTimeAtt ? 'Active' : 'Inactive' }}
-                  </span>
-
-                    <!-- {{ item.isofflineAllTimeAtt ? 'Active' : 'Inactive' }} -->
+                  <td class="col-alltime" data-label="All Time Atten.">
+                    <span
+                      class="badge badge-outline-success px-2"
+                      [ngClass]="getStatusClass(item.isofflineAllTimeAtt)"
+                    >
+                      {{ item.isofflineAllTimeAtt ? 'Active' : 'Inactive' }}
+                    </span>
                   </td>
-                  <td>
-
-                     <button type="button" class="badge badge-center bg-label-primary" title="All Time Attendance"
-                      (click)="enableDisableLoc(item,'attendanceAllTime')">
-                      <!-- Attendance All Time -->
-                      <i class="fa-solid fa-calendar-check"></i>
-                    </button>&nbsp;
-
-                    <button type="button" class="badge badge-center bg-label-warning" title="Attendance"
-                      (click)="enableDisableLoc(item,'attendance')">
-                      <!-- Offline Attendance -->
-
-<!--                       <i class="fa fa-clock"></i> -->
-
-                      <i class="fa-regular fa-clock"></i>
-                      <!-- <i class="fas fa-location"></i> -->
-
-                    </button>&nbsp;
-                    <button type="button" class="badge badge-center bg-label-primary"  title="Location"
-                      (click)="enableDisableLoc(item,'location')">
-                      <i class="fas fa-location"></i></button>&nbsp;
-                    <button type="button" class="badge badge-center bg-label-secondary"  title="View Details" (click)="view(item)">
-                      <i class="far fa-eye"></i></button>&nbsp;
-                    <button type="button" class="badge badge-center bg-label-info"  title="Update" (click)="update(item)">
-                      <i class="fas fa-edit"></i>
-                    </button>
-                    &nbsp;
-                    <button type="button" class="btn btn-sm btn-outline-danger"  title="Delete" (click)="delete(item)">
-                      <i class="fas fa-trash-alt"></i>
-                    </button>
+                  <td class="emp-actions-cell col-actions" data-label="Actions">
+                    <div class="dropdown emp-actions-dropdown" [class.show]="openActionMenuId === item?.id">
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-secondary emp-actions-toggle"
+                        title="Actions"
+                        (click)="toggleActionMenu(item?.id, $event)"
+                        [attr.aria-expanded]="openActionMenuId === item?.id"
+                      >
+                        <i class="ri ri-more-2-fill"></i>
+                      </button>
+                      <ul
+                        class="dropdown-menu dropdown-menu-end emp-actions-menu"
+                        [class.show]="openActionMenuId === item?.id"
+                        [ngStyle]="openActionMenuId === item?.id ? actionMenuStyle : null"
+                        (click)="$event.stopPropagation()"
+                      >
+                        <li>
+                          <button type="button" class="dropdown-item" (click)="runAction(item, 'attendanceAllTime')">
+                            <i class="fa-solid fa-calendar-check me-2 text-primary"></i>
+                            <span>All Time Attendance</span>
+                          </button>
+                        </li>
+                        <li>
+                          <button type="button" class="dropdown-item" (click)="runAction(item, 'attendance')">
+                            <i class="fa-regular fa-clock me-2 text-warning"></i>
+                            <span>Attendance</span>
+                          </button>
+                        </li>
+                        <li>
+                          <button type="button" class="dropdown-item" (click)="runAction(item, 'location')">
+                            <i class="fas fa-location me-2 text-primary"></i>
+                            <span>Location</span>
+                          </button>
+                        </li>
+                        <li>
+                          <button type="button" class="dropdown-item" (click)="runAction(item, 'view')">
+                            <i class="far fa-eye me-2 text-secondary"></i>
+                            <span>View Details</span>
+                          </button>
+                        </li>
+                        <li>
+                          <button type="button" class="dropdown-item" (click)="runAction(item, 'assignBranches')">
+                            <i class="fas fa-code-branch me-2"></i>
+                            <span>Assign Branches</span>
+                          </button>
+                        </li>
+                        <li>
+                          <button type="button" class="dropdown-item" (click)="runAction(item, 'update')">
+                            <i class="fas fa-edit me-2 text-info"></i>
+                            <span>Edit</span>
+                          </button>
+                        </li>
+                        <li><hr class="dropdown-divider" /></li>
+                        <li>
+                          <button type="button" class="dropdown-item text-danger" (click)="runAction(item, 'delete')">
+                            <i class="fas fa-trash-alt me-2"></i>
+                            <span>Delete</span>
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -741,6 +773,50 @@
           </table>
         </app-search-pagination> -->
 
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Branches (Employee List action) -->
+<div class="ab-backdrop" *ngIf="branchAssign" (click)="closeAssignBranches()">
+  <div class="ab-dialog" role="dialog" aria-modal="true" aria-labelledby="ab-title" (click)="$event.stopPropagation()">
+    <div class="ab-head">
+      <div>
+        <h5 id="ab-title" class="mb-0">Assign Branches</h5>
+        <small class="text-muted">{{ branchAssign.name }} · {{ branchAssign.roleLabel }}</small>
+      </div>
+      <button type="button" class="btn-close" aria-label="Close" (click)="closeAssignBranches()"></button>
+    </div>
+
+    <div class="ab-body">
+      <div class="alert alert-warning py-2 small mb-2" *ngIf="!branchAssign.multi">
+        Only Director or Manager roles can have more than one branch. Change the role with Update to assign more.
+      </div>
+      <label class="ab-all" *ngIf="branchAssign.multi">
+        <input type="checkbox" class="form-check-input" [checked]="allBranchesAssigned"
+          (change)="toggleAllBranches($any($event.target).checked)" />
+        <span><b>All branches</b> <small class="text-muted">({{ branchList?.length || 0 }})</small></span>
+      </label>
+      <div class="ab-grid">
+        <label class="ab-item" *ngFor="let b of branchList"
+          [class.ab-item--home]="b.id === branchAssign.homeId">
+          <input type="checkbox" class="form-check-input"
+            [checked]="branchAssign.selected.includes(b.id)"
+            [disabled]="b.id === branchAssign.homeId || !branchAssign.multi"
+            (change)="toggleBranch(b.id, $any($event.target).checked)" />
+          <span>{{ b.name }} <small *ngIf="b.id === branchAssign.homeId" class="text-muted">(home)</small></span>
+        </label>
+      </div>
+      <small class="text-muted d-block mt-2">The home branch always stays assigned.</small>
+    </div>
+
+    <div class="ab-foot">
+      <span class="small text-muted">{{ branchAssign.selected.length }} selected</span>
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="closeAssignBranches()">Cancel</button>
+        <button type="button" class="btn btn-sm btn-primary" [disabled]="branchAssign.saving || !branchAssign.multi"
+          (click)="saveAssignBranches()">{{ branchAssign.saving ? 'Saving…' : 'Save' }}</button>
       </div>
     </div>
   </div>

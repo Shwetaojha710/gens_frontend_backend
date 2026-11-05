@@ -1,0 +1,52 @@
+<div class="container-fluid mt-5">
+  <div class="card">
+    <h5 class="card-header d-flex justify-content-between align-items-center">
+      <span>Asset Categories</span>
+      <button class="btn btn-sm btn-primary" (click)="open()"><i class="icon-base ri ri-add-line me-1"></i> New category</button>
+    </h5>
+    <div class="table-responsive">
+      <table class="table table-striped text-nowrap mb-0">
+        <thead><tr><th>Category</th><th>ID prefix</th><th>Employee acknowledgement</th><th class="text-end">Assets</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          <tr *ngIf="!categories.length"><td colspan="6" class="text-center text-muted py-4">No categories yet — e.g. Laptop (LAP), Mobile (MOB), Access card (ACC).</td></tr>
+          <tr *ngFor="let c of categories">
+            <td class="fw-semibold">{{ c.name }}<div class="small text-muted" *ngIf="c.description">{{ c.description }}</div></td>
+            <td><code>{{ c.code }}-0001</code></td>
+            <td>{{ c.requiresAcknowledgement ? 'Required' : 'Not required' }}</td>
+            <td class="text-end">{{ c.assetCount }}</td>
+            <td><span class="badge" [ngClass]="c.status === 'active' ? 'bg-label-success' : 'bg-label-secondary'">{{ c.status }}</span></td>
+            <td class="text-end"><button class="btn btn-sm btn-outline-secondary" (click)="open(c)">Edit</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div *ngIf="form" class="modal d-block" style="background: rgba(15, 23, 42, 0.45)" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">{{ form.id ? 'Edit category' : 'New category' }}</h5><button type="button" class="btn-close" (click)="form = null"></button></div>
+        <div class="modal-body">
+          <div class="row g-2">
+            <div class="col-8"><label class="form-label">Name</label><input class="form-control" [(ngModel)]="form.name" /></div>
+            <div class="col-4"><label class="form-label">ID prefix</label><input class="form-control text-uppercase" maxlength="8" [(ngModel)]="form.code" placeholder="LAP" /></div>
+            <div class="col-12"><label class="form-label">Description</label><input class="form-control" [(ngModel)]="form.description" /></div>
+          </div>
+          <div class="form-check mt-3">
+            <input class="form-check-input" type="checkbox" id="ackReq" [(ngModel)]="form.requiresAcknowledgement" />
+            <label class="form-check-label" for="ackReq">Employee must acknowledge receipt in the portal</label>
+          </div>
+          <div class="mt-2">
+            <label class="form-label">Status</label>
+            <select class="form-select" [(ngModel)]="form.status"><option value="active">Active</option><option value="inactive">Inactive</option></select>
+          </div>
+          <p class="small text-muted mt-2 mb-0" *ngIf="form.id">Changing the prefix only affects assets registered from now on.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="form = null">Cancel</button>
+          <button class="btn btn-primary" (click)="save()" [disabled]="saving">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

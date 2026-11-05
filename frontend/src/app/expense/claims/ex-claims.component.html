@@ -1,0 +1,156 @@
+<div class="container-fluid mt-5">
+  <div class="card mb-4">
+    <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span>Expense Claims</span>
+      <span class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-success" (click)="export('excel')"><i class="icon-base ri ri-file-excel-2-line me-1"></i> Excel</button>
+        <button class="btn btn-sm btn-outline-danger" (click)="export('pdf')"><i class="icon-base ri ri-file-pdf-2-line me-1"></i> PDF</button>
+      </span>
+    </h5>
+    <div class="card-body">
+      <div class="row g-2">
+        <div class="col-md-2">
+          <label class="form-label small">Status</label>
+          <select class="form-select" [(ngModel)]="filters.status" (change)="load()">
+            <option value="">All</option>
+            <option *ngFor="let s of statuses" [value]="s.value">{{ s.label }}</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Waiting on</label>
+          <select class="form-select" [(ngModel)]="filters.pendingWith" (change)="load()">
+            <option value="">Anyone</option>
+            <option *ngFor="let l of levels" [value]="l.value">{{ l.label }}</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Category</label>
+          <ng-select [items]="categoryOptions" bindLabel="name" bindValue="id" [(ngModel)]="filters.categoryId" (change)="load()" placeholder="All"></ng-select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Department</label>
+          <ng-select [items]="departmentOptions" bindLabel="label" bindValue="value" [(ngModel)]="filters.departmentId" (change)="load()" placeholder="All"></ng-select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Employee</label>
+          <ng-select [items]="employeeOptions" bindLabel="label" bindValue="value" [(ngModel)]="filters.employeeId" (change)="load()" placeholder="All"></ng-select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Search</label>
+          <input class="form-control" [(ngModel)]="search" placeholder="Claim no, name…" />
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Expense from</label>
+          <input type="date" class="form-control" [(ngModel)]="filters.fromDate" (change)="load()" />
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Expense to</label>
+          <input type="date" class="form-control" [(ngModel)]="filters.toDate" (change)="load()" />
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="flaggedOnly" [(ngModel)]="filters.flaggedOnly" (change)="load()" />
+            <label class="form-check-label" for="flaggedOnly">Only claims with policy / duplicate flags</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span>{{ filtered.length }} claim(s) · {{ fmtMoney(filteredTotal) }}</span>
+      <button *ngIf="selected.size" class="btn btn-sm btn-primary" (click)="openBulkPay()">
+        <i class="icon-base ri ri-bank-card-line me-1"></i> Mark {{ selected.size }} paid ({{ fmtMoney(selectedTotal) }})
+      </button>
+    </div>
+    <div *ngIf="loading" class="text-center py-5 text-muted">Loading claims…</div>
+    <div class="table-responsive" *ngIf="!loading">
+      <table class="table table-striped table-hover text-nowrap mb-0">
+        <thead>
+          <tr>
+            <th>
+              <input type="checkbox" class="form-check-input" title="Select all approved"
+                [checked]="payableIds.length > 0 && selected.size === payableIds.length"
+                (change)="toggleAll($any($event.target).checked)" [disabled]="!payableIds.length" />
+            </th>
+            <th>Claim</th><th>Employee</th><th>Categories</th><th class="text-end">Amount</th><th>Status</th><th>Submitted</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="!filtered.length"><td colspan="8" class="text-center text-muted py-4">No claims match.</td></tr>
+          <tr *ngFor="let r of filtered" (click)="open(r.id)" style="cursor: pointer">
+            <td (click)="$event.stopPropagation()">
+              <input *ngIf="r.status === 'approved'" type="checkbox" class="form-check-input"
+                [checked]="selected.has(r.id)" (change)="toggle(r.id, $any($event.target).checked)" />
+            </td>
+            <td>
+              <span class="fw-semibold">{{ r.claimNo || 'Older claim' }}</span>
+              <span *ngIf="r.flagCount" class="badge bg-label-warning ms-1" title="Policy / duplicate flags"><i class="icon-base ri ri-flag-line"></i> {{ r.flagCount }}</span>
+              <div class="small text-muted text-truncate" style="max-width: 240px">{{ r.title }}</div>
+            </td>
+            <td>{{ r.employeeName }}<div class="small text-muted">{{ r.department }}</div></td>
+            <td class="small">{{ r.categories.join(', ') || '—' }}</td>
+            <td class="text-end fw-semibold">{{ fmtMoney(r.amount) }}</td>
+            <td>
+              <span class="badge" [ngClass]="statusBadge(r.status)">{{ statusLabel(r.status) }}</span>
+              <div class="small text-muted" *ngIf="r.pendingWith">with {{ levelLabel(r.pendingWith) }}</div>
+            </td>
+            <td class="small">{{ r.submittedAt | date: 'dd MMM yyyy' }}</td>
+            <td><button class="btn btn-sm btn-outline-primary">Open</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Claim modal -->
+  <div *ngIf="openId" class="modal d-block" style="background: rgba(15, 23, 42, 0.45); overflow-y: auto" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Expense claim</h5>
+          <button type="button" class="btn-close" (click)="close()"></button>
+        </div>
+        <div class="modal-body">
+          <div *ngIf="!detail" class="text-center text-muted py-4">Loading…</div>
+          <app-ex-claim-detail [detail]="detail" [permissions]="permissions" [busy]="busy"
+            (decide)="onDecide($event)" (pay)="onPay($event)"></app-ex-claim-detail>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk payment modal -->
+  <div *ngIf="bulkPayment" class="modal d-block" style="background: rgba(15, 23, 42, 0.45)" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Record payment for {{ selected.size }} claim(s)</h5>
+          <button type="button" class="btn-close" (click)="bulkPayment = null"></button>
+        </div>
+        <div class="modal-body">
+          <p class="small text-muted">Total {{ fmtMoney(selectedTotal) }}. Use one reference for a single bulk bank file, or record claims individually.</p>
+          <label class="form-label small">Mode</label>
+          <select class="form-select mb-2" [(ngModel)]="bulkPayment.paymentMode">
+            <option *ngFor="let m of paymentModes" [value]="m.value">{{ m.label }}</option>
+          </select>
+          <ng-container *ngIf="bulkPayment.paymentMode !== 'payroll'">
+            <label class="form-label small">Reference</label>
+            <input class="form-control mb-2" [(ngModel)]="bulkPayment.paymentReference" />
+            <label class="form-label small">Paid on</label>
+            <input type="date" class="form-control" [(ngModel)]="bulkPayment.paidAt" />
+          </ng-container>
+          <div class="row g-2" *ngIf="bulkPayment.paymentMode === 'payroll'">
+            <div class="col"><label class="form-label small">Salary month</label><input type="number" min="1" max="12" class="form-control" [(ngModel)]="bulkPayment.payrollMonth" /></div>
+            <div class="col"><label class="form-label small">Year</label><input type="number" class="form-control" [(ngModel)]="bulkPayment.payrollYear" /></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="bulkPayment = null">Cancel</button>
+          <button class="btn btn-primary" (click)="submitBulkPay()" [disabled]="busy">Mark paid</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

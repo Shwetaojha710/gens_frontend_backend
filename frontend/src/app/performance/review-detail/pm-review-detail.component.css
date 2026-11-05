@@ -1,0 +1,45 @@
+.pm-steps {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.pm-step {
+  flex: 1 1 120px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(108, 117, 125, 0.08);
+  color: #6c757d;
+  font-size: 0.8rem;
+}
+.pm-step__dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+.pm-step--done { background: rgba(40, 199, 111, 0.14); color: #1b7a45; }
+.pm-step--current { background: rgba(102, 108, 255, 0.16); color: #4146c7; font-weight: 600; }
+.pm-goal {
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+}
+.pm-goal:last-child { border-bottom: 0; }
+.pm-inline {
+  background: rgba(102, 108, 255, 0.05);
+  border-radius: 8px;
+  padding: 12px;
+}
+.pm-feedback {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+.pm-pre { white-space: pre-wrap; }
+.pm-modal { background: rgba(15, 23, 42, 0.45); overflow-y: auto; }

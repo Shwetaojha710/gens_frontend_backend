@@ -17,13 +17,19 @@ const empPersonal = sequelize.define(
       type: DataTypes.UUID,
       allowNull: true,
     },
+    /** Branches this employee (e.g. director) may access for team leave/attendance. */
+    branchIds: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+      defaultValue: null,
+    },
     firstName: {
       type: DataTypes.STRING,
       allowNull: false,
     },
     lastName: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
     },
     email: {
       type: DataTypes.STRING,
@@ -161,6 +167,11 @@ const empPersonal = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    /** SHA-256 of profile image bytes — blocks duplicate photo registration per tenant */
+    profileImageHash: {
+      type: DataTypes.STRING(64),
+      allowNull: true,
+    },
     empCode: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -233,12 +244,33 @@ const empPersonal = sequelize.define(
   },
 );
 
-empPersonal.sync({ alter: true })
-  .then(() => {
-    console.log("empPersonal model synced successfully");
-  })
-  .catch((error) => {
-    console.error("Error syncing empPersonal model:", error);
-  });
+// Do NOT use sync({ alter: true }) — views (e.g. employee_leave_features) block ALTER on tenantId.
+// Only add missing branchIds column when needed.
+(async () => {
+  try {
+    const qi = sequelize.getQueryInterface();
+    const desc = await qi.describeTable("empPersonals");
+    if (!desc.branchIds) {
+      await qi.addColumn("empPersonals", "branchIds", {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        defaultValue: null,
+      });
+      console.log("empPersonal.branchIds column added");
+    }
+    if (!desc.profileImageHash) {
+      await qi.addColumn("empPersonals", "profileImageHash", {
+        type: DataTypes.STRING(64),
+        allowNull: true,
+      });
+      console.log("empPersonal.profileImageHash column added");
+    }
+  } catch (error) {
+    console.error(
+      "Error ensuring empPersonal columns:",
+      error?.parent?.message || error?.message || error,
+    );
+  }
+})();
 
 module.exports = empPersonal;

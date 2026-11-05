@@ -164,7 +164,7 @@
               </div>
 
               <div class="mb-4">
-                <label class="form-label small text-muted mb-2 d-block">Company logo</label>
+                <label class="form-label small text-muted mb-2 d-block">Company logo (optional)</label>
                 <input
                   #fileInput
                   class="form-control"
@@ -173,9 +173,24 @@
                   accept="image/png,image/jpeg,image/jpg"
                   (change)="onFileChange($event)"
                 />
-                <small class="text-muted d-block mt-1">PNG or JPG, max 2 MB</small>
+                <small class="text-muted d-block mt-1">PNG or JPG, max 2 MB. You can also add or change it later in Settings.</small>
                 <div *ngIf="previewUrl" class="mt-2 text-center">
                   <img [src]="previewUrl" alt="Logo preview" class="creg-preview img-thumbnail" />
+                </div>
+              </div>
+
+              <div class="mb-4">
+                <label class="form-label small text-muted mb-2 d-block">Logo for dark backgrounds (optional)</label>
+                <input
+                  class="form-control"
+                  type="file"
+                  id="formFileDark"
+                  accept="image/png,image/jpeg,image/jpg"
+                  (change)="onDarkFileChange($event)"
+                />
+                <small class="text-muted d-block mt-1">For example a white logo, shown on the dark sidebar. If you skip it, the company logo is used.</small>
+                <div *ngIf="darkPreviewUrl" class="mt-2 text-center">
+                  <img [src]="darkPreviewUrl" alt="Dark logo preview" class="creg-preview img-thumbnail creg-preview--dark" />
                 </div>
               </div>
 

@@ -68,11 +68,11 @@ const notification_reads = sequelize.define(
   }
 );
 
-// Creates/updates table on boot — comment after first successful sync if preferred
-notification_reads.sync({ alter: true }).then(() => {
-  console.log("notification_reads model synced successfully");
-}).catch((error) => {
-  console.error("Error syncing notification_reads model:", error);
-});
+// Disabled: sync({ alter: true }) exhausts Postgres locks (53200 out of shared memory)
+// notification_reads.sync({ alter: true }).then(() => {
+//   console.log("notification_reads model synced successfully");
+// }).catch((error) => {
+//   console.error("Error syncing notification_reads model:", error);
+// });
 
 module.exports = notification_reads;

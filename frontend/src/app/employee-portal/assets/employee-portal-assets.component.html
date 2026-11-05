@@ -1,0 +1,80 @@
+<div class="container-fluid ep-ep-page">
+  <a routerLink="/employee-portal/dashboard" class="ep-ep-page__back">
+    <i class="icon-base ri ri-arrow-left-line me-1"></i> Back to dashboard
+  </a>
+
+  <header class="mb-4">
+    <h4 class="ep-page-title mb-1">My Assets</h4>
+    <p class="ep-page-sub mb-0">Company equipment issued to you. Confirm what you received, and return everything before your last working day.</p>
+  </header>
+
+  <div *ngIf="pendingAcks" class="alert alert-warning">
+    Please confirm receipt of {{ pendingAcks }} asset(s) below — or report a problem if something is wrong.
+  </div>
+  <div *ngIf="clearance && clearance.recoveryTotal > 0" class="alert alert-danger small">
+    {{ fmtMoney(clearance.recoveryTotal) }} is recorded for recovery against damaged / lost assets. Contact HR for details.
+  </div>
+
+  <div *ngIf="loading" class="text-center py-4 text-muted">Loading…</div>
+  <div *ngIf="!loading && !items.length" class="card ep-glass-card border-0"><div class="card-body text-muted">No company assets have been issued to you.</div></div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-6 col-xl-4" *ngFor="let i of current">
+      <div class="card ep-glass-card border-0 h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <div class="small text-muted">{{ i.asset.category }} · {{ i.asset.assetTag }}</div>
+              <div class="fw-bold">{{ i.asset.name }}</div>
+              <div class="small text-muted">{{ [i.asset.brand, i.asset.model].join(' ').trim() }}<span *ngIf="i.asset.serialNumber"> · S/N {{ i.asset.serialNumber }}</span></div>
+            </div>
+            <span class="badge" [ngClass]="ackBadge(i.ackStatus)" *ngIf="i.ackStatus !== 'not_required'">{{ ackLabel(i.ackStatus) }}</span>
+          </div>
+          <div class="small mt-2">
+            Issued {{ i.allocatedOn | date: 'dd MMM yyyy' }} in {{ conditionLabel(i.conditionAtIssue) | lowercase }} condition
+            <span *ngIf="i.expectedReturnDate"> · return by {{ i.expectedReturnDate | date: 'dd MMM yyyy' }}</span>
+          </div>
+          <div class="small text-muted" *ngIf="i.issueNotes">Included: {{ i.issueNotes }}</div>
+          <div class="small text-danger" *ngIf="i.ackStatus === 'disputed'">You reported: {{ i.ackComment }}</div>
+          <div class="small text-info" *ngIf="i.returnRequestedAt">Return requested — hand it over to HR / IT.</div>
+
+          <div class="d-flex flex-wrap gap-2 mt-3" *ngIf="form?.allocationId !== i.allocationId">
+            <ng-container *ngIf="i.ackStatus === 'pending'">
+              <button class="btn btn-sm btn-success" (click)="acknowledge(i)" [disabled]="busy">I received it</button>
+              <button class="btn btn-sm btn-outline-danger" (click)="form = { allocationId: i.allocationId, kind: 'dispute', text: '' }">Report a problem</button>
+            </ng-container>
+            <button *ngIf="!i.returnRequestedAt" class="btn btn-sm btn-outline-secondary" (click)="form = { allocationId: i.allocationId, kind: 'return', text: '' }">Return this</button>
+          </div>
+
+          <div *ngIf="form?.allocationId === i.allocationId" class="mt-3">
+            <textarea class="form-control form-control-sm mb-2" rows="2" [(ngModel)]="form!.text"
+              [placeholder]="form!.kind === 'dispute' ? 'What is wrong? (missing charger, damaged, not received…)' : 'Optional note for HR'"></textarea>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-primary" (click)="submitForm()" [disabled]="busy">{{ form!.kind === 'dispute' ? 'Send to HR' : 'Request return' }}</button>
+              <button class="btn btn-sm btn-outline-secondary" (click)="form = null">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card ep-glass-card border-0 mb-5" *ngIf="past.length">
+    <div class="card-body">
+      <h6 class="mb-3">Returned</h6>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Asset</th><th>Issued</th><th>Returned</th><th>Condition</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let i of past">
+              <td>{{ i.asset.assetTag }} <span class="small text-muted">{{ i.asset.name }}</span></td>
+              <td>{{ i.allocatedOn | date: 'dd MMM yyyy' }}</td>
+              <td>{{ i.returnedOn ? (i.returnedOn | date: 'dd MMM yyyy') : '—' }}<span *ngIf="i.status === 'lost'" class="badge bg-label-danger ms-1">lost</span></td>
+              <td>{{ i.conditionAtReturn ? conditionLabel(i.conditionAtReturn) : '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

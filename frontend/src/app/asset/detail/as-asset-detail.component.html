@@ -1,0 +1,305 @@
+<div class="container-fluid mt-4">
+  <a routerLink="/layout/assets/inventory" class="small fw-semibold d-inline-flex align-items-center mb-3">
+    <i class="icon-base ri ri-arrow-left-line me-1"></i> Inventory
+  </a>
+
+  <div *ngIf="!detail" class="text-center py-5 text-muted">Loading asset…</div>
+
+  <ng-container *ngIf="detail">
+    <div class="row g-4 mb-4">
+      <div class="col-lg-8">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
+              <div>
+                <h4 class="mb-1">{{ asset.assetTag }} <span class="fs-6 text-muted">{{ asset.category }}</span></h4>
+                <div class="fw-semibold">{{ asset.name }}</div>
+                <div class="small text-muted">{{ [asset.brand, asset.model].join(' ').trim() || '—' }}<span *ngIf="asset.serialNumber"> · S/N {{ asset.serialNumber }}</span></div>
+              </div>
+              <div class="text-end">
+                <span class="badge me-1" [ngClass]="statusBadge(asset.status)">{{ statusLabel(asset.status) }}</span>
+                <span class="badge" [ngClass]="conditionBadge(asset.condition)">{{ conditionLabel(asset.condition) }}</span>
+              </div>
+            </div>
+            <div class="row g-3 small">
+              <div class="col-6 col-md-3"><div class="text-muted">Purchased</div>{{ asset.purchaseDate ? (asset.purchaseDate | date: 'dd MMM yyyy') : '—' }}</div>
+              <div class="col-6 col-md-3"><div class="text-muted">Cost</div>{{ fmtMoney(asset.purchaseCost) }}</div>
+              <div class="col-6 col-md-3"><div class="text-muted">Vendor / invoice</div>{{ asset.vendor || '—' }}<span *ngIf="asset.invoiceNo"> · {{ asset.invoiceNo }}</span></div>
+              <div class="col-6 col-md-3">
+                <div class="text-muted">Warranty</div>
+                <span [class.text-danger]="asset.warranty?.state === 'expired'" [class.text-warning]="asset.warranty?.state === 'expiring'">
+                  {{ asset.warrantyExpiry ? (asset.warrantyExpiry | date: 'dd MMM yyyy') : '—' }}
+                  <span *ngIf="asset.warranty?.state === 'expired'">(expired)</span>
+                  <span *ngIf="asset.warranty?.state === 'expiring'">({{ asset.warranty.daysLeft }} days left)</span>
+                </span>
+              </div>
+              <div class="col-6 col-md-3"><div class="text-muted">Location</div>{{ asset.location || '—' }}</div>
+              <div class="col-6 col-md-3"><div class="text-muted">Maintenance spend</div>{{ fmtMoney(detail.maintenanceCost) }}</div>
+              <div class="col-12" *ngIf="asset.notes"><div class="text-muted">Notes</div>{{ asset.notes }}</div>
+            </div>
+            <div class="d-flex flex-wrap gap-2 mt-4">
+              <button class="btn btn-sm btn-outline-secondary" (click)="openEdit()">Edit details / condition</button>
+              <button *ngIf="asset.status === 'available'" class="btn btn-sm btn-primary" (click)="openAllocate()">Allocate</button>
+              <button *ngIf="!openMaintenance && asset.status !== 'retired' && asset.status !== 'lost'" class="btn btn-sm btn-outline-warning" (click)="openMaint()">Log maintenance</button>
+              <button *ngIf="asset.status === 'available'" class="btn btn-sm btn-outline-danger" (click)="openStatus('retired')">Retire</button>
+              <button *ngIf="asset.status === 'available'" class="btn btn-sm btn-outline-danger" (click)="openStatus('lost')">Mark lost</button>
+              <button *ngIf="asset.status === 'retired' || asset.status === 'lost'" class="btn btn-sm btn-outline-success" (click)="openStatus('available')">Restore to available</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card h-100">
+          <div class="card-body text-center">
+            <div class="as-qr mx-auto mb-2" style="width: 160px" [innerHTML]="qr"></div>
+            <div class="small text-muted mb-2">Scan to open this asset</div>
+            <button class="btn btn-sm btn-outline-primary" (click)="printLabel()"><i class="icon-base ri ri-printer-line me-1"></i> Print label</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Current holder -->
+    <div class="card mb-4" *ngIf="current">
+      <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+          <div class="small text-muted">With</div>
+          <div class="fw-semibold">{{ current.employeeName }} <span class="text-muted small">{{ current.empCode }}</span></div>
+          <div class="small text-muted">
+            Since {{ current.allocatedOn | date: 'dd MMM yyyy' }}<span *ngIf="current.expectedReturnDate"> · return by {{ current.expectedReturnDate | date: 'dd MMM yyyy' }}</span>
+            · issued in {{ conditionLabel(current.conditionAtIssue) | lowercase }} condition
+          </div>
+          <div class="mt-1">
+            <span class="badge me-1" [ngClass]="ackBadge(current.ackStatus)">{{ ackLabel(current.ackStatus) }}</span>
+            <span *ngIf="current.returnRequestedAt" class="badge bg-label-info">Employee asked to return it</span>
+          </div>
+          <div class="small text-danger mt-1" *ngIf="current.ackStatus === 'disputed'">Dispute: {{ current.ackComment }}</div>
+          <div class="small text-muted mt-1" *ngIf="current.returnRequestNote">"{{ current.returnRequestNote }}"</div>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-success" (click)="openReturn('returned')">Receive return</button>
+          <button class="btn btn-outline-danger" (click)="openReturn('lost')">Record as lost</button>
+        </div>
+      </div>
+    </div>
+
+    <ul class="nav nav-pills mb-3 gap-2">
+      <li class="nav-item"><button class="nav-link" [class.active]="tab === 'history'" (click)="tab = 'history'">Allocation history ({{ detail.allocations.length }})</button></li>
+      <li class="nav-item"><button class="nav-link" [class.active]="tab === 'maintenance'" (click)="tab = 'maintenance'">Maintenance &amp; warranty ({{ detail.maintenance.length }})</button></li>
+      <li class="nav-item"><button class="nav-link" [class.active]="tab === 'timeline'" (click)="tab = 'timeline'">Timeline</button></li>
+    </ul>
+
+    <div class="card mb-5" *ngIf="tab === 'history'">
+      <div class="table-responsive">
+        <table class="table text-nowrap mb-0">
+          <thead><tr><th>Employee</th><th>From</th><th>To</th><th>Condition out → in</th><th>Acknowledgement</th><th>Outcome</th></tr></thead>
+          <tbody>
+            <tr *ngIf="!detail.allocations.length"><td colspan="6" class="text-center text-muted py-4">Never allocated.</td></tr>
+            <tr *ngFor="let a of detail.allocations">
+              <td>{{ a.employeeName }}</td>
+              <td>{{ a.allocatedOn | date: 'dd MMM yyyy' }}</td>
+              <td>{{ a.returnedOn ? (a.returnedOn | date: 'dd MMM yyyy') : '—' }}</td>
+              <td>{{ conditionLabel(a.conditionAtIssue) }} → {{ a.conditionAtReturn ? conditionLabel(a.conditionAtReturn) : '—' }}</td>
+              <td><span class="badge" [ngClass]="ackBadge(a.ackStatus)">{{ ackLabel(a.ackStatus) }}</span></td>
+              <td>
+                <span class="badge" [ngClass]="a.status === 'active' ? 'bg-label-primary' : a.status === 'lost' ? 'bg-label-danger' : 'bg-label-success'">{{ a.status }}</span>
+                <span class="small text-danger ms-1" *ngIf="a.recoveryAmount">recover {{ fmtMoney(a.recoveryAmount) }}</span>
+                <div class="small text-muted" *ngIf="a.returnNotes">{{ a.returnNotes }}</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card mb-5" *ngIf="tab === 'maintenance'">
+      <div class="table-responsive">
+        <table class="table text-nowrap mb-0">
+          <thead><tr><th>Type</th><th>Work</th><th>Vendor</th><th>Dates</th><th>Warranty</th><th class="text-end">Cost</th><th></th></tr></thead>
+          <tbody>
+            <tr *ngIf="!detail.maintenance.length"><td colspan="7" class="text-center text-muted py-4">No maintenance yet.</td></tr>
+            <tr *ngFor="let m of detail.maintenance">
+              <td class="text-capitalize">{{ m.type }}</td>
+              <td class="text-wrap" style="max-width: 280px">{{ m.description }}</td>
+              <td>{{ m.vendor || '—' }}</td>
+              <td class="small">{{ m.startDate | date: 'dd MMM yy' }} – {{ m.endDate ? (m.endDate | date: 'dd MMM yy') : 'open' }}</td>
+              <td>{{ m.underWarranty ? 'Covered' : '—' }}</td>
+              <td class="text-end">{{ fmtMoney(m.cost) }}</td>
+              <td class="text-end"><button *ngIf="m.status === 'open'" class="btn btn-sm btn-success" (click)="openClose(m)">Close</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card mb-5" *ngIf="tab === 'timeline'">
+      <ul class="list-group list-group-flush">
+        <li *ngFor="let e of detail.events" class="list-group-item small">
+          <div class="d-flex justify-content-between">
+            <strong>{{ eventLabel(e.type) }}<span *ngIf="e.employeeName" class="fw-normal"> — {{ e.employeeName }}</span></strong>
+            <span class="text-muted">{{ e.createdAt | date: 'dd MMM yyyy, HH:mm' }}</span>
+          </div>
+          <div *ngIf="e.condition" class="text-muted">Condition: {{ conditionLabel(e.condition) }}</div>
+          <div *ngIf="e.note">{{ e.note }}</div>
+          <div class="text-muted" *ngIf="e.actorName">by {{ e.actorName }}</div>
+        </li>
+      </ul>
+    </div>
+  </ng-container>
+
+  <!-- Edit -->
+  <div *ngIf="editForm" class="modal d-block" style="background: rgba(15, 23, 42, 0.45); overflow-y: auto" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Edit {{ editForm.assetTag }}</h5><button type="button" class="btn-close" (click)="editForm = null"></button></div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label">Name</label><input class="form-control" [(ngModel)]="editForm.name" /></div>
+            <div class="col-md-6">
+              <label class="form-label">Category</label>
+              <select class="form-select" [(ngModel)]="editForm.categoryId"><option *ngFor="let c of categories" [value]="c.id">{{ c.name }}</option></select>
+            </div>
+            <div class="col-md-4"><label class="form-label">Brand</label><input class="form-control" [(ngModel)]="editForm.brand" /></div>
+            <div class="col-md-4"><label class="form-label">Model</label><input class="form-control" [(ngModel)]="editForm.model" /></div>
+            <div class="col-md-4"><label class="form-label">Serial / IMEI</label><input class="form-control" [(ngModel)]="editForm.serialNumber" /></div>
+            <div class="col-md-3"><label class="form-label">Purchase date</label><input type="date" class="form-control" [(ngModel)]="editForm.purchaseDate" /></div>
+            <div class="col-md-3"><label class="form-label">Cost (₹)</label><input type="number" min="0" class="form-control" [(ngModel)]="editForm.purchaseCost" /></div>
+            <div class="col-md-3"><label class="form-label">Vendor</label><input class="form-control" [(ngModel)]="editForm.vendor" /></div>
+            <div class="col-md-3"><label class="form-label">Invoice no.</label><input class="form-control" [(ngModel)]="editForm.invoiceNo" /></div>
+            <div class="col-md-3"><label class="form-label">Warranty until</label><input type="date" class="form-control" [(ngModel)]="editForm.warrantyExpiry" /></div>
+            <div class="col-md-3"><label class="form-label">Location</label><input class="form-control" [(ngModel)]="editForm.location" /></div>
+            <div class="col-md-3">
+              <label class="form-label">Condition</label>
+              <select class="form-select" [(ngModel)]="editForm.condition"><option *ngFor="let c of conditions" [value]="c.value">{{ c.label }}</option></select>
+            </div>
+            <div class="col-md-3"><label class="form-label">Condition note</label><input class="form-control" [(ngModel)]="editForm.conditionNote" placeholder="Why it changed" /></div>
+            <div class="col-12"><label class="form-label">Notes</label><textarea class="form-control" rows="2" [(ngModel)]="editForm.notes"></textarea></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="editForm = null">Cancel</button>
+          <button class="btn btn-primary" (click)="saveEdit()" [disabled]="saving">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Allocate -->
+  <div *ngIf="allocateForm" class="modal d-block" style="background: rgba(15, 23, 42, 0.45)" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Allocate {{ asset?.assetTag }}</h5><button type="button" class="btn-close" (click)="allocateForm = null"></button></div>
+        <div class="modal-body">
+          <label class="form-label">Employee</label>
+          <ng-select class="mb-2" [items]="employeeOptions" bindLabel="label" bindValue="value" [(ngModel)]="allocateForm.employeeId" appendTo="body" placeholder="Select employee"></ng-select>
+          <div class="row g-2 mb-2">
+            <div class="col"><label class="form-label">Handed over on</label><input type="date" class="form-control" [(ngModel)]="allocateForm.allocatedOn" /></div>
+            <div class="col"><label class="form-label">Return by</label><input type="date" class="form-control" [(ngModel)]="allocateForm.expectedReturnDate" /></div>
+          </div>
+          <label class="form-label">Notes</label>
+          <textarea class="form-control" rows="2" [(ngModel)]="allocateForm.notes" placeholder="Accessories handed over"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="allocateForm = null">Cancel</button>
+          <button class="btn btn-primary" (click)="saveAllocate()" [disabled]="saving || !allocateForm.employeeId">Allocate</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Return / lost -->
+  <div *ngIf="returnForm" class="modal d-block" style="background: rgba(15, 23, 42, 0.45)" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ returnForm.outcome === 'lost' ? 'Record ' + asset?.assetTag + ' as lost' : 'Receive ' + asset?.assetTag }}</h5>
+          <button type="button" class="btn-close" (click)="returnForm = null"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label">{{ returnForm.outcome === 'lost' ? 'Reported on' : 'Received on' }}</label>
+          <input type="date" class="form-control mb-2" [(ngModel)]="returnForm.returnedOn" />
+          <ng-container *ngIf="returnForm.outcome !== 'lost'">
+            <label class="form-label">Condition on return</label>
+            <select class="form-select mb-2" [(ngModel)]="returnForm.condition"><option *ngFor="let c of conditions" [value]="c.value">{{ c.label }}</option></select>
+          </ng-container>
+          <label class="form-label">{{ returnForm.outcome === 'lost' ? 'What happened' : 'Inspection notes' }}</label>
+          <textarea class="form-control mb-2" rows="2" [(ngModel)]="returnForm.notes"></textarea>
+          <label class="form-label">Amount to recover (₹) <span class="text-muted small">— damage / loss, for full &amp; final</span></label>
+          <input type="number" min="0" class="form-control" [(ngModel)]="returnForm.recoveryAmount" />
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="returnForm = null">Cancel</button>
+          <button class="btn" [ngClass]="returnForm.outcome === 'lost' ? 'btn-danger' : 'btn-success'" (click)="saveReturn()" [disabled]="saving">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Maintenance -->
+  <div *ngIf="maintForm" class="modal d-block" style="background: rgba(15, 23, 42, 0.45)" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Log maintenance</h5><button type="button" class="btn-close" (click)="maintForm = null"></button></div>
+        <div class="modal-body">
+          <div class="row g-2 mb-2">
+            <div class="col">
+              <label class="form-label">Type</label>
+              <select class="form-select" [(ngModel)]="maintForm.type"><option *ngFor="let t of maintenanceTypes" [value]="t.value">{{ t.label }}</option></select>
+            </div>
+            <div class="col"><label class="form-label">Started</label><input type="date" class="form-control" [(ngModel)]="maintForm.startDate" /></div>
+          </div>
+          <label class="form-label">Work / problem</label>
+          <textarea class="form-control mb-2" rows="2" [(ngModel)]="maintForm.description"></textarea>
+          <label class="form-label">Vendor / service centre</label>
+          <input class="form-control" [(ngModel)]="maintForm.vendor" />
+          <p class="small text-muted mt-2 mb-0" *ngIf="asset?.status === 'available'">The asset is marked "In repair" until you close this.</p>
+          <p class="small text-muted mt-2 mb-0" *ngIf="asset?.warranty?.state && asset.warranty.state !== 'expired'">Warranty is active — this will be marked as covered.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="maintForm = null">Cancel</button>
+          <button class="btn btn-primary" (click)="saveMaint()" [disabled]="saving">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Close maintenance -->
+  <div *ngIf="closeForm" class="modal d-block" style="background: rgba(15, 23, 42, 0.45)" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Close maintenance</h5><button type="button" class="btn-close" (click)="closeForm = null"></button></div>
+        <div class="modal-body">
+          <div class="row g-2 mb-2">
+            <div class="col"><label class="form-label">Completed on</label><input type="date" class="form-control" [(ngModel)]="closeForm.endDate" /></div>
+            <div class="col"><label class="form-label">Cost (₹)</label><input type="number" min="0" class="form-control" [(ngModel)]="closeForm.cost" /></div>
+          </div>
+          <label class="form-label">Condition after</label>
+          <select class="form-select mb-2" [(ngModel)]="closeForm.conditionAfter"><option *ngFor="let c of conditions" [value]="c.value">{{ c.label }}</option></select>
+          <label class="form-label">Notes</label>
+          <textarea class="form-control" rows="2" [(ngModel)]="closeForm.notes"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="closeForm = null">Cancel</button>
+          <button class="btn btn-success" (click)="saveClose()" [disabled]="saving">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status -->
+  <div *ngIf="statusForm" class="modal d-block" style="background: rgba(15, 23, 42, 0.45)" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">{{ statusForm.status === 'available' ? 'Restore asset' : 'Mark as ' + statusLabel(statusForm.status) }}</h5><button type="button" class="btn-close" (click)="statusForm = null"></button></div>
+        <div class="modal-body">
+          <label class="form-label">Reason</label>
+          <textarea class="form-control" rows="2" [(ngModel)]="statusForm.note"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="statusForm = null">Cancel</button>
+          <button class="btn btn-primary" (click)="saveStatus()" [disabled]="saving">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -487,10 +487,45 @@
           </div>
         </div>
         <div class="row">
-          <div class="col-md-4">
-            <label for="formFile" class="form-label">Upload Profile Picture</label>
-            <input class="form-control" type="file" id="formFile" (change)="onFileChange($event)" accept="image/*"
-              #fileInput />
+          <div class="col-md-6">
+            <label class="form-label d-block">Profile picture</label>
+            <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+              <button type="button" class="btn btn-sm btn-primary" (click)="openAdminCamera()" [disabled]="cameraOpen">
+                <i class="fas fa-camera me-1"></i> Live capture
+              </button>
+              <label class="btn btn-sm btn-outline-primary mb-0" for="formFile">
+                <i class="fas fa-images me-1"></i> From gallery
+              </label>
+              <input
+                class="d-none"
+                type="file"
+                id="formFile"
+                (change)="onFileChange($event)"
+                accept="image/png,image/jpeg,image/jpg"
+                #fileInput
+              />
+            </div>
+            <small class="text-muted">JPG / PNG, max 2 MB. Live camera or gallery.</small>
+
+            <div class="admin-camera-panel mt-3" *ngIf="cameraOpen">
+              <div class="admin-camera-frame">
+                <video #adminCameraVideo autoplay playsinline muted></video>
+              </div>
+              <p class="small text-danger mb-2" *ngIf="cameraError">{{ cameraError }}</p>
+              <div class="d-flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-success"
+                  (click)="captureAdminPhoto()"
+                  [disabled]="!!cameraError || cameraBusy"
+                >
+                  {{ cameraBusy ? 'Capturing…' : 'Capture photo' }}
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="closeAdminCamera()">
+                  Close camera
+                </button>
+              </div>
+            </div>
           </div>
           <div class="row mt-2">
             <div class="col-md-4">

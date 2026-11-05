@@ -21,8 +21,8 @@ checkEmpByMobile(data: any): Observable<any> {
   return this.http.post(`${this.baseUrl}checkEmpByMobile`, data);
 }
 
-getEmp(): Observable<any[]> {
-  const branchId = localStorage.getItem('branchId') || '';
+getEmp(forBranchId?: string): Observable<any[]> {
+  const branchId = forBranchId || localStorage.getItem('branchId') || '';
   return this.http.post<any[]>(`${this.baseUrl}getEmp`, { branchId });
 }
 
@@ -46,6 +46,11 @@ getCities(data: any): Observable<any> {
 updateEmp(data: any): Observable<any> {
   return this.http.post(`${this.baseUrl}updateEmp`, data);
 }
+
+/** Bulk approve pending employees into a branch: { branchId, employeeIds?: string[] } */
+approveAllPendingEmp(data: { branchId: string; employeeIds?: string[] }): Observable<any> {
+  return this.http.post(`${this.baseUrl}approve-all-pending-emp`, data);
+}
 //   updateEmp(data: any): Observable<any> {
 //   return this.http.post(`http://192.168.23.17:3002/api/updateEmp`, data);
 // }
@@ -59,6 +64,10 @@ pythonregister(data: any): Observable<any> {
 
 getUploadImage(data: any): Observable<any> {
   return this.http.post(`${this.baseUrl}getUploadImage`, data);
+}
+/** Employee List: branches a Director / Manager can access ({ employeeId, branchIds } or { employeeId, all: true }) */
+assignBranches(data: { employeeId: string; branchIds?: string[]; all?: boolean }): Observable<any> {
+  return this.http.post(`${this.baseUrl}assign-branches`, data);
 }
 deleteEmp(id: string): Observable<any> {
   return this.http.post(`${this.baseUrl}deleteEmp`, id);
@@ -140,8 +149,8 @@ getLetterStats(): Observable<any> {
   return this.http.post<any>(`${this.baseUrl}get-letter-stats`, {});
 }
 
-generateLetterPdf(employeeId: string, type: 'appointment' | 'offer' | 'relieving'): Observable<any> {
-  return this.http.post<any>(`${this.baseUrl}generate-letter-pdf`, { employeeId, type });
+generateLetterPdf(employeeId: string, type: 'appointment' | 'offer' | 'relieving', extra: { overrideAssetClearance?: boolean } = {}): Observable<any> {
+  return this.http.post<any>(`${this.baseUrl}generate-letter-pdf`, { employeeId, type, ...extra });
 }
 
 generateAllLettersPdf(): Observable<any> {

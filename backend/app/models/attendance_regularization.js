@@ -86,11 +86,12 @@ const AttendanceRegularization = sequelize.define("attendance_regularization", {
   },
 });
 
-AttendanceRegularization.sync({alter:true})
-    .then(() => {
-        console.log("AttendanceRegularization table created or updated successfully.");
-    })
-    .catch((error) => {
-        console.error("Error creating or updating AttendanceRegularization table:", error);
-    });
+// Disabled: sync({ alter: true }) exhausts Postgres locks (53200 out of shared memory)
+// AttendanceRegularization.sync({alter:true})
+//     .then(() => {
+//         console.log("AttendanceRegularization table created or updated successfully.");
+//     })
+//     .catch((error) => {
+//         console.error("Error creating or updating AttendanceRegularization table:", error);
+//     });
 module.exports = AttendanceRegularization;

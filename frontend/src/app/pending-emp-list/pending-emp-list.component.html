@@ -11,6 +11,69 @@
 
 
         <div class="card-body">
+          <div class="row mb-3 align-items-start" *ngIf="updateFlag">
+            <div class="col-auto">
+              <div class="pending-photo-preview">
+                <img
+                  [src]="profileImagePreview || defaultPendingAvatar"
+                  alt="Employee photo"
+                  (error)="onProfileImgError($event)"
+                />
+              </div>
+            </div>
+            <div class="col">
+              <label class="col-form-label fw-bold d-block mb-1">Employee photo</label>
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-primary"
+                  (click)="openAdminCamera()"
+                  [disabled]="cameraOpen"
+                >
+                  <i class="fas fa-camera me-1"></i> Live capture
+                </button>
+                <label class="btn btn-sm btn-outline-primary mb-0">
+                  <i class="fas fa-images me-1"></i> From gallery
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg"
+                    hidden
+                    (change)="onProfilePhotoPick($event)"
+                  />
+                </label>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-link text-danger"
+                  *ngIf="selectedProfileFile"
+                  (click)="clearProfilePhotoPick()"
+                >
+                  Undo change
+                </button>
+              </div>
+              <small class="d-block text-muted mt-1">JPG / PNG, max 2 MB. Live camera or gallery upload.</small>
+
+              <div class="pending-camera-panel mt-3" *ngIf="cameraOpen">
+                <div class="pending-camera-frame">
+                  <video #adminCameraVideo autoplay playsinline muted></video>
+                </div>
+                <p class="small text-danger mb-2" *ngIf="cameraError">{{ cameraError }}</p>
+                <div class="d-flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-success"
+                    (click)="captureAdminPhoto()"
+                    [disabled]="!!cameraError || cameraBusy"
+                  >
+                    {{ cameraBusy ? 'Capturing…' : 'Capture photo' }}
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" (click)="closeAdminCamera()">
+                    Close camera
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="row">
             <div class="col-md-3">
               <div class="form-group">
@@ -79,25 +142,34 @@
             </div>
             <div class="col-md-3">
               <label class="col-form-label fw-bold">Email
-                <span *ngIf="!updateFlag" style="color: red"> *</span>
+                <span style="color: red">*</span>
               </label>
 
-              <input type="email" class="form-control" placeholder="Enter Email" [(ngModel)]="personalDetails.email"
-                name="email" required #emailRef="ngModel" />
-              <small class="text-danger" *ngIf="updateFlag==false && emailRef.invalid && emailRef.touched">
-                Enter valid Email
+              <input
+                type="email"
+                class="form-control"
+                placeholder="Enter Email"
+                [(ngModel)]="personalDetails.email"
+                name="email"
+                required
+                #emailRef="ngModel"
+                [class.is-invalid]="emailRef.touched && !isValidEmail(personalDetails.email)"
+              />
+              <small class="text-danger" *ngIf="emailRef.touched && !isValidEmail(personalDetails.email)">
+                {{ personalDetails.email ? 'Enter a valid email (e.g. name@example.com)' : 'Email is required' }}
               </small>
             </div>
             <div class="col-md-3">
               <label class="col-form-label fw-bold">Aadhaar Number
                 <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
               </label>
-              <input type="text" class="form-control" placeholder="Enter Aadhaar Number" maxlength="14"
+              <input type="text" class="form-control" placeholder="Enter Aadhaar Number (optional)" maxlength="14"
                 [(ngModel)]="personalDetails.adhaarNo" name="aadhaarNumber" (input)="onAadhaarInput($event, 'space')"
-                (keypress)="adhaarvalidaiton($event, personalDetails.mobile)" pattern="^\d{4}\s\d{4}\s\d{4}$"
+                (keypress)="adhaarvalidaiton($event, personalDetails.adhaarNo)" pattern="^$|^\d{4}\s\d{4}\s\d{4}$"
                 #aadhaarRef="ngModel" />
-              <small class="text-danger" *ngIf="updateFlag==false && aadhaarRef.invalid && aadhaarRef.touched">
-                Enter valid 12-digit Aadhaar number
+              <small class="text-danger"
+                *ngIf="aadhaarRef.touched && personalDetails.adhaarNo && !isValidAadhaar(personalDetails.adhaarNo)">
+                Enter valid 12-digit Aadhaar number (e.g. 1234 5678 9012)
               </small>
             </div>
 
@@ -105,10 +177,11 @@
               <label class="col-form-label fw-bold">PAN
                 <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
               </label>
-              <input type="text" class="form-control text-uppercase" placeholder="Enter PAN Number"
+              <input type="text" class="form-control text-uppercase" placeholder="Enter PAN Number (optional)"
                 [(ngModel)]="personalDetails.panNo" (ngModelChange)="toUppercase()" name="pan"
-                pattern="^[A-Z]{5}[0-9]{4}[A-Z]{1}$" maxlength="10" #panRef="ngModel" />
-              <small class="text-danger" *ngIf="updateFlag==false && panRef.invalid && panRef.touched">
+                pattern="^$|^[A-Z]{5}[0-9]{4}[A-Z]{1}$" maxlength="10" #panRef="ngModel" />
+              <small class="text-danger"
+                *ngIf="panRef.touched && personalDetails.panNo && !isValidPan(personalDetails.panNo)">
                 Enter valid PAN (e.g., ABCDE1234F)
               </small>
             </div>
@@ -116,11 +189,9 @@
               <label class="col-form-label fw-bold">Blood Group
                 <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
               </label>
-              <input type="text" class="form-control" placeholder="Enter Blood Group"
-                [(ngModel)]="personalDetails.bloodGroup" name="bloodGroup" #bloodGroupRef="ngModel" />
-              <small class="text-danger" *ngIf="updateFlag==false && bloodGroupRef.invalid && bloodGroupRef.touched">
-                Enter valid First Name
-              </small>
+              <ng-select [items]="bloodGroupList" bindLabel="label" bindValue="value"
+                [(ngModel)]="personalDetails.bloodGroup" placeholder="Select Blood Group" name="bloodGroup">
+              </ng-select>
             </div>
             <div class="col-md-3">
               <label class="col-form-label fw-bold">Marital Status
@@ -220,15 +291,27 @@
             </div>
             <div class="col-md-3">
               <label class="col-form-label fw-bold"> Select Branch
-                <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
+                <span style="color: red"> *</span>
               </label>
-              <ng-select [items]="branchList" bindLabel="name" bindValue="id" placeholder="Select Branch"
-                class=" me-sm-2 " name="branch" [(ngModel)]="personalDetails['branchId']"
-                (ngModelChange)="onBranchChange($event)" #branchRef="ngModel">
+              <!-- Multiple branches only for Director / Manager (multi-branch access roles) -->
+              <ng-select
+                [items]="branchList"
+                bindLabel="name"
+                bindValue="id"
+                [placeholder]="allowMultiBranch ? 'Select Branch(es)' : 'Select Branch'"
+                class="me-sm-2"
+                name="branch"
+                [multiple]="true"
+                [maxSelectedItems]="allowMultiBranch ? branchList?.length : 1"
+                [closeOnSelect]="!allowMultiBranch"
+                [(ngModel)]="personalDetails['branchIds']"
+                (ngModelChange)="onBranchChange($event)"
+                #branchRef="ngModel"
+              >
               </ng-select>
 
-              <small class="text-danger" *ngIf="branchRef.invalid && branchRef.touched">
-                Select Branch
+              <small class="text-danger" *ngIf="branchRef.touched && !personalDetails['branchIds']?.length">
+                Select a Branch
               </small>
             </div>
             <div class="col-md-3">
@@ -281,7 +364,7 @@
                 <!-- <span *ngIf="!updateFlag" style="color: red"> *</span> -->
               </label>
               <ng-select [items]="role" bindLabel="label" bindValue="value" [(ngModel)]="personalDetails['role']"
-                [multiple]="false" placeholder="Select Role" name="role" id="select2Danger">
+                [multiple]="false" placeholder="Select Role" name="role" id="select2Danger" (change)="onRoleChange()">
               </ng-select>
             </div>
             <div class="col-md-3">
@@ -290,7 +373,7 @@
               </label>
               <ng-select [items]="employeeList" bindLabel="label" bindValue="value"
                 [(ngModel)]="personalDetails['reportingPersonId']" [multiple]="false"
-                placeholder="Select Employment Types" name="country" id="select2Danger">
+                placeholder="Select Reporting Person" name="reportingPerson" id="select2Danger">
               </ng-select>
             </div>
 
@@ -393,9 +476,15 @@
       <div class="card">
         <h5 class="card-header d-flex justify-content-between align-items-center mb-0">
           <span>Employee List</span>
-          <!-- <button type="button" class="btn btn-xs btn-primary float-end" (click)="create()">
-            <i class="fa-solid fa-plus"></i>&nbsp;Create
-          </button> -->
+          <button
+            type="button"
+            class="btn btn-sm btn-primary"
+            (click)="openApproveAll()"
+            [disabled]="!selectedPendingCount || approveAllSaving"
+          >
+            <i class="fas fa-check-double me-1"></i> Approve Selected
+            <span *ngIf="selectedPendingCount">({{ selectedPendingCount }})</span>
+          </button>
         </h5>
         <div class="card-body">
           <app-search-pagination [totalItems]="employees.length" [pageSize]="itemsPerPage" [currentPage]="currentPage"
@@ -404,6 +493,15 @@
               <table class="table dataTable">
                 <thead>
                   <tr>
+                    <th style="width: 40px;">
+                      <input
+                        type="checkbox"
+                        [(ngModel)]="masterSelected"
+                        (change)="checkUncheckAll()"
+                        [disabled]="!employees?.length"
+                        title="Select all"
+                      />
+                    </th>
                     <th style="width: 10px!important;">SI.NO </th>
 
                     <th>Name/Email/Gender</th>
@@ -420,6 +518,14 @@
                 </thead>
                 <tbody class="table-border-bottom-0">
                   <tr *ngFor="let item of filteredDesignation; let i = index">
+                    <td>
+                      <input
+                        type="checkbox"
+                        [(ngModel)]="item.isSelected"
+                        (change)="isAllSelected()"
+                        [name]="'pendingSel' + item.id"
+                      />
+                    </td>
                     <td style="width: 10px!important;">{{item?.si_no}}</td>
 
                     <td>
@@ -477,6 +583,9 @@
                       </button>
                     </td>
                   </tr>
+                  <tr *ngIf="!filteredDesignation?.length">
+                    <td colspan="7" class="text-center text-muted py-4">No pending employee requests found</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -486,5 +595,43 @@
 
 
     </div>
+  </div>
+</div>
+
+<!-- Approve Selected modal -->
+<div class="pending-approve-backdrop" *ngIf="approveAllOpen" (click)="closeApproveAll()"></div>
+<div class="pending-approve-modal" *ngIf="approveAllOpen" role="dialog" aria-modal="true">
+  <div class="pending-approve-modal__head">
+    <h5 class="mb-0">Approve Selected</h5>
+    <button type="button" class="btn-close" (click)="closeApproveAll()" [disabled]="approveAllSaving"></button>
+  </div>
+  <div class="pending-approve-modal__body">
+    <p class="text-muted mb-3">
+      Select a branch to approve <strong>{{ selectedPendingCount }}</strong> selected employee(s).
+    </p>
+    <label class="form-label fw-bold">Branch <span class="text-danger">*</span></label>
+    <ng-select
+      [items]="branchList"
+      bindLabel="name"
+      bindValue="id"
+      placeholder="Select branch"
+      [(ngModel)]="approveAllBranchId"
+      [clearable]="true"
+      name="approveAllBranch"
+    >
+    </ng-select>
+  </div>
+  <div class="pending-approve-modal__foot">
+    <button type="button" class="btn btn-outline-secondary" (click)="closeApproveAll()" [disabled]="approveAllSaving">
+      Cancel
+    </button>
+    <button
+      type="button"
+      class="btn btn-primary"
+      (click)="confirmApproveAll()"
+      [disabled]="approveAllSaving || !approveAllBranchId || !selectedPendingCount"
+    >
+      {{ approveAllSaving ? 'Approving…' : 'Approve Selected' }}
+    </button>
   </div>
 </div>

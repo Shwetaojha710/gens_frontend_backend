@@ -5,7 +5,9 @@
       <div class="lg:col-span-2">
         <a routerLink="/Home" class="inline-block mb-4" aria-label="GENS.Ai Home">
           <img
-            src="assets/img/marketing/gens-logo.png"
+            [src]="themeService.isDark()
+              ? 'assets/img/marketing/gens-ai-logo-drak-mode.png'
+              : 'assets/img/marketing/gens-logo.png'"
             alt="GENS.Ai - Global Employee Network System"
             class="h-10 sm:h-11 w-auto max-w-[220px] object-contain object-left"
           />

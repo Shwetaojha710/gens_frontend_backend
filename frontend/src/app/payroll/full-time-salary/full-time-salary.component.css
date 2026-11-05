@@ -1,3 +1,187 @@
+/* Salary Breakup — clickable leave/attendance metrics */
+.salary-metric-hint {
+  font-size: 0.75rem;
+}
+.salary-metric-table .salary-metric-th {
+  cursor: pointer;
+  color: #0d9488;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+.salary-metric-table .salary-metric-th:hover {
+  color: #0f766e;
+}
+.salary-metric-link {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  color: #0d9488;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  line-height: inherit;
+}
+.salary-metric-link:hover {
+  color: #0f766e;
+}
+.salary-metric-table td {
+  vertical-align: middle;
+}
+/* ========== Attendance List — status colors ========== */
+.att-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.75rem;
+  font-size: 0.72rem;
+  color: #64748b;
+}
+.att-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.att-legend__item::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.att-legend__item--ontime::before { background: #bbf7d0; border: 1px solid #86efac; }
+.att-legend__item--late::before { background: #fde68a; border: 1px solid #fcd34d; }
+.att-legend__item--half::before { background: #fed7aa; border: 1px solid #fdba74; }
+.att-legend__item--absent::before { background: #fecaca; border: 1px solid #fca5a5; }
+.att-legend__item--leave::before { background: #bfdbfe; border: 1px solid #93c5fd; }
+.att-legend__item--off::before { background: #e2e8f0; border: 1px solid #cbd5e1; }
+.att-legend__item--holiday::before { background: #ddd6fe; border: 1px solid #c4b5fd; }
+.att-legend__item--gazetted::before { background: #c7d2fe; border: 1px solid #a5b4fc; }
+.att-legend__item--restricted::before { background: #fbcfe8; border: 1px solid #f9a8d4; }
+
+.att-table {
+  --att-border: #e2e8f0;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.att-table thead th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--att-border);
+  white-space: nowrap;
+  padding: 0.65rem 0.75rem;
+}
+.att-table tbody td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.84rem;
+  color: #334155;
+  vertical-align: middle;
+}
+.att-date {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.att-row--ontime { background: #f0fdf4; }
+.att-row--late { background: #fffbeb; }
+.att-row--half { background: #fff7ed; }
+.att-row--absent { background: #fef2f2; }
+.att-row--leave { background: #eff6ff; }
+.att-row--weekoff {
+  background: #f8fafc;
+  color: #94a3b8;
+}
+.att-row--holiday { background: #f5f3ff; }
+.att-row--gazetted { background: #eef2ff; }
+.att-row--restricted { background: #fdf2f8; }
+.att-row--weekoff .att-date {
+  color: #94a3b8;
+  font-weight: 400;
+}
+.att-row--default { background: #fff; }
+
+.att-row--editable {
+  box-shadow: inset 3px 0 0 #0d9488;
+}
+.att-row--focus {
+  box-shadow: inset 3px 0 0 #0d9488, inset 0 0 0 1px rgba(13, 148, 136, 0.25);
+  background: #ecfdf5 !important;
+}
+
+.att-status {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.att-status--ontime {
+  background: #dcfce7;
+  color: #166534;
+}
+.att-status--late {
+  background: #fef3c7;
+  color: #92400e;
+}
+.att-status--half {
+  background: #ffedd5;
+  color: #9a3412;
+}
+.att-status--absent {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.att-status--leave {
+  background: #dbeafe;
+  color: #1e40af;
+}
+.att-status--weekoff {
+  background: #e2e8f0;
+  color: #475569;
+}
+.att-status--holiday {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+.att-status--gazetted {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+.att-status--restricted {
+  background: #fce7f3;
+  color: #9d174d;
+}
+.att-status--default {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.att-time-input:disabled {
+  background: #f8fafc;
+  opacity: 0.85;
+}
+.att-row--editable .att-time-input:not(:disabled) {
+  background: #fff;
+  border-color: #99f6e4;
+}
+.att-del-btn {
+  padding: 0.25rem 0.45rem;
+}
+
+#salary-att-focus {
+  scroll-margin-top: 12px;
+}
+
 .loading-state {
   position: fixed;
   top: 0;
