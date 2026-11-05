@@ -76,7 +76,7 @@ this.getDesignation(this.personalDetails.departmentId)
     { value: 'Other', label: 'Other' }
   ]
   shift: any = [{ value: 'Day', label: 'Day' }, { value: 'Afternoon', label: 'Afternoon' }, { value: 'Night', label: 'Night' }]
-  // Employee-wise week off (blank = shift ka week off)
+  // Employee-wise week off (blank = use shift week off)
   weekDays: any = [
     { value: 'Monday', label: 'Monday' }, { value: 'Tuesday', label: 'Tuesday' },
     { value: 'Wednesday', label: 'Wednesday' }, { value: 'Thursday', label: 'Thursday' },
