@@ -1,0 +1,153 @@
+<div class="container-fluid mt-5">
+  <div class="card mb-4">
+    <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span>Appraisal Cycles</span>
+      <button class="btn btn-sm btn-primary" (click)="openForm()"><i class="icon-base ri ri-add-line me-1"></i> New cycle</button>
+    </h5>
+    <div class="card-body py-2">
+      <p class="text-muted small mb-0">
+        Create a quarterly, half-yearly or annual cycle, set deadlines and score weights, then launch it to open goal setting for employees.
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div *ngIf="loading" class="text-center py-5 text-muted">Loading cycles…</div>
+    <div *ngIf="!loading && !cycles.length" class="text-center py-5 text-muted">No cycles yet. Create your first appraisal cycle.</div>
+    <div class="table-responsive" *ngIf="!loading && cycles.length">
+      <table class="table table-striped text-nowrap mb-0">
+        <thead>
+          <tr>
+            <th>Cycle</th><th>Type</th><th>Period</th><th>Weights (G/M/360)</th><th>Approval</th>
+            <th>Progress</th><th>Status</th><th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of cycles">
+            <td class="fw-semibold">{{ c.name }}<div class="small text-muted" *ngIf="!c.branchId">All branches</div></td>
+            <td>{{ cycleTypeLabel(c.cycleType) }}</td>
+            <td>{{ c.startDate | date: 'dd MMM yy' }} – {{ c.endDate | date: 'dd MMM yy' }}</td>
+            <td>{{ c.weightGoals }}/{{ c.weightManager }}/{{ c.weightFeedback }}</td>
+            <td><span *ngFor="let l of c.approvalLevels; let last = last">{{ approvalLevelLabel(l) }}<span *ngIf="!last"> → </span></span></td>
+            <td>{{ c.approvedReviews }}/{{ c.totalReviews }} approved</td>
+            <td>
+              <span class="badge" [ngClass]="c.status === 'active' ? 'bg-label-success' : c.status === 'closed' ? 'bg-label-secondary' : 'bg-label-warning'">
+                {{ c.status | titlecase }}
+              </span>
+            </td>
+            <td class="text-end">
+              <a *ngIf="c.status !== 'draft'" class="btn btn-sm btn-outline-primary me-1" [routerLink]="['/layout/performance/reviews']" [queryParams]="{ cycleId: c.id }">Reviews</a>
+              <a *ngIf="c.status !== 'draft'" class="btn btn-sm btn-outline-primary me-1" [routerLink]="['/layout/performance/dashboard']" [queryParams]="{ cycleId: c.id }">Dashboard</a>
+              <button *ngIf="c.status !== 'closed'" class="btn btn-sm btn-outline-secondary me-1" (click)="openForm(c)">Edit</button>
+              <button *ngIf="c.status === 'draft'" class="btn btn-sm btn-success me-1" (click)="launch(c)">Launch</button>
+              <button *ngIf="c.status === 'active'" class="btn btn-sm btn-outline-success me-1" (click)="launch(c)" title="Add new joiners">Sync employees</button>
+              <button *ngIf="c.status === 'active'" class="btn btn-sm btn-outline-danger me-1" (click)="close(c)">Close</button>
+              <button *ngIf="c.status === 'draft'" class="btn btn-sm btn-outline-danger" (click)="remove(c)">Delete</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Cycle form -->
+  <div *ngIf="form" class="modal d-block" style="background: rgba(15, 23, 42, 0.45); overflow-y: auto" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ form.id ? 'Edit cycle' : 'New appraisal cycle' }}</h5>
+          <button type="button" class="btn-close" (click)="form = null"></button>
+        </div>
+        <div class="modal-body">
+          <div *ngIf="form.status === 'active'" class="alert alert-info small py-2">
+            This cycle is live: only the name, end date and deadlines can be changed.
+          </div>
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label">Name</label>
+              <input class="form-control" [(ngModel)]="form.name" placeholder="FY 2026-27 Annual Review" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Cycle type</label>
+              <select class="form-select" [(ngModel)]="form.cycleType" (change)="onPeriodChange()" [disabled]="form.status === 'active'">
+                <option *ngFor="let t of cycleTypes" [value]="t.value">{{ t.label }}</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Review period start</label>
+              <input type="date" class="form-control" [(ngModel)]="form.startDate" (change)="onPeriodChange()" [disabled]="form.status === 'active'" />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Review period end</label>
+              <input type="date" class="form-control" [(ngModel)]="form.endDate" />
+            </div>
+
+            <div class="col-12"><h6 class="mb-0 mt-2">Deadlines</h6></div>
+            <div class="col-md-3">
+              <label class="form-label small">Goal setting</label>
+              <input type="date" class="form-control" [(ngModel)]="form.goalSettingDeadline" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small">Self review</label>
+              <input type="date" class="form-control" [(ngModel)]="form.selfReviewDeadline" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small">360 feedback</label>
+              <input type="date" class="form-control" [(ngModel)]="form.feedbackDeadline" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small">Manager review</label>
+              <input type="date" class="form-control" [(ngModel)]="form.managerReviewDeadline" />
+            </div>
+
+            <ng-container *ngIf="form.status !== 'active'">
+              <div class="col-12">
+                <h6 class="mb-0 mt-2">Final score weights
+                  <span class="badge ms-2" [ngClass]="weightTotal === 100 ? 'bg-label-success' : 'bg-label-danger'">{{ weightTotal }}%</span>
+                </h6>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small">Goals (OKR + KPI) %</label>
+                <input type="number" class="form-control" [(ngModel)]="form.weightGoals" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small">Manager rating %</label>
+                <input type="number" class="form-control" [(ngModel)]="form.weightManager" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small">360 feedback %</label>
+                <input type="number" class="form-control" [(ngModel)]="form.weightFeedback" />
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">360 competencies <span class="text-muted small">(one per line)</span></label>
+                <textarea class="form-control" rows="6" [(ngModel)]="form.competenciesText"></textarea>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Approval levels after manager review</label>
+                <div class="form-check" *ngFor="let o of approvalOptions">
+                  <input class="form-check-input" type="checkbox" [id]="'lvl-' + o.value"
+                    [checked]="form.approvalLevels.includes(o.value)" (change)="toggleLevel(o.value, $any($event.target).checked)" />
+                  <label class="form-check-label" [for]="'lvl-' + o.value">{{ o.label }}</label>
+                </div>
+                <p class="small text-muted mt-1 mb-3">Levels run in the order shown. A skip-level step is skipped when the manager has no manager.</p>
+
+                <label class="form-label">Departments <span class="text-muted small">(empty = all)</span></label>
+                <ng-select [items]="departmentOptions" bindLabel="label" bindValue="value" [multiple]="true"
+                  [(ngModel)]="form.departmentIds" placeholder="All departments" appendTo="body"></ng-select>
+                <div class="form-check mt-2">
+                  <input class="form-check-input" type="checkbox" id="allBranches" [(ngModel)]="form.allBranches" />
+                  <label class="form-check-label" for="allBranches">Include all branches</label>
+                </div>
+              </div>
+            </ng-container>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="form = null">Cancel</button>
+          <button class="btn btn-primary" (click)="save()" [disabled]="saving">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

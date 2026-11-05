@@ -1,0 +1,57 @@
+<div class="container-fluid mt-5">
+  <div class="card">
+    <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span>Clients</span>
+      <span class="d-flex gap-2">
+        <input class="form-control form-control-sm" style="width: 220px" [(ngModel)]="search" placeholder="Search" />
+        <button class="btn btn-sm btn-primary" (click)="open()"><i class="icon-base ri ri-add-line me-1"></i> New client</button>
+      </span>
+    </h5>
+    <div class="table-responsive">
+      <table class="table table-striped text-nowrap mb-0">
+        <thead><tr><th>Client</th><th>Contact</th><th>Email / phone</th><th>GSTIN</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          <tr *ngIf="!filtered.length"><td colspan="6" class="text-center text-muted py-4">No clients yet.</td></tr>
+          <tr *ngFor="let c of filtered">
+            <td class="fw-semibold">{{ c.name }} <span class="text-muted small" *ngIf="c.code">({{ c.code }})</span></td>
+            <td>{{ c.contactName || '—' }}</td>
+            <td class="small">{{ c.email || '—' }}<div>{{ c.phone }}</div></td>
+            <td class="small">{{ c.gstin || '—' }}</td>
+            <td><span class="badge" [ngClass]="c.status === 'active' ? 'bg-label-success' : 'bg-label-secondary'">{{ c.status }}</span></td>
+            <td class="text-end"><button class="btn btn-sm btn-outline-secondary" (click)="open(c)">Edit</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div *ngIf="form" class="modal d-block" style="background: rgba(15, 23, 42, 0.45); overflow-y: auto" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ form.id ? 'Edit client' : 'New client' }}</h5>
+          <button type="button" class="btn-close" (click)="form = null"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-2">
+            <div class="col-8"><label class="form-label">Name</label><input class="form-control" [(ngModel)]="form.name" /></div>
+            <div class="col-4"><label class="form-label">Code</label><input class="form-control" [(ngModel)]="form.code" /></div>
+            <div class="col-6"><label class="form-label">Contact person</label><input class="form-control" [(ngModel)]="form.contactName" /></div>
+            <div class="col-6"><label class="form-label">Phone</label><input class="form-control" [(ngModel)]="form.phone" /></div>
+            <div class="col-6"><label class="form-label">Email</label><input type="email" class="form-control" [(ngModel)]="form.email" /></div>
+            <div class="col-6"><label class="form-label">GSTIN</label><input class="form-control" [(ngModel)]="form.gstin" /></div>
+            <div class="col-12"><label class="form-label">Address</label><textarea class="form-control" rows="2" [(ngModel)]="form.address"></textarea></div>
+            <div class="col-6">
+              <label class="form-label">Status</label>
+              <select class="form-select" [(ngModel)]="form.status"><option value="active">Active</option><option value="inactive">Inactive</option></select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="form = null">Cancel</button>
+          <button class="btn btn-primary" (click)="save()" [disabled]="saving">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

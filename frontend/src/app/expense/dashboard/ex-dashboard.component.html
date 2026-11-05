@@ -1,0 +1,122 @@
+<div class="container-fluid mt-5">
+  <div class="card mb-4">
+    <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span>Expense Dashboard</span>
+      <span class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-success" (click)="export('excel')" [disabled]="!data"><i class="icon-base ri ri-file-excel-2-line me-1"></i> Excel</button>
+        <button class="btn btn-sm btn-outline-danger" (click)="export('pdf')" [disabled]="!data"><i class="icon-base ri ri-file-pdf-2-line me-1"></i> PDF</button>
+      </span>
+    </h5>
+    <div class="card-body">
+      <div class="row g-2">
+        <div class="col-md-3"><label class="form-label small">Expenses from</label><input type="date" class="form-control" [(ngModel)]="filters.fromDate" (change)="load()" /></div>
+        <div class="col-md-3"><label class="form-label small">to</label><input type="date" class="form-control" [(ngModel)]="filters.toDate" (change)="load()" /></div>
+        <div class="col-md-3">
+          <label class="form-label small">Department</label>
+          <ng-select [items]="departmentOptions" bindLabel="label" bindValue="value" [(ngModel)]="filters.departmentId" (change)="load()" placeholder="All"></ng-select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="loading && !data" class="text-center py-5 text-muted">Loading…</div>
+
+  <ng-container *ngIf="data">
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-lg-2">
+        <div class="card h-100"><div class="card-body">
+          <div class="small text-muted">Total spend</div><div class="fs-4 fw-bold">{{ fmtMoney(data.totalAmount) }}</div>
+          <div class="small text-muted">{{ data.totalClaims }} claims</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-lg-2">
+        <div class="card h-100"><div class="card-body">
+          <div class="small text-muted">Pending approval</div><div class="fs-4 fw-bold">{{ data.byStatus.pending.count }}</div>
+          <a class="small" [routerLink]="['/layout/expense/claims']" [queryParams]="{ status: 'pending' }">{{ fmtMoney(data.byStatus.pending.amount) }} →</a>
+        </div></div>
+      </div>
+      <div class="col-6 col-lg-2">
+        <div class="card h-100 border border-info"><div class="card-body">
+          <div class="small text-muted">Approved, unpaid</div><div class="fs-4 fw-bold">{{ fmtMoney(data.outstandingPayable) }}</div>
+          <a class="small" [routerLink]="['/layout/expense/claims']" [queryParams]="{ status: 'approved' }">{{ data.byStatus.approved.count }} to pay →</a>
+        </div></div>
+      </div>
+      <div class="col-6 col-lg-2">
+        <div class="card h-100"><div class="card-body">
+          <div class="small text-muted">Paid</div><div class="fs-4 fw-bold">{{ fmtMoney(data.byStatus.paid.amount) }}</div>
+          <div class="small text-muted">{{ data.byStatus.paid.count }} claims</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-lg-2">
+        <div class="card h-100"><div class="card-body">
+          <div class="small text-muted">Flagged claims</div><div class="fs-4 fw-bold text-warning">{{ data.flaggedClaims }}</div>
+          <div class="small text-muted">{{ data.byStatus.rejected.count }} rejected</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-lg-2">
+        <div class="card h-100"><div class="card-body">
+          <div class="small text-muted">Avg approval time</div>
+          <div class="fs-4 fw-bold">{{ data.avgApprovalDays !== null ? (data.avgApprovalDays | number: '1.0-1') + ' d' : '—' }}</div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+      <div class="col-lg-8">
+        <div class="card h-100">
+          <h6 class="card-header">Monthly spend (last 12 months)</h6>
+          <div class="card-body">
+            <apx-chart *ngIf="trendChart" [series]="trendChart.series" [chart]="trendChart.chart" [xaxis]="trendChart.xaxis"
+              [yaxis]="trendChart.yaxis" [dataLabels]="trendChart.dataLabels" [plotOptions]="trendChart.plotOptions" [tooltip]="trendChart.tooltip"></apx-chart>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card h-100">
+          <h6 class="card-header">By category</h6>
+          <div class="card-body">
+            <apx-chart *ngIf="categoryChart" [series]="categoryChart.series" [chart]="categoryChart.chart" [labels]="categoryChart.labels"
+              [legend]="categoryChart.legend" [tooltip]="categoryChart.tooltip"></apx-chart>
+            <p *ngIf="!categoryChart" class="text-muted small mb-0">No itemised claims yet.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4 mb-5">
+      <div class="col-lg-6">
+        <div class="card h-100">
+          <h6 class="card-header">By department</h6>
+          <div class="card-body">
+            <apx-chart *ngIf="departmentChart" [series]="departmentChart.series" [chart]="departmentChart.chart" [plotOptions]="departmentChart.plotOptions"
+              [xaxis]="departmentChart.xaxis" [dataLabels]="departmentChart.dataLabels" [tooltip]="departmentChart.tooltip"></apx-chart>
+            <p *ngIf="!departmentChart" class="text-muted small mb-0">No claims in this period.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3">
+        <div class="card h-100">
+          <h6 class="card-header">Top spenders</h6>
+          <ul class="list-group list-group-flush">
+            <li *ngIf="!data.topSpenders.length" class="list-group-item text-muted small">No claims yet.</li>
+            <li *ngFor="let t of data.topSpenders" class="list-group-item d-flex justify-content-between small">
+              <span>{{ t.employeeName }}<span class="text-muted d-block">{{ t.count }} claims</span></span>
+              <strong>{{ fmtMoney(t.amount) }}</strong>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="col-lg-3">
+        <div class="card h-100">
+          <h6 class="card-header">Waiting on</h6>
+          <ul class="list-group list-group-flush">
+            <li *ngIf="!data.pendingByLevel.length" class="list-group-item text-muted small">Nothing pending.</li>
+            <li *ngFor="let p of data.pendingByLevel" class="list-group-item d-flex justify-content-between small">
+              <span>{{ p.level }}</span><strong>{{ p.count }}</strong>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>

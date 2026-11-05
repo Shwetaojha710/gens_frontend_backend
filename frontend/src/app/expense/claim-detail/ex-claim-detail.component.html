@@ -1,0 +1,151 @@
+<ng-container *ngIf="detail">
+  <!-- Summary -->
+  <div class="d-flex flex-wrap justify-content-between gap-3 mb-3">
+    <div>
+      <div class="small text-muted">{{ claim.claimNo || 'Older reimbursement' }}</div>
+      <h5 class="mb-1">{{ claim.title }}</h5>
+      <div class="small text-muted">
+        {{ detail.employee.name }} <span *ngIf="detail.employee.empCode">({{ detail.employee.empCode }})</span>
+        · {{ detail.employee.department || '—' }}
+        <span *ngIf="detail.employee.managerName"> · Manager: {{ detail.employee.managerName }}</span>
+      </div>
+      <div class="small text-muted">
+        Submitted {{ claim.submittedAt | date: 'dd MMM yyyy' }} · Expenses {{ claim.fromDate | date: 'dd MMM' }} – {{ claim.toDate | date: 'dd MMM yyyy' }}
+      </div>
+    </div>
+    <div class="text-end">
+      <div class="fs-4 fw-bold">{{ fmtMoney(claim.amount) }}</div>
+      <span class="badge" [ngClass]="statusBadge(claim.status)">{{ statusLabel(claim.status) }}</span>
+      <div class="small text-muted mt-1" *ngIf="claim.waitingOn">Waiting on: {{ claim.waitingOn.name }}</div>
+    </div>
+  </div>
+
+  <div *ngIf="claim.flagCount" class="alert alert-warning py-2 small">
+    <i class="icon-base ri ri-error-warning-line me-1"></i>
+    {{ claim.flagCount }} policy / duplicate flag(s) — check the highlighted expenses before approving.
+  </div>
+  <div *ngIf="claim.rejectionReason" class="alert alert-danger py-2 small">Rejected: {{ claim.rejectionReason }}</div>
+
+  <!-- Approval chain -->
+  <div class="d-flex flex-wrap gap-2 mb-3" *ngIf="claim.approvalLevels.length">
+    <span *ngFor="let l of claim.approvalLevels; let i = index" class="badge" [ngClass]="levelState(i)">{{ i + 1 }}. {{ l.label }}</span>
+  </div>
+
+  <!-- Items -->
+  <div class="table-responsive mb-3" *ngIf="detail.items.length">
+    <table class="table table-sm align-middle mb-0">
+      <thead>
+        <tr><th>Date</th><th>Category</th><th>Merchant / invoice</th><th class="text-end">Amount</th><th>Receipt</th></tr>
+      </thead>
+      <tbody>
+        <ng-container *ngFor="let i of detail.items">
+          <tr [class.table-warning]="i.flags.length">
+            <td>{{ i.expenseDate | date: 'dd MMM yyyy' }}</td>
+            <td>{{ i.category }}</td>
+            <td>
+              {{ i.merchant || '—' }}<span class="text-muted small" *ngIf="i.invoiceNo"> · #{{ i.invoiceNo }}</span>
+              <div class="small text-muted" *ngIf="i.description">{{ i.description }}</div>
+            </td>
+            <td class="text-end fw-semibold">{{ fmtMoney(i.amount) }}</td>
+            <td>
+              <a *ngIf="i.receipt" [href]="receiptUrl(i.receipt.fileName)" target="_blank" rel="noopener">View</a>
+              <span *ngIf="!i.receipt" class="text-muted small">None</span>
+              <div class="small" *ngIf="i.receipt?.ocrData?.amount != null"
+                [ngClass]="ocrMismatch(i) ? 'text-danger fw-semibold' : 'text-muted'">
+                OCR: {{ fmtMoney(i.receipt.ocrData.amount) }}<span *ngIf="ocrMismatch(i)"> ≠ claimed</span>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="i.flags.length" class="table-warning">
+            <td colspan="5" class="small pt-0">
+              <div *ngFor="let f of i.flags"><i class="icon-base ri ri-flag-line me-1"></i>{{ f.message }}</div>
+            </td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Legacy claim: remark + files -->
+  <div *ngIf="claim.kind === 'legacy'" class="mb-3">
+    <p class="mb-2">{{ claim.remark }}</p>
+    <div class="d-flex flex-wrap gap-2">
+      <a *ngFor="let f of detail.files; let n = index" class="btn btn-sm btn-outline-secondary" [href]="receiptUrl(f.image)" target="_blank" rel="noopener">
+        Attachment {{ n + 1 }}
+      </a>
+    </div>
+  </div>
+
+  <!-- Trail -->
+  <div class="mb-3" *ngIf="detail.approvals.length">
+    <h6 class="mb-2">Approval history</h6>
+    <div *ngFor="let a of detail.approvals" class="small border-bottom py-1">
+      <span class="badge me-2" [ngClass]="a.action === 'approved' ? 'bg-label-success' : 'bg-label-danger'">{{ a.action }}</span>
+      <strong>{{ a.approverName }}</strong>
+      <span class="text-muted"> · {{ levelLabel(a.approverType) }} · {{ a.createdAt | date: 'dd MMM yyyy, HH:mm' }}</span>
+      <div *ngIf="a.comments">{{ a.comments }}</div>
+    </div>
+  </div>
+
+  <!-- Payment -->
+  <div *ngIf="claim.payment" class="alert alert-success py-2 small">
+    Paid {{ fmtMoney(claim.amount) }} on {{ claim.payment.paidAt | date: 'dd MMM yyyy' }} by {{ paymentModeLabel(claim.payment.mode) }}
+    <span *ngIf="claim.payment.reference"> · Ref {{ claim.payment.reference }}</span>
+    <span *ngIf="claim.payment.payrollMonth"> · Salary {{ claim.payment.payrollMonth }}/{{ claim.payment.payrollYear }}</span>
+    <span *ngIf="claim.payment.paidByName"> · recorded by {{ claim.payment.paidByName }}</span>
+  </div>
+
+  <!-- Decision -->
+  <div *ngIf="permissions?.canAct || permissions?.canOverride || permissions?.canDecideLegacy" class="border rounded p-3 mb-3">
+    <h6 class="mb-2">Decision</h6>
+    <div *ngIf="permissions.canOverride" class="form-check mb-2">
+      <input class="form-check-input" type="checkbox" id="exOverride" [(ngModel)]="override" />
+      <label class="form-check-label small" for="exOverride">
+        Override — this claim is waiting on the {{ claim.waitingOn?.label | lowercase }}. Act on their behalf as HR.
+      </label>
+    </div>
+    <textarea class="form-control mb-2" rows="2" [(ngModel)]="comments" placeholder="Comments (required to reject)"></textarea>
+    <div class="d-flex gap-2">
+      <button class="btn btn-success" (click)="emitDecision('approved')" [disabled]="busy || !canDecide">Approve</button>
+      <button class="btn btn-outline-danger" (click)="emitDecision('rejected')" [disabled]="busy || !canDecide">Reject</button>
+    </div>
+  </div>
+
+  <!-- Record payment -->
+  <div *ngIf="permissions?.canPay" class="border rounded p-3 mb-3">
+    <h6 class="mb-2">Record payment</h6>
+    <div class="row g-2">
+      <div class="col-md-4">
+        <label class="form-label small">Mode</label>
+        <select class="form-select" [(ngModel)]="payment.paymentMode">
+          <option *ngFor="let m of paymentModes" [value]="m.value">{{ m.label }}</option>
+        </select>
+      </div>
+      <ng-container *ngIf="payment.paymentMode !== 'payroll'">
+        <div class="col-md-4">
+          <label class="form-label small">Reference (UTR / cheque no.)</label>
+          <input class="form-control" [(ngModel)]="payment.paymentReference" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Paid on</label>
+          <input type="date" class="form-control" [(ngModel)]="payment.paidAt" />
+        </div>
+      </ng-container>
+      <ng-container *ngIf="payment.paymentMode === 'payroll'">
+        <div class="col-md-4">
+          <label class="form-label small">Salary month</label>
+          <input type="number" min="1" max="12" class="form-control" [(ngModel)]="payment.payrollMonth" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Year</label>
+          <input type="number" class="form-control" [(ngModel)]="payment.payrollYear" />
+        </div>
+      </ng-container>
+    </div>
+    <button class="btn btn-primary mt-2" (click)="pay.emit(payment)" [disabled]="busy">Mark as paid</button>
+  </div>
+
+  <button *ngIf="permissions?.canCancel" class="btn btn-outline-danger btn-sm" (click)="cancelClaim.emit()" [disabled]="busy">
+    Withdraw claim
+  </button>
+</ng-container>

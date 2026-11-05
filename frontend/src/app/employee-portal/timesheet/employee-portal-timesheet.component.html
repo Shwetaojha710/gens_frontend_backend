@@ -1,0 +1,302 @@
+<div class="container-fluid ep-ep-page">
+  <a routerLink="/employee-portal/dashboard" class="ep-ep-page__back">
+    <i class="icon-base ri ri-arrow-left-line me-1"></i> Back to dashboard
+  </a>
+
+  <header class="mb-4">
+    <h4 class="ep-page-title mb-1">Timesheet</h4>
+    <p class="ep-page-sub mb-0">Log project hours by week or by day, or run a timer. Submit each week for your manager's approval.</p>
+  </header>
+
+  <ul class="nav nav-pills mb-4 gap-2 flex-wrap">
+    <li class="nav-item"><button class="nav-link" [class.active]="tab === 'week'" (click)="tab = 'week'">My time</button></li>
+    <li class="nav-item"><button class="nav-link" [class.active]="tab === 'projects'" (click)="tab = 'projects'">My projects ({{ projects.length }})</button></li>
+    <li class="nav-item" *ngIf="approvals.length">
+      <button class="nav-link" [class.active]="tab === 'approvals'" (click)="tab = 'approvals'">To approve <span class="badge bg-danger ms-1">{{ approvals.length }}</span></button>
+    </li>
+  </ul>
+
+  <!-- ═══ My time ═══ -->
+  <ng-container *ngIf="tab === 'week' && week">
+    <!-- Timer -->
+    <div class="card ep-glass-card border-0 mb-3">
+      <div class="card-body">
+        <div *ngIf="week.timer" class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+          <div>
+            <div class="small text-muted">Timer running</div>
+            <div class="fw-semibold">{{ timerLabel() }}</div>
+            <div class="small text-muted" *ngIf="week.timer.notes">{{ week.timer.notes }}</div>
+          </div>
+          <div class="d-flex align-items-center gap-3">
+            <span class="ep-ts-clock">{{ elapsed }}</span>
+            <button class="btn btn-danger" (click)="stopTimer()" [disabled]="busy"><i class="icon-base ri ri-stop-circle-line me-1"></i> Stop</button>
+          </div>
+        </div>
+        <div *ngIf="!week.timer" class="row g-2 align-items-end">
+          <div class="col-md-3">
+            <label class="form-label small">Project</label>
+            <select class="form-select" [(ngModel)]="timerForm.projectId" (change)="timerForm.taskId = null">
+              <option [ngValue]="null" disabled>Select</option>
+              <option *ngFor="let p of week.assignable" [ngValue]="p.projectId">{{ p.name }}</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small">Task</label>
+            <select class="form-select" [(ngModel)]="timerForm.taskId" [disabled]="!timerForm.projectId">
+              <option [ngValue]="null">No task</option>
+              <option *ngFor="let t of tasksOf(timerForm.projectId)" [ngValue]="t.id">{{ t.title }}{{ t.mine ? ' (mine)' : '' }}</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small">What are you working on?</label>
+            <input class="form-control" [(ngModel)]="timerForm.notes" />
+          </div>
+          <div class="col-md-1">
+            <div class="form-check mb-2" [title]="canBill(timerForm.projectId, timerForm.taskId) ? '' : 'Not billable'">
+              <input class="form-check-input" type="checkbox" id="tmBill" [(ngModel)]="timerForm.isBillable" [disabled]="!canBill(timerForm.projectId, timerForm.taskId)" />
+              <label class="form-check-label small" for="tmBill">Billable</label>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-success w-100" (click)="startTimer()" [disabled]="busy || !timerForm.projectId"><i class="icon-base ri ri-play-circle-line me-1"></i> Start timer</button>
+          </div>
+        </div>
+        <p *ngIf="!week.assignable.length" class="small text-muted mb-0 mt-2">You are not allocated to any active project this week. Ask your project manager to add you.</p>
+      </div>
+    </div>
+
+    <!-- Week header -->
+    <div class="card ep-glass-card border-0 mb-3">
+      <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-sm btn-outline-secondary" (click)="shiftWeek(-7)" title="Previous week"><i class="icon-base ri ri-arrow-left-s-line"></i></button>
+          <div class="fw-semibold">{{ week.days[0] | date: 'dd MMM' }} – {{ week.days[6] | date: 'dd MMM yyyy' }}</div>
+          <button class="btn btn-sm btn-outline-secondary" (click)="shiftWeek(7)" title="Next week"><i class="icon-base ri ri-arrow-right-s-line"></i></button>
+          <button class="btn btn-sm btn-link" (click)="thisWeek()">This week</button>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+          <span class="badge" [ngClass]="badge(week.timesheet.status)">{{ statusLabel(week.timesheet.status) }}</span>
+          <span><strong>{{ fmtHours(week.timesheet.totalHours) }}</strong> <span class="small text-muted">({{ fmtHours(week.timesheet.billableHours) }} billable)</span></span>
+          <div class="btn-group btn-group-sm">
+            <button class="btn" [ngClass]="view === 'grid' ? 'btn-primary' : 'btn-outline-primary'" (click)="view = 'grid'">Week</button>
+            <button class="btn" [ngClass]="view === 'day' ? 'btn-primary' : 'btn-outline-primary'" (click)="view = 'day'">Day</button>
+          </div>
+          <button *ngIf="week.editable" class="btn btn-primary btn-sm" (click)="submit()" [disabled]="busy || !week.timesheet.totalHours">Submit week</button>
+        </div>
+      </div>
+      <div *ngIf="week.timesheet.status === 'rejected'" class="alert alert-danger mx-3 py-2 small">
+        Sent back by {{ week.timesheet.decidedByName }}: {{ week.timesheet.comments }} — fix and submit again.
+      </div>
+      <div *ngIf="week.timesheet.status === 'submitted'" class="alert alert-info mx-3 py-2 small">Waiting for {{ week.timesheet.approverName }} to approve. Entries are locked.</div>
+    </div>
+
+    <div *ngIf="loading" class="text-center text-muted py-3">Loading…</div>
+
+    <!-- Week grid -->
+    <div *ngIf="view === 'grid'" class="card ep-glass-card border-0 mb-5">
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0 ep-ts-grid">
+            <thead>
+              <tr>
+                <th style="min-width: 220px">Project / task</th>
+                <th *ngFor="let d of week.days" class="text-center" [class.ep-ts-today]="d === week.today">
+                  {{ d | date: 'EEE' }}<div class="small text-muted">{{ d | date: 'dd MMM' }}</div>
+                </th>
+                <th class="text-end">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="!rows.length"><td colspan="9" class="text-muted small py-3">No time this week. Add a row below or use the timer.</td></tr>
+              <tr *ngFor="let r of rows">
+                <td>
+                  {{ r.label }}
+                  <span class="badge ms-1" [ngClass]="r.isBillable ? 'bg-label-success' : 'bg-label-secondary'">{{ r.isBillable ? 'Billable' : 'Non-billable' }}</span>
+                </td>
+                <td *ngFor="let d of week.days" class="text-center">
+                  <input type="number" min="0" max="24" step="0.25" class="form-control form-control-sm text-center ep-ts-cell"
+                    [ngModel]="cellValue(r, d)" (ngModelChange)="cellDraft[r.key + '|' + d] = $event"
+                    (blur)="saveCell(r, d, $any($event.target).value)" (keyup.enter)="$any($event.target).blur()"
+                    [disabled]="busy || cellLocked(r, d)"
+                    [title]="(r.cells[d]?.length || 0) > 1 || r.cells[d]?.[0]?.running ? 'Several entries or a running timer — edit in Day view' : ''" />
+                </td>
+                <td class="text-end fw-semibold">{{ fmtHours(rowTotal(r)) }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="fw-semibold">
+                <td>Total</td>
+                <td *ngFor="let d of week.days" class="text-center">{{ dayTotal(d) || '' }}</td>
+                <td class="text-end">{{ fmtHours(week.timesheet.totalHours) }}</td>
+              </tr>
+              <tr class="small text-muted">
+                <td>Attendance</td>
+                <td *ngFor="let d of week.days" class="text-center">
+                  <ng-container *ngIf="recFor(d) as rec">
+                    <span *ngIf="rec.holiday">Holiday</span>
+                    <span *ngIf="!rec.holiday && rec.leave">Leave</span>
+                    <span *ngIf="!rec.holiday && !rec.leave">{{ rec.attendanceHours ?? '' }}</span>
+                    <i *ngIf="rec.flags?.length" class="icon-base ri ri-error-warning-line text-warning ms-1" [title]="rec.flags[0].message"></i>
+                  </ng-container>
+                </td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div *ngIf="week.editable && week.assignable.length" class="row g-2 align-items-end mt-3">
+          <div class="col-md-4">
+            <select class="form-select form-select-sm" [(ngModel)]="newRow.projectId" (change)="newRow.taskId = null">
+              <option [ngValue]="null" disabled>Add a row: project</option>
+              <option *ngFor="let p of week.assignable" [ngValue]="p.projectId">{{ p.name }}</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <select class="form-select form-select-sm" [(ngModel)]="newRow.taskId" [disabled]="!newRow.projectId">
+              <option [ngValue]="null">No task</option>
+              <option *ngFor="let t of tasksOf(newRow.projectId)" [ngValue]="t.id">{{ t.title }}{{ t.mine ? ' (mine)' : '' }}</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="nrBill" [(ngModel)]="newRow.isBillable" [disabled]="!canBill(newRow.projectId, newRow.taskId)" />
+              <label class="form-check-label small" for="nrBill">Billable</label>
+            </div>
+          </div>
+          <div class="col-md-2"><button class="btn btn-sm btn-outline-primary w-100" (click)="addRow()" [disabled]="!newRow.projectId">+ Add row</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day view -->
+    <div *ngIf="view === 'day'" class="card ep-glass-card border-0 mb-5">
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          <button *ngFor="let d of week.days" class="btn btn-sm" [ngClass]="d === selectedDay ? 'btn-primary' : 'btn-outline-secondary'" (click)="selectedDay = d; dayForm = null">
+            {{ d | date: 'EEE dd' }} <span class="small" *ngIf="dayTotal(d)">· {{ dayTotal(d) }}h</span>
+          </button>
+        </div>
+        <ng-container *ngIf="recFor(selectedDay) as rec">
+          <div class="small mb-2" [class.text-warning]="rec.flags?.length" [class.text-muted]="!rec.flags?.length">
+            Attendance: {{ rec.holiday ? 'Holiday — ' + rec.holiday : rec.leave ? 'On leave' : rec.attendanceHours !== null && rec.attendanceHours !== undefined ? rec.attendanceHours + 'h' : 'not marked' }}
+            <span *ngFor="let f of rec.flags"> · {{ f.message }}</span>
+          </div>
+        </ng-container>
+
+        <div *ngIf="!dayEntries.length" class="text-muted small mb-3">Nothing logged on this day.</div>
+        <div *ngFor="let e of dayEntries" class="d-flex justify-content-between align-items-start border-bottom py-2">
+          <div>
+            <div class="fw-semibold">{{ e.projectName }}<span class="text-muted fw-normal" *ngIf="e.taskTitle"> · {{ e.taskTitle }}</span></div>
+            <div class="small text-muted">
+              {{ e.isBillable ? 'Billable' : 'Non-billable' }} · {{ e.source === 'timer' ? 'Timer' : 'Manual' }}<span *ngIf="e.notes"> · {{ e.notes }}</span>
+            </div>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="fw-semibold">{{ e.running ? 'running…' : fmtHours(e.hours) }}</span>
+            <ng-container *ngIf="week.editable && !e.running">
+              <button class="btn btn-sm btn-outline-secondary" (click)="openDayForm(e)"><i class="icon-base ri ri-pencil-line"></i></button>
+              <button class="btn btn-sm btn-outline-danger" (click)="deleteEntry(e)" [disabled]="busy"><i class="icon-base ri ri-delete-bin-line"></i></button>
+            </ng-container>
+          </div>
+        </div>
+
+        <button *ngIf="week.editable && !dayForm && !isFuture(selectedDay) && week.assignable.length" class="btn btn-sm btn-outline-primary mt-3" (click)="openDayForm()">+ Add time</button>
+
+        <div *ngIf="dayForm" class="ep-ts-form mt-3">
+          <div class="row g-2">
+            <div class="col-md-4">
+              <label class="form-label small">Project</label>
+              <select class="form-select form-select-sm" [(ngModel)]="dayForm.projectId" (change)="dayForm.taskId = null">
+                <option *ngFor="let p of week.assignable" [ngValue]="p.projectId">{{ p.name }}</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small">Task</label>
+              <select class="form-select form-select-sm" [(ngModel)]="dayForm.taskId">
+                <option [ngValue]="null">No task</option>
+                <option *ngFor="let t of tasksOf(dayForm.projectId)" [ngValue]="t.id">{{ t.title }}</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small">Hours</label>
+              <input type="number" min="0.25" max="24" step="0.25" class="form-control form-control-sm" [(ngModel)]="dayForm.hours" />
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="dfBill" [(ngModel)]="dayForm.isBillable" [disabled]="!canBill(dayForm.projectId, dayForm.taskId)" />
+                <label class="form-check-label small" for="dfBill">Billable</label>
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label small">Notes</label>
+              <input class="form-control form-control-sm" [(ngModel)]="dayForm.notes" placeholder="What did you work on?" />
+            </div>
+          </div>
+          <div class="d-flex gap-2 mt-2">
+            <button class="btn btn-sm btn-primary" (click)="saveDayForm()" [disabled]="busy">Save</button>
+            <button class="btn btn-sm btn-outline-secondary" (click)="dayForm = null">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ═══ My projects ═══ -->
+  <div *ngIf="tab === 'projects'" class="row g-3 mb-5">
+    <div *ngIf="!projects.length" class="col-12"><div class="card ep-glass-card border-0"><div class="card-body text-muted">You are not on any project yet.</div></div></div>
+    <div class="col-md-6 col-xl-4" *ngFor="let p of projects">
+      <div class="card ep-glass-card border-0 h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-1">
+            <div class="fw-bold">{{ p.name }}</div>
+            <span class="badge" [ngClass]="projectStatusBadge(p.status)">{{ projectStatusLabel(p.status) }}</span>
+          </div>
+          <div class="small text-muted mb-2">{{ p.clientName }} · PM {{ p.managerName || '—' }}</div>
+          <div class="small" *ngIf="!p.isManager">You: {{ p.myRole || 'Member' }}<span *ngIf="p.myAllocation"> · {{ p.myAllocation }}%</span></div>
+          <ng-container *ngIf="p.isManager">
+            <span class="badge bg-label-primary mb-2">You manage this project</span>
+            <div class="small">{{ fmtHours(p.actualHours) }} of {{ fmtHours(p.estimatedHours) }} estimated · {{ p.members }} members</div>
+            <div *ngIf="p.hoursBudget" class="small" [ngClass]="'text-' + budgetTone(p.hoursBudget.state)">Hours budget {{ p.hoursBudget.pct | number: '1.0-0' }}% used</div>
+          </ng-container>
+          <a class="btn btn-sm btn-outline-primary mt-3" [routerLink]="['/employee-portal/projects', p.id]">{{ p.isManager ? 'Manage' : 'View tasks' }}</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Approvals ═══ -->
+  <div *ngIf="tab === 'approvals'" class="card ep-glass-card border-0 mb-5">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr><th>Employee</th><th>Week</th><th class="text-end">Hours</th><th class="text-end">Billable</th><th></th></tr></thead>
+          <tbody>
+            <tr *ngFor="let a of approvals">
+              <td>{{ a.employeeName }}</td>
+              <td>{{ a.weekStart | date: 'dd MMM yyyy' }}</td>
+              <td class="text-end fw-semibold">{{ fmtHours(a.totalHours) }}</td>
+              <td class="text-end">{{ fmtHours(a.billableHours) }}</td>
+              <td class="text-end"><button class="btn btn-sm btn-primary" (click)="openApproval(a.id)">Review</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="openId" class="modal d-block" style="background: rgba(15, 23, 42, 0.45); overflow-y: auto" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Timesheet</h5>
+          <button type="button" class="btn-close" (click)="openId = null"></button>
+        </div>
+        <div class="modal-body">
+          <div *ngIf="!approvalDetail" class="text-center text-muted py-4">Loading…</div>
+          <app-pt-timesheet-view [detail]="approvalDetail" [canAct]="canAct" [busy]="busy" (decide)="onDecide($event)"></app-pt-timesheet-view>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

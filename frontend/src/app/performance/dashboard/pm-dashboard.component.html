@@ -1,0 +1,160 @@
+<div class="container-fluid mt-5">
+  <div class="card mb-4">
+    <h5 class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span>Performance Dashboard</span>
+      <span class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-success" (click)="export('excel')" [disabled]="!data || exporting">
+          <i class="icon-base ri ri-file-excel-2-line me-1"></i> Excel
+        </button>
+        <button class="btn btn-sm btn-outline-danger" (click)="export('pdf')" [disabled]="!data || exporting">
+          <i class="icon-base ri ri-file-pdf-2-line me-1"></i> PDF
+        </button>
+      </span>
+    </h5>
+    <div class="card-body">
+      <div *ngIf="!cycles.length" class="text-muted">No launched cycles yet. Create one in <a routerLink="/layout/performance/cycles">Appraisal Cycles</a>.</div>
+      <div class="row g-2" *ngIf="cycles.length">
+        <div class="col-md-4">
+          <label class="form-label small">Cycle</label>
+          <select class="form-select" [(ngModel)]="cycleId" (change)="load()">
+            <option *ngFor="let c of cycles" [value]="c.id">{{ c.name }} ({{ c.status }})</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Department</label>
+          <ng-select [items]="departmentOptions" bindLabel="label" bindValue="value" [(ngModel)]="departmentId"
+            (change)="load()" placeholder="All departments"></ng-select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="loading && !data" class="text-center py-5 text-muted">Loading…</div>
+
+  <ng-container *ngIf="data">
+    <!-- KPI tiles -->
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-lg">
+        <div class="card h-100"><div class="card-body">
+          <div class="small text-muted">Employees in cycle</div>
+          <div class="fs-3 fw-bold">{{ data.totalEmployees }}</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-lg">
+        <div class="card h-100"><div class="card-body">
+          <div class="small text-muted">Completed (approved)</div>
+          <div class="fs-3 fw-bold">{{ data.completionRate }}%</div>
+          <div class="progress mt-1" style="height: 6px"><div class="progress-bar bg-success" [style.width.%]="data.completionRate"></div></div>
+        </div></div>
+      </div>
+      <div class="col-6 col-lg">
+        <div class="card h-100"><div class="card-body">
+          <div class="small text-muted">Average final rating</div>
+          <div class="fs-3 fw-bold">{{ fmtRating(data.avgFinalRating) }}<span class="fs-6 text-muted"> / 5</span></div>
+        </div></div>
+      </div>
+      <div class="col-6 col-lg">
+        <div class="card h-100"><div class="card-body">
+          <div class="small text-muted">Average goal achievement</div>
+          <div class="fs-3 fw-bold">{{ fmtPct(data.avgGoalAchievement) }}</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-lg">
+        <div class="card h-100"><div class="card-body">
+          <div class="small text-muted">Awaiting approval</div>
+          <div class="fs-3 fw-bold">{{ data.statusCounts.in_approval }}</div>
+          <a class="small" [routerLink]="['/layout/performance/reviews']" [queryParams]="{ cycleId: cycleId }">View reviews →</a>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+      <div class="col-lg-4">
+        <div class="card h-100">
+          <h6 class="card-header">Review status</h6>
+          <div class="card-body">
+            <apx-chart *ngIf="statusChart" [series]="statusChart.series" [chart]="statusChart.chart" [labels]="statusChart.labels"
+              [legend]="statusChart.legend" [dataLabels]="statusChart.dataLabels"></apx-chart>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-8">
+        <div class="card h-100">
+          <h6 class="card-header">Rating distribution</h6>
+          <div class="card-body">
+            <apx-chart *ngIf="distributionChart" [series]="distributionChart.series" [chart]="distributionChart.chart"
+              [xaxis]="distributionChart.xaxis" [plotOptions]="distributionChart.plotOptions" [colors]="distributionChart.colors"
+              [legend]="distributionChart.legend" [dataLabels]="distributionChart.dataLabels"></apx-chart>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+      <div class="col-lg-6">
+        <div class="card h-100">
+          <h6 class="card-header">Nine-box talent grid</h6>
+          <div class="card-body">
+            <app-pm-nine-box [cells]="data.nineBox" (employeeClick)="openReview($event)"></app-pm-nine-box>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card h-100">
+          <h6 class="card-header">Department performance</h6>
+          <div class="card-body">
+            <apx-chart *ngIf="departmentChart && departmentChart.xaxis.categories.length" [series]="departmentChart.series"
+              [chart]="departmentChart.chart" [plotOptions]="departmentChart.plotOptions" [xaxis]="departmentChart.xaxis"
+              [dataLabels]="departmentChart.dataLabels" [legend]="departmentChart.legend"></apx-chart>
+            <p *ngIf="!departmentChart?.xaxis.categories.length" class="text-muted small mb-0">Ratings appear once reviews are scored.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <h6 class="card-header">Department analytics</h6>
+      <div class="table-responsive">
+        <table class="table table-striped text-nowrap mb-0">
+          <thead>
+            <tr>
+              <th>Department</th><th>Employees</th><th>Completed</th><th>Avg final</th><th>Avg goal achievement</th>
+              <th>Avg manager</th><th>Avg 360</th><th>High performers</th><th>Low performers</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let d of data.departments">
+              <td class="fw-semibold">{{ d.department }}</td>
+              <td>{{ d.employees }}</td>
+              <td>{{ d.completed }}</td>
+              <td>{{ fmtRating(d.avgFinalRating) }}</td>
+              <td>{{ fmtPct(d.avgGoalAchievement) }}</td>
+              <td>{{ fmtRating(d.avgManagerRating) }}</td>
+              <td>{{ fmtRating(d.avgFeedbackRating) }}</td>
+              <td class="text-success">{{ d.highPerformers }}</td>
+              <td class="text-danger">{{ d.lowPerformers }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card mb-5">
+      <h6 class="card-header">Top performers</h6>
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <tbody>
+            <tr *ngIf="!data.topPerformers.length"><td class="text-muted">No scored reviews yet.</td></tr>
+            <tr *ngFor="let t of data.topPerformers; let i = index">
+              <td style="width: 40px">#{{ i + 1 }}</td>
+              <td><a [routerLink]="['/layout/performance/review', t.reviewId]">{{ t.employeeName }}</a>
+                <span class="small text-muted"> · {{ t.department }}</span></td>
+              <td>{{ t.ratingLabel }}</td>
+              <td class="fw-bold text-end">{{ fmtRating(t.finalRating) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+</div>

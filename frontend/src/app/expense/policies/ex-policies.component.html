@@ -1,0 +1,174 @@
+<div class="container-fluid mt-5">
+  <div class="card mb-4">
+    <h5 class="card-header">Expense Policies</h5>
+    <div class="card-body py-2">
+      <ul class="nav nav-pills gap-2">
+        <li class="nav-item"><button class="nav-link" [class.active]="tab === 'categories'" (click)="tab = 'categories'">Categories &amp; limits</button></li>
+        <li class="nav-item"><button class="nav-link" [class.active]="tab === 'rules'" (click)="tab = 'rules'">Approval rules</button></li>
+        <li class="nav-item"><button class="nav-link" [class.active]="tab === 'settings'" (click)="tab = 'settings'">Settings</button></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Categories -->
+  <div class="card" *ngIf="tab === 'categories'">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span class="small text-muted">"Block" stops a claim that breaks the limit; "Flag" lets it through, highlighted for approvers.</span>
+      <button class="btn btn-sm btn-primary" (click)="openCategory()"><i class="icon-base ri ri-add-line me-1"></i> New category</button>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-striped text-nowrap mb-0">
+        <thead><tr><th>Category</th><th>Per expense</th><th>Per month</th><th>Receipt above</th><th>Claim within</th><th>On breach</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          <tr *ngIf="!categories.length"><td colspan="8" class="text-center text-muted py-4">No categories yet. Employees cannot submit claims until you add one.</td></tr>
+          <tr *ngFor="let c of categories">
+            <td class="fw-semibold">{{ c.name }} <span class="text-muted small" *ngIf="c.code">({{ c.code }})</span></td>
+            <td>{{ c.perClaimLimit !== null ? fmtMoney(c.perClaimLimit) : 'No limit' }}</td>
+            <td>{{ c.monthlyLimit !== null ? fmtMoney(c.monthlyLimit) : 'No limit' }}</td>
+            <td>{{ +c.receiptRequiredAbove > 0 ? fmtMoney(c.receiptRequiredAbove) : 'Always' }}</td>
+            <td>{{ c.maxAgeDays ? c.maxAgeDays + ' days' : 'Any time' }}</td>
+            <td><span class="badge" [ngClass]="c.limitAction === 'block' ? 'bg-label-danger' : 'bg-label-warning'">{{ c.limitAction | titlecase }}</span></td>
+            <td><span class="badge" [ngClass]="c.status === 'active' ? 'bg-label-success' : 'bg-label-secondary'">{{ c.status }}</span></td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-secondary me-1" (click)="openCategory(c)">Edit</button>
+              <button class="btn btn-sm btn-outline-secondary" (click)="toggleCategory(c)">{{ c.status === 'active' ? 'Deactivate' : 'Activate' }}</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Rules -->
+  <div class="card" *ngIf="tab === 'rules'">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span class="small text-muted">
+        A category rule is matched on that category's subtotal; an "any category" rule on the claim total. Highest priority wins.
+        No match → default levels from Settings.
+      </span>
+      <button class="btn btn-sm btn-primary" (click)="openRule()"><i class="icon-base ri ri-add-line me-1"></i> New rule</button>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-striped text-nowrap mb-0">
+        <thead><tr><th>Rule</th><th>Category</th><th>Amount range</th><th>Approval chain</th><th>Priority</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          <tr *ngIf="!rules.length"><td colspan="7" class="text-center text-muted py-4">No rules — every claim uses the default levels.</td></tr>
+          <tr *ngFor="let r of rules">
+            <td class="fw-semibold">{{ r.name }}</td>
+            <td>{{ categoryName(r.categoryId) }}</td>
+            <td>{{ fmtMoney(r.minAmount) }} – {{ r.maxAmount !== null ? fmtMoney(r.maxAmount) : 'no limit' }}</td>
+            <td><span *ngFor="let l of r.levels; let last = last">{{ levelLabel(l) }}<span *ngIf="!last"> → </span></span></td>
+            <td>{{ r.priority }}</td>
+            <td><span class="badge" [ngClass]="r.status === 'active' ? 'bg-label-success' : 'bg-label-secondary'">{{ r.status }}</span></td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-secondary me-1" (click)="openRule(r)">Edit</button>
+              <button class="btn btn-sm btn-outline-danger" (click)="deleteRule(r)">Delete</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="card" *ngIf="tab === 'settings' && settings">
+    <div class="card-body">
+      <div class="row g-4">
+        <div class="col-md-6">
+          <label class="form-label">Default approval levels <span class="text-muted small">(when no rule matches)</span></label>
+          <div class="form-check" *ngFor="let l of levels">
+            <input class="form-check-input" type="checkbox" [id]="'def-' + l.value" [checked]="settings.defaultLevels.includes(l.value)"
+              (change)="toggleDefaultLevel(l.value, $any($event.target).checked)" />
+            <label class="form-check-label" [for]="'def-' + l.value">{{ l.label }}</label>
+          </div>
+          <div class="form-check mt-3">
+            <input class="form-check-input" type="checkbox" id="flaggedHr" [(ngModel)]="settings.flaggedRequiresHr" />
+            <label class="form-check-label" for="flaggedHr">Send flagged claims (policy breach / possible duplicate) through HR too</label>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Finance team <span class="text-muted small">(employees who verify claims and record payments in the portal)</span></label>
+          <ng-select [items]="employeeOptions" bindLabel="label" bindValue="value" [multiple]="true" [(ngModel)]="settings.financeEmployeeIds"
+            placeholder="Select employees"></ng-select>
+          <p class="small text-muted mt-1">HR and admins can always act on the finance level from this panel.</p>
+          <label class="form-label mt-2">Claim number prefix</label>
+          <input class="form-control" style="max-width: 160px" [(ngModel)]="settings.claimPrefix" />
+        </div>
+      </div>
+      <button class="btn btn-primary mt-4" (click)="saveSettings()" [disabled]="saving">Save settings</button>
+    </div>
+  </div>
+
+  <!-- Category modal -->
+  <div *ngIf="categoryForm" class="modal d-block" style="background: rgba(15, 23, 42, 0.45); overflow-y: auto" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ categoryForm.id ? 'Edit category' : 'New category' }}</h5>
+          <button type="button" class="btn-close" (click)="categoryForm = null"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-8"><label class="form-label">Name</label><input class="form-control" [(ngModel)]="categoryForm.name" placeholder="Travel, Meals, Fuel…" /></div>
+            <div class="col-md-4"><label class="form-label">Code</label><input class="form-control" [(ngModel)]="categoryForm.code" /></div>
+            <div class="col-12"><label class="form-label">Description / policy note</label><textarea class="form-control" rows="2" [(ngModel)]="categoryForm.description"></textarea></div>
+            <div class="col-md-4"><label class="form-label">Limit per expense (₹)</label><input type="number" class="form-control" [(ngModel)]="categoryForm.perClaimLimit" placeholder="No limit" /></div>
+            <div class="col-md-4"><label class="form-label">Limit per month (₹)</label><input type="number" class="form-control" [(ngModel)]="categoryForm.monthlyLimit" placeholder="No limit" /></div>
+            <div class="col-md-4"><label class="form-label">Receipt required above (₹)</label><input type="number" class="form-control" [(ngModel)]="categoryForm.receiptRequiredAbove" /><div class="small text-muted">0 = always</div></div>
+            <div class="col-md-4"><label class="form-label">Must be claimed within (days)</label><input type="number" class="form-control" [(ngModel)]="categoryForm.maxAgeDays" placeholder="Any time" /></div>
+            <div class="col-md-4">
+              <label class="form-label">When a limit is broken</label>
+              <select class="form-select" [(ngModel)]="categoryForm.limitAction">
+                <option value="flag">Flag for approvers</option>
+                <option value="block">Block submission</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="categoryForm = null">Cancel</button>
+          <button class="btn btn-primary" (click)="saveCategory()" [disabled]="saving">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rule modal -->
+  <div *ngIf="ruleForm" class="modal d-block" style="background: rgba(15, 23, 42, 0.45); overflow-y: auto" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ ruleForm.id ? 'Edit rule' : 'New approval rule' }}</h5>
+          <button type="button" class="btn-close" (click)="ruleForm = null"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label">Name</label>
+          <input class="form-control mb-2" [(ngModel)]="ruleForm.name" placeholder="Travel above ₹25,000" />
+          <label class="form-label">Category</label>
+          <ng-select class="mb-2" [items]="categories" bindLabel="name" bindValue="id" [(ngModel)]="ruleForm.categoryId" placeholder="Any category" appendTo="body"></ng-select>
+          <div class="row g-2 mb-2">
+            <div class="col"><label class="form-label">From ₹</label><input type="number" class="form-control" [(ngModel)]="ruleForm.minAmount" /></div>
+            <div class="col"><label class="form-label">To ₹</label><input type="number" class="form-control" [(ngModel)]="ruleForm.maxAmount" placeholder="No limit" /></div>
+          </div>
+          <label class="form-label">Approval chain (runs in this order)</label>
+          <div class="form-check" *ngFor="let l of levels">
+            <input class="form-check-input" type="checkbox" [id]="'rl-' + l.value" [checked]="ruleForm.levels.includes(l.value)"
+              (change)="toggleRuleLevel(l.value, $any($event.target).checked)" />
+            <label class="form-check-label" [for]="'rl-' + l.value">{{ l.label }}</label>
+          </div>
+          <div class="row g-2 mt-2">
+            <div class="col"><label class="form-label">Priority</label><input type="number" class="form-control" [(ngModel)]="ruleForm.priority" /></div>
+            <div class="col">
+              <label class="form-label">Status</label>
+              <select class="form-select" [(ngModel)]="ruleForm.status"><option value="active">Active</option><option value="inactive">Inactive</option></select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="ruleForm = null">Cancel</button>
+          <button class="btn btn-primary" (click)="saveRule()" [disabled]="saving">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

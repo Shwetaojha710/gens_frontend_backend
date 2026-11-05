@@ -1,0 +1,79 @@
+<ng-container *ngIf="detail">
+  <div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
+    <div>
+      <h5 class="mb-1">{{ detail.timesheet.employeeName }} <span class="text-muted fs-6" *ngIf="detail.timesheet.empCode">({{ detail.timesheet.empCode }})</span></h5>
+      <div class="small text-muted">Week of {{ detail.days[0] | date: 'dd MMM' }} – {{ detail.days[6] | date: 'dd MMM yyyy' }} · approver {{ detail.timesheet.approverName }}</div>
+    </div>
+    <div class="text-end">
+      <span class="badge" [ngClass]="badge(detail.timesheet.status)">{{ statusLabel(detail.timesheet.status) }}</span>
+      <div class="fw-bold mt-1">{{ fmtHours(detail.timesheet.totalHours) }} <span class="small text-muted fw-normal">({{ fmtHours(detail.timesheet.billableHours) }} billable)</span></div>
+    </div>
+  </div>
+
+  <div *ngIf="detail.timesheet.comments" class="alert py-2 small" [ngClass]="detail.timesheet.status === 'rejected' ? 'alert-danger' : 'alert-secondary'">
+    {{ detail.timesheet.decidedByName }}: {{ detail.timesheet.comments }}
+  </div>
+
+  <div class="table-responsive mb-3">
+    <table class="table table-sm table-bordered align-middle mb-0 text-nowrap">
+      <thead class="table-light">
+        <tr>
+          <th>Project / task</th>
+          <th *ngFor="let d of detail.days" class="text-center">{{ d | date: 'EEE dd' }}</th>
+          <th class="text-end">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="!rows.length"><td [attr.colspan]="9" class="text-muted text-center">No time logged.</td></tr>
+        <tr *ngFor="let r of rows">
+          <td>
+            {{ r.projectName }}<span class="text-muted" *ngIf="r.taskTitle"> · {{ r.taskTitle }}</span>
+            <span class="badge ms-1" [ngClass]="r.billable ? 'bg-label-success' : 'bg-label-secondary'">{{ r.billable ? 'Billable' : 'Non-billable' }}</span>
+          </td>
+          <td *ngFor="let d of detail.days" class="text-center">{{ r.hours[d] ? r.hours[d] : '' }}</td>
+          <td class="text-end fw-semibold">{{ fmtHours(r.total) }}</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr class="fw-semibold">
+          <td>Logged</td>
+          <td *ngFor="let d of detail.days" class="text-center">{{ dayTotals[d] || '' }}</td>
+          <td class="text-end">{{ fmtHours(detail.timesheet.totalHours) }}</td>
+        </tr>
+        <tr class="small text-muted">
+          <td>Attendance</td>
+          <td *ngFor="let d of detail.days" class="text-center">
+            <ng-container *ngIf="recFor(d) as rec">
+              <span *ngIf="rec.holiday" title="{{ rec.holiday }}">Holiday</span>
+              <span *ngIf="!rec.holiday && rec.leave">Leave</span>
+              <span *ngIf="!rec.holiday && !rec.leave">{{ rec.attendanceHours ?? '—' }}</span>
+            </ng-container>
+          </td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div *ngIf="flagCount" class="alert alert-warning py-2 small mb-3">
+    <div class="fw-semibold mb-1"><i class="icon-base ri ri-error-warning-line me-1"></i>Attendance doesn't match the timesheet</div>
+    <ng-container *ngFor="let r of detail.reconciliation">
+      <div *ngFor="let f of r.flags">{{ r.date | date: 'EEE dd MMM' }}: {{ f.message }}</div>
+    </ng-container>
+  </div>
+
+  <div *ngIf="notes.length" class="mb-3">
+    <h6 class="mb-1">Notes</h6>
+    <div *ngFor="let e of notes" class="small border-bottom py-1">
+      <span class="text-muted">{{ e.date | date: 'EEE dd' }} · {{ e.projectName }} · {{ fmtHours(e.hours) }}</span> — {{ e.notes }}
+    </div>
+  </div>
+
+  <div *ngIf="canAct" class="border rounded p-3">
+    <textarea class="form-control mb-2" rows="2" [(ngModel)]="comments" placeholder="Comments (required to reject)"></textarea>
+    <div class="d-flex gap-2">
+      <button class="btn btn-success" (click)="decide.emit({ action: 'approved', comments: comments })" [disabled]="busy">Approve</button>
+      <button class="btn btn-outline-danger" (click)="decide.emit({ action: 'rejected', comments: comments })" [disabled]="busy">Reject</button>
+    </div>
+  </div>
+</ng-container>
