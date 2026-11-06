@@ -1104,17 +1104,23 @@
 
 .timeline-list {
   flex: 0 0 auto;
-  overflow: visible;
+  max-height: min(380px, 50vh);
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 6px 0 18px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #64748b transparent;
+  border-bottom: 1px solid #334155;
 }
 
 .timeline-list::-webkit-scrollbar {
-  width: 3px;
+  width: 6px;
 }
 
 .timeline-list::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 2px;
+  background: #64748b;
+  border-radius: 3px;
 }
 
 .tl-item {
