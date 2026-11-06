@@ -251,17 +251,22 @@ export class EmployeePortalLeaveComponent implements OnInit {
     return `${d} days`;
   }
 
-  get isTeamLead(): boolean {
-    console.log(this.userDesignation,"user designaiton");
+  /** Project manager works like a team leader for leaves (recommend / decline, no approve). */
+  get isProjectManager(): boolean {
+    return this.userDesignation === 'project_manager' || this.userDesignation === 'projectmanager';
+  }
 
-    return this.userDesignation.includes('teamleader') || this.userDesignation.includes('teamleader');
+  get isTeamLead(): boolean {
+    return this.userDesignation.includes('teamleader') || this.userDesignation.includes('team_leader') || this.isProjectManager;
   }
 
   get isApprover(): boolean {
+    if (this.isProjectManager) return false;
     return this.userDesignation.includes('director') || this.userDesignation.includes('manager');
   }
 
   get isDirectorOrManager(): boolean {
+    if (this.isProjectManager) return false;
     return this.userDesignation.includes('director') || this.userDesignation.includes('manager');
   }
 

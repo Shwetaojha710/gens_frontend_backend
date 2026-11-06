@@ -519,7 +519,7 @@ exports.upcomingLeave = async (req, res) => {
     let leaveBranchFilter = branchId;
 
     // 👇 Role-based logic
-    if (role == "teamLeader") {
+    if (role == "teamLeader" || role == "project_manager") {
       // Team Leader: own + reportees
       const reportees = await empPersonal.findAll({
         where: {
@@ -3695,6 +3695,10 @@ exports.AppupdatedApplyLeaveStatus = async (req, res) => {
         return Helper.response(false, "No access to this branch leave", {}, res, 403);
       }
     }
+    // Team leader / project manager can only recommend or reject — not approve
+    if ((role == "teamLeader" || role == "project_manager") && status == "approved") {
+      return Helper.response(false, "You are not allowed to approve leave. You can only recommend.", {}, res, 403);
+    }
     const oldLeave = toPlain(existingLeave);
     let { employeeId, leaveTypeId, days, appliedOn } = existingLeave;
     const year = new Date(appliedOn).getFullYear();
@@ -4562,8 +4566,8 @@ exports.notification = async (req, res) => {
     let notifBranchWhere = branchId;
     const today = new Date().toISOString().split("T")[0];
     // Role-based logic
-    if (role == "teamLeader") {
-      // Team Leader: own + reportees
+    if (role == "teamLeader" || role == "project_manager") {
+      // Team Leader / Project Manager: own + reportees
       const reportees = await empPersonal.findAll({
         where: {
           reportingPersonId: userId,
