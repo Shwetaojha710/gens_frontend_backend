@@ -75,53 +75,44 @@ export class HolidayComponent {
     });
 
   }
-  pageSize = 5;
   currentPage = 1;
   searchTerm = '';
   itemsPerPage = 10;
+  /** Count after search, before page slice — drives pagination UI */
+  filteredTotal = 0;
+
   onSearch(term: string) {
-    if (!term) {
-      this.fetchHoliday();
-    } else {
-      this.searchTerm = term.toLowerCase();
-      this.currentPage = 1;
-      this.applyFilters();
-    }
-
+    this.searchTerm = (term || '').toLowerCase();
+    this.currentPage = 1;
+    this.applyFilters();
   }
-
 
   onPageChange(page: number) {
     this.currentPage = page;
     this.applyFilters();
   }
 
-
   onPageSizeChange(size: number) {
-    this.pageSize = size;
+    this.itemsPerPage = Number(size) || 10;
     this.currentPage = 1;
     this.applyFilters();
   }
-  filteredDesignation: any = []
-  searchText: any = ''
 
   applyFilters() {
-    const value = this.searchTerm || '';
-    this.searchText = value.trim();
+    const value = (this.searchTerm || '').trim().toLowerCase();
+    const filtered = !value
+      ? [...(this.originalList || [])]
+      : (this.originalList || []).filter((item: any) =>
+          JSON.stringify(item).toLowerCase().includes(value),
+        );
 
-    if (this.searchText === '') {
-      this.HolidayList = [...this.originalList];
-    } else {
-      this.HolidayList = this.originalList.filter((item: any) =>
-        JSON.stringify(item).toLowerCase().includes(this.searchText.toLowerCase())
-      );
-    }
+    this.filteredTotal = filtered.length;
+    const size = Number(this.itemsPerPage) || 10;
+    const totalPages = Math.max(1, Math.ceil(this.filteredTotal / size) || 1);
+    if (this.currentPage > totalPages) this.currentPage = totalPages;
 
-    let data = [...this.HolidayList];
-    // pagination
-    const start = (this.currentPage - 1) * this.pageSize;
-    const end = start + this.pageSize;
-    this.HolidayList = data.slice(start, end);
+    const start = (this.currentPage - 1) * size;
+    this.HolidayList = filtered.slice(start, start + size);
   }
   getStatusClass(status: any): string {
     switch (status) {
@@ -133,18 +124,15 @@ export class HolidayComponent {
   }
   originalList: any = []
   async fetchHoliday() {
-    this.HolidayList = []
-    this.originalList = []
-
     this.attendanceService.getHolidayList(this.NewObj).subscribe(data => {
       if (data['status'] == true) {
-        // this.notyf.success(data['message']);
-
-        this.HolidayList = data.data;
-        for (let i = 0; i < this.HolidayList.length; i++) {
-          this.HolidayList[i]['image1'] = `${this.baseurl}/${this.HolidayList[i]['image']}`
+        const rows = data.data || [];
+        for (let i = 0; i < rows.length; i++) {
+          rows[i]['image1'] = `${this.baseurl}/${rows[i]['image']}`;
         }
-        this.originalList = data.data;
+        this.originalList = rows;
+        this.currentPage = 1;
+        this.applyFilters();
       }
       else if (data['status'] == 'expired') {
         this.router.navigate(['login'])
@@ -158,7 +146,6 @@ export class HolidayComponent {
   }
   HolidayTypeList: any = []
   async fetchHolidaytype() {
-    this.HolidayList = []
     this.master.getHolidayTypeDD().subscribe(data => {
       if (data['status'] == true) {
         // this.notyf.success(data['message']);

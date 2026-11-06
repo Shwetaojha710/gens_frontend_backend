@@ -34,9 +34,9 @@ get pages() {
 }
 
 onPageSizeChange(event: any): void {
-  const newPageSize = event.target.value;
+  const newPageSize = Number(event.target.value) || 10;
+  this.pageSize = newPageSize;
   this.pageSizeChange.emit(newPageSize);
-  this.pageSize = newPageSize; // Update the page size if needed
 }
   // get pages() {
   //   return Array(Math.ceil(this.totalItems / this.pageSize)).fill(0).map((_, i) => i + 1);
