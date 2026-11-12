@@ -1,4 +1,5 @@
 const Helper = require("../../helper/helper");
+const WeekOff = require("../../helper/weekOff");
 const attendance = require("../../models/attendance");
 const empPersonal = require("../../models/empPersonal");
 const Department = require("../../models/department.js");
@@ -230,7 +231,7 @@ const getDashboardBaseData = async (
     }),
     empPersonal.findAll({
       where: { tenantId, branchId, status: "active", ...NOT_REJECTED },
-      attributes: ["id", "departmentId", "shift_id", "firstName", "lastName", "empCode"],
+      attributes: ["id", "departmentId", "shift_id", "firstName", "lastName", "empCode", "week_off_days"],
       raw: true,
     }),
     empPersonal.findAll({
@@ -371,7 +372,32 @@ const getDashboardBaseData = async (
     }),
   ]);
 
+  // Employee-wise week off (fixed days + roster) for the selected day.
+  // Only loaded when needed; without overrides metrics use shift rows as before.
+  const weekOffRosterMap = await WeekOff.loadRosterMap({
+    tenantId,
+    employeeIds: activeEmployeeRecords.map((e) => e.id),
+    from: todayDate,
+  });
+  let weekOffShiftRowsByName = {};
+  const anyWeekOffOverride = activeEmployeeRecords.some((e) =>
+    WeekOff.hasOverride({ emp: e, date: todayDate, rosterMap: weekOffRosterMap }),
+  );
+  if (anyWeekOffOverride) {
+    const allShiftRows = await Shift.findAll({
+      where: { tenantId, branchId },
+      attributes: ["shift", "day_of_week", "startTime", "endTime", "is_week_off", "status"],
+      raw: true,
+    });
+    allShiftRows.forEach((r) => {
+      if (!weekOffShiftRowsByName[r.shift]) weekOffShiftRowsByName[r.shift] = [];
+      weekOffShiftRowsByName[r.shift].push(r);
+    });
+  }
+
   return {
+    weekOffRosterMap,
+    weekOffShiftRowsByName,
     today,
     attendanceDay,
     chartStart,
@@ -415,6 +441,8 @@ const getAttendanceMetrics = (baseData) => {
     todayAttendanceRows,
     shiftRows,
     attendanceSetting,
+    weekOffRosterMap,
+    weekOffShiftRowsByName,
   } = baseData;
 
   // All figures for the selected day, over active employees only. Buckets do
@@ -451,7 +479,19 @@ const getAttendanceMetrics = (baseData) => {
   let lateCheckInCount = 0;
   for (const entry of todayAttendanceRows) {
     const employee = employeeMap[entry.employeeId];
-    const shift = employee?.shift_id ? shiftMap[employee.shift_id] : null;
+    let shift = employee?.shift_id ? shiftMap[employee.shift_id] : null;
+    if (
+      employee &&
+      WeekOff.hasOverride({ emp: employee, date: todayDate, rosterMap: weekOffRosterMap })
+    ) {
+      shift = WeekOff.effectiveShiftRow({
+        emp: employee,
+        date: todayDate,
+        shiftRow: shift || null,
+        shiftRows: (weekOffShiftRowsByName || {})[employee.shift_id] || [],
+        rosterMap: weekOffRosterMap,
+      });
+    }
 
     if (!shift || shift.is_week_off || !shift.startTime) {
       continue;

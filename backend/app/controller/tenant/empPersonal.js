@@ -23,6 +23,7 @@ const Subscription = require("../../models/subscription");
 const pin_code_master = require("../../models/pin_code_master");
 const Department = require("../../models/department");
 const { writeAudit, toPlain } = require("../../helper/auditLog");
+const WeekOff = require("../../helper/weekOff");
 const {
   resolveProfileImagePath,
   mirrorProfileImageToUpload,
@@ -700,6 +701,7 @@ exports.createEmp = async (req, res) => {
       profileImage: null,
       empType: empType,
       shift_id,
+      week_off_days: WeekOff.sanitizeWeekOffDays(req.body?.week_off_days),
       branchId,
       branchIds: branchIds.length ? branchIds : [branchId],
       guarantorName,
@@ -1269,6 +1271,8 @@ exports.updateEmp = async (req, res) => {
     if (designationId !== undefined) updateData.designationId = designationId;
     if (departmentId !== undefined) updateData.departmentId = departmentId;
     if (shift_id !== undefined) updateData.shift_id = shift_id;
+    if (req.body?.week_off_days !== undefined)
+      updateData.week_off_days = WeekOff.sanitizeWeekOffDays(req.body.week_off_days);
     if (reportingPersonId !== undefined)
       updateData.reportingPersonId = reportingPersonId;
     if (joiningDate !== undefined) updateData.joiningDate = joiningDate;

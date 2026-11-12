@@ -542,12 +542,20 @@ export class DashboardComponent {
       return;
     }
 
+    // Remember the broken URL so the [src] binding doesn't request it again on every re-render
+    if (data?.profileImage) this.failedImageUrls.add(String(data.profileImage));
     const img = event.target as HTMLImageElement;
     img.src = data?.gender === 'Male' ? 'assets/img/avatars/5.png' : 'assets/img/avatars/4.png';
   }
 
+  /** Image URLs that failed to load once — fallback avatar is used for them afterwards. */
+  private failedImageUrls = new Set<string>();
+
   getEmployeeAvatar(item: any): string {
-    return item?.profileImage || (item?.gender === 'Male' ? 'assets/img/avatars/5.png' : 'assets/img/avatars/4.png');
+    const fallback = item?.gender === 'Male' ? 'assets/img/avatars/5.png' : 'assets/img/avatars/4.png';
+    const url = item?.profileImage;
+    if (!url || this.failedImageUrls.has(String(url))) return fallback;
+    return url;
   }
 
   getLeaveStatusClass(status: string): string {

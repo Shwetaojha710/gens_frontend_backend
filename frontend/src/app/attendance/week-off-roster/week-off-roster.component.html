@@ -1,0 +1,89 @@
+<div class="container-fluid mt-5">
+  <div class="card">
+    <h5 class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <span>Week Off Roster</span>
+      <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-xs btn-outline-secondary" (click)="downloadTemplate()">
+          <i class="ri-download-2-line"></i>&nbsp;Template
+        </button>
+        <button type="button" class="btn btn-xs btn-outline-primary" (click)="fileInput.click()" [disabled]="saving">
+          <i class="ri-upload-cloud-line"></i>&nbsp;Upload Excel
+        </button>
+        <input #fileInput type="file" accept=".xlsx,.xls" hidden (change)="onFile($event)" />
+      </div>
+    </h5>
+
+    <div class="card-body">
+      <div class="row g-2 align-items-end mb-3">
+        <div class="col-6 col-md-2">
+          <label class="form-label">Month</label>
+          <ng-select [items]="months" bindLabel="label" bindValue="value" [(ngModel)]="month"
+            [clearable]="false" name="month"></ng-select>
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label">Year</label>
+          <ng-select [items]="years" bindLabel="label" bindValue="value" [(ngModel)]="year"
+            [clearable]="false" name="year"></ng-select>
+        </div>
+        <div class="col-auto">
+          <button type="button" class="btn btn-sm btn-primary" (click)="load()" [disabled]="loading">
+            {{ loading ? 'Loading...' : 'Show' }}
+          </button>
+        </div>
+        <div class="col-12 col-md-3">
+          <input type="text" class="form-control form-control-sm" placeholder="Search name / code"
+            [(ngModel)]="search" name="search" />
+        </div>
+        <div class="col-12 col-md text-md-end">
+          <button type="button" class="btn btn-sm btn-outline-secondary me-2" (click)="resetChanges()"
+            [disabled]="!pendingCount || saving">Reset</button>
+          <button type="button" class="btn btn-sm btn-success" (click)="save()" [disabled]="!pendingCount || saving">
+            {{ saving ? 'Saving...' : 'Save' }}<span *ngIf="pendingCount"> ({{ pendingCount }})</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="legend mb-2 small">
+        <span><span class="sw sw-default-off">wo</span> Default week off (fixed days / shift)</span>
+        <span><span class="sw sw-wo">WO</span> Roster week off</span>
+        <span><span class="sw sw-working">W</span> Roster working</span>
+        <span><span class="sw sw-changed"></span> Unsaved change</span>
+        <span class="text-muted">Click a cell to change it. Fixed week off days are set in the employee form.</span>
+      </div>
+
+      <div class="roster-wrap" *ngIf="employees.length; else empty">
+        <table class="table table-bordered table-sm roster mb-0">
+          <thead>
+            <tr>
+              <th class="sticky-col name-col">Employee</th>
+              <th class="sticky-col2 def-col">Default Off</th>
+              <th *ngFor="let d of dates" class="day-col" [class.weekend-head]="d.dayName === 'Sunday'">
+                <div>{{ d.day }}</div>
+                <div class="text-muted fw-normal">{{ d.short }}</div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let emp of filteredEmployees">
+              <td class="sticky-col name-col">
+                <div class="fw-semibold text-truncate">{{ emp.name }}</div>
+                <div class="text-muted small">{{ emp.empCode }} · {{ emp.shift_id || '-' }}</div>
+              </td>
+              <td class="sticky-col2 def-col small">{{ defaultText(emp) }}</td>
+              <td *ngFor="let d of dates" class="cell" (click)="toggle(emp, d)" [title]="cellTitle(emp, d)"
+                [class.off]="isOff(emp, d)" [class.default-off]="isOff(emp, d) && !cellType(emp, d.date)"
+                [class.ro-wo]="cellType(emp, d.date) === 'WO'"
+                [class.ro-working]="cellType(emp, d.date) === 'WORKING'"
+                [class.changed]="isChanged(emp, d.date)">
+                {{ cellLabel(emp, d) }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #empty>
+        <div class="text-center text-muted py-5">{{ loading ? 'Loading...' : 'No employees found' }}</div>
+      </ng-template>
+    </div>
+  </div>
+</div>

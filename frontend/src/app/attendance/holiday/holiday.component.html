@@ -210,7 +210,7 @@
           </div>
         </h5>
 
-        <app-search-pagination [totalItems]="HolidayList.length" [pageSize]="itemsPerPage" [currentPage]="currentPage"
+        <app-search-pagination [totalItems]="filteredTotal" [pageSize]="itemsPerPage" [currentPage]="currentPage"
           (search)="onSearch($event)" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)">
           <div class="table-responsive">
           <table class="table dataTable">
@@ -227,7 +227,7 @@
             </thead>
             <tbody class="table-border-bottom-0">
               <tr *ngFor="let item of HolidayList; let i = index">
-                <th scope="row">{{ i + 1 }}</th>
+                <th scope="row">{{ (currentPage - 1) * itemsPerPage + i + 1 }}</th>
                 <!-- <td >{{ item["holiday_type_name"] }}</td> -->
                    <td>
                        <span

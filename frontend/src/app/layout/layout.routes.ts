@@ -142,6 +142,13 @@ export const layoutRoutes: Routes = [
           ),
       },
       {
+        path: 'attendance/week-off-roster',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'att.shift' },
+        loadComponent: () =>
+          import('../attendance/week-off-roster/week-off-roster.component').then((m) => m.WeekOffRosterComponent),
+      },
+      {
         path: 'attendance/holiday',
         canActivate: [PermissionGuard],
         data: { permKey: 'att.holiday' },

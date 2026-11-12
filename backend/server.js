@@ -65,6 +65,8 @@ GeneratedDocument.sync({ alter: false }).catch(err =>
   require('./app/models/as_allocation'),
   require('./app/models/as_maintenance'),
   require('./app/models/as_event'),
+  // Employee-wise week off roster
+  require('./app/models/employeeWeekOffRoster'),
 ].forEach((model) =>
   model.sync({ alter: false }).catch(err =>
     console.error(`${model.getTableName()} sync error:`, err)

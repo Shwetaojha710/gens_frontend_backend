@@ -180,6 +180,15 @@ const empPersonal = sequelize.define(
       type: DataTypes.STRING(10),
       allowNull: true,
     },
+    /**
+     * Employee-specific fixed week-off days, e.g. ["Tuesday"].
+     * NULL / [] => shift's is_week_off is used (old behaviour).
+     */
+    week_off_days: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+      defaultValue: null,
+    },
     designationId: {
       type: DataTypes.UUID,
       allowNull: true,
@@ -264,6 +273,14 @@ const empPersonal = sequelize.define(
         allowNull: true,
       });
       console.log("empPersonal.profileImageHash column added");
+    }
+    if (!desc.week_off_days) {
+      await qi.addColumn("empPersonals", "week_off_days", {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        defaultValue: null,
+      });
+      console.log("empPersonal.week_off_days column added");
     }
   } catch (error) {
     console.error(

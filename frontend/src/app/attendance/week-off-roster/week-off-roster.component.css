@@ -1,0 +1,102 @@
+.roster-wrap {
+  overflow: auto;
+  max-height: 70vh;
+}
+.roster {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.roster thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f8f9fa;
+  text-align: center;
+  vertical-align: middle;
+}
+.sticky-col,
+.sticky-col2 {
+  position: sticky;
+  background: #fff;
+  z-index: 1;
+}
+.roster thead .sticky-col,
+.roster thead .sticky-col2 {
+  z-index: 3;
+  background: #f8f9fa;
+}
+.sticky-col {
+  left: 0;
+}
+.name-col {
+  min-width: 180px;
+  max-width: 180px;
+}
+.sticky-col2 {
+  left: 180px;
+}
+.def-col {
+  min-width: 110px;
+}
+.day-col {
+  min-width: 34px;
+}
+.weekend-head {
+  color: #c0392b;
+}
+.cell {
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+}
+.cell:hover {
+  outline: 2px solid #0d6efd;
+  outline-offset: -2px;
+}
+.cell.default-off {
+  background: #f1f3f5;
+  color: #868e96;
+}
+.cell.ro-wo {
+  background: #ffe3e3;
+  color: #c92a2a;
+}
+.cell.ro-working {
+  background: #d3f9d8;
+  color: #2b8a3e;
+}
+.cell.changed {
+  box-shadow: inset 0 0 0 2px #f59f00;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+}
+.sw {
+  display: inline-block;
+  min-width: 26px;
+  padding: 0 4px;
+  margin-right: 4px;
+  text-align: center;
+  font-weight: 600;
+  border: 1px solid #dee2e6;
+}
+.sw-default-off {
+  background: #f1f3f5;
+  color: #868e96;
+}
+.sw-wo {
+  background: #ffe3e3;
+  color: #c92a2a;
+}
+.sw-working {
+  background: #d3f9d8;
+  color: #2b8a3e;
+}
+.sw-changed {
+  height: 14px;
+  box-shadow: inset 0 0 0 2px #f59f00;
+}

@@ -57,6 +57,7 @@ export const APP_MENU_ITEMS: MenuItem[] = [
     permKey: 'attendance',
     children: [
       { title: 'Shift Master',            icon: 'ri-user-3-line',          link: '/layout/attendance/shift',                permKey: 'att.shift' },
+      { title: 'Week Off Roster',         icon: 'ri-calendar-event-line',  link: '/layout/attendance/week-off-roster',      permKey: 'att.shift' },
       { title: 'Date Wise Attendance',    icon: 'ri-calendar-line',        link: '/layout/attendance/date-wise-attendance', permKey: 'att.datewise' },
       { title: 'Holiday',                 icon: 'ri-barricade-fill',       link: '/layout/attendance/holiday',              permKey: 'att.holiday' },
       { title: 'Attendance Logs',         icon: 'ri-calendar-line',        link: '/layout/attendance/logs',                 permKey: 'att.logs' },
