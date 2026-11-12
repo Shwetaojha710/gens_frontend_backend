@@ -99,7 +99,9 @@ export class JoiningComponent {
         break;
     }
   }
-  shift: any = [{ value: 'Day', label: 'Day' }, { value: 'Afternoon', label: 'Afternoon' }, { value: 'Night', label: 'Night' }]
+  // shift: any = [{ value: 'Day', label: 'Day' }, { value: 'Afternoon', label: 'Afternoon' }, { value: 'Night', label: 'Night' }]
+
+  shift: any = [];
   // Employee-wise week off (blank = use shift week off)
   weekDays: any = [
     { value: 'Monday', label: 'Monday' }, { value: 'Tuesday', label: 'Tuesday' },
@@ -135,8 +137,35 @@ export class JoiningComponent {
     await this.getEmploymentTypes();
     await this.DepartmentDD()
     await this.applyFilters()
-    await this. getBranchDD()
+    await this.getBranchDD()
+    await this.loadShifts()
     this.baseurl = this.master.getBaseUrl();
+  }
+
+  /** Load unique shift names from Shift Master for the joining form dropdown */
+  loadShifts() {
+    this.shift = [];
+    this.master.getshifts().subscribe({
+      next: (data: any) => {
+        if (data?.status === true) {
+          const rows = Array.isArray(data.data) ? data.data : [];
+          // getShift returns grouped: [{ shift: 'Day', shifts: [...] }, ...]
+          this.shift = rows
+            .map((g: any) => {
+              const name = (g?.shift ?? g?.value ?? g?.label ?? '').toString().trim();
+              return name ? { value: name, label: name } : null;
+            })
+            .filter(Boolean);
+        } else if (data?.status === 'expired') {
+          this.router.navigate(['login']);
+        } else {
+          this.notyf.error(data?.message || 'Unable to load shifts');
+        }
+      },
+      error: () => {
+        this.notyf.error('Unable to load shifts');
+      },
+    });
   }
 
   pageSize = 10;
