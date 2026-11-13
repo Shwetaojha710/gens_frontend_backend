@@ -65,6 +65,16 @@
           <span class="notification-dot"></span>
         </button> -->
 
+        <button
+          type="button"
+          class="utility-btn theme-toggle-btn"
+          [attr.aria-label]="colorMode.isDark() ? 'Switch to light mode' : 'Switch to dark mode'"
+          [title]="colorMode.isDark() ? 'Light mode' : 'Dark mode'"
+          (click)="colorMode.toggle()"
+        >
+          <i class="ri" [ngClass]="colorMode.isDark() ? 'ri-sun-line' : 'ri-moon-line'"></i>
+        </button>
+
         <div class="notif-wrap">
           <button type="button" class="utility-btn notification-btn"
                   aria-label="Notifications"

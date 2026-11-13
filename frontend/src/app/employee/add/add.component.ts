@@ -27,6 +27,7 @@ import { ServiceAgreementComponent } from '../profile/service-agreement/service-
 import { AppointmentLetterComponent } from '../profile/appointment-letter/appointment-letter.component';
 import { RelevingLetterComponent } from '../profile/releving-letter/releving-letter.component';
 import { InsuranceDocumentsComponent } from '../profile/insurance-documents/insurance-documents.component';
+import { PermissionService, UserRole } from '../../services/permission.service';
 // import { DocumentRendererComponent } from '../profile/document-renderer/document-renderer.component';
 
 @Component({
@@ -45,21 +46,62 @@ export class AddComponent implements OnDestroy {
   cameraBusy = false;
   cameraError: string | null = null;
   private cameraStream: MediaStream | null = null;
-  constructor(private Documentervice: MasterService,
-    private router: Router,
-    private employeeService: EmployeeService, public dataService: DataService, public statusService: StatusService) {
+  private userRole: UserRole = 'hr';
 
+  /** Order of General Info side tabs (permission-controlled) */
+  readonly profileTabOrder = [
+    'emp-mgmt.profile.basic',
+    'emp-mgmt.profile.document',
+    'emp-mgmt.profile.insurance',
+    'emp-mgmt.profile.workExp',
+    'emp-mgmt.profile.bank',
+    'emp-mgmt.profile.relieving',
+    'emp-mgmt.profile.nda',
+    'emp-mgmt.profile.offer',
+    'emp-mgmt.profile.service',
+    'emp-mgmt.profile.appointment',
+  ] as const;
+
+  constructor(
+    private Documentervice: MasterService,
+    private router: Router,
+    private employeeService: EmployeeService,
+    public dataService: DataService,
+    public statusService: StatusService,
+    private permSvc: PermissionService,
+  ) {
     this.personalDetails = JSON.parse(localStorage.getItem('employeeId') || '{}');
+
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      this.userRole = ((user?.role as UserRole) || 'hr');
+    } catch {
+      this.userRole = 'hr';
+    }
 
     this.notyf = new Notyf();
     console.log(this.personalDetails, "personaldetails");
-         this.DepartmentDD()
-this.getDesignation(this.personalDetails.departmentId)
+    this.DepartmentDD()
+    this.getDesignation(this.personalDetails.departmentId)
 
-     this.getEmploymentTypes();
+    this.getEmploymentTypes();
 
-     this.loadEmployees()
-     this.getStateDistrict(this.personalDetails.pinCode)
+    this.loadEmployees()
+    this.getStateDistrict(this.personalDetails.pinCode)
+  }
+
+  /** Role Permission / user custom perms — General Info side tab visibility */
+  canTab(key: string): boolean {
+    return this.permSvc.can(key, this.userRole);
+  }
+
+  /** First allowed tab becomes the default active pane */
+  get firstAllowedProfileTab(): string | null {
+    return this.profileTabOrder.find((k) => this.canTab(k)) ?? null;
+  }
+
+  isDefaultProfileTab(key: string): boolean {
+    return this.firstAllowedProfileTab === key;
   }
     role: any = [{ value: 'manager', label: 'Manager' }, { value: 'teamLeader', label: 'Team Leader' }, { value: 'employee', label: 'employee' }]
 

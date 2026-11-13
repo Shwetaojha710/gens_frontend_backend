@@ -150,3 +150,165 @@ table tbody td {
   padding-bottom: 0.65rem;
   vertical-align: middle;
 }
+
+.al-records-header {
+  background: #fff;
+}
+
+.al-records-title {
+  color: #0f172a;
+}
+
+/* ── Dark theme ───────────────────────────────────────────────────────────── */
+:host-context(html.dark) .al-title,
+:host-context(html.dark-style) .al-title,
+:host-context([data-bs-theme='dark']) .al-title {
+  color: #f1f5f9 !important;
+}
+
+:host-context(html.dark) .al-header .text-muted,
+:host-context(html.dark-style) .al-header .text-muted,
+:host-context([data-bs-theme='dark']) .al-header .text-muted {
+  color: #94a3b8 !important;
+}
+
+:host-context(html.dark) .al-card,
+:host-context(html.dark-style) .al-card,
+:host-context([data-bs-theme='dark']) .al-card {
+  background: #1e293b !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+}
+
+:host-context(html.dark) .al-card__count,
+:host-context(html.dark-style) .al-card__count,
+:host-context([data-bs-theme='dark']) .al-card__count {
+  color: #f1f5f9 !important;
+}
+
+:host-context(html.dark) .al-card__label,
+:host-context(html.dark-style) .al-card__label,
+:host-context([data-bs-theme='dark']) .al-card__label {
+  color: #94a3b8 !important;
+}
+
+:host-context(html.dark) .al-filter-btn,
+:host-context(html.dark-style) .al-filter-btn,
+:host-context([data-bs-theme='dark']) .al-filter-btn {
+  background: #0f172a !important;
+  border-color: #475569 !important;
+  color: #cbd5e1 !important;
+}
+
+:host-context(html.dark) .al-filter-btn:hover,
+:host-context(html.dark-style) .al-filter-btn:hover,
+:host-context([data-bs-theme='dark']) .al-filter-btn:hover {
+  background: rgba(0, 180, 166, 0.12) !important;
+  border-color: rgba(0, 210, 180, 0.4) !important;
+  color: #5eead4 !important;
+}
+
+:host-context(html.dark) .al-filter-btn.active,
+:host-context(html.dark-style) .al-filter-btn.active,
+:host-context([data-bs-theme='dark']) .al-filter-btn.active {
+  background: #00b4a6 !important;
+  border-color: #00b4a6 !important;
+  color: #fff !important;
+}
+
+:host-context(html.dark) .al-records-card,
+:host-context(html.dark-style) .al-records-card,
+:host-context([data-bs-theme='dark']) .al-records-card {
+  background: #1e293b !important;
+  border-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+:host-context(html.dark) .al-records-header,
+:host-context(html.dark-style) .al-records-header,
+:host-context([data-bs-theme='dark']) .al-records-header {
+  background: #0f172a !important;
+  border-bottom-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+:host-context(html.dark) .al-records-title,
+:host-context(html.dark-style) .al-records-title,
+:host-context([data-bs-theme='dark']) .al-records-title {
+  color: #f1f5f9 !important;
+}
+
+:host-context(html.dark) .al-table thead th,
+:host-context(html.dark-style) .al-table thead th,
+:host-context([data-bs-theme='dark']) .al-table thead th {
+  background: rgba(0, 180, 166, 0.12) !important;
+  color: #cbd5e1 !important;
+  border-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+:host-context(html.dark) .al-table tbody td,
+:host-context(html.dark-style) .al-table tbody td,
+:host-context([data-bs-theme='dark']) .al-table tbody td {
+  color: #e2e8f0 !important;
+  border-color: rgba(148, 163, 184, 0.1) !important;
+}
+
+:host-context(html.dark) .al-table tbody tr:hover,
+:host-context(html.dark-style) .al-table tbody tr:hover,
+:host-context([data-bs-theme='dark']) .al-table tbody tr:hover {
+  background: rgba(0, 180, 166, 0.08) !important;
+}
+
+:host-context(html.dark) .al-date,
+:host-context(html.dark-style) .al-date,
+:host-context([data-bs-theme='dark']) .al-date {
+  color: #94a3b8 !important;
+}
+
+:host-context(html.dark) .al-not-generated,
+:host-context(html.dark-style) .al-not-generated,
+:host-context([data-bs-theme='dark']) .al-not-generated {
+  color: #64748b !important;
+}
+
+:host-context(html.dark) .al-badge--appointment,
+:host-context(html.dark-style) .al-badge--appointment,
+:host-context([data-bs-theme='dark']) .al-badge--appointment {
+  background: rgba(14, 165, 233, 0.18) !important;
+  color: #7dd3fc !important;
+}
+
+:host-context(html.dark) .al-badge--offer,
+:host-context(html.dark-style) .al-badge--offer,
+:host-context([data-bs-theme='dark']) .al-badge--offer {
+  background: rgba(245, 158, 11, 0.18) !important;
+  color: #fbbf24 !important;
+}
+
+:host-context(html.dark) .al-badge--nda,
+:host-context(html.dark-style) .al-badge--nda,
+:host-context([data-bs-theme='dark']) .al-badge--nda {
+  background: rgba(167, 139, 250, 0.18) !important;
+  color: #c4b5fd !important;
+}
+
+:host-context(html.dark) .al-badge--relieving,
+:host-context(html.dark-style) .al-badge--relieving,
+:host-context([data-bs-theme='dark']) .al-badge--relieving {
+  background: rgba(45, 212, 191, 0.18) !important;
+  color: #5eead4 !important;
+}
+
+:host-context(html.dark) .al-action-btn--print,
+:host-context(html.dark-style) .al-action-btn--print,
+:host-context([data-bs-theme='dark']) .al-action-btn--print {
+  color: #cbd5e1 !important;
+  border-color: #475569 !important;
+  background: #0f172a !important;
+}
+
+:host-context(html.dark) .al-action-btn--print:hover,
+:host-context(html.dark-style) .al-action-btn--print:hover,
+:host-context([data-bs-theme='dark']) .al-action-btn--print:hover {
+  background: rgba(148, 163, 184, 0.12) !important;
+  border-color: #64748b !important;
+  color: #f1f5f9 !important;
+}

@@ -6,11 +6,12 @@
           <span>Tracking List</span>
         </h5>
 
-        <div class="card-body">
+        <div class="card-body" [class.tr-filters-dark]="isDark()">
           <div class="row">
             <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
               <label for="defaultFormControlInput" class="form-label">Select Employee</label>
-              <ng-select [items]="EmpList" bindLabel="label" bindValue="value" [(ngModel)]="obj['emp_id']"
+              <ng-select class="tr-ng"
+                [items]="EmpList" bindLabel="label" bindValue="value" [(ngModel)]="obj['emp_id']"
                 [multiple]="false" placeholder="Select Employee" name="state" id="select2Danger" required
                 #enCashableRef="ngModel"(change)="loadVisitPlaceDD()">
               </ng-select>
@@ -22,7 +23,7 @@
               <label for="defaultFormControlInput" class="form-label">Select Year
                 <span style="color: red"> * </span>
               </label>
-              <ng-select [items]="yearList" bindLabel="label" bindValue="value" [(ngModel)]="obj['year']"
+              <ng-select class="tr-ng" [items]="yearList" bindLabel="label" bindValue="value" [(ngModel)]="obj['year']"
                 [multiple]="false" placeholder="Select Year" name="state" id="select2Danger" required
                 #enCashableRef="ngModel">
               </ng-select>
@@ -32,7 +33,7 @@
               <label for="defaultFormControlInput" class="form-label">Select reportType
                 <span style="color: red"> * </span>
               </label>
-              <ng-select [items]="reportType" bindLabel="label" bindValue="value" [(ngModel)]="obj['report_type']"
+              <ng-select class="tr-ng" [items]="reportType" bindLabel="label" bindValue="value" [(ngModel)]="obj['report_type']"
                 [multiple]="false" placeholder="Select Year" name="state" id="select2Danger" required
                 #enCashableRef="ngModel">
               </ng-select>
@@ -41,7 +42,7 @@
               <label for="defaultFormControlInput" class="form-label">Select Month
                 <span style="color: red">*</span>
               </label>
-              <ng-select [items]="monthList" bindLabel="label" bindValue="value" [(ngModel)]="obj['month']"
+              <ng-select class="tr-ng" [items]="monthList" bindLabel="label" bindValue="value" [(ngModel)]="obj['month']"
                 [multiple]="false" placeholder="Select Month" name="state" id="select2Danger" required
                 #enCashableRef="ngModel">
               </ng-select>
@@ -50,7 +51,7 @@
               <label for="defaultFormControlInput" class="form-label">Select Quarterly
                 <span style="color: red">*</span>
               </label>
-              <ng-select [items]="quarterList" bindLabel="label" bindValue="value" [(ngModel)]="obj['quarter']"
+              <ng-select class="tr-ng" [items]="quarterList" bindLabel="label" bindValue="value" [(ngModel)]="obj['quarter']"
                 [multiple]="false" placeholder="Select quarter" name="state" id="select2Danger" required
                 #enCashableRef="ngModel">
               </ng-select>
@@ -60,7 +61,7 @@
               <label for="defaultFormControlInput" class="form-label">Select Visit Place
 
               </label>
-              <ng-select [items]="PlaceDD" bindLabel="visit_place" bindValue="visit_place"
+              <ng-select class="tr-ng" [items]="PlaceDD" bindLabel="visit_place" bindValue="visit_place"
                 [(ngModel)]="obj['visit_place']" [multiple]="false" placeholder="Select Visit Place" name="state"
                 id="select2Danger" required #enCashableRef="ngModel">
               </ng-select>

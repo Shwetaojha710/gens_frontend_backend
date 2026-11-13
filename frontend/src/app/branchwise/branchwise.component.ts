@@ -8,6 +8,7 @@ import { LocationsService } from '../services/locations.service';
 import { ThemeService, BrandColors, BRAND_DEFAULTS, APPLY_TO_DEFAULTS, ApplyToModules } from '../services/theme.service';
 import { PermissionService, DEFAULT_PERMISSIONS, PermissionSection } from '../services/permission.service';
 import { UserPermissionService, TenantUser } from '../master/user-permission/user-permission.service';
+import { MarketingThemeService } from '../marketing/services/marketing-theme.service';
 import { Notyf } from 'notyf';
 import { ChartOptions } from '../dashboard/dashboard.component';
 import { CommonModule } from '@angular/common';
@@ -131,6 +132,7 @@ export class BranchwiseComponent implements OnInit, OnDestroy {
     private theme: ThemeService,
     private permSvc: PermissionService,
     private userPermSvc: UserPermissionService,
+    private colorMode: MarketingThemeService,
   ) {
     this.baseurl = this.masterService.getBaseUrl();
     this.getBranchDD()
@@ -139,6 +141,9 @@ export class BranchwiseComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // Keep branch picker in sync with marketing landing dark/light
+    this.colorMode.syncFromStorage();
+
     this.backSub = this.router.events.pipe(
       filter(e => e instanceof NavigationStart && e.navigationTrigger === 'popstate')
     ).subscribe(() => {

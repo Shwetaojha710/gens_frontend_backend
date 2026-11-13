@@ -1,6 +1,6 @@
 import {
   Component, OnInit, OnDestroy, AfterViewInit,
-  ViewChild, ElementRef, NgZone,
+  ViewChild, ElementRef, NgZone, inject,
   ChangeDetectionStrategy, ChangeDetectorRef
 } from '@angular/core';
 import * as L from 'leaflet';
@@ -13,6 +13,7 @@ import { SearchPaginationComponent } from '../master/search-pagination/search-pa
 import { CommonModule }           from '@angular/common';
 import { MasterService }          from '../services/master.service';
 import { LiveTrackingComponent } from './live-tracking/live-tracking.component';
+import { MarketingThemeService } from '../marketing/services/marketing-theme.service';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -44,7 +45,10 @@ const EARTH_R  = 6371000;
   templateUrl: './tracking.component.html',
   styleUrls: ['./tracking.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, CommonModule, NgSelectModule, SearchPaginationComponent, LiveTrackingComponent]
+  imports: [FormsModule, CommonModule, NgSelectModule, SearchPaginationComponent, LiveTrackingComponent],
+  host: {
+    '[class.tr-dark]': 'isDark()',
+  },
 })
 export class TrackingComponent implements OnInit, AfterViewInit, OnDestroy {
 
@@ -103,6 +107,7 @@ export class TrackingComponent implements OnInit, AfterViewInit, OnDestroy {
   // ── UI ────────────────────────────────────────────────────────────────────
   isPanelCollapsed: boolean = false;
   themeMode: 'dark' | 'light' = 'light';
+  readonly isDark = inject(MarketingThemeService).isDark;
 
   // ── Employee list ─────────────────────────────────────────────────────────
   ActiveUsers:  any[]   = [];
@@ -135,7 +140,11 @@ export class TrackingComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // ─── Lifecycle ─────────────────────────────────────────────────────────────
 
-  ngOnInit():      void { this.baseurl = this.master.getBaseUrl(); this.activeTrackingUsers(); }
+  ngOnInit(): void {
+    this.baseurl = this.master.getBaseUrl();
+    this.themeMode = this.isDark() ? 'dark' : 'light';
+    this.activeTrackingUsers();
+  }
   ngAfterViewInit(): void {}
   ngOnDestroy():   void {
     this.stopLiveTracking();

@@ -338,7 +338,10 @@ export class WeekendEmpListComponent {
       console.log(data)
       if (data['status'] == true) {
         // this.notyf.success(data['message']);
-        this.EmpList = data.data;
+        const rows = Array.isArray(data.data) ? data.data : [];
+        // Default filter value is 'All' — keep a matching option so ng-select can show the label
+        const hasAll = rows.some((r: any) => r?.value === 'All' || r?.value === 'all');
+        this.EmpList = hasAll ? rows : [{ value: 'All', label: 'All' }, ...rows];
         // console.log(this.EmpList, "attendance master list");
 
       }
@@ -357,7 +360,17 @@ export class WeekendEmpListComponent {
       console.log(data)
       if (data['status'] == true) {
         // this.notyf.success(data['message']);
-        this.yearList = data.data;
+        const rows = Array.isArray(data.data) ? data.data : [];
+        this.yearList = rows.map((y: any) => {
+          if (y == null || typeof y !== 'object') {
+            const s = String(y ?? '');
+            return { value: s, label: s };
+          }
+          const raw = y.value ?? y.year ?? y.id ?? y.label;
+          const s = raw != null ? String(raw) : '';
+          return { ...y, value: s, label: y.label != null ? String(y.label) : s };
+        });
+        if (this.obj?.['year'] != null) this.obj['year'] = String(this.obj['year']);
         console.log(this.EmpList, "attendance master list");
 
       }

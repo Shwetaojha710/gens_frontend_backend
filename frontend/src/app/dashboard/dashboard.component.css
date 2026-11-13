@@ -2461,3 +2461,554 @@
   cursor: pointer;
   border: 0;
 }
+
+.dash-card-heading {
+  color: #3c4056;
+}
+
+.celebration-tabs {
+  background: #fff;
+  border-radius: 5px;
+}
+
+.events-col-head {
+  background: #f5f5f7;
+}
+
+.events-col-label {
+  font-size: 14px;
+  color: #3c4056;
+}
+
+.events-list-body {
+  overflow-y: scroll;
+  height: 170px;
+  background: #fff;
+}
+
+.events-list-item {
+  border-bottom: 1px solid #dadada;
+  padding-bottom: 4px;
+}
+
+.events-item-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.events-item-date {
+  font-size: 12px;
+  color: #004463;
+  font-weight: 500;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Dark theme ONLY (html.dark / data-bs-theme=dark)
+   Light styles above stay the default.
+   ═══════════════════════════════════════════════════════════ */
+:host-context(html.dark) .dash-card-heading,
+:host-context([data-bs-theme='dark']) .dash-card-heading {
+  color: #f1f5f9;
+}
+
+:host-context(html.dark) .attendance-legend-text span,
+:host-context([data-bs-theme='dark']) .attendance-legend-text span {
+  color: #94a3b8;
+}
+
+:host-context(html.dark) .container-fluid > .row > .col-md-6 > h4,
+:host-context([data-bs-theme='dark']) .container-fluid > .row > .col-md-6 > h4 {
+  color: #f1f5f9;
+}
+
+:host-context(html.dark) .card-header h5,
+:host-context([data-bs-theme='dark']) .card-header h5 {
+  color: #f1f5f9;
+}
+
+:host-context(html.dark) .dashboard-glass-card,
+:host-context([data-bs-theme='dark']) .dashboard-glass-card {
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.92) 0%, rgba(15, 23, 42, 0.88) 100%) !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+  color: #e2e8f0;
+}
+
+:host-context(html.dark) .dashboard-top-pill,
+:host-context([data-bs-theme='dark']) .dashboard-top-pill {
+  background: #1e293b;
+  color: #94a3b8;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+:host-context(html.dark) .dashboard-date-filter.bg-white,
+:host-context([data-bs-theme='dark']) .dashboard-date-filter.bg-white,
+:host-context(html.dark) .btn.bg-white.dashboard-date-filter,
+:host-context([data-bs-theme='dark']) .btn.bg-white.dashboard-date-filter {
+  background-color: #1e293b !important;
+  color: #e2e8f0 !important;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+:host-context(html.dark) .badge.bg-white,
+:host-context([data-bs-theme='dark']) .badge.bg-white {
+  background-color: #0f172a !important;
+  color: #cbd5e1 !important;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+:host-context(html.dark) .card-info p,
+:host-context([data-bs-theme='dark']) .card-info p {
+  color: #94a3b8;
+}
+
+:host-context(html.dark) .card-info h5,
+:host-context([data-bs-theme='dark']) .card-info h5 {
+  color: inherit;
+}
+
+:host-context(html.dark) .tracking,
+:host-context([data-bs-theme='dark']) .tracking {
+  background: #1e293b;
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+:host-context(html.dark) .birthday-card,
+:host-context([data-bs-theme='dark']) .birthday-card {
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+:host-context(html.dark) .bday-mini-card,
+:host-context([data-bs-theme='dark']) .bday-mini-card {
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+:host-context(html.dark) .bday-mini-card--anniversary,
+:host-context([data-bs-theme='dark']) .bday-mini-card--anniversary {
+  background: #0f172a;
+}
+
+:host-context(html.dark) .bday-mini-card__inner,
+:host-context([data-bs-theme='dark']) .bday-mini-card__inner {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.2) 0%, rgba(15, 23, 42, 0.7) 55%, rgba(15, 23, 42, 0.88) 100%);
+}
+
+:host-context(html.dark) .bday-mini-card__name,
+:host-context([data-bs-theme='dark']) .bday-mini-card__name {
+  color: #f1f5f9;
+}
+
+:host-context(html.dark) .bday-mini-card__date,
+:host-context([data-bs-theme='dark']) .bday-mini-card__date {
+  color: #94a3b8;
+}
+
+:host-context(html.dark) .attendance-department-bar-bg,
+:host-context([data-bs-theme='dark']) .attendance-department-bar-bg {
+  background: linear-gradient(180deg, #334155 0%, #1e293b 100%);
+}
+
+:host-context(html.dark) .attendance-department-percent,
+:host-context(html.dark) .attendance-department-name,
+:host-context([data-bs-theme='dark']) .attendance-department-percent,
+:host-context([data-bs-theme='dark']) .attendance-department-name {
+  color: #94a3b8;
+}
+
+:host-context(html.dark) .tw-attendance-title,
+:host-context([data-bs-theme='dark']) .tw-attendance-title {
+  color: #f1f5f9;
+}
+
+:host-context(html.dark) .celebration-tabs,
+:host-context([data-bs-theme='dark']) .celebration-tabs {
+  background: #0f172a;
+}
+
+:host-context(html.dark) .celebration-when,
+:host-context([data-bs-theme='dark']) .celebration-when {
+  color: #5eead4;
+}
+
+:host-context(html.dark) .events-col-head,
+:host-context([data-bs-theme='dark']) .events-col-head {
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+:host-context(html.dark) .events-col-label,
+:host-context([data-bs-theme='dark']) .events-col-label {
+  color: #94a3b8;
+}
+
+:host-context(html.dark) .events-list-body,
+:host-context([data-bs-theme='dark']) .events-list-body {
+  background: #1e293b;
+}
+
+:host-context(html.dark) .events-list-item,
+:host-context([data-bs-theme='dark']) .events-list-item {
+  border-bottom-color: rgba(148, 163, 184, 0.14);
+}
+
+:host-context(html.dark) .events-item-name,
+:host-context([data-bs-theme='dark']) .events-item-name {
+  color: #f1f5f9;
+}
+
+:host-context(html.dark) .events-item-date,
+:host-context([data-bs-theme='dark']) .events-item-date {
+  color: #5eead4;
+}
+
+:host-context(html.dark) .attendance-section,
+:host-context([data-bs-theme='dark']) .attendance-section {
+  background: #1e293b;
+  border-color: rgba(148, 163, 184, 0.16);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+:host-context(html.dark) .title-area h2,
+:host-context([data-bs-theme='dark']) .title-area h2 {
+  color: #f1f5f9;
+}
+
+:host-context(html.dark) .title-area p,
+:host-context(html.dark) .legend,
+:host-context([data-bs-theme='dark']) .title-area p,
+:host-context([data-bs-theme='dark']) .legend {
+  color: #94a3b8;
+}
+
+:host-context(html.dark) .team-card,
+:host-context([data-bs-theme='dark']) .team-card {
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.16);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+
+:host-context(html.dark) .team-card:hover,
+:host-context([data-bs-theme='dark']) .team-card:hover {
+  border-color: rgba(0, 180, 166, 0.35);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+}
+
+:host-context(html.dark) .team-name,
+:host-context([data-bs-theme='dark']) .team-name {
+  color: #f1f5f9;
+}
+
+:host-context(html.dark) .members,
+:host-context(html.dark) .stat-label,
+:host-context([data-bs-theme='dark']) .members,
+:host-context([data-bs-theme='dark']) .stat-label {
+  color: #94a3b8;
+}
+
+:host-context(html.dark) .tw-dept-card,
+:host-context([data-bs-theme='dark']) .tw-dept-card {
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.16);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+
+:host-context(html.dark) .tw-dept-card:hover,
+:host-context(html.dark) .tw-dept-card--open,
+:host-context([data-bs-theme='dark']) .tw-dept-card:hover,
+:host-context([data-bs-theme='dark']) .tw-dept-card--open {
+  border-color: rgba(0, 180, 166, 0.35);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+}
+
+:host-context(html.dark) .tw-dept-name,
+:host-context([data-bs-theme='dark']) .tw-dept-name {
+  color: #f1f5f9;
+}
+
+:host-context(html.dark) .tw-dept-count,
+:host-context([data-bs-theme='dark']) .tw-dept-count {
+  color: #94a3b8;
+}
+
+:host-context(html.dark) .tw-stat--present,
+:host-context([data-bs-theme='dark']) .tw-stat--present {
+  background: rgba(16, 185, 129, 0.18);
+  color: #6ee7b7;
+}
+
+:host-context(html.dark) .tw-stat--leave,
+:host-context([data-bs-theme='dark']) .tw-stat--leave {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+}
+
+:host-context(html.dark) .tw-stat--absent,
+:host-context([data-bs-theme='dark']) .tw-stat--absent {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+}
+
+:host-context(html.dark) .tw-dept-ring::before,
+:host-context([data-bs-theme='dark']) .tw-dept-ring::before {
+  background: #0f172a;
+}
+
+:host-context(html.dark) .tw-dept-ring span,
+:host-context([data-bs-theme='dark']) .tw-dept-ring span {
+  color: #e2e8f0;
+}
+
+:host-context(html.dark) .tw-dept-card__body,
+:host-context([data-bs-theme='dark']) .tw-dept-card__body {
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  border-top-color: rgba(148, 163, 184, 0.14);
+}
+
+:host-context(html.dark) .tw-member-row,
+:host-context([data-bs-theme='dark']) .tw-member-row {
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.14);
+}
+
+:host-context(html.dark) .tw-member-name,
+:host-context([data-bs-theme='dark']) .tw-member-name {
+  color: #e2e8f0;
+}
+
+:host-context(html.dark) .tw-member-sub,
+:host-context(html.dark) .tw-member-times,
+:host-context([data-bs-theme='dark']) .tw-member-sub,
+:host-context([data-bs-theme='dark']) .tw-member-times {
+  color: #94a3b8;
+}
+
+:host-context(html.dark) .employee-directory,
+:host-context([data-bs-theme='dark']) .employee-directory {
+  background: #1e293b;
+  border-color: rgba(148, 163, 184, 0.16);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+:host-context(html.dark) .directory-header,
+:host-context([data-bs-theme='dark']) .directory-header {
+  border-bottom-color: rgba(148, 163, 184, 0.14);
+}
+
+:host-context(html.dark) .directory-title h2,
+:host-context([data-bs-theme='dark']) .directory-title h2 {
+  color: #f1f5f9;
+}
+
+:host-context(html.dark) .directory-title p,
+:host-context([data-bs-theme='dark']) .directory-title p {
+  color: #94a3b8;
+}
+
+:host-context(html.dark) .search-box,
+:host-context([data-bs-theme='dark']) .search-box {
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+:host-context(html.dark) .search-box span,
+:host-context([data-bs-theme='dark']) .search-box span {
+  color: #64748b;
+}
+
+:host-context(html.dark) .search-box input,
+:host-context([data-bs-theme='dark']) .search-box input {
+  color: #e2e8f0;
+  background: transparent;
+}
+
+:host-context(html.dark) .search-box input::placeholder,
+:host-context([data-bs-theme='dark']) .search-box input::placeholder {
+  color: #64748b;
+}
+
+:host-context(html.dark) .directory-filters select,
+:host-context(html.dark) .filter-btn,
+:host-context([data-bs-theme='dark']) .directory-filters select,
+:host-context([data-bs-theme='dark']) .filter-btn {
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.22);
+  color: #cbd5e1;
+}
+
+:host-context(html.dark) .employee-table thead,
+:host-context([data-bs-theme='dark']) .employee-table thead {
+  background: rgba(0, 180, 166, 0.1);
+}
+
+:host-context(html.dark) .employee-table th,
+:host-context([data-bs-theme='dark']) .employee-table th {
+  color: #94a3b8;
+  border-bottom-color: rgba(148, 163, 184, 0.14);
+}
+
+:host-context(html.dark) .employee-table td,
+:host-context([data-bs-theme='dark']) .employee-table td {
+  color: #cbd5e1;
+  border-bottom-color: rgba(148, 163, 184, 0.1);
+}
+
+:host-context(html.dark) .employee-table tbody tr:hover,
+:host-context([data-bs-theme='dark']) .employee-table tbody tr:hover {
+  background: rgba(0, 180, 166, 0.08);
+}
+
+:host-context(html.dark) .employee strong,
+:host-context([data-bs-theme='dark']) .employee strong {
+  color: #f1f5f9;
+}
+
+:host-context(html.dark) .employee small,
+:host-context([data-bs-theme='dark']) .employee small {
+  color: #94a3b8;
+}
+
+:host-context(html.dark) .employee img,
+:host-context([data-bs-theme='dark']) .employee img {
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+:host-context(html.dark) .emp-badge--primary,
+:host-context([data-bs-theme='dark']) .emp-badge--primary {
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.18);
+}
+
+:host-context(html.dark) .emp-badge--warning,
+:host-context([data-bs-theme='dark']) .emp-badge--warning {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.18);
+}
+
+:host-context(html.dark) .emp-badge--info,
+:host-context([data-bs-theme='dark']) .emp-badge--info {
+  color: #5eead4;
+  background: rgba(13, 148, 136, 0.2);
+}
+
+:host-context(html.dark) .emp-badge--danger,
+:host-context([data-bs-theme='dark']) .emp-badge--danger {
+  color: #fca5a5;
+  background: rgba(220, 38, 38, 0.18);
+}
+
+:host-context(html.dark) .emp-badge--success,
+:host-context([data-bs-theme='dark']) .emp-badge--success {
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.18);
+}
+
+:host-context(html.dark) .management,
+:host-context([data-bs-theme='dark']) .management {
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.18);
+}
+
+:host-context(html.dark) .development,
+:host-context([data-bs-theme='dark']) .development {
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.18);
+}
+
+:host-context(html.dark) .hr,
+:host-context([data-bs-theme='dark']) .hr {
+  color: #7dd3fc;
+  background: rgba(14, 165, 233, 0.18);
+}
+
+:host-context(html.dark) .qa,
+:host-context([data-bs-theme='dark']) .qa {
+  color: #c4b5fd;
+  background: rgba(139, 92, 246, 0.18);
+}
+
+:host-context(html.dark) .present,
+:host-context([data-bs-theme='dark']) .present {
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.18);
+}
+
+:host-context(html.dark) .leave,
+:host-context([data-bs-theme='dark']) .leave {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.18);
+}
+
+:host-context(html.dark) .progress,
+:host-context([data-bs-theme='dark']) .progress {
+  background: #334155;
+}
+
+:host-context(html.dark) .attendance b,
+:host-context([data-bs-theme='dark']) .attendance b {
+  color: #94a3b8;
+}
+
+:host-context(html.dark) .actions button,
+:host-context(html.dark) .pagination button,
+:host-context([data-bs-theme='dark']) .actions button,
+:host-context([data-bs-theme='dark']) .pagination button {
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.22);
+  color: #94a3b8;
+}
+
+:host-context(html.dark) .actions button:hover,
+:host-context(html.dark) .pagination button:hover,
+:host-context([data-bs-theme='dark']) .actions button:hover,
+:host-context([data-bs-theme='dark']) .pagination button:hover {
+  background: rgba(0, 180, 166, 0.15);
+  color: #5eead4;
+  border-color: rgba(0, 210, 180, 0.35);
+}
+
+:host-context(html.dark) .pagination button.active,
+:host-context([data-bs-theme='dark']) .pagination button.active {
+  background: rgba(0, 180, 166, 0.2);
+  color: #5eead4;
+  border-color: rgba(0, 210, 180, 0.4);
+}
+
+:host-context(html.dark) .pagination select,
+:host-context([data-bs-theme='dark']) .pagination select {
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.22);
+  color: #cbd5e1;
+}
+
+:host-context(html.dark) .table-footer,
+:host-context([data-bs-theme='dark']) .table-footer {
+  color: #94a3b8;
+}
+
+:host-context(html.dark) .leave-type-badge,
+:host-context([data-bs-theme='dark']) .leave-type-badge {
+  color: #7dd3fc;
+  background: rgba(14, 165, 233, 0.18);
+}
+
+:host-context(html.dark) .leave-days-badge,
+:host-context(html.dark) .leave-dates,
+:host-context(html.dark) .leave-contact,
+:host-context([data-bs-theme='dark']) .leave-days-badge,
+:host-context([data-bs-theme='dark']) .leave-dates,
+:host-context([data-bs-theme='dark']) .leave-contact {
+  color: #cbd5e1;
+}
+
+:host-context(html.dark) .btn-outline-primary,
+:host-context([data-bs-theme='dark']) .btn-outline-primary {
+  color: #5eead4;
+  border-color: rgba(0, 180, 166, 0.45);
+  background: transparent;
+}
+
+:host-context(html.dark) .btn-outline-primary:hover,
+:host-context([data-bs-theme='dark']) .btn-outline-primary:hover {
+  background: rgba(0, 180, 166, 0.15);
+  color: #fff;
+  border-color: #14b8a6;
+}

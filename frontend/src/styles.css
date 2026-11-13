@@ -43,9 +43,59 @@
 /* Unified card look across all Company Management pages (dashboard, employee, attendance, payroll, reports, master, settings, recruitment): white background + teal-green shadow */
 .app-layout-content .card,
 .ep-content .card {
+  background: #fff !important;
   background-color: #fff !important;
   border: none !important;
   box-shadow: 0 8px 24px rgba(0, 180, 166, 0.16) !important;
+}
+
+/* Dark cards — must use `background` shorthand to beat core.css white gradient !important */
+html.dark .card,
+html.dark .app-layout-content .card,
+html.dark .ep-content .card,
+[data-bs-theme='dark'] .card,
+[data-bs-theme='dark'] .app-layout-content .card,
+[data-bs-theme='dark'] .ep-content .card {
+  background: #1e293b !important;
+  background-color: #1e293b !important;
+  background-image: none !important;
+  border: 1px solid rgba(148, 163, 184, 0.14) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark .card .card-body,
+html.dark .card .card-header,
+html.dark .card .card-footer,
+[data-bs-theme='dark'] .card .card-body,
+[data-bs-theme='dark'] .card .card-header,
+[data-bs-theme='dark'] .card .card-footer {
+  background: transparent !important;
+  color: inherit;
+}
+
+html.dark .card-title h5,
+[data-bs-theme='dark'] .card-title h5 {
+  color: var(--bs-heading-color, #e7e7ff);
+}
+
+html.dark .text-developer,
+[data-bs-theme='dark'] .text-developer {
+  color: var(--bs-heading-color, #e7e7ff);
+}
+
+html.dark .actions button,
+[data-bs-theme='dark'] .actions button {
+  background: var(--bs-paper-bg, #2b2c40);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--bs-secondary-color, #a1a1c2);
+}
+
+html.dark .actions button:hover,
+[data-bs-theme='dark'] .actions button:hover {
+  background: rgba(0, 180, 166, 0.18);
+  color: #00d2b4;
+  border-color: rgba(0, 210, 180, 0.35);
 }
 
 .table thead tr th {
@@ -97,6 +147,38 @@ a.btn.btn-primary,
   background: var(--app-button-hover, #008f84) !important;
   border-color: var(--app-button-hover, #008f84) !important;
   color: #fff !important;
+}
+
+/* Dark theme primary buttons — match marketing landing CTA */
+html.dark .btn-primary,
+html.dark button.btn.btn-primary,
+html.dark a.btn.btn-primary,
+html.dark .btn-primary.waves-effect,
+[data-bs-theme='dark'] .btn-primary,
+[data-bs-theme='dark'] button.btn.btn-primary,
+[data-bs-theme='dark'] a.btn.btn-primary,
+[data-bs-theme='dark'] .btn-primary.waves-effect {
+  background: linear-gradient(135deg, #1a8075 0%, #7ed321 100%) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+  box-shadow: 0 10px 24px rgba(26, 128, 117, 0.28);
+}
+
+html.dark .btn-primary:hover,
+html.dark .btn-primary:focus,
+html.dark .btn-primary:active,
+html.dark .btn-primary.active,
+html.dark .show > .btn-primary.dropdown-toggle,
+[data-bs-theme='dark'] .btn-primary:hover,
+[data-bs-theme='dark'] .btn-primary:focus,
+[data-bs-theme='dark'] .btn-primary:active,
+[data-bs-theme='dark'] .btn-primary.active,
+[data-bs-theme='dark'] .show > .btn-primary.dropdown-toggle {
+  background: linear-gradient(135deg, #1a8075 0%, #7ed321 100%) !important;
+  filter: brightness(1.06);
+  border-color: transparent !important;
+  color: #fff !important;
+  box-shadow: 0 14px 30px rgba(26, 128, 117, 0.36);
 }
 
 .btn-outline-primary {
@@ -158,5 +240,1143 @@ div.dt-container div.dt-length select {
 /* ng-select appendTo="body" — keep dropdown above cards/modals */
 .ng-dropdown-panel {
   z-index: 3000 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Admin dark theme (only when marketing landing is dark)
+   Light theme styles above remain the default.
+   ═══════════════════════════════════════════════════════════ */
+html.dark,
+html.dark body,
+[data-bs-theme='dark'],
+[data-bs-theme='dark'] body {
+  background-color: #0f172a !important;
+  color: #e2e8f0;
+}
+
+html.dark .app-layout-shell,
+[data-bs-theme='dark'] .app-layout-shell {
+  background:
+    radial-gradient(ellipse 50% 40% at 90% 0%, rgba(0, 180, 166, 0.1) 0%, transparent 55%),
+    linear-gradient(180deg, #0b1220 0%, #111827 45%, #0f172a 100%) !important;
+}
+
+html.dark .app-layout-main,
+html.dark .app-layout-content,
+[data-bs-theme='dark'] .app-layout-main,
+[data-bs-theme='dark'] .app-layout-content {
+  background: transparent !important;
+  color: #e2e8f0;
+}
+
+/* Admin header — dark (global so it always wins over component light rules) */
+html.dark .top-header,
+[data-bs-theme='dark'] .top-header {
+  border-bottom-color: rgba(148, 163, 184, 0.16) !important;
+  background: transparent !important;
+}
+
+html.dark .header-search-shell,
+[data-bs-theme='dark'] .header-search-shell {
+  background: rgba(30, 41, 59, 0.95) !important;
+  border-color: rgba(148, 163, 184, 0.22) !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35) !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark .header-search-shell .search-input,
+[data-bs-theme='dark'] .header-search-shell .search-input {
+  color: #f1f5f9 !important;
+  background: transparent !important;
+}
+
+html.dark .header-search-shell .search-input::placeholder,
+[data-bs-theme='dark'] .header-search-shell .search-input::placeholder {
+  color: #64748b !important;
+}
+
+html.dark .search-shortcut,
+[data-bs-theme='dark'] .search-shortcut {
+  color: #64748b !important;
+}
+
+html.dark .search-icon-btn i,
+html.dark .utility-btn,
+[data-bs-theme='dark'] .search-icon-btn i,
+[data-bs-theme='dark'] .utility-btn {
+  color: #cbd5e1 !important;
+}
+
+html.dark .hamburger-btn,
+[data-bs-theme='dark'] .hamburger-btn {
+  background: rgba(30, 41, 59, 0.95) !important;
+  color: #5eead4 !important;
+}
+
+html.dark .branch-selector .ng-select-container,
+[data-bs-theme='dark'] .branch-selector .ng-select-container {
+  background: rgba(30, 41, 59, 0.95) !important;
+  border-color: rgba(148, 163, 184, 0.25) !important;
+}
+
+html.dark .branch-selector .ng-value-label,
+html.dark .branch-selector .ng-placeholder,
+[data-bs-theme='dark'] .branch-selector .ng-value-label,
+[data-bs-theme='dark'] .branch-selector .ng-placeholder {
+  color: #e2e8f0 !important;
+}
+
+html.dark .location-btn,
+[data-bs-theme='dark'] .location-btn {
+  background: linear-gradient(135deg, #1a8075 0%, #7ed321 100%) !important;
+  box-shadow: 0 10px 24px rgba(26, 128, 117, 0.32) !important;
+}
+
+html.dark .app-layout-content .table,
+[data-bs-theme='dark'] .app-layout-content .table {
+  --bs-table-bg: transparent;
+  --bs-table-color: #e2e8f0;
+  --bs-table-border-color: rgba(148, 163, 184, 0.16);
+  --bs-table-striped-bg: rgba(255, 255, 255, 0.03);
+  --bs-table-hover-bg: rgba(0, 180, 166, 0.08);
+  --bs-table-header-bg-color: rgba(0, 180, 166, 0.12) !important;
+  color: #e2e8f0;
+}
+
+html.dark .app-layout-content .table thead th,
+[data-bs-theme='dark'] .app-layout-content .table thead th {
+  color: #cbd5e1;
+  border-color: rgba(148, 163, 184, 0.16);
+}
+
+html.dark .app-layout-content .table td,
+html.dark .app-layout-content .table th,
+[data-bs-theme='dark'] .app-layout-content .table td,
+[data-bs-theme='dark'] .app-layout-content .table th {
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+html.dark .app-layout-content .bg-white,
+[data-bs-theme='dark'] .app-layout-content .bg-white {
+  background-color: #1e293b !important;
+  color: #e2e8f0;
+}
+
+html.dark .app-layout-content .text-muted,
+[data-bs-theme='dark'] .app-layout-content .text-muted {
+  color: #94a3b8 !important;
+}
+
+html.dark .app-layout-content .form-control,
+html.dark .app-layout-content .form-select,
+[data-bs-theme='dark'] .app-layout-content .form-control,
+[data-bs-theme='dark'] .app-layout-content .form-select {
+  background-color: #0f172a;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+html.dark .app-layout-content .form-control:focus,
+html.dark .app-layout-content .form-select:focus,
+[data-bs-theme='dark'] .app-layout-content .form-control:focus,
+[data-bs-theme='dark'] .app-layout-content .form-select:focus {
+  background-color: #0f172a;
+  border-color: #14b8a6;
+  color: #f1f5f9;
+  box-shadow: 0 0 0 0.2rem rgba(20, 184, 166, 0.2);
+}
+
+html.dark .app-layout-content .modal-content,
+[data-bs-theme='dark'] .app-layout-content .modal-content {
+  background: #1e293b;
+  color: #e2e8f0;
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+html.dark .app-layout-content .list-group-item,
+[data-bs-theme='dark'] .app-layout-content .list-group-item {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-color: rgba(148, 163, 184, 0.14);
+}
+
+html.dark .app-layout-content .dropdown-menu,
+[data-bs-theme='dark'] .app-layout-content .dropdown-menu {
+  background: #1e293b;
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+html.dark .app-layout-content .dropdown-item,
+[data-bs-theme='dark'] .app-layout-content .dropdown-item {
+  color: #e2e8f0;
+}
+
+html.dark .app-layout-content .dropdown-item:hover,
+[data-bs-theme='dark'] .app-layout-content .dropdown-item:hover {
+  background: rgba(0, 180, 166, 0.12);
+  color: #5eead4;
+}
+
+html.dark .card-header,
+[data-bs-theme='dark'] .card-header {
+  background: transparent;
+  border-color: rgba(148, 163, 184, 0.14);
+  color: #f1f5f9;
+}
+
+html.dark .app-layout-content .card-title h5,
+html.dark .app-layout-content .card-header h5,
+html.dark .app-layout-content .card-header h4,
+html.dark .app-layout-content .card-header h6,
+[data-bs-theme='dark'] .app-layout-content .card-title h5,
+[data-bs-theme='dark'] .app-layout-content .card-header h5,
+[data-bs-theme='dark'] .app-layout-content .card-header h4,
+[data-bs-theme='dark'] .app-layout-content .card-header h6 {
+  color: #f1f5f9;
+}
+
+html.dark .btn-outline-secondary,
+[data-bs-theme='dark'] .btn-outline-secondary {
+  color: #cbd5e1;
+  border-color: #64748b;
+}
+
+html.dark .btn-outline-secondary:hover,
+[data-bs-theme='dark'] .btn-outline-secondary:hover {
+  background: #334155;
+  color: #fff;
+  border-color: #64748b;
+}
+
+html.dark .app-layout-content .btn.bg-white,
+[data-bs-theme='dark'] .app-layout-content .btn.bg-white {
+  background-color: #1e293b !important;
+  color: #e2e8f0 !important;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+html.dark .app-layout-content .text-secondary,
+[data-bs-theme='dark'] .app-layout-content .text-secondary {
+  color: #94a3b8 !important;
+}
+
+html.dark .app-layout-content .badge.bg-white,
+[data-bs-theme='dark'] .app-layout-content .badge.bg-white {
+  background-color: #0f172a !important;
+  color: #cbd5e1 !important;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+html.dark .app-layout-content .card-header,
+[data-bs-theme='dark'] .app-layout-content .card-header {
+  color: #f1f5f9;
+}
+
+/* Dark theme ng-select = same look as form-select ("Show 10 entries") */
+html.dark .app-layout-content .ng-select .ng-select-container,
+html.dark .ng-select .ng-select-container,
+html.dark-style .ng-select .ng-select-container,
+[data-bs-theme='dark'] .app-layout-content .ng-select .ng-select-container,
+[data-bs-theme='dark'] .ng-select .ng-select-container {
+  background: #0f172a !important;
+  background-color: #0f172a !important;
+  border-color: #475569 !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark .ng-select .ng-value,
+html.dark .ng-select .ng-value-label,
+html.dark .ng-select .ng-input > input,
+html.dark .app-layout-content .ng-select .ng-value,
+html.dark .app-layout-content .ng-select .ng-value-label,
+html.dark .app-layout-content .ng-select .ng-input > input,
+html.dark-style .ng-select .ng-value,
+html.dark-style .ng-select .ng-value-label,
+html.dark-style .ng-select .ng-input > input,
+[data-bs-theme='dark'] .ng-select .ng-value,
+[data-bs-theme='dark'] .ng-select .ng-value-label,
+[data-bs-theme='dark'] .ng-select .ng-input > input,
+[data-bs-theme='dark'] .app-layout-content .ng-select .ng-value,
+[data-bs-theme='dark'] .app-layout-content .ng-select .ng-value-label,
+[data-bs-theme='dark'] .app-layout-content .ng-select .ng-input > input {
+  color: #f1f5f9 !important;
+  -webkit-text-fill-color: #f1f5f9 !important;
+}
+
+html.dark .ng-select .ng-placeholder,
+html.dark .app-layout-content .ng-select .ng-placeholder,
+html.dark-style .ng-select .ng-placeholder,
+[data-bs-theme='dark'] .ng-select .ng-placeholder,
+[data-bs-theme='dark'] .app-layout-content .ng-select .ng-placeholder {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+}
+
+html.dark .ng-select .ng-arrow-wrapper .ng-arrow,
+html.dark .ng-select .ng-clear-wrapper,
+[data-bs-theme='dark'] .ng-select .ng-arrow-wrapper .ng-arrow,
+[data-bs-theme='dark'] .ng-select .ng-clear-wrapper {
+  color: #94a3b8 !important;
+  border-color: #94a3b8 !important;
+}
+
+html.dark .ng-select.ng-select-focused .ng-select-container,
+[data-bs-theme='dark'] .ng-select.ng-select-focused .ng-select-container {
+  border-color: #14b8a6 !important;
+  box-shadow: 0 0 0 0.2rem rgba(20, 184, 166, 0.2) !important;
+}
+
+html.dark .ng-dropdown-panel,
+[data-bs-theme='dark'] .ng-dropdown-panel {
+  background: #1e293b !important;
+  border-color: rgba(148, 163, 184, 0.2) !important;
+  color: #e2e8f0;
+}
+
+html.dark .ng-dropdown-panel .ng-dropdown-panel-items .ng-option,
+html.dark .ng-dropdown-panel .ng-option,
+[data-bs-theme='dark'] .ng-dropdown-panel .ng-dropdown-panel-items .ng-option,
+[data-bs-theme='dark'] .ng-dropdown-panel .ng-option {
+  background: #1e293b !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark .ng-dropdown-panel .ng-option.ng-option-marked,
+html.dark .ng-dropdown-panel .ng-option.ng-option-selected,
+[data-bs-theme='dark'] .ng-dropdown-panel .ng-option.ng-option-marked,
+[data-bs-theme='dark'] .ng-dropdown-panel .ng-option.ng-option-selected {
+  background: rgba(0, 180, 166, 0.15) !important;
+  color: #5eead4 !important;
+}
+
+html.dark .ng-dropdown-panel .ng-optgroup,
+[data-bs-theme='dark'] .ng-dropdown-panel .ng-optgroup {
+  color: #94a3b8 !important;
+  background: #0f172a !important;
+}
+
+/* Dashboard Team-wise Attendance — dark */
+html.dark .attendance-section,
+[data-bs-theme='dark'] .attendance-section {
+  background: #1e293b !important;
+  border-color: rgba(148, 163, 184, 0.16) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+}
+
+html.dark .team-card,
+[data-bs-theme='dark'] .team-card {
+  background: #0f172a !important;
+  border-color: rgba(148, 163, 184, 0.16) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark .team-name,
+[data-bs-theme='dark'] .team-name {
+  color: #f1f5f9 !important;
+}
+
+html.dark .members,
+html.dark .stat-label,
+html.dark .legend,
+[data-bs-theme='dark'] .members,
+[data-bs-theme='dark'] .stat-label,
+[data-bs-theme='dark'] .legend {
+  color: #94a3b8 !important;
+}
+
+html.dark .employee-directory,
+[data-bs-theme='dark'] .employee-directory {
+  background: #1e293b !important;
+  border-color: rgba(148, 163, 184, 0.16) !important;
+}
+
+html.dark .dashboard-glass-card,
+[data-bs-theme='dark'] .dashboard-glass-card {
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.92) 100%) !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+}
+
+/* Employee list / shared DataTables chrome */
+html.dark .app-layout-content .dt-info,
+html.dark .app-layout-content .dt-length,
+html.dark .app-layout-content .dt-search,
+[data-bs-theme='dark'] .app-layout-content .dt-info,
+[data-bs-theme='dark'] .app-layout-content .dt-length,
+[data-bs-theme='dark'] .app-layout-content .dt-search {
+  color: #94a3b8;
+}
+
+html.dark .app-layout-content .page-link,
+[data-bs-theme='dark'] .app-layout-content .page-link {
+  background-color: #0f172a;
+  border-color: rgba(148, 163, 184, 0.22);
+  color: #cbd5e1;
+}
+
+html.dark .app-layout-content .page-item.active .page-link,
+[data-bs-theme='dark'] .app-layout-content .page-item.active .page-link {
+  background: linear-gradient(135deg, #1a8075 0%, #7ed321 100%);
+  border-color: transparent;
+  color: #fff;
+}
+
+html.dark .app-layout-content .card-body h6,
+[data-bs-theme='dark'] .app-layout-content .card-body h6 {
+  color: #e2e8f0;
+}
+
+html.dark .app-layout-content .text-body-secondary,
+[data-bs-theme='dark'] .app-layout-content .text-body-secondary {
+  color: #94a3b8 !important;
+}
+
+/* Readable outline badges on dark tables */
+html.dark .badge[class*='badge-outline'],
+[data-bs-theme='dark'] .badge[class*='badge-outline'] {
+  font-weight: 600 !important;
+  letter-spacing: 0.01em;
+  padding: 0.35em 0.65em !important;
+}
+
+html.dark .badge-outline-success,
+[data-bs-theme='dark'] .badge-outline-success {
+  background: rgba(16, 185, 129, 0.18) !important;
+  color: #6ee7b7 !important;
+  border-color: rgba(52, 211, 153, 0.45) !important;
+}
+
+html.dark .badge-outline-danger,
+[data-bs-theme='dark'] .badge-outline-danger {
+  background: rgba(239, 68, 68, 0.18) !important;
+  color: #fca5a5 !important;
+  border-color: rgba(248, 113, 113, 0.45) !important;
+}
+
+html.dark .badge-outline-warning,
+[data-bs-theme='dark'] .badge-outline-warning {
+  background: rgba(245, 158, 11, 0.18) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(251, 191, 36, 0.45) !important;
+}
+
+html.dark .badge-outline-info,
+[data-bs-theme='dark'] .badge-outline-info {
+  background: rgba(14, 165, 233, 0.18) !important;
+  color: #7dd3fc !important;
+  border-color: rgba(56, 189, 248, 0.45) !important;
+}
+
+html.dark .link-primary,
+html.dark a.link-primary,
+[data-bs-theme='dark'] .link-primary,
+[data-bs-theme='dark'] a.link-primary {
+  color: #5eead4 !important;
+}
+
+html.dark .link-primary:hover,
+[data-bs-theme='dark'] .link-primary:hover {
+  color: #99f6e4 !important;
+}
+
+html.dark .app-layout-content .card-body small,
+html.dark .app-layout-content .card-body .text-body-secondary,
+[data-bs-theme='dark'] .app-layout-content .card-body small,
+[data-bs-theme='dark'] .app-layout-content .card-body .text-body-secondary {
+  color: #94a3b8 !important;
+}
+
+html.dark .emp-list-table .col-actions,
+[data-bs-theme='dark'] .emp-list-table .col-actions {
+  background: #1e293b !important;
+}
+
+html.dark .emp-list-table thead .col-actions,
+[data-bs-theme='dark'] .emp-list-table thead .col-actions {
+  background: #1e293b !important;
+}
+
+html.dark .emp-list-header,
+[data-bs-theme='dark'] .emp-list-header {
+  color: #f1f5f9 !important;
+  border-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+html.dark .avatar-initial.bg-label-success,
+[data-bs-theme='dark'] .avatar-initial.bg-label-success {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+  color: #6ee7b7 !important;
+}
+
+html.dark .avatar-initial.bg-label-primary,
+[data-bs-theme='dark'] .avatar-initial.bg-label-primary {
+  background-color: rgba(0, 180, 166, 0.2) !important;
+  color: #5eead4 !important;
+}
+
+html.dark .avatar-initial.bg-label-danger,
+[data-bs-theme='dark'] .avatar-initial.bg-label-danger {
+  background-color: rgba(239, 68, 68, 0.2) !important;
+  color: #fca5a5 !important;
+}
+
+html.dark .avatar-initial.bg-label-info,
+[data-bs-theme='dark'] .avatar-initial.bg-label-info {
+  background-color: rgba(14, 165, 233, 0.2) !important;
+  color: #7dd3fc !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GLOBAL admin dark — all /layout pages (tables, forms, chrome)
+   Matches dashboard look. Light theme untouched.
+   ═══════════════════════════════════════════════════════════ */
+html.dark .app-layout-content,
+[data-bs-theme='dark'] .app-layout-content {
+  --bs-heading-color: #f1f5f9;
+  --bs-body-color: #e2e8f0;
+  --bs-secondary-color: #94a3b8;
+  --bs-border-color: rgba(148, 163, 184, 0.16);
+  --bs-paper-bg: #1e293b;
+  --bs-table-bg: transparent;
+  --bs-table-color: #e2e8f0;
+  --bs-table-border-color: rgba(148, 163, 184, 0.12);
+  --bs-table-striped-bg: rgba(255, 255, 255, 0.03);
+  --bs-table-hover-bg: rgba(0, 180, 166, 0.08);
+  --bs-table-header-bg-color: rgba(0, 180, 166, 0.12) !important;
+}
+
+html.dark .app-layout-content h1,
+html.dark .app-layout-content h2,
+html.dark .app-layout-content h3,
+html.dark .app-layout-content h4,
+html.dark .app-layout-content h5,
+html.dark .app-layout-content h6,
+html.dark .app-layout-content .card-title,
+[data-bs-theme='dark'] .app-layout-content h1,
+[data-bs-theme='dark'] .app-layout-content h2,
+[data-bs-theme='dark'] .app-layout-content h3,
+[data-bs-theme='dark'] .app-layout-content h4,
+[data-bs-theme='dark'] .app-layout-content h5,
+[data-bs-theme='dark'] .app-layout-content h6,
+[data-bs-theme='dark'] .app-layout-content .card-title {
+  color: #f1f5f9;
+}
+
+/* Don't wash out status-colored headings inside metric cards */
+html.dark .app-layout-content .text-success,
+html.dark .app-layout-content .text-success h4,
+html.dark .app-layout-content .text-success h5,
+[data-bs-theme='dark'] .app-layout-content .text-success,
+[data-bs-theme='dark'] .app-layout-content .text-success h4,
+[data-bs-theme='dark'] .app-layout-content .text-success h5 {
+  color: #34d399 !important;
+}
+
+html.dark .app-layout-content .text-danger,
+html.dark .app-layout-content .text-danger h4,
+html.dark .app-layout-content .text-danger h5,
+[data-bs-theme='dark'] .app-layout-content .text-danger,
+[data-bs-theme='dark'] .app-layout-content .text-danger h4,
+[data-bs-theme='dark'] .app-layout-content .text-danger h5 {
+  color: #f87171 !important;
+}
+
+html.dark .app-layout-content .text-primary,
+html.dark .app-layout-content .text-primary h4,
+html.dark .app-layout-content .text-primary h5,
+[data-bs-theme='dark'] .app-layout-content .text-primary,
+[data-bs-theme='dark'] .app-layout-content .text-primary h4,
+[data-bs-theme='dark'] .app-layout-content .text-primary h5 {
+  color: #2dd4bf !important;
+}
+
+html.dark .app-layout-content .text-info,
+html.dark .app-layout-content .text-info h4,
+html.dark .app-layout-content .text-info h5,
+[data-bs-theme='dark'] .app-layout-content .text-info,
+[data-bs-theme='dark'] .app-layout-content .text-info h4,
+[data-bs-theme='dark'] .app-layout-content .text-info h5 {
+  color: #38bdf8 !important;
+}
+
+html.dark .app-layout-content .text-warning,
+[data-bs-theme='dark'] .app-layout-content .text-warning {
+  color: #fbbf24 !important;
+}
+
+/* All tables across admin */
+html.dark .app-layout-content .table,
+html.dark .app-layout-content table.dataTable,
+html.dark .ep-content .table,
+[data-bs-theme='dark'] .app-layout-content .table,
+[data-bs-theme='dark'] .app-layout-content table.dataTable,
+[data-bs-theme='dark'] .ep-content .table {
+  --bs-table-bg: transparent;
+  --bs-table-color: #e2e8f0;
+  --bs-table-border-color: rgba(148, 163, 184, 0.12);
+  --bs-table-striped-bg: rgba(255, 255, 255, 0.03);
+  --bs-table-hover-bg: rgba(0, 180, 166, 0.08);
+  --bs-table-header-bg-color: rgba(0, 180, 166, 0.12) !important;
+  color: #e2e8f0 !important;
+  background: transparent !important;
+}
+
+html.dark .app-layout-content .table > :not(caption) > * > *,
+html.dark .app-layout-content table.dataTable > :not(caption) > * > *,
+[data-bs-theme='dark'] .app-layout-content .table > :not(caption) > * > *,
+[data-bs-theme='dark'] .app-layout-content table.dataTable > :not(caption) > * > * {
+  background-color: transparent !important;
+  color: #e2e8f0;
+  border-bottom-color: rgba(148, 163, 184, 0.12);
+  box-shadow: none !important;
+}
+
+html.dark .app-layout-content .table thead th,
+html.dark .app-layout-content .table thead td,
+html.dark .app-layout-content table.dataTable thead th,
+[data-bs-theme='dark'] .app-layout-content .table thead th,
+[data-bs-theme='dark'] .app-layout-content .table thead td,
+[data-bs-theme='dark'] .app-layout-content table.dataTable thead th {
+  background: rgba(0, 180, 166, 0.12) !important;
+  color: #cbd5e1 !important;
+  border-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+html.dark .app-layout-content .table tbody tr:hover > *,
+[data-bs-theme='dark'] .app-layout-content .table tbody tr:hover > * {
+  background-color: rgba(0, 180, 166, 0.08) !important;
+  color: #f1f5f9;
+}
+
+html.dark .app-layout-content .table-striped > tbody > tr:nth-of-type(odd) > *,
+[data-bs-theme='dark'] .app-layout-content .table-striped > tbody > tr:nth-of-type(odd) > * {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+/* Breadcrumbs */
+html.dark .app-layout-content .breadcrumb,
+html.dark .app-layout-content .breadcrumb-item,
+html.dark .app-layout-content .breadcrumb-item a,
+[data-bs-theme='dark'] .app-layout-content .breadcrumb,
+[data-bs-theme='dark'] .app-layout-content .breadcrumb-item,
+[data-bs-theme='dark'] .app-layout-content .breadcrumb-item a {
+  color: #94a3b8 !important;
+}
+
+html.dark .app-layout-content .breadcrumb-item.active,
+[data-bs-theme='dark'] .app-layout-content .breadcrumb-item.active {
+  color: #e2e8f0 !important;
+}
+
+/* Forms / inputs everywhere in admin */
+html.dark .app-layout-content .form-control,
+html.dark .app-layout-content .form-select,
+html.dark .app-layout-content .form-control-sm,
+html.dark .app-layout-content .form-select-sm,
+html.dark .app-layout-content input[type='text'],
+html.dark .app-layout-content input[type='search'],
+html.dark .app-layout-content input[type='number'],
+html.dark .app-layout-content input[type='email'],
+html.dark .app-layout-content input[type='date'],
+html.dark .app-layout-content input[type='password'],
+html.dark .app-layout-content textarea,
+html.dark .app-layout-content select,
+[data-bs-theme='dark'] .app-layout-content .form-control,
+[data-bs-theme='dark'] .app-layout-content .form-select,
+[data-bs-theme='dark'] .app-layout-content .form-control-sm,
+[data-bs-theme='dark'] .app-layout-content .form-select-sm,
+[data-bs-theme='dark'] .app-layout-content input[type='text'],
+[data-bs-theme='dark'] .app-layout-content input[type='search'],
+[data-bs-theme='dark'] .app-layout-content input[type='number'],
+[data-bs-theme='dark'] .app-layout-content input[type='email'],
+[data-bs-theme='dark'] .app-layout-content input[type='date'],
+[data-bs-theme='dark'] .app-layout-content input[type='password'],
+[data-bs-theme='dark'] .app-layout-content textarea,
+[data-bs-theme='dark'] .app-layout-content select {
+  background-color: #0f172a !important;
+  border-color: #475569 !important;
+  color: #e2e8f0 !important;
+}
+
+/* ng-select inner input: transparent (solid dark fill = black box over value) */
+html.dark .app-layout-content .ng-select .ng-input > input,
+html.dark .app-layout-content .ng-select input,
+html.dark .ng-select .ng-input > input,
+html.dark .ng-select input,
+html.dark-style .ng-select .ng-input > input,
+html.dark-style .ng-select input,
+[data-bs-theme='dark'] .app-layout-content .ng-select .ng-input > input,
+[data-bs-theme='dark'] .app-layout-content .ng-select input,
+[data-bs-theme='dark'] .ng-select .ng-input > input,
+[data-bs-theme='dark'] .ng-select input {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: #f1f5f9 !important;
+  -webkit-text-fill-color: #f1f5f9 !important;
+}
+
+html.dark .app-layout-content .ng-select .ng-value-container,
+html.dark .ng-select .ng-value-container,
+html.dark .app-layout-content .ng-select .ng-value,
+html.dark .ng-select .ng-value,
+[data-bs-theme='dark'] .app-layout-content .ng-select .ng-value-container,
+[data-bs-theme='dark'] .ng-select .ng-value-container,
+[data-bs-theme='dark'] .app-layout-content .ng-select .ng-value,
+[data-bs-theme='dark'] .ng-select .ng-value {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+html.dark .app-layout-content .form-control::placeholder,
+html.dark .app-layout-content input::placeholder,
+[data-bs-theme='dark'] .app-layout-content .form-control::placeholder,
+[data-bs-theme='dark'] .app-layout-content input::placeholder {
+  color: #64748b !important;
+}
+
+html.dark .app-layout-content .form-label,
+html.dark .app-layout-content label,
+[data-bs-theme='dark'] .app-layout-content .form-label,
+[data-bs-theme='dark'] .app-layout-content label {
+  color: #cbd5e1;
+}
+
+html.dark .app-layout-content .input-group-text,
+[data-bs-theme='dark'] .app-layout-content .input-group-text {
+  background-color: #0f172a !important;
+  border-color: #475569 !important;
+  color: #94a3b8 !important;
+}
+
+/* Nav pills / tabs */
+html.dark .app-layout-content .nav-pills,
+[data-bs-theme='dark'] .app-layout-content .nav-pills {
+  background: #0f172a;
+}
+
+html.dark .app-layout-content .nav-pills .nav-link,
+[data-bs-theme='dark'] .app-layout-content .nav-pills .nav-link {
+  color: #94a3b8;
+}
+
+html.dark .app-layout-content .nav-pills .nav-link.active,
+[data-bs-theme='dark'] .app-layout-content .nav-pills .nav-link.active {
+  background: linear-gradient(135deg, #1a8075 0%, #7ed321 100%) !important;
+  color: #fff !important;
+}
+
+html.dark .app-layout-content .nav-tabs,
+[data-bs-theme='dark'] .app-layout-content .nav-tabs {
+  border-color: rgba(148, 163, 184, 0.16);
+}
+
+html.dark .app-layout-content .nav-tabs .nav-link,
+[data-bs-theme='dark'] .app-layout-content .nav-tabs .nav-link {
+  color: #94a3b8;
+}
+
+html.dark .app-layout-content .nav-tabs .nav-link.active,
+[data-bs-theme='dark'] .app-layout-content .nav-tabs .nav-link.active {
+  background: #1e293b;
+  border-color: rgba(148, 163, 184, 0.16);
+  color: #5eead4;
+}
+
+/* Accordion / list / offcanvas / modal */
+html.dark .app-layout-content .accordion-item,
+html.dark .app-layout-content .accordion-button,
+[data-bs-theme='dark'] .app-layout-content .accordion-item,
+[data-bs-theme='dark'] .app-layout-content .accordion-button {
+  background: #1e293b !important;
+  color: #e2e8f0 !important;
+  border-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+html.dark .app-layout-content .accordion-button:not(.collapsed),
+[data-bs-theme='dark'] .app-layout-content .accordion-button:not(.collapsed) {
+  background: #0f172a !important;
+  color: #5eead4 !important;
+  box-shadow: none !important;
+}
+
+html.dark .modal-content,
+[data-bs-theme='dark'] .modal-content {
+  background: #1e293b !important;
+  color: #e2e8f0 !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+html.dark .modal-header,
+html.dark .modal-footer,
+[data-bs-theme='dark'] .modal-header,
+[data-bs-theme='dark'] .modal-footer {
+  border-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+html.dark .offcanvas,
+[data-bs-theme='dark'] .offcanvas {
+  background: #1e293b !important;
+  color: #e2e8f0 !important;
+}
+
+/* DataTables / search-pagination chrome */
+html.dark .dt-container,
+html.dark .dt-bootstrap5,
+[data-bs-theme='dark'] .dt-container,
+[data-bs-theme='dark'] .dt-bootstrap5 {
+  color: #94a3b8;
+}
+
+html.dark .page-item .page-link,
+[data-bs-theme='dark'] .page-item .page-link {
+  background-color: #0f172a !important;
+  border-color: rgba(148, 163, 184, 0.22) !important;
+  color: #cbd5e1 !important;
+}
+
+html.dark .page-item.active .page-link,
+[data-bs-theme='dark'] .page-item.active .page-link {
+  background: linear-gradient(135deg, #1a8075 0%, #7ed321 100%) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+}
+
+html.dark .page-item.disabled .page-link,
+[data-bs-theme='dark'] .page-item.disabled .page-link {
+  background-color: #1e293b !important;
+  color: #64748b !important;
+}
+
+/* Borders / dividers */
+html.dark .app-layout-content .border,
+html.dark .app-layout-content .border-bottom,
+html.dark .app-layout-content .border-top,
+html.dark .app-layout-content hr,
+[data-bs-theme='dark'] .app-layout-content .border,
+[data-bs-theme='dark'] .app-layout-content .border-bottom,
+[data-bs-theme='dark'] .app-layout-content .border-top,
+[data-bs-theme='dark'] .app-layout-content hr {
+  border-color: rgba(148, 163, 184, 0.16) !important;
+}
+
+/* Alert / toast soft surfaces */
+html.dark .app-layout-content .alert,
+[data-bs-theme='dark'] .app-layout-content .alert {
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+/* Quill / editors if present */
+html.dark .ql-toolbar,
+html.dark .ql-container,
+[data-bs-theme='dark'] .ql-toolbar,
+[data-bs-theme='dark'] .ql-container {
+  background: #0f172a !important;
+  border-color: #475569 !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark .ql-editor,
+[data-bs-theme='dark'] .ql-editor {
+  color: #e2e8f0 !important;
+}
+
+html.dark .ql-snow .ql-stroke,
+[data-bs-theme='dark'] .ql-snow .ql-stroke {
+  stroke: #94a3b8 !important;
+}
+
+html.dark .ql-snow .ql-fill,
+[data-bs-theme='dark'] .ql-snow .ql-fill {
+  fill: #94a3b8 !important;
+}
+
+/* Sticky table cells inherit card paper, not white */
+html.dark .app-layout-content .table .col-actions,
+html.dark .app-layout-content table [class*='sticky'],
+[data-bs-theme='dark'] .app-layout-content .table .col-actions,
+[data-bs-theme='dark'] .app-layout-content table [class*='sticky'] {
+  background: #1e293b !important;
+}
+
+/* Soft label backgrounds used across list pages */
+html.dark .bg-label-primary,
+[data-bs-theme='dark'] .bg-label-primary {
+  background-color: rgba(0, 180, 166, 0.18) !important;
+  color: #5eead4 !important;
+}
+
+html.dark .bg-label-success,
+[data-bs-theme='dark'] .bg-label-success {
+  background-color: rgba(16, 185, 129, 0.18) !important;
+  color: #6ee7b7 !important;
+}
+
+html.dark .bg-label-danger,
+[data-bs-theme='dark'] .bg-label-danger {
+  background-color: rgba(239, 68, 68, 0.18) !important;
+  color: #fca5a5 !important;
+}
+
+html.dark .bg-label-warning,
+[data-bs-theme='dark'] .bg-label-warning {
+  background-color: rgba(245, 158, 11, 0.18) !important;
+  color: #fbbf24 !important;
+}
+
+html.dark .bg-label-info,
+[data-bs-theme='dark'] .bg-label-info {
+  background-color: rgba(14, 165, 233, 0.18) !important;
+  color: #7dd3fc !important;
+}
+
+html.dark .bg-label-secondary,
+[data-bs-theme='dark'] .bg-label-secondary {
+  background-color: rgba(148, 163, 184, 0.18) !important;
+  color: #cbd5e1 !important;
+}
+
+/* Report / list stat-cards — kill white bottom gradient everywhere */
+html.dark .stat-card,
+[data-bs-theme='dark'] .stat-card {
+  background: #1e293b !important;
+  background-image: none !important;
+  border: 1px solid rgba(148, 163, 184, 0.18) !important;
+  color: #e2e8f0 !important;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark .stat-card .stat-label,
+[data-bs-theme='dark'] .stat-card .stat-label {
+  color: #94a3b8 !important;
+}
+
+html.dark .stat-card .stat-sub,
+[data-bs-theme='dark'] .stat-card .stat-sub {
+  color: #64748b !important;
+}
+
+html.dark .tracking-table thead tr,
+[data-bs-theme='dark'] .tracking-table thead tr {
+  background: rgba(0, 180, 166, 0.12) !important;
+  border-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+html.dark .tracking-table th,
+[data-bs-theme='dark'] .tracking-table th {
+  color: #cbd5e1 !important;
+}
+
+html.dark .tracking-table td,
+[data-bs-theme='dark'] .tracking-table td {
+  color: #e2e8f0 !important;
+  border-color: rgba(148, 163, 184, 0.12) !important;
+}
+
+/* AI Insights pages — hero / panels / chips */
+html.dark .ai-hero,
+[data-bs-theme='dark'] .ai-hero {
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.9) 100%) !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35) !important;
+}
+
+html.dark .ai-hero__title,
+[data-bs-theme='dark'] .ai-hero__title {
+  color: #f1f5f9 !important;
+}
+
+html.dark .ai-hero__sub,
+[data-bs-theme='dark'] .ai-hero__sub {
+  color: #94a3b8 !important;
+}
+
+html.dark .ai-panel,
+html.dark .card.ai-panel,
+[data-bs-theme='dark'] .ai-panel,
+[data-bs-theme='dark'] .card.ai-panel {
+  background: #1e293b !important;
+  background-image: none !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+}
+
+html.dark .ai-stat-chip,
+[data-bs-theme='dark'] .ai-stat-chip {
+  background: #0f172a !important;
+  border-color: rgba(148, 163, 184, 0.2) !important;
+}
+
+html.dark .ai-stat-chip strong,
+[data-bs-theme='dark'] .ai-stat-chip strong {
+  color: #f1f5f9 !important;
+}
+
+html.dark .ai-run-btn,
+[data-bs-theme='dark'] .ai-run-btn {
+  background: linear-gradient(135deg, #1a8075 0%, #7ed321 100%) !important;
+  box-shadow: 0 10px 24px rgba(26, 128, 117, 0.32) !important;
+}
+
+html.dark .ai-slot-card,
+html.dark .ai-timeline__item,
+[data-bs-theme='dark'] .ai-slot-card,
+[data-bs-theme='dark'] .ai-timeline__item {
+  background: #0f172a !important;
+  border-color: rgba(148, 163, 184, 0.2) !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark .ai-meter-row__label,
+html.dark .ai-meter-value,
+html.dark .ai-summary-heading,
+[data-bs-theme='dark'] .ai-meter-row__label,
+[data-bs-theme='dark'] .ai-meter-value,
+[data-bs-theme='dark'] .ai-summary-heading {
+  color: #f1f5f9 !important;
+}
+
+html.dark .ai-donut::before,
+[data-bs-theme='dark'] .ai-donut::before {
+  background: #1e293b !important;
+}
+
+/* Recruitment dashboard cards (.rd-card is not Bootstrap .card) */
+html.dark .rd-card,
+[data-bs-theme='dark'] .rd-card {
+  background: #1e293b !important;
+  background-image: none !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark .rd-card__head,
+[data-bs-theme='dark'] .rd-card__head {
+  background: rgba(15, 23, 42, 0.55) !important;
+  border-bottom-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+html.dark .rd-shell,
+[data-bs-theme='dark'] .rd-shell {
+  background: transparent !important;
+}
+
+html.dark .rd-header__title,
+html.dark .rd-overview-head__title,
+html.dark .rd-card__head-title,
+html.dark .rd-donut-card__title,
+[data-bs-theme='dark'] .rd-header__title,
+[data-bs-theme='dark'] .rd-overview-head__title,
+[data-bs-theme='dark'] .rd-card__head-title,
+[data-bs-theme='dark'] .rd-donut-card__title {
+  color: #f1f5f9 !important;
+}
+
+html.dark .rd-card__head-desc,
+html.dark .rd-muted,
+[data-bs-theme='dark'] .rd-card__head-desc,
+[data-bs-theme='dark'] .rd-muted {
+  color: #94a3b8 !important;
+}
+
+html.dark .rd-donut-sm__hole,
+[data-bs-theme='dark'] .rd-donut-sm__hole {
+  background: #1e293b !important;
+}
+
+html.dark .rd-header__daterange,
+html.dark .rd-header__iconbtn,
+[data-bs-theme='dark'] .rd-header__daterange,
+[data-bs-theme='dark'] .rd-header__iconbtn {
+  background: #1e293b !important;
+  border-color: rgba(148, 163, 184, 0.2) !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark .rd-header__reports,
+[data-bs-theme='dark'] .rd-header__reports {
+  background: linear-gradient(135deg, #1a8075 0%, #7ed321 100%) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ng-select dark = form-select look (Show 10 entries)
+   Container dark + light text; inner input transparent.
+   ═══════════════════════════════════════════════════════════ */
+html.dark .ng-select .ng-select-container,
+html.dark-style .ng-select .ng-select-container,
+[data-bs-theme='dark'] .ng-select .ng-select-container,
+.tr-filters-dark .ng-select .ng-select-container,
+.tr-filters-dark .tr-ng.ng-select .ng-select-container {
+  background: #0f172a !important;
+  background-color: #0f172a !important;
+  border-color: #475569 !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark .ng-select .ng-value-container,
+html.dark .ng-select .ng-value,
+html.dark .ng-select .ng-value-label,
+html.dark-style .ng-select .ng-value-container,
+html.dark-style .ng-select .ng-value-label,
+[data-bs-theme='dark'] .ng-select .ng-value-container,
+[data-bs-theme='dark'] .ng-select .ng-value-label,
+.tr-filters-dark .ng-select .ng-value,
+.tr-filters-dark .ng-select .ng-value-label,
+.tr-filters-dark .ng-select .ng-value-container .ng-value .ng-value-label,
+.tr-filters-dark .tr-ng.ng-select .ng-value-label {
+  color: #f1f5f9 !important;
+  -webkit-text-fill-color: #f1f5f9 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+html.dark .ng-select .ng-input > input,
+html.dark .ng-select input,
+[data-bs-theme='dark'] .ng-select .ng-input > input,
+[data-bs-theme='dark'] .ng-select input,
+.tr-filters-dark .ng-select .ng-input > input,
+.tr-filters-dark .ng-select input {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: #f1f5f9 !important;
+  -webkit-text-fill-color: #f1f5f9 !important;
+}
+
+html.dark .ng-select .ng-value-container .ng-placeholder,
+html.dark .ng-select .ng-value-container .ng-placeholder *,
+html.dark-style .ng-select .ng-value-container .ng-placeholder,
+[data-bs-theme='dark'] .ng-select .ng-value-container .ng-placeholder,
+.tr-filters-dark .ng-select .ng-placeholder {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+}
+
+html.dark .ng-select .ng-clear-wrapper,
+html.dark .ng-select .ng-arrow-wrapper .ng-arrow,
+html.dark-style .ng-select .ng-clear-wrapper,
+html.dark-style .ng-select .ng-arrow-wrapper .ng-arrow,
+[data-bs-theme='dark'] .ng-select .ng-clear-wrapper,
+[data-bs-theme='dark'] .ng-select .ng-arrow-wrapper .ng-arrow {
+  color: #94a3b8 !important;
+  border-color: #94a3b8 transparent transparent !important;
+}
+
+html.dark .ng-select.ng-select-multiple .ng-select-container .ng-value-container .ng-value,
+html.dark-style .ng-select.ng-select-multiple .ng-select-container .ng-value-container .ng-value,
+[data-bs-theme='dark'] .ng-select.ng-select-multiple .ng-select-container .ng-value-container .ng-value {
+  background-color: rgba(0, 180, 166, 0.2) !important;
+  color: #5eead4 !important;
+  border-color: transparent !important;
+}
+
+html.dark .ng-select.ng-select-multiple .ng-select-container .ng-value-container .ng-value .ng-value-label,
+html.dark-style .ng-select.ng-select-multiple .ng-select-container .ng-value-container .ng-value .ng-value-label,
+[data-bs-theme='dark'] .ng-select.ng-select-multiple .ng-select-container .ng-value-container .ng-value .ng-value-label {
+  color: #5eead4 !important;
+  -webkit-text-fill-color: #5eead4 !important;
 }
 

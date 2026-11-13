@@ -33895,5 +33895,46 @@ div.dt-container div.dt-search input {
 }
 
 .ng-select.ng-select-single .ng-select-container {
-  background: transparent;
+  background: #fff;
+}
+
+/* Dark theme ng-select = form-select look (Show 10 entries) */
+[data-bs-theme='dark'] .ng-select .ng-select-container,
+[data-bs-theme='dark'] .ng-select.ng-select-single .ng-select-container,
+html.dark .ng-select .ng-select-container,
+html.dark .ng-select.ng-select-single .ng-select-container,
+html.dark-style .ng-select .ng-select-container {
+  background: #0f172a !important;
+  background-color: #0f172a !important;
+  border-color: #475569 !important;
+  color: #e2e8f0 !important;
+}
+
+[data-bs-theme='dark'] .ng-select .ng-value-label,
+[data-bs-theme='dark'] .ng-select .ng-value,
+[data-bs-theme='dark'] .ng-select .ng-input > input,
+html.dark .ng-select .ng-value-label,
+html.dark .ng-select .ng-value,
+html.dark .ng-select .ng-input > input,
+html.dark-style .ng-select .ng-value-label,
+html.dark-style .ng-select .ng-value {
+  color: #f1f5f9 !important;
+  -webkit-text-fill-color: #f1f5f9 !important;
+  background: transparent !important;
+  opacity: 1 !important;
+}
+
+[data-bs-theme='dark'] .ng-select .ng-input > input,
+html.dark .ng-select .ng-input > input,
+html.dark-style .ng-select .ng-input > input {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 0 !important;
+}
+
+[data-bs-theme='dark'] .ng-select .ng-placeholder,
+html.dark .ng-select .ng-placeholder,
+html.dark-style .ng-select .ng-placeholder {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
 }

@@ -14,9 +14,20 @@
           <div class="row">
             <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-4">
               <label for="defaultFormControlInput" class="form-label">Type</label>
-              <ng-select [items]="status" bindLabel="label" bindValue="value" [(ngModel)]="obj['shift']"
-                [multiple]="false" placeholder="Select Shift Type" name="status" id="select2Danger">
+              <ng-select
+                [items]="shiftTypes"
+                bindLabel="label"
+                bindValue="value"
+                [(ngModel)]="obj['shift']"
+                [multiple]="false"
+                [addTag]="addShiftType"
+                [addTagText]="'Add shift type'"
+                placeholder="Select or type shift type"
+                name="shiftType"
+                id="select2Danger"
+              >
               </ng-select>
+              <small class="text-muted">Existing shifts appear here — type to add a new shift type</small>
             </div>
           </div>
 

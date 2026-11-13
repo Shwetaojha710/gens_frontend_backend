@@ -13,6 +13,14 @@
   background: var(--app-page-bg, linear-gradient(to top, #fff1eb 0%, #d1e8f3 100%));
 }
 
+/* Dark theme ONLY — light shell above stays unchanged */
+:host-context(html.dark) .app-layout-shell,
+:host-context([data-bs-theme='dark']) .app-layout-shell {
+  background:
+    radial-gradient(ellipse 50% 40% at 90% 0%, rgba(0, 180, 166, 0.12) 0%, transparent 55%),
+    linear-gradient(180deg, #0b1220 0%, #111827 45%, #0f172a 100%) !important;
+}
+
 .app-layout-sidebar {
   flex: 0 0 auto;
 }

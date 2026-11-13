@@ -12,6 +12,7 @@ import { PermissionService } from '../../services/permission.service';
 import { APP_MENU_ITEMS, MenuItem } from '../../navbar/navigation';
 import { Subscription } from 'rxjs';
 import { CompanyLogoService } from '../../services/company-logo.service';
+import { MarketingThemeService } from '../../marketing/services/marketing-theme.service';
 
 interface SearchResult {
   title: string;
@@ -52,7 +53,8 @@ export class HeaderComponent implements OnDestroy {
     public masterService: MasterService,
     public mobileMenu: MobileMenuService,
     private permSvc: PermissionService,
-    public companyLogoSvc: CompanyLogoService
+    public companyLogoSvc: CompanyLogoService,
+    public colorMode: MarketingThemeService,
   ) {
     this.getBranchDD()
       this.baseurl = this.masterService.getBaseUrl();

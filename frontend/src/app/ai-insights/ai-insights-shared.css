@@ -444,3 +444,256 @@
     min-width: 96px;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   Dark theme — all AI Insights pages
+   ═══════════════════════════════════════════════════════════ */
+:host-context(html.dark) .ai-hero,
+:host-context([data-bs-theme='dark']) .ai-hero,
+html.dark .ai-hero,
+[data-bs-theme='dark'] .ai-hero {
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.9) 100%) !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35) !important;
+}
+
+:host-context(html.dark) .ai-hero__title,
+:host-context([data-bs-theme='dark']) .ai-hero__title,
+html.dark .ai-hero__title,
+[data-bs-theme='dark'] .ai-hero__title {
+  color: #f1f5f9 !important;
+}
+
+:host-context(html.dark) .ai-hero__sub,
+:host-context([data-bs-theme='dark']) .ai-hero__sub,
+html.dark .ai-hero__sub,
+[data-bs-theme='dark'] .ai-hero__sub {
+  color: #94a3b8 !important;
+}
+
+:host-context(html.dark) .ai-hero__eyebrow,
+:host-context([data-bs-theme='dark']) .ai-hero__eyebrow,
+html.dark .ai-hero__eyebrow,
+[data-bs-theme='dark'] .ai-hero__eyebrow {
+  color: #38bdf8 !important;
+}
+
+:host-context(html.dark) .ai-panel,
+:host-context([data-bs-theme='dark']) .ai-panel,
+html.dark .ai-panel,
+html.dark .card.ai-panel,
+[data-bs-theme='dark'] .ai-panel,
+[data-bs-theme='dark'] .card.ai-panel {
+  background: #1e293b !important;
+  background-image: none !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35) !important;
+  color: #e2e8f0 !important;
+}
+
+:host-context(html.dark) .ai-panel .form-label,
+:host-context([data-bs-theme='dark']) .ai-panel .form-label,
+html.dark .ai-panel .form-label,
+[data-bs-theme='dark'] .ai-panel .form-label {
+  color: #cbd5e1 !important;
+}
+
+:host-context(html.dark) .ai-panel .form-control,
+:host-context(html.dark) .ai-panel .form-select,
+:host-context([data-bs-theme='dark']) .ai-panel .form-control,
+:host-context([data-bs-theme='dark']) .ai-panel .form-select,
+html.dark .ai-panel .form-control,
+html.dark .ai-panel .form-select,
+[data-bs-theme='dark'] .ai-panel .form-control,
+[data-bs-theme='dark'] .ai-panel .form-select {
+  background-color: #0f172a !important;
+  border-color: #475569 !important;
+  color: #e2e8f0 !important;
+}
+
+:host-context(html.dark) .ai-panel__label,
+:host-context([data-bs-theme='dark']) .ai-panel__label,
+html.dark .ai-panel__label,
+[data-bs-theme='dark'] .ai-panel__label {
+  color: #5eead4 !important;
+}
+
+:host-context(html.dark) .ai-run-btn,
+:host-context([data-bs-theme='dark']) .ai-run-btn,
+html.dark .ai-run-btn,
+[data-bs-theme='dark'] .ai-run-btn {
+  background: linear-gradient(135deg, #1a8075 0%, #7ed321 100%) !important;
+  box-shadow: 0 10px 24px rgba(26, 128, 117, 0.32) !important;
+  color: #fff !important;
+}
+
+:host-context(html.dark) .ai-stat-chip,
+:host-context([data-bs-theme='dark']) .ai-stat-chip,
+html.dark .ai-stat-chip,
+[data-bs-theme='dark'] .ai-stat-chip {
+  background: #0f172a !important;
+  border-color: rgba(148, 163, 184, 0.2) !important;
+}
+
+:host-context(html.dark) .ai-stat-chip strong,
+:host-context([data-bs-theme='dark']) .ai-stat-chip strong,
+html.dark .ai-stat-chip strong,
+[data-bs-theme='dark'] .ai-stat-chip strong {
+  color: #f1f5f9 !important;
+}
+
+:host-context(html.dark) .ai-stat-chip span,
+:host-context([data-bs-theme='dark']) .ai-stat-chip span,
+html.dark .ai-stat-chip span,
+[data-bs-theme='dark'] .ai-stat-chip span {
+  color: #94a3b8 !important;
+}
+
+:host-context(html.dark) .ai-table thead th,
+:host-context([data-bs-theme='dark']) .ai-table thead th,
+html.dark .ai-table thead th,
+[data-bs-theme='dark'] .ai-table thead th {
+  background: rgba(0, 180, 166, 0.12) !important;
+  color: #cbd5e1 !important;
+  border-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+:host-context(html.dark) .ai-table tbody tr:hover,
+:host-context([data-bs-theme='dark']) .ai-table tbody tr:hover,
+html.dark .ai-table tbody tr:hover,
+[data-bs-theme='dark'] .ai-table tbody tr:hover {
+  background: rgba(0, 180, 166, 0.08) !important;
+}
+
+:host-context(html.dark) .ai-table td,
+:host-context([data-bs-theme='dark']) .ai-table td,
+html.dark .ai-table td,
+[data-bs-theme='dark'] .ai-table td {
+  color: #e2e8f0 !important;
+  border-color: rgba(148, 163, 184, 0.12) !important;
+}
+
+:host-context(html.dark) .ai-slot-card,
+:host-context([data-bs-theme='dark']) .ai-slot-card,
+html.dark .ai-slot-card,
+[data-bs-theme='dark'] .ai-slot-card {
+  background: #0f172a !important;
+  border-color: rgba(148, 163, 184, 0.2) !important;
+  color: #e2e8f0 !important;
+}
+
+:host-context(html.dark) .ai-slot-card:hover,
+:host-context([data-bs-theme='dark']) .ai-slot-card:hover,
+html.dark .ai-slot-card:hover,
+[data-bs-theme='dark'] .ai-slot-card:hover {
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4) !important;
+}
+
+:host-context(html.dark) .ai-empty-state,
+:host-context(html.dark) .ai-loading-state,
+:host-context([data-bs-theme='dark']) .ai-empty-state,
+:host-context([data-bs-theme='dark']) .ai-loading-state,
+html.dark .ai-empty-state,
+html.dark .ai-loading-state,
+[data-bs-theme='dark'] .ai-empty-state,
+[data-bs-theme='dark'] .ai-loading-state {
+  color: #94a3b8 !important;
+}
+
+:host-context(html.dark) .ai-empty-state i,
+:host-context([data-bs-theme='dark']) .ai-empty-state i,
+html.dark .ai-empty-state i,
+[data-bs-theme='dark'] .ai-empty-state i {
+  color: #64748b !important;
+}
+
+:host-context(html.dark) .ai-summary-heading,
+:host-context([data-bs-theme='dark']) .ai-summary-heading,
+html.dark .ai-summary-heading,
+[data-bs-theme='dark'] .ai-summary-heading {
+  color: #f1f5f9 !important;
+}
+
+:host-context(html.dark) .ai-summary-line,
+:host-context(html.dark) .ai-summary-bullet,
+:host-context([data-bs-theme='dark']) .ai-summary-line,
+:host-context([data-bs-theme='dark']) .ai-summary-bullet,
+html.dark .ai-summary-line,
+html.dark .ai-summary-bullet,
+[data-bs-theme='dark'] .ai-summary-line,
+[data-bs-theme='dark'] .ai-summary-bullet {
+  color: #cbd5e1 !important;
+}
+
+:host-context(html.dark) .ai-meter-row__label,
+:host-context([data-bs-theme='dark']) .ai-meter-row__label,
+html.dark .ai-meter-row__label,
+[data-bs-theme='dark'] .ai-meter-row__label {
+  color: #e2e8f0 !important;
+}
+
+:host-context(html.dark) .ai-meter-track,
+:host-context([data-bs-theme='dark']) .ai-meter-track,
+html.dark .ai-meter-track,
+[data-bs-theme='dark'] .ai-meter-track {
+  background: rgba(148, 163, 184, 0.2) !important;
+}
+
+:host-context(html.dark) .ai-meter-value,
+:host-context([data-bs-theme='dark']) .ai-meter-value,
+html.dark .ai-meter-value,
+[data-bs-theme='dark'] .ai-meter-value {
+  color: #f1f5f9 !important;
+}
+
+:host-context(html.dark) .ai-rank,
+:host-context([data-bs-theme='dark']) .ai-rank,
+html.dark .ai-rank,
+[data-bs-theme='dark'] .ai-rank {
+  background: rgba(148, 163, 184, 0.2) !important;
+  color: #cbd5e1 !important;
+}
+
+:host-context(html.dark) .ai-donut::before,
+:host-context([data-bs-theme='dark']) .ai-donut::before,
+html.dark .ai-donut::before,
+[data-bs-theme='dark'] .ai-donut::before {
+  background: #1e293b !important;
+}
+
+:host-context(html.dark) .ai-donut__value,
+:host-context([data-bs-theme='dark']) .ai-donut__value,
+html.dark .ai-donut__value,
+[data-bs-theme='dark'] .ai-donut__value {
+  color: #f1f5f9 !important;
+}
+
+:host-context(html.dark) .ai-timeline__item,
+:host-context([data-bs-theme='dark']) .ai-timeline__item,
+html.dark .ai-timeline__item,
+[data-bs-theme='dark'] .ai-timeline__item {
+  background: #0f172a !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+:host-context(html.dark) .ai-timeline__title,
+:host-context([data-bs-theme='dark']) .ai-timeline__title,
+html.dark .ai-timeline__title,
+[data-bs-theme='dark'] .ai-timeline__title {
+  color: #f1f5f9 !important;
+}
+
+:host-context(html.dark) .ai-timeline__meta,
+:host-context([data-bs-theme='dark']) .ai-timeline__meta,
+html.dark .ai-timeline__meta,
+[data-bs-theme='dark'] .ai-timeline__meta {
+  color: #94a3b8 !important;
+}
+
+:host-context(html.dark) .ai-timeline__icon,
+:host-context([data-bs-theme='dark']) .ai-timeline__icon,
+html.dark .ai-timeline__icon,
+[data-bs-theme='dark'] .ai-timeline__icon {
+  background: rgba(148, 163, 184, 0.15) !important;
+  color: #94a3b8 !important;
+}

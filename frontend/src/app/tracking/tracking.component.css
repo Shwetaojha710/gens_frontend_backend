@@ -1987,3 +1987,96 @@
   color: #0f172a !important;
   box-shadow: 0 12px 28px rgba(15, 23, 42, .12) !important
 }
+
+/* ── Live Tracking Employee List — dark theme ─────────────────────────────── */
+:host-context(html.dark) .employee-list-card,
+:host-context(html.dark-style) .employee-list-card,
+:host-context([data-bs-theme='dark']) .employee-list-card,
+:host.tr-dark .employee-list-card {
+  background: #1e293b !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+}
+
+:host-context(html.dark) .employee-table thead th,
+:host-context(html.dark-style) .employee-table thead th,
+:host-context([data-bs-theme='dark']) .employee-table thead th,
+:host.tr-dark .employee-table thead th {
+  background: rgba(0, 180, 166, 0.12) !important;
+  color: #cbd5e1 !important;
+  border-bottom-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+:host-context(html.dark) .employee-table tbody tr,
+:host-context(html.dark-style) .employee-table tbody tr,
+:host-context([data-bs-theme='dark']) .employee-table tbody tr,
+:host.tr-dark .employee-table tbody tr {
+  border-bottom-color: rgba(148, 163, 184, 0.1) !important;
+}
+
+:host-context(html.dark) .employee-table tbody tr:hover,
+:host-context(html.dark-style) .employee-table tbody tr:hover,
+:host-context([data-bs-theme='dark']) .employee-table tbody tr:hover,
+:host.tr-dark .employee-table tbody tr:hover {
+  background: rgba(0, 180, 166, 0.08) !important;
+  box-shadow: none !important;
+}
+
+:host-context(html.dark) .employee-table tbody td,
+:host-context(html.dark-style) .employee-table tbody td,
+:host-context([data-bs-theme='dark']) .employee-table tbody td,
+:host.tr-dark .employee-table tbody td {
+  color: #e2e8f0 !important;
+}
+
+:host-context(html.dark) .emp-name,
+:host-context(html.dark-style) .emp-name,
+:host-context([data-bs-theme='dark']) .emp-name,
+:host.tr-dark .emp-name {
+  color: #f1f5f9 !important;
+}
+
+:host-context(html.dark) .employee-row:hover .emp-name,
+:host-context(html.dark-style) .employee-row:hover .emp-name,
+:host-context([data-bs-theme='dark']) .employee-row:hover .emp-name,
+:host.tr-dark .employee-row:hover .emp-name {
+  color: #5eead4 !important;
+}
+
+:host-context(html.dark) .aadhaar-pill,
+:host-context(html.dark-style) .aadhaar-pill,
+:host-context([data-bs-theme='dark']) .aadhaar-pill,
+:host.tr-dark .aadhaar-pill {
+  background: #0f172a !important;
+  color: #cbd5e1 !important;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+:host-context(html.dark) .gender-badge.male,
+:host-context(html.dark-style) .gender-badge.male,
+:host-context([data-bs-theme='dark']) .gender-badge.male,
+:host.tr-dark .gender-badge.male {
+  background: rgba(37, 99, 235, 0.25) !important;
+  color: #93c5fd !important;
+}
+
+:host-context(html.dark) .gender-badge.female,
+:host-context(html.dark-style) .gender-badge.female,
+:host-context([data-bs-theme='dark']) .gender-badge.female,
+:host.tr-dark .gender-badge.female {
+  background: rgba(219, 39, 119, 0.25) !important;
+  color: #f9a8d4 !important;
+}
+
+:host-context(html.dark) .emp-avatar,
+:host-context(html.dark-style) .emp-avatar,
+:host-context([data-bs-theme='dark']) .emp-avatar,
+:host.tr-dark .emp-avatar {
+  border-color: #334155 !important;
+}
+
+:host-context(html.dark) .emp-online-dot,
+:host-context(html.dark-style) .emp-online-dot,
+:host-context([data-bs-theme='dark']) .emp-online-dot,
+:host.tr-dark .emp-online-dot {
+  border-color: #1e293b !important;
+}

@@ -155,9 +155,49 @@
     color: #fff;
 } */
 
+/* ─── Page shell ─── */
+.lh-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 60% 50% at 15% 20%, rgba(0, 180, 166, 0.16) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 85% 15%, rgba(255, 140, 66, 0.14) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 50% 95%, rgba(126, 211, 33, 0.12) 0%, transparent 60%),
+    linear-gradient(180deg, #eaf6f5 0%, #f7fbfa 100%);
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.lh-page-inner {
+  border: 0;
+  padding: 30px;
+}
+
 /* ─── Back inside main panel ─── */
 .lh-main-panel {
-    position: relative;
+  position: relative;
+  border: 0;
+  padding: 30px;
+  width: min(1394px, 100%);
+  min-height: 650px;
+  margin: auto;
+  border-radius: 32px;
+  background-image: url('/assets/img/bg-login/bg-branch1.png');
+  background-size: cover;
+  background-position: center;
+  background:
+    linear-gradient(110.78deg, rgba(255, 255, 255, 0.41) 7.01%, rgba(255, 255, 255, 0.01) 106.22%),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));
+}
+
+.lh-company-name {
+  font-size: 32px;
+  color: #0b2b3a;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.lh-company-address {
+  color: #45606b;
 }
 
 .lh-back-btn {
@@ -880,4 +920,63 @@
     width:100%; height:200px;
     border-right:none; border-bottom:1.5px solid #dbeafe;
   }
+}
+
+/*
+ * Dark theme ONLY when marketing landing toggle set `gens-theme=dark`
+ * (html.dark / data-bs-theme=dark). Light styles above stay unchanged.
+ * NOTE: this component uses ViewEncapsulation.None — use html.dark, not :host-context.
+ */
+html.dark .lh-page,
+[data-bs-theme='dark'] .lh-page {
+  background:
+    radial-gradient(ellipse 60% 50% at 15% 20%, rgba(0, 180, 166, 0.14) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 85% 15%, rgba(126, 211, 33, 0.08) 0%, transparent 60%),
+    linear-gradient(180deg, #0b1220 0%, #111827 55%, #0f172a 100%);
+}
+
+html.dark .lh-main-panel,
+[data-bs-theme='dark'] .lh-main-panel {
+  background:
+    linear-gradient(110.78deg, rgba(30, 41, 59, 0.75) 7.01%, rgba(15, 23, 42, 0.5) 106.22%),
+    linear-gradient(0deg, rgba(15, 23, 42, 0.55), rgba(15, 23, 42, 0.35));
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  box-shadow: 0 24px 60px -28px rgba(0, 0, 0, 0.55);
+}
+
+html.dark .lh-company-name,
+[data-bs-theme='dark'] .lh-company-name {
+  color: #f8fafc;
+}
+
+html.dark .lh-company-address,
+[data-bs-theme='dark'] .lh-company-address {
+  color: #94a3b8;
+}
+
+html.dark .lh-back-btn,
+[data-bs-theme='dark'] .lh-back-btn {
+  background: linear-gradient(135deg, #1a8075 0%, #7ed321 100%);
+  box-shadow: 0 4px 14px rgba(26, 128, 117, 0.35);
+}
+
+html.dark .btn-dashboard,
+[data-bs-theme='dark'] .btn-dashboard {
+  border-color: rgba(255, 255, 255, 0.75);
+  color: #fff;
+}
+
+html.dark .btn-dashboard:hover,
+[data-bs-theme='dark'] .btn-dashboard:hover {
+  background: linear-gradient(135deg, #1a8075 0%, #7ed321 100%);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 10px 26px rgba(26, 128, 117, 0.4);
+}
+
+html.dark .lh-drawer-title,
+html.dark .lh-section-label,
+[data-bs-theme='dark'] .lh-drawer-title,
+[data-bs-theme='dark'] .lh-section-label {
+  color: #f1f5f9;
 }

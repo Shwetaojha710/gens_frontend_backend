@@ -129,11 +129,14 @@ export class ThemeService {
     root.style.setProperty('--app-promo-card-bg', c.promoCardBg);
     root.style.setProperty('--app-promo-title', c.promoTitleColor);
 
-    root.style.setProperty('--app-page-bg', `linear-gradient(180deg, ${c.pageBgStart} 0%, ${c.pageBgEnd} 100%)`);
+    // Don't wipe marketing dark page bg — MarketingThemeService owns shell bg when dark
+    const isDarkShell = root.classList.contains('dark') || root.getAttribute('data-bs-theme') === 'dark';
+    if (!isDarkShell) {
+      root.style.setProperty('--app-page-bg', `linear-gradient(180deg, ${c.pageBgStart} 0%, ${c.pageBgEnd} 100%)`);
+      root.style.setProperty('--app-landing-bg', `linear-gradient(90deg, ${c.landingBgStart} 0%, ${c.landingBgEnd} 100%)`);
+      root.style.setProperty('--app-login-bg', `linear-gradient(180deg, ${c.loginBgStart} 0%, ${c.loginBgEnd} 100%)`);
+    }
     root.style.setProperty('--app-hero-bg', `linear-gradient(89.79deg, ${c.heroBgStart} 0.92%, ${c.heroBgEnd} 99.82%)`);
-
-    root.style.setProperty('--app-landing-bg', `linear-gradient(90deg, ${c.landingBgStart} 0%, ${c.landingBgEnd} 100%)`);
-    root.style.setProperty('--app-login-bg', `linear-gradient(180deg, ${c.loginBgStart} 0%, ${c.loginBgEnd} 100%)`);
     root.style.setProperty('--app-login-button', c.loginButtonColor);
   }
 

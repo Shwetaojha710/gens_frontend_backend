@@ -83,91 +83,116 @@
           <div class="col-lg-2 col-md-4 col-12 mb-md-0 mb-4">
             <div class="d-flex justify-content-between flex-column nav-align-left mb-2 mb-md-0">
               <ul class="nav nav-pills flex-column flex-nowrap" role="tablist">
-                <li class="nav-item active" role="presentation">
-                  <button class="nav-link tab-link waves-effect waves-light active" data-bs-toggle="tab"
-                    data-bs-target="#payment" aria-selected="true" role="tab" type="link">
+                <li class="nav-item" role="presentation" *ngIf="canTab('emp-mgmt.profile.basic')"
+                  [class.active]="isDefaultProfileTab('emp-mgmt.profile.basic')">
+                  <button class="nav-link tab-link waves-effect waves-light" data-bs-toggle="tab"
+                    data-bs-target="#payment" role="tab" type="button"
+                    [class.active]="isDefaultProfileTab('emp-mgmt.profile.basic')"
+                    [attr.aria-selected]="isDefaultProfileTab('emp-mgmt.profile.basic')">
                     <i class="icon-base ri ri-bank-card-line icon-sm me-2"></i>
                     <span class="align-middle">Basic</span>
                   </button>
                 </li>
-                <li class="nav-item" role="presentation">
+                <li class="nav-item" role="presentation" *ngIf="canTab('emp-mgmt.profile.document')"
+                  [class.active]="isDefaultProfileTab('emp-mgmt.profile.document')">
                   <button class="nav-link tab-link waves-effect waves-light" data-bs-toggle="tab"
-                    data-bs-target="#delivery" aria-selected="false" role="tab" tabindex="-1">
+                    data-bs-target="#delivery" role="tab" type="button" tabindex="-1"
+                    [class.active]="isDefaultProfileTab('emp-mgmt.profile.document')"
+                    [attr.aria-selected]="isDefaultProfileTab('emp-mgmt.profile.document')">
                     <i class="icon-base ri ri-shopping-cart-line icon-sm me-2"></i>
-
-                    <span class="align-middle"> Document</span>
+                    <span class="align-middle">Document</span>
                   </button>
-                  <!-- <a href=""routerLink="/layout/employee/add/profile/qualification" routerLinkActive="active">Document</a> -->
                 </li>
-                <li class="nav-item" role="presentation">
+                <li class="nav-item" role="presentation" *ngIf="canTab('emp-mgmt.profile.insurance')"
+                  [class.active]="isDefaultProfileTab('emp-mgmt.profile.insurance')">
                   <button class="nav-link tab-link waves-effect waves-light" data-bs-toggle="tab"
-                    data-bs-target="#insurance_docs" aria-selected="false" role="tab" tabindex="-1">
+                    data-bs-target="#insurance_docs" role="tab" type="button" tabindex="-1"
+                    [class.active]="isDefaultProfileTab('emp-mgmt.profile.insurance')"
+                    [attr.aria-selected]="isDefaultProfileTab('emp-mgmt.profile.insurance')">
                     <i class="icon-base ri ri-shield-check-line icon-sm me-2"></i>
                     <span class="align-middle">Insurance</span>
                   </button>
                 </li>
-                <li class="nav-item" role="presentation">
+                <li class="nav-item" role="presentation" *ngIf="canTab('emp-mgmt.profile.workExp')"
+                  [class.active]="isDefaultProfileTab('emp-mgmt.profile.workExp')">
                   <button class="nav-link tab-link waves-effect waves-light" data-bs-toggle="tab"
-                    data-bs-target="#cancellation" aria-selected="false" role="tab" tabindex="-1">
+                    data-bs-target="#cancellation" role="tab" type="button" tabindex="-1"
+                    [class.active]="isDefaultProfileTab('emp-mgmt.profile.workExp')"
+                    [attr.aria-selected]="isDefaultProfileTab('emp-mgmt.profile.workExp')">
                     <i class="icon-base ri ri-refresh-line icon-sm me-2"></i>
                     <span class="align-middle">Work Experience</span>
                   </button>
                 </li>
-                <li class="nav-item" role="presentation">
+                <li class="nav-item" role="presentation" *ngIf="canTab('emp-mgmt.profile.bank')"
+                  [class.active]="isDefaultProfileTab('emp-mgmt.profile.bank')">
                   <button class="nav-link tab-link waves-effect waves-light" data-bs-toggle="tab"
-                    data-bs-target="#orders" aria-selected="false" role="tab" tabindex="-1">
+                    data-bs-target="#orders" role="tab" type="button" tabindex="-1"
+                    [class.active]="isDefaultProfileTab('emp-mgmt.profile.bank')"
+                    [attr.aria-selected]="isDefaultProfileTab('emp-mgmt.profile.bank')">
                     <i class="icon-base ri ri-inbox-archive-line icon-sm me-2"></i>
                     <span class="align-middle">Bank Account</span>
                   </button>
                 </li>
-                   <li class="nav-item" role="presentation">
+                <li class="nav-item" role="presentation" *ngIf="canTab('emp-mgmt.profile.relieving')"
+                  [class.active]="isDefaultProfileTab('emp-mgmt.profile.relieving')">
                   <button class="nav-link tab-link waves-effect waves-light" data-bs-toggle="tab"
-                    data-bs-target="#relieving_letter" aria-selected="false" role="tab" tabindex="-1">
+                    data-bs-target="#relieving_letter" role="tab" type="button" tabindex="-1"
+                    [class.active]="isDefaultProfileTab('emp-mgmt.profile.relieving')"
+                    [attr.aria-selected]="isDefaultProfileTab('emp-mgmt.profile.relieving')">
                     <i class="icon-base ri ri-inbox-archive-line icon-sm me-2"></i>
                     <span class="align-middle">Relieving Letter</span>
                   </button>
                 </li>
-                <li class="nav-item" role="presentation">
+                <li class="nav-item" role="presentation" *ngIf="canTab('emp-mgmt.profile.nda')"
+                  [class.active]="isDefaultProfileTab('emp-mgmt.profile.nda')">
                   <button class="nav-link tab-link waves-effect waves-light" data-bs-toggle="tab"
-                    data-bs-target="#nda" aria-selected="false" role="tab" tabindex="-1">
+                    data-bs-target="#nda" role="tab" type="button" tabindex="-1"
+                    [class.active]="isDefaultProfileTab('emp-mgmt.profile.nda')"
+                    [attr.aria-selected]="isDefaultProfileTab('emp-mgmt.profile.nda')">
                     <i class="icon-base ri ri-refresh-line icon-sm me-2"></i>
                     <span class="align-middle">NDA</span>
                   </button>
                 </li>
-                <li class="nav-item" role="presentation">
+                <li class="nav-item" role="presentation" *ngIf="canTab('emp-mgmt.profile.offer')"
+                  [class.active]="isDefaultProfileTab('emp-mgmt.profile.offer')">
                   <button class="nav-link tab-link waves-effect waves-light" data-bs-toggle="tab"
-                    data-bs-target="#offer_letter" aria-selected="false" role="tab" tabindex="-1">
+                    data-bs-target="#offer_letter" role="tab" type="button" tabindex="-1"
+                    [class.active]="isDefaultProfileTab('emp-mgmt.profile.offer')"
+                    [attr.aria-selected]="isDefaultProfileTab('emp-mgmt.profile.offer')">
                     <i class="icon-base ri ri-inbox-archive-line icon-sm me-2"></i>
                     <span class="align-middle">Offer Letter</span>
                   </button>
                 </li>
-                <li class="nav-item" role="presentation">
+                <li class="nav-item" role="presentation" *ngIf="canTab('emp-mgmt.profile.service')"
+                  [class.active]="isDefaultProfileTab('emp-mgmt.profile.service')">
                   <button class="nav-link tab-link waves-effect waves-light" data-bs-toggle="tab"
-                    data-bs-target="#service_agreement" aria-selected="false" role="tab" tabindex="-1">
+                    data-bs-target="#service_agreement" role="tab" type="button" tabindex="-1"
+                    [class.active]="isDefaultProfileTab('emp-mgmt.profile.service')"
+                    [attr.aria-selected]="isDefaultProfileTab('emp-mgmt.profile.service')">
                     <i class="icon-base ri ri-inbox-archive-line icon-sm me-2"></i>
                     <span class="align-middle">Service Agreement</span>
                   </button>
                 </li>
-                <li class="nav-item" role="presentation">
+                <li class="nav-item" role="presentation" *ngIf="canTab('emp-mgmt.profile.appointment')"
+                  [class.active]="isDefaultProfileTab('emp-mgmt.profile.appointment')">
                   <button class="nav-link tab-link waves-effect waves-light" data-bs-toggle="tab"
-                    data-bs-target="#appointment_letter" aria-selected="false" role="tab" tabindex="-1">
+                    data-bs-target="#appointment_letter" role="tab" type="button" tabindex="-1"
+                    [class.active]="isDefaultProfileTab('emp-mgmt.profile.appointment')"
+                    [attr.aria-selected]="isDefaultProfileTab('emp-mgmt.profile.appointment')">
                     <i class="icon-base ri ri-inbox-archive-line icon-sm me-2"></i>
                     <span class="align-middle">Appointment Letter</span>
                   </button>
                 </li>
-                <!-- <li class="nav-item" role="presentation">
-                        <button class="nav-link waves-effect waves-light active" data-bs-toggle="tab" data-bs-target="#product" aria-selected="true" role="tab">
-                          <i class="icon-base ri ri-settings-4-line icon-sm me-2"></i>
-                          <span class="align-middle">Product &amp; Services</span>
-                        </button>
-                      </li> -->
               </ul>
             </div>
           </div>
 
           <div class="col-lg-10 col-md-8 col-12">
             <div class="tab-content  p-0">
-              <div class="tab-pane fade show active" id="payment" role="tabpanel">
+              <div class="tab-pane fade" id="payment" role="tabpanel"
+                *ngIf="canTab('emp-mgmt.profile.basic')"
+                [class.show]="isDefaultProfileTab('emp-mgmt.profile.basic')"
+                [class.active]="isDefaultProfileTab('emp-mgmt.profile.basic')">
                 <div class="d-flex mb-4 gap-4">
                   <div>
                     <h5 class="mb-0">Basic Information</h5>
@@ -422,60 +447,58 @@
                   </div>
                 </div>
               </div>
-              <div class="tab-pane fade" id="delivery" role="tabpanel">
-                <!-- <router-outlet></router-outlet> -->
-
+              <div class="tab-pane fade" id="delivery" role="tabpanel"
+                *ngIf="canTab('emp-mgmt.profile.document')"
+                [class.show]="isDefaultProfileTab('emp-mgmt.profile.document')"
+                [class.active]="isDefaultProfileTab('emp-mgmt.profile.document')">
                 <app-qualification></app-qualification>
               </div>
-              <div class="tab-pane fade" id="insurance_docs" role="tabpanel">
+              <div class="tab-pane fade" id="insurance_docs" role="tabpanel"
+                *ngIf="canTab('emp-mgmt.profile.insurance')"
+                [class.show]="isDefaultProfileTab('emp-mgmt.profile.insurance')"
+                [class.active]="isDefaultProfileTab('emp-mgmt.profile.insurance')">
                 <app-insurance-documents></app-insurance-documents>
               </div>
-              <div class="tab-pane fade" id="cancellation" role="tabpanel">
+              <div class="tab-pane fade" id="cancellation" role="tabpanel"
+                *ngIf="canTab('emp-mgmt.profile.workExp')"
+                [class.show]="isDefaultProfileTab('emp-mgmt.profile.workExp')"
+                [class.active]="isDefaultProfileTab('emp-mgmt.profile.workExp')">
                 <app-experience></app-experience>
               </div>
-              <div class="tab-pane fade" id="orders" role="tabpanel">
-                <!-- <router-outlet></router-outlet> -->
+              <div class="tab-pane fade" id="orders" role="tabpanel"
+                *ngIf="canTab('emp-mgmt.profile.bank')"
+                [class.show]="isDefaultProfileTab('emp-mgmt.profile.bank')"
+                [class.active]="isDefaultProfileTab('emp-mgmt.profile.bank')">
                 <app-bank-details></app-bank-details>
               </div>
-                 <!-- DOCUMENT ENGINE -->
-        <!-- <app-document-renderer
-        class="tab-pane fade" id="nda" role="tabpanel"
-          [type]="'nda'"
-          [data]="personalDetails">
-        </app-document-renderer>
-
-        <app-document-renderer
-         class="tab-pane fade" id="offer_letter" role="tabpanel"
-          [type]="'offer'"
-          [data]="personalDetails">
-        </app-document-renderer>
-
-        <app-document-renderer
-          class="tab-pane fade" id="appointment_letter" role="tabpanel"
-          [type]="'service'"
-          [data]="personalDetails">
-        </app-document-renderer>
-
-        <app-document-renderer
-         class="tab-pane fade" id="service_agreement" role="tabpanel"
-          [type]="'appointment'"
-          [data]="personalDetails">
-        </app-document-renderer> -->
-         <div class="tab-pane fade" id="relieving_letter" role="tabpanel">
-
+              <div class="tab-pane fade" id="relieving_letter" role="tabpanel"
+                *ngIf="canTab('emp-mgmt.profile.relieving')"
+                [class.show]="isDefaultProfileTab('emp-mgmt.profile.relieving')"
+                [class.active]="isDefaultProfileTab('emp-mgmt.profile.relieving')">
                 <app-releving-letter></app-releving-letter>
               </div>
-              <div class="tab-pane fade" id="nda" role="tabpanel">
-
+              <div class="tab-pane fade" id="nda" role="tabpanel"
+                *ngIf="canTab('emp-mgmt.profile.nda')"
+                [class.show]="isDefaultProfileTab('emp-mgmt.profile.nda')"
+                [class.active]="isDefaultProfileTab('emp-mgmt.profile.nda')">
                 <app-nda></app-nda>
               </div>
-              <div class="tab-pane fade" id="offer_letter" role="tabpanel">
+              <div class="tab-pane fade" id="offer_letter" role="tabpanel"
+                *ngIf="canTab('emp-mgmt.profile.offer')"
+                [class.show]="isDefaultProfileTab('emp-mgmt.profile.offer')"
+                [class.active]="isDefaultProfileTab('emp-mgmt.profile.offer')">
                 <app-offer-letter></app-offer-letter>
               </div>
-              <div class="tab-pane fade" id="service_agreement" role="tabpanel">
+              <div class="tab-pane fade" id="service_agreement" role="tabpanel"
+                *ngIf="canTab('emp-mgmt.profile.service')"
+                [class.show]="isDefaultProfileTab('emp-mgmt.profile.service')"
+                [class.active]="isDefaultProfileTab('emp-mgmt.profile.service')">
                 <app-service-agreement></app-service-agreement>
               </div>
-              <div class="tab-pane fade" id="appointment_letter" role="tabpanel">
+              <div class="tab-pane fade" id="appointment_letter" role="tabpanel"
+                *ngIf="canTab('emp-mgmt.profile.appointment')"
+                [class.show]="isDefaultProfileTab('emp-mgmt.profile.appointment')"
+                [class.active]="isDefaultProfileTab('emp-mgmt.profile.appointment')">
                 <app-appointment-letter></app-appointment-letter>
               </div>
             </div>

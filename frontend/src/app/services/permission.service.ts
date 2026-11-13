@@ -42,6 +42,17 @@ export const DEFAULT_PERMISSIONS: PermissionSection[] = [
       { key: 'emp-mgmt.leave',   label: 'Apply Leave',   roles: ['admin', 'superadmin', 'hr', 'manager', 'director'] },
       { key: 'emp-mgmt.letters', label: 'All Letters',   roles: ['admin', 'superadmin', 'hr'] },
       { key: 'emp-mgmt.insurance', label: 'Insurance Documents', roles: ['admin', 'superadmin', 'hr'] },
+      // Employee profile General Info side tabs
+      { key: 'emp-mgmt.profile.basic',       label: 'Profile: Basic',               roles: ['admin', 'superadmin', 'hr', 'manager', 'director'] },
+      { key: 'emp-mgmt.profile.document',    label: 'Profile: Document',            roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'emp-mgmt.profile.insurance',   label: 'Profile: Insurance',           roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'emp-mgmt.profile.workExp',     label: 'Profile: Work Experience',     roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'emp-mgmt.profile.bank',        label: 'Profile: Bank Account',        roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'emp-mgmt.profile.relieving',   label: 'Profile: Relieving Letter',    roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'emp-mgmt.profile.nda',         label: 'Profile: NDA',                 roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'emp-mgmt.profile.offer',       label: 'Profile: Offer Letter',        roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'emp-mgmt.profile.service',     label: 'Profile: Service Agreement',   roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'emp-mgmt.profile.appointment', label: 'Profile: Appointment Letter',  roles: ['admin', 'superadmin', 'hr'] },
     ]
   },
   {
@@ -224,7 +235,7 @@ export class PermissionService {
   private readonly ROLE_PERM_KEY   = 'app_role_permissions';
   private readonly USER_PERM_KEY   = 'custom_user_permissions';
   // Bump this version whenever DEFAULT_PERMISSIONS changes — forces a fresh load
-  private readonly PERM_VERSION    = 'v9';
+  private readonly PERM_VERSION    = 'v10';
   private readonly VERSION_KEY     = 'app_role_permissions_version';
 
   // ── Role-based permissions (admin configures per role) ──────────────────

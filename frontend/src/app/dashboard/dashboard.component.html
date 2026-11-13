@@ -128,8 +128,8 @@
           <div class="col-6">
             <div class="card-body" (click)="gotoTrackingPage()" style="cursor: pointer;">
               <div class="card-info mb-2">
-                <h6 class="mb-2 text-nowrap" style="color: #3C4056;">On Field Employees (GPS)</h6>
-                <div class="badge bg-label-primary bg-white text-black rounded-pill lh-xs mt-1">
+                <h6 class="mb-2 text-nowrap dash-card-heading">On Field Employees (GPS)</h6>
+                <div class="badge bg-label-primary bg-white text-secondary rounded-pill lh-xs mt-1">
                   <span class="text-danger me-2"><i class="icon-base ri ri-circle-fill icon-12px"></i></span>
                   Live Tracking
                 </div>
@@ -155,7 +155,7 @@
           <div class="d-flex justify-content-between align-items-start mb-3">
             <div routerLink="/layout/attendance/date-wise-attendance" routerLinkActive="true" style="cursor: pointer"
               [queryParams]="{ fromDashboard: true }">
-              <h6 class="mb-1 text-nowrap" style="color: #3C4056;">Attendance Chart</h6>
+              <h6 class="mb-1 text-nowrap dash-card-heading">Attendance Chart</h6>
             </div>
             <div class="dropdown table-range-dropdown">
               <button class="btn chart-period-label" type="button" (click)="toggleAttendanceChartRangeDropdown($event)"
@@ -497,7 +497,7 @@
       <div class="card mb-2 dashboard-glass-card">
         <div class="card-header d-flex justify-content-between mb-0 align-items-center p-2">
           <h5 class="mb-0 ml-2">Celebrations</h5>
-          <ul class="nav nav-pills bg-white p-1" style="border-radius: 5px;" role="tablist">
+          <ul class="nav nav-pills celebration-tabs p-1" role="tablist">
             <li class="nav-item" role="presentation">
               <button type="button" class="nav-link waves-effect waves-light" [class.active]="celebrationTab === 'all'"
                 (click)="setCelebrationTab('all')">
@@ -564,14 +564,13 @@
           <h5 class="card-title m-0 me-2">Upcoming Events</h5>
           <button type="button" class="btn btn-sm approve view-all-btn" (click)="openHolidayPage()">View All</button>
         </div>
-        <div class="d-flex justify-content-between p-4 border-bottom" style="background: #F5F5F7;">
-          <p class="mb-0" style="font-size: 14px;color:#3C4056;">Event Name</p>
-          <p class="mb-0" style="font-size: 14px;color:#3C4056;">Date</p>
+        <div class="d-flex justify-content-between p-4 border-bottom events-col-head">
+          <p class="mb-0 events-col-label">Event Name</p>
+          <p class="mb-0 events-col-label">Date</p>
         </div>
-        <div class="card-body bg-white p-2" style="overflow-y:scroll;height: 170px;">
+        <div class="card-body events-list-body p-2">
           <ul class="p-0 m-0">
-            <li class="d-flex align-items-center mb-2" *ngFor="let item of holidayList"
-              style="border-bottom:  1px solid #dadada;padding-bottom: 4px ;">
+            <li class="d-flex align-items-center mb-2 events-list-item" *ngFor="let item of holidayList">
               <div class="avatar avatar-md flex-shrink-0 me-2">
                 <div class="avatar-initial bg-lightest rounded-3">
                   <div>
@@ -582,9 +581,9 @@
               </div>
               <div class="d-flex w-100 flex-wrap align-items-center justify-content-between gap-2">
                 <div class="me-1">
-                  <h6 class="mb-1" style="font-size: 14px; font-weight: 600;">{{ item.name }}</h6>
+                  <h6 class="mb-1 events-item-name">{{ item.name }}</h6>
                 </div>
-                <div class="text" style="font-size: 12px;color: #004463;font-weight: 500;">{{ item.date }}</div>
+                <div class="events-item-date">{{ item.date }}</div>
               </div>
             </li>
           </ul>

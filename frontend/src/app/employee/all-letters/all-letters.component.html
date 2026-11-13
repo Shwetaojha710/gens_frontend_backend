@@ -67,9 +67,9 @@
   </div>
 
   <!-- Table -->
-  <div class="card border-0 shadow-sm">
-    <div class="card-header bg-white border-bottom d-flex align-items-center justify-content-between py-3">
-      <h6 class="mb-0 fw-semibold">Letter Records</h6>
+  <div class="card border-0 shadow-sm al-records-card">
+    <div class="card-header al-records-header border-bottom d-flex align-items-center justify-content-between py-3">
+      <h6 class="mb-0 fw-semibold al-records-title">Letter Records</h6>
       <span class="badge bg-primary">{{ filteredEmployees.length }} records</span>
     </div>
 
@@ -87,8 +87,8 @@
       </div>
 
       <div class="table-responsive" *ngIf="!loading">
-        <table class="table table-hover align-middle mb-0">
-          <thead class="table-light">
+        <table class="table table-hover align-middle mb-0 al-table">
+          <thead>
             <tr>
               <th style="width:40px">SI</th>
               <th>Employee</th>

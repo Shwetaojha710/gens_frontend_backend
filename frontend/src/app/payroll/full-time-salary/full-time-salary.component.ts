@@ -179,23 +179,27 @@ isAllAttendanceSelected() {
 }
 
   async getYear() {
-    this.yearList = []
+    this.yearList = [];
     this.master.getAttendanceYear().subscribe((data: { [x: string]: any; data: any; }) => {
-      console.log(data)
       if (data['status'] == true) {
-        // this.notyf.success(data['message']);
-        this.yearList = data.data;
-        console.log(this.EmpList, "attendance master list");
-
-      }
-      else if (data['status'] == 'expired') {
-        this.router.navigate(['login'])
-      }
-      else {
-        // this.notyf.error(data['message']);
+        const rows = Array.isArray(data.data) ? data.data : [];
+        this.yearList = rows.map((y: any) => {
+          if (y == null) return y;
+          if (typeof y !== 'object') {
+            const s = String(y);
+            return { value: s, label: s };
+          }
+          const raw = y.value ?? y.year ?? y.id ?? y.label;
+          const s = raw != null ? String(raw) : '';
+          return { ...y, value: s, label: y.label != null ? String(y.label) : s };
+        });
+        if (this.obj?.['year'] != null) {
+          this.obj['year'] = String(this.obj['year']);
+        }
+      } else if (data['status'] == 'expired') {
+        this.router.navigate(['login']);
       }
     });
-
   }
   deleteAttendance(id: number) {
     this.attendanceService.deleteAttendance(id).subscribe((data: { [x: string]: any; data: any; }) => {

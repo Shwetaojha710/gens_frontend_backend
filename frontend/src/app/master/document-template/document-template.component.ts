@@ -3441,11 +3441,11 @@ ${paginatorScriptTag(paginateCfg)}
       if (topPad == null || blankLh) {
         topPad = 0;
       }
-      this.form = {
+    this.form = {
         id: data.id,
         name: data.name,
         category: data.category || 'custom',
-        bodyHtml: html,
+      bodyHtml: html,
         letterheadBlank: blankLh,
         topPaddingMm: topPad,
         letterheadPages: this.normalizeLetterheadPages(data.letterheadPages),
@@ -3477,12 +3477,12 @@ ${paginatorScriptTag(paginateCfg)}
           this.letterheadMode = 'image';
         }
         this.cdr.detectChanges();
-        setTimeout(() => {
+    setTimeout(() => {
           this.initEditor(html);
           this.applyEditorChromeDefaults();
           this.showAnnexureSlotWhenReady();
           this.scheduleAutoPageBreaks();
-        }, 0);
+    }, 0);
       };
 
       // Always refresh company letterhead so edit shows logo/footer when saved with it
@@ -3541,18 +3541,18 @@ ${paginatorScriptTag(paginateCfg)}
             [{ size: QUILL_SIZE_WHITELIST }],
             [{ lineheight: QUILL_LINEHEIGHT_WHITELIST }],
             [{ paragraphspacing: QUILL_PARASPACING_WHITELIST }],
-            ['bold', 'italic', 'underline', 'strike'],
+          ['bold', 'italic', 'underline', 'strike'],
             [{ script: 'sub' }, { script: 'super' }],
             ['uppercase', 'lowercase', 'titlecase'],
-            [{ color: [] }, { background: [] }],
-            [{ align: [] }],
-            [{ list: 'ordered' }, { list: 'bullet' }],
-            [{ indent: '-1' }, { indent: '+1' }],
+          [{ color: [] }, { background: [] }],
+          [{ align: [] }],
+          [{ list: 'ordered' }, { list: 'bullet' }],
+          [{ indent: '-1' }, { indent: '+1' }],
             ['blockquote', 'link', 'image', 'table'],
             ['pagebreak', 'textbox', 'inputfield'],
             [{ dateformat: self.dateFormatOptions.map((d) => d.id) }],
-            ['clean'],
-          ],
+          ['clean'],
+        ],
           handlers: {
             pagebreak() {
               self.insertQuillPageBreak();

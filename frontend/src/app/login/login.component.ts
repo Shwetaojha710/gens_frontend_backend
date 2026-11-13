@@ -12,6 +12,7 @@ import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { Notyf } from 'notyf';
 import { NgItemLabelDirective } from "@ng-select/ng-select";
+import { MarketingThemeService } from '../marketing/services/marketing-theme.service';
 
 @Component({
   selector: 'app-login',
@@ -34,8 +35,11 @@ export class LoginComponent {
     private fb: FormBuilder,
     private auth: AuthService,
     private router: Router,
-    private companyLogo: CompanyLogoService
+    private companyLogo: CompanyLogoService,
+    private colorMode: MarketingThemeService,
   ) {
+    // Keep Sign-in page in sync with marketing landing dark/light
+    this.colorMode.syncFromStorage();
     this.form = this.fb.group({
       tenantId: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],

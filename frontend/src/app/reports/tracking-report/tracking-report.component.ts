@@ -1,5 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  AfterViewChecked,
+  ElementRef,
+  inject,
+  effect,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { Router } from '@angular/router';
@@ -11,15 +18,19 @@ import { AttendanceService } from '../../services/attendance.service';
 import { MasterService } from '../../services/master.service';
 import { StatusService } from '../../services/status.service';
 import { LocationService } from '../../services/location.service';
+import { MarketingThemeService } from '../../marketing/services/marketing-theme.service';
 
 @Component({
   selector: 'app-tracking-report',
   standalone: true,
   imports: [NgSelectModule, FormsModule, CommonModule],
   templateUrl: './tracking-report.component.html',
-  styleUrl: './tracking-report.component.css'
+  styleUrl: './tracking-report.component.css',
+  host: {
+    '[class.tr-dark]': 'isDark()',
+  },
 })
-export class TrackingReportComponent implements OnInit {
+export class TrackingReportComponent implements OnInit, AfterViewChecked {
 
   // ── Core State ────────────────────────────────────────────────────────────
   obj: any = {};
@@ -87,12 +98,16 @@ export class TrackingReportComponent implements OnInit {
   uniquePlacesCount: number = 0;
 
   // ─────────────────────────────────────────────────────────────────────────
+  readonly isDark = inject(MarketingThemeService).isDark;
+  private readonly hostEl = inject(ElementRef);
+  private ngSelectPaintQueued = false;
+
   constructor(
     private master: MasterService,
     private attendanceService: AttendanceService,
     public statusService: StatusService,
     private router: Router,
-    private locationService: LocationService
+    private locationService: LocationService,
   ) {
     this.notyf = new Notyf();
 
@@ -104,6 +119,12 @@ export class TrackingReportComponent implements OnInit {
     this.obj['month'] = m < 10 ? '0' + m : m.toString();
 
     this.loadVisitPlaceDD();
+
+    // Re-paint selects whenever theme flips
+    effect(() => {
+      this.isDark();
+      this.ngSelectPaintQueued = true;
+    });
   }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -112,6 +133,58 @@ export class TrackingReportComponent implements OnInit {
     await this.loadEmpList();
     await this.loadYearList();
     this.loadReport();
+    this.ngSelectPaintQueued = true;
+  }
+
+  ngAfterViewChecked(): void {
+    if (!this.ngSelectPaintQueued) return;
+    this.ngSelectPaintQueued = false;
+    this.paintNgSelectLabels();
+  }
+
+  /** Match form-select dark look: dark field + light text; inner input transparent */
+  private paintNgSelectLabels(): void {
+    const root = this.hostEl.nativeElement as HTMLElement;
+    const dark = this.isDark();
+    const containers = root.querySelectorAll<HTMLElement>('.ng-select .ng-select-container');
+    containers.forEach((el) => {
+      if (dark) {
+        el.style.setProperty('background', '#0f172a', 'important');
+        el.style.setProperty('background-color', '#0f172a', 'important');
+        el.style.setProperty('color', '#e2e8f0', 'important');
+        el.style.setProperty('border-color', '#475569', 'important');
+      } else {
+        el.style.removeProperty('background');
+        el.style.removeProperty('background-color');
+        el.style.removeProperty('color');
+        el.style.removeProperty('border-color');
+      }
+    });
+    const clearBg = root.querySelectorAll<HTMLElement>(
+      '.ng-select .ng-value-container, .ng-select .ng-value, .ng-select .ng-input, .ng-select .ng-input > input',
+    );
+    clearBg.forEach((el) => {
+      el.style.setProperty('background', 'transparent', 'important');
+      el.style.setProperty('background-color', 'transparent', 'important');
+      el.style.setProperty('border', '0', 'important');
+      el.style.setProperty('box-shadow', 'none', 'important');
+    });
+    const labelColor = dark ? '#f1f5f9' : '#1e293b';
+    const labels = root.querySelectorAll<HTMLElement>(
+      '.ng-select .ng-value-label, .ng-select .ng-value, .ng-select .ng-input > input',
+    );
+    labels.forEach((el) => {
+      el.style.setProperty('color', labelColor, 'important');
+      el.style.setProperty('-webkit-text-fill-color', labelColor, 'important');
+      el.style.setProperty('opacity', '1', 'important');
+      el.style.setProperty('visibility', 'visible', 'important');
+    });
+    const placeholders = root.querySelectorAll<HTMLElement>('.ng-select .ng-placeholder');
+    placeholders.forEach((el) => {
+      el.style.setProperty('color', dark ? '#94a3b8' : '#64748b', 'important');
+      el.style.setProperty('-webkit-text-fill-color', dark ? '#94a3b8' : '#64748b', 'important');
+      el.style.setProperty('background', 'transparent', 'important');
+    });
   }
 
   // ── Dropdown Loaders ──────────────────────────────────────────────────────
@@ -148,7 +221,8 @@ export class TrackingReportComponent implements OnInit {
               ...item,
               si_no: index + 1,
               label: `${item.firstName} ${item.lastName} - ${item.empCode}`,
-              value: item.id,
+              // String id so ng-select bindValue always matches ngModel
+              value: item.id != null ? String(item.id) : item.id,
               profileImage: item.profileImage
                 ? `${this.baseurl}${item.profileImage}`
                 : item.gender === 'Female'
@@ -157,6 +231,10 @@ export class TrackingReportComponent implements OnInit {
             }));
 
             this.EmpList = [{ label: 'All', value: 'All' }, ...employees];
+            if (this.obj?.['emp_id'] != null && this.obj['emp_id'] !== 'All') {
+              this.obj['emp_id'] = String(this.obj['emp_id']);
+            }
+            this.ngSelectPaintQueued = true;
           } else if (status === 'expired') {
             this.router.navigate(['login']);
           }
@@ -176,7 +254,23 @@ export class TrackingReportComponent implements OnInit {
       this.master.getAttendanceYear().subscribe({
         next: (data: any) => {
           if (data?.status === true) {
-            this.yearList = data.data;
+            // Normalize to string value/label so ng-select matches obj.year (string)
+            const rows = Array.isArray(data.data) ? data.data : [];
+            this.yearList = rows.map((y: any) => {
+              if (y == null) return y;
+              if (typeof y !== 'object') {
+                const s = String(y);
+                return { value: s, label: s };
+              }
+              const raw = y.value ?? y.year ?? y.id ?? y.label;
+              const s = raw != null ? String(raw) : '';
+              return { ...y, value: s, label: y.label != null ? String(y.label) : s };
+            });
+            // Keep selected year in sync with list item types
+            if (this.obj?.['year'] != null) {
+              this.obj['year'] = String(this.obj['year']);
+            }
+            this.ngSelectPaintQueued = true;
           } else if (data?.status === 'expired') {
             this.router.navigate(['login']);
           } else {

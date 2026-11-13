@@ -8,6 +8,7 @@ import { MasterService } from '../services/master.service';
 import { ThemeService, BrandColors, BRAND_DEFAULTS, APPLY_TO_DEFAULTS, ApplyToModules } from '../services/theme.service';
 import { PermissionService, DEFAULT_PERMISSIONS, PermissionSection } from '../services/permission.service';
 import { UserPermissionService, TenantUser } from '../master/user-permission/user-permission.service';
+import { MarketingThemeService } from '../marketing/services/marketing-theme.service';
 
 @Component({
   selector: 'app-landing-home',
@@ -84,7 +85,9 @@ export class LandingHomeComponent {
     private theme: ThemeService,
     private permSvc: PermissionService,
     private userPermSvc: UserPermissionService,
+    private colorMode: MarketingThemeService,
   ) {
+    this.colorMode.syncFromStorage();
     this.baseurl = this.masterService.getBaseUrl();
     this.tenantDetails = JSON.parse(localStorage.getItem('tenant') || '{}');
     this.tenantDetails.image = `${this.baseurl}${this.tenantDetails['image']}`;

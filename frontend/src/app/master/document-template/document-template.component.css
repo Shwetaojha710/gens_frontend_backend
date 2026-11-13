@@ -1808,3 +1808,188 @@
     width: 100%;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   Dark theme — chrome/panels dark; A4 page stays white paper
+   ═══════════════════════════════════════════════════════════ */
+:host-context(html.dark) .dt-settings-panel,
+:host-context(html.dark-style) .dt-settings-panel,
+:host-context([data-bs-theme='dark']) .dt-settings-panel {
+  background: #1e293b !important;
+  border-color: rgba(148, 163, 184, 0.2) !important;
+  color: #e2e8f0;
+}
+
+:host-context(html.dark) .dt-panel-actions,
+:host-context(html.dark-style) .dt-panel-actions,
+:host-context([data-bs-theme='dark']) .dt-panel-actions {
+  background: #0f172a !important;
+  border-bottom-color: rgba(148, 163, 184, 0.16) !important;
+}
+
+:host-context(html.dark) .dt-panel-section,
+:host-context(html.dark-style) .dt-panel-section,
+:host-context([data-bs-theme='dark']) .dt-panel-section {
+  border-bottom-color: rgba(148, 163, 184, 0.12) !important;
+}
+
+:host-context(html.dark) .dt-panel-title,
+:host-context(html.dark-style) .dt-panel-title,
+:host-context([data-bs-theme='dark']) .dt-panel-title {
+  color: #5eead4 !important;
+}
+
+:host-context(html.dark) .dt-settings-panel .form-label,
+:host-context(html.dark) .dt-settings-panel .fw-semibold,
+:host-context(html.dark) .dt-settings-panel .form-check,
+:host-context(html.dark-style) .dt-settings-panel .form-label,
+:host-context(html.dark-style) .dt-settings-panel .fw-semibold,
+:host-context(html.dark-style) .dt-settings-panel .form-check,
+:host-context([data-bs-theme='dark']) .dt-settings-panel .form-label,
+:host-context([data-bs-theme='dark']) .dt-settings-panel .fw-semibold,
+:host-context([data-bs-theme='dark']) .dt-settings-panel .form-check {
+  color: #e2e8f0 !important;
+}
+
+:host-context(html.dark) .dt-settings-panel small,
+:host-context(html.dark) .dt-settings-panel .text-muted,
+:host-context(html.dark-style) .dt-settings-panel small,
+:host-context(html.dark-style) .dt-settings-panel .text-muted,
+:host-context([data-bs-theme='dark']) .dt-settings-panel small,
+:host-context([data-bs-theme='dark']) .dt-settings-panel .text-muted {
+  color: #94a3b8 !important;
+}
+
+:host-context(html.dark) .dt-branch-assign,
+:host-context(html.dark-style) .dt-branch-assign,
+:host-context([data-bs-theme='dark']) .dt-branch-assign {
+  background: #0f172a !important;
+  border-color: rgba(148, 163, 184, 0.2) !important;
+}
+
+:host-context(html.dark) .dt-editor-toolbar-bar,
+:host-context(html.dark-style) .dt-editor-toolbar-bar,
+:host-context([data-bs-theme='dark']) .dt-editor-toolbar-bar {
+  background: #0f172a !important;
+  border-color: rgba(148, 163, 184, 0.2) !important;
+  box-shadow: none;
+}
+
+:host-context(html.dark) .dt-rich-toolbar,
+:host-context(html.dark-style) .dt-rich-toolbar,
+:host-context([data-bs-theme='dark']) .dt-rich-toolbar {
+  background: #1e293b !important;
+  border-color: rgba(148, 163, 184, 0.22) !important;
+}
+
+:host-context(html.dark) .dt-rich-sep,
+:host-context(html.dark-style) .dt-rich-sep,
+:host-context([data-bs-theme='dark']) .dt-rich-sep {
+  background: #475569 !important;
+}
+
+:host-context(html.dark) .a4-stage,
+:host-context(html.dark-style) .a4-stage,
+:host-context([data-bs-theme='dark']) .a4-stage {
+  background: #0b1220 !important;
+}
+
+:host-context(html.dark) .dt-hf-part--on,
+:host-context(html.dark-style) .dt-hf-part--on,
+:host-context([data-bs-theme='dark']) .dt-hf-part--on {
+  background: rgba(0, 180, 166, 0.1) !important;
+  border-color: rgba(0, 180, 166, 0.35) !important;
+}
+
+/* A4 paper stays white — force dark ink (beats global card light text) */
+:host-context(html.dark) .editor-frame,
+:host-context(html.dark-style) .editor-frame,
+:host-context([data-bs-theme='dark']) .editor-frame {
+  background-color: #fff !important;
+  color: #000 !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.55) !important;
+}
+
+/* Black ink on white paper — children inherit; inline/format colors still win */
+:host-context(html.dark) .dt-rich-host,
+:host-context(html.dark) .editor-frame--image .dt-rich-host,
+:host-context(html.dark) .editor-frame--image.editor-frame--imported .dt-rich-host,
+:host-context(html.dark-style) .dt-rich-host,
+:host-context(html.dark-style) .editor-frame--image .dt-rich-host,
+:host-context([data-bs-theme='dark']) .dt-rich-host,
+:host-context([data-bs-theme='dark']) .editor-frame--image .dt-rich-host {
+  color: #000 !important;
+}
+
+:host-context(html.dark) .editor-frame--image .dt-rich-host,
+:host-context(html.dark) .editor-frame--image.editor-frame--imported .dt-rich-host,
+:host-context(html.dark-style) .editor-frame--image .dt-rich-host,
+:host-context(html.dark-style) .editor-frame--image.editor-frame--imported .dt-rich-host,
+:host-context([data-bs-theme='dark']) .editor-frame--image .dt-rich-host,
+:host-context([data-bs-theme='dark']) .editor-frame--image.editor-frame--imported .dt-rich-host {
+  background: #fff !important;
+}
+
+:host-context(html.dark) .dt-seam-foot,
+:host-context(html.dark) .dt-seam-head,
+:host-context(html.dark-style) .dt-seam-foot,
+:host-context(html.dark-style) .dt-seam-head,
+:host-context([data-bs-theme='dark']) .dt-seam-foot,
+:host-context([data-bs-theme='dark']) .dt-seam-head {
+  background: #fff !important;
+}
+
+:host-context(html.dark) .dt-seam-gap,
+:host-context(html.dark-style) .dt-seam-gap,
+:host-context([data-bs-theme='dark']) .dt-seam-gap {
+  background: #0b1220 !important;
+}
+
+:host-context(html.dark) .dt-rich-host .page-break::after,
+:host-context(html.dark-style) .dt-rich-host .page-break::after,
+:host-context([data-bs-theme='dark']) .dt-rich-host .page-break::after {
+  background: #fff !important;
+  color: #64748b !important;
+  border-color: #cbd5e1 !important;
+  -webkit-text-fill-color: #64748b !important;
+}
+
+:host-context(html.dark) .print-preview-dock,
+:host-context(html.dark-style) .print-preview-dock,
+:host-context([data-bs-theme='dark']) .print-preview-dock {
+  background: #0f172a !important;
+  box-shadow: -8px 0 28px rgba(0, 0, 0, 0.5) !important;
+}
+
+:host-context(html.dark) .print-preview-header,
+:host-context(html.dark-style) .print-preview-header,
+:host-context([data-bs-theme='dark']) .print-preview-header {
+  background: #1e293b !important;
+  border-bottom-color: rgba(148, 163, 184, 0.2) !important;
+  color: #f1f5f9 !important;
+}
+
+:host-context(html.dark) .print-preview-body,
+:host-context(html.dark) .print-preview-iframe,
+:host-context(html.dark-style) .print-preview-body,
+:host-context(html.dark-style) .print-preview-iframe,
+:host-context([data-bs-theme='dark']) .print-preview-body,
+:host-context([data-bs-theme='dark']) .print-preview-iframe {
+  background: #0b1220 !important;
+}
+
+/* Don't let global dark card text wash into the paper */
+:host-context(html.dark) .dt-editor-card.card,
+:host-context(html.dark) .dt-editor-card .card-body,
+:host-context(html.dark-style) .dt-editor-card.card,
+:host-context(html.dark-style) .dt-editor-card .card-body,
+:host-context([data-bs-theme='dark']) .dt-editor-card.card,
+:host-context([data-bs-theme='dark']) .dt-editor-card .card-body {
+  color: inherit;
+}
+
+:host-context(html.dark) .dt-editor-card .card-header,
+:host-context(html.dark-style) .dt-editor-card .card-header,
+:host-context([data-bs-theme='dark']) .dt-editor-card .card-header {
+  color: #f1f5f9 !important;
+}

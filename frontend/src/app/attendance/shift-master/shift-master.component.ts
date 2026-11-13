@@ -26,11 +26,9 @@ export class ShiftMasterComponent {
     this.createFlag = false
 
   }
-  status: any = [{ value: 'Day', label: 'Day' }, { value: 'Afternoon', label: 'Afternoon' }, { value: 'Night', label: 'Night' }]
+  /** Dynamic shift types from Shift Master list (+ addTag allows new names) */
+  shiftTypes: { value: string; label: string }[] = [];
 
-  // onSubmit() {
-  //    console.log(this.obj)
-  // }
   departmentForm!: FormGroup;
   shiftList: any = [];
   editingId: number | null = null;
@@ -66,31 +64,50 @@ export class ShiftMasterComponent {
   }
 
   async fetchshifts() {
-    this.shiftList = []
-    this.shiftService.getshifts().subscribe(data => {
+    this.shiftList = [];
+    this.shiftService.getshifts().subscribe((data) => {
       if (data['status'] == true) {
-        this.shiftList = []
-        // this.notyf.success(data['message']);
-        this.shiftList = data.data;
-        this.shiftList = this.shiftList.map((item: any) => {
-          return {
-            ...item,
-            shifts: item.shifts.map((shiftItem: any) => {
-              return {
-                ...shiftItem,
-                is_week_off: shiftItem.is_week_off == false ? 'Working' : 'Week Off',
-              };
-            }),
-          };
-        });
-
+        this.shiftList = (data.data || []).map((item: any) => ({
+          ...item,
+          shifts: (item.shifts || []).map((shiftItem: any) => ({
+            ...shiftItem,
+            is_week_off:
+              shiftItem.is_week_off == false ? 'Working' : 'Week Off',
+          })),
+        }));
+        this.buildShiftTypes();
+      } else if (data['status'] == 'expired') {
+        this.router.navigate(['login']);
       } else {
         this.notyf.error(data['message']);
       }
     });
-
-
   }
+
+  /** Unique shift names for Type dropdown */
+  buildShiftTypes() {
+    const names: string[] = [
+      ...new Set<string>(
+        (this.shiftList || [])
+          .map((g: any) => String(g?.shift || '').trim())
+          .filter((n: string): n is string => !!n),
+      ),
+    ].sort((a, b) => a.localeCompare(b));
+    this.shiftTypes = names.map((n) => ({ value: n, label: n }));
+  }
+
+  /** ng-select addTag — allow creating a new shift type name */
+  addShiftType = (term: string) => {
+    const name = String(term || '').trim();
+    if (!name) return null;
+    const exists = this.shiftTypes.some(
+      (s) => s.value.toLowerCase() === name.toLowerCase(),
+    );
+    if (!exists) {
+      this.shiftTypes = [...this.shiftTypes, { value: name, label: name }];
+    }
+    return { value: name, label: name };
+  };
 
   onSubmit() {
     if (!ValidationUtil.showRequiredError('Shift Type', this.obj.shift, this.notyf)) {

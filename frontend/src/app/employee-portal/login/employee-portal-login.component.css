@@ -33,7 +33,7 @@
   color: #718096;
 }
 
-/* Stronger primary button contrast */
+/* Stronger primary button contrast (light theme) */
 .gens-login__card .gens-btn--primary {
   background: #178f89;
 }
@@ -44,6 +44,28 @@
 
 .gens-login__card .gens-btn--primary:disabled {
   background: #9ad5d1;
+  color: #fff;
+}
+
+/* Dark theme — same CTA as marketing landing */
+:host-context(html.dark) .gens-login__card .gens-btn--primary,
+:host-context([data-bs-theme='dark']) .gens-login__card .gens-btn--primary {
+  background-color: #00afa1;
+  background-image: linear-gradient(135deg, #1a8075 0%, #7ed321 100%);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(26, 128, 117, 0.28);
+}
+
+:host-context(html.dark) .gens-login__card .gens-btn--primary:hover:not(:disabled),
+:host-context([data-bs-theme='dark']) .gens-login__card .gens-btn--primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1a8075 0%, #7ed321 100%);
+  filter: brightness(1.06);
+}
+
+:host-context(html.dark) .gens-login__card .gens-btn--primary:disabled,
+:host-context([data-bs-theme='dark']) .gens-login__card .gens-btn--primary:disabled {
+  background-image: linear-gradient(135deg, #1a8075 0%, #7ed321 100%);
+  opacity: 0.55;
   color: #fff;
 }
 
