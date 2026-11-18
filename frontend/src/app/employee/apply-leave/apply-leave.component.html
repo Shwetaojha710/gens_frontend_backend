@@ -1,236 +1,232 @@
-<div class="container-fluid  mt-5">
-  <div class="row mb-6" *ngIf="createFlag">
-    <div class="col-md">
-      <div class="card">
-        <h5 class="card-header d-flex justify-content-between align-items-center">
-          <span>Apply Leave</span>
-          <button type="button" class="btn btn-xs btn-primary float-end" (click)="back()">
-            <i class="fa-solid fa-arrow-left"></i>&nbsp;back
+<div class="container-fluid mt-4 alv-page">
+  <div class="row mb-4" *ngIf="createFlag">
+    <div class="col-12">
+      <div class="card alv-card border-0 shadow-sm">
+        <div class="card-header alv-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div>
+            <h5 class="alv-card-title mb-0">{{ updateFlag ? 'Edit Leave' : 'Apply Leave' }}</h5>
+            <p class="alv-card-sub mb-0">Set from/to dates and half-day duration on first or last day.</p>
+          </div>
+          <button type="button" class="btn btn-sm btn-primary" (click)="back()">
+            <i class="fa-solid fa-arrow-left me-1"></i>Back
           </button>
-        </h5>
+        </div>
 
-
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-4">
-              <label for="defaultFormControlInput" class="form-label">Select Employee</label>
-              <ng-select [items]="EmpList" bindLabel="label" bindValue="value" [(ngModel)]="obj['employeeId']"
-                [multiple]="false" placeholder="Select Employee" name="state" id="select2Danger" required
-                #employeeRef="ngModel">
+        <div class="card-body alv-card-body">
+          <div class="row g-3 align-items-end">
+            <div class="col-12 col-md-6 col-xl-4">
+              <label class="form-label alv-label">Select Employee</label>
+              <ng-select class="alv-select" [items]="EmpList" bindLabel="label" bindValue="value"
+                [(ngModel)]="obj['employeeId']" [multiple]="false" placeholder="Select Employee"
+                name="employeeId" required #employeeRef="ngModel">
               </ng-select>
               <small class="text-danger" *ngIf="employeeRef.invalid && employeeRef.touched">
-                Select Employee Is required
+                Select Employee is required
               </small>
             </div>
 
-            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-4">
-              <label for="defaultFormControlInput" class="form-label">Leave Type</label>
-              <ng-select [items]="leaveTypeList" bindLabel="label" bindValue="value" [(ngModel)]="obj['leaveTypeId']"
-                [multiple]="false" placeholder="Select Leave Type" name="state" id="select2Danger" required
-                #leaveTypeRef="ngModel">
+            <div class="col-12 col-md-6 col-xl-4">
+              <label class="form-label alv-label">Leave Type</label>
+              <ng-select class="alv-select" [items]="leaveTypeList" bindLabel="label" bindValue="value"
+                [(ngModel)]="obj['leaveTypeId']" [multiple]="false" placeholder="Select Leave Type"
+                name="leaveTypeId" required #leaveTypeRef="ngModel">
               </ng-select>
               <small class="text-danger" *ngIf="leaveTypeRef.invalid && leaveTypeRef.touched">
-                Leave Type Is required
-              </small>
-            </div>
-            <div class="col-4">
-              <label class="form-label d-block">Duration Type</label>
-              <!-- <label class="form-check-label me-3 mt-2">
-                <input
-                  type="radio"
-                  name="leaveFreqTo"
-                  value="first_half"
-                  class="form-check-input me-1"
-                  [(ngModel)]="obj['duration_type']"
-                />
-                First Half
-              </label>
-              <label class="form-check-label me-3 mt-2">
-                <input
-                  type="radio"
-                  name="leaveFreqFrom"
-                  value="second_half"
-                  class="form-check-input me-1"
-                  [(ngModel)]="obj['duration_type']"
-                />
-                Second Half
-              </label>
-
-               <label class="form-check-label me-3 mt-2">
-                <input
-                  type="radio"
-                  name="leaveFreqFullDay"
-                  value="full_day"
-                  class="form-check-input me-1"
-                  [(ngModel)]="obj['duration_type']"
-                />
-                Full Day
-              </label> -->
-
-              <div class="btn-group w-100" role="group" aria-label="Basic radio toggle button group">
-                <input type="radio" name="leaveFreqTo" value="first_half" class="btn-check" id="btnradio1"
-                  [(ngModel)]="obj['duration_type']" />
-                <label class="btn btn-outline-primary waves-effect" for="btnradio1">First Half</label>
-
-                <input type="radio" name="leaveFreqFrom" value="second_half" class="btn-check" id="btnradio2"
-                  [(ngModel)]="obj['duration_type']" />
-                <label class="btn btn-outline-primary waves-effect" for="btnradio2">Second Half</label>
-
-                <input type="radio" name="leaveFreqFullDay" value="full" class="btn-check" id="btnradio3"
-                  [(ngModel)]="obj['duration_type']" />
-                <label class="btn btn-outline-primary waves-effect" for="btnradio3">Full Day</label>
-              </div>
-
-
-
-            </div>
-            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-4" *ngIf="obj['duration_type']=='first_half'  || obj['duration_type']=='full' ">
-              <label for="defaultFormControlInput" class="form-label">Leave From</label>
-              <input type="date" class="form-control" id="defaultFormControlInput" placeholder="Select Leave From"
-                [(ngModel)]="obj['fromDate']" [min]="minDate" aria-describedby="defaultFormControlHelp"
-                #startDateRef="ngModel" />
-              <small class="text-danger" *ngIf="startDateRef.invalid && startDateRef.touched">Leave From Is Required
-              </small>
-            </div>
-            <div class="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-4" *ngIf="obj['duration_type']=='second_half'  || obj['duration_type']=='full' ">
-              <label for="defaultFormControlInput" class="form-label">Leave To</label>
-              <input type="date" class="form-control" id="defaultFormControlInput" placeholder="Select Leave To"
-                [(ngModel)]="obj['toDate']" aria-describedby="defaultFormControlHelp" #toDateRef="ngModel"
-                [min]="getToDateMin()" />
-              <small class="text-danger" *ngIf="toDateRef.invalid && toDateRef.touched">
-                Leave To Is Required
+                Leave Type is required
               </small>
             </div>
 
-
+            <div class="col-12 col-md-6 col-xl-4">
+              <label class="form-label alv-label">Total Leave Days</label>
+              <div class="alv-days-pill">{{ computedLeaveDaysLabel }}</div>
+            </div>
 
             <div class="col-12">
-              <label for="defaultFormControlInput" class="form-label">Reason</label>
-              <textarea class="form-control" id="defaultFormControlInput" [(ngModel)]="obj['reason']"
-                #reasonRef="ngModel"></textarea>
+              <div class="row g-2 g-xl-3 alv-date-duration-row align-items-end">
+                <div class="col-6 col-lg-3">
+                  <label class="form-label alv-label">Leave From</label>
+                  <input type="date" class="form-control alv-input" name="fromDate"
+                    [(ngModel)]="obj['fromDate']" [min]="minDate"
+                    (ngModelChange)="onFromDateChange()"
+                    #startDateRef="ngModel" required />
+                  <small class="text-danger" *ngIf="startDateRef.invalid && startDateRef.touched">
+                    Leave From is required
+                  </small>
+                </div>
 
+                <div class="col-6 col-lg-3">
+                  <label class="form-label alv-label">Leave To</label>
+                  <input type="date" class="form-control alv-input" name="toDate"
+                    [(ngModel)]="obj['toDate']"
+                    [min]="getToDateMin()"
+                    (ngModelChange)="onToDateChange()"
+                    #toDateRef="ngModel" required />
+                  <small class="text-danger" *ngIf="toDateRef.invalid && toDateRef.touched">
+                    Leave To is required
+                  </small>
+                </div>
+
+                <div class="col-6 col-lg-3">
+                  <label class="form-label alv-label">
+                    From Duration
+                    <span class="alv-hint" *ngIf="isSingleLeaveDay">· single</span>
+                    <span class="alv-hint" *ngIf="!isSingleLeaveDay && obj['fromDate'] && obj['toDate']">· first</span>
+                  </label>
+                  <div class="alv-seg alv-seg--row" role="radiogroup" aria-label="From duration">
+                    <label class="alv-seg__btn" [class.is-active]="obj['duration_type']==='full'">
+                      <input type="radio" name="fromDuration" value="full"
+                        [(ngModel)]="obj['duration_type']" (ngModelChange)="onFromDurationChange()" />
+                      Full
+                    </label>
+                    <label class="alv-seg__btn" [class.is-active]="obj['duration_type']==='first_half'">
+                      <input type="radio" name="fromDuration" value="first_half"
+                        [(ngModel)]="obj['duration_type']" (ngModelChange)="onFromDurationChange()" />
+                      1st
+                    </label>
+                    <label class="alv-seg__btn" [class.is-active]="obj['duration_type']==='second_half'">
+                      <input type="radio" name="fromDuration" value="second_half"
+                        [(ngModel)]="obj['duration_type']" (ngModelChange)="onFromDurationChange()" />
+                      2nd
+                    </label>
+                  </div>
+                </div>
+
+                <div class="col-6 col-lg-3" *ngIf="!isSingleLeaveDay">
+                  <label class="form-label alv-label">
+                    To Duration
+                    <span class="alv-hint">· last</span>
+                  </label>
+                  <div class="alv-seg alv-seg--row" role="radiogroup" aria-label="To duration">
+                    <label class="alv-seg__btn" [class.is-active]="obj['to_duration_type']==='full'">
+                      <input type="radio" name="toDuration" value="full"
+                        [(ngModel)]="obj['to_duration_type']" />
+                      Full
+                    </label>
+                    <label class="alv-seg__btn" [class.is-active]="obj['to_duration_type']==='first_half'">
+                      <input type="radio" name="toDuration" value="first_half"
+                        [(ngModel)]="obj['to_duration_type']" />
+                      1st
+                    </label>
+                    <label class="alv-seg__btn" [class.is-active]="obj['to_duration_type']==='second_half'">
+                      <input type="radio" name="toDuration" value="second_half"
+                        [(ngModel)]="obj['to_duration_type']" />
+                      2nd
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-md-4 col-xl-3" *ngIf="updateFlag">
+              <label class="form-label alv-label">Status</label>
+              <ng-select class="alv-select" [items]="editStatusList" bindLabel="label" bindValue="value"
+                [(ngModel)]="obj['status']" [multiple]="false" placeholder="Select Status"
+                name="editStatus" [clearable]="false">
+              </ng-select>
+            </div>
+
+            <div class="col-12" [ngClass]="updateFlag ? 'col-md-8 col-xl-9' : ''">
+              <label class="form-label alv-label">Reason</label>
+              <textarea class="form-control alv-input" rows="3" name="reason"
+                [(ngModel)]="obj['reason']" #reasonRef="ngModel"
+                placeholder="Brief reason for leave"></textarea>
               <small class="text-danger" *ngIf="reasonRef.invalid && reasonRef.touched">
-                Reason Is Required
+                Reason is required
               </small>
             </div>
           </div>
-          <div class="row">
-            <div class="col-md-12 mt-2">
-              <button *ngIf="createFlag && updateFlag == false" type="button"
-                class="btn btn-sm btn-primary waves-effect waves-light" (click)="onSubmit()">
-                Submit
-              </button>
-            </div>
+
+          <div class="alv-actions mt-4">
+            <button *ngIf="createFlag && !updateFlag" type="button"
+              class="btn btn-primary" (click)="onSubmit()">
+              Submit
+            </button>
+            <button *ngIf="createFlag && updateFlag" type="button"
+              class="btn btn-primary" (click)="onSubmit()">
+              Update Leave
+            </button>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="row mb-6" *ngIf="!createFlag && !fromDashboard">
-    <div class="col-md">
-
-      <div class="card">
-        <h5 class="card-header d-flex justify-content-between align-items-center">
-          <span>Filter Apply Leave</span>
-          <button *ngIf="createFlag == false" type="button" class="btn btn-xs btn-primary float-end"
+  <div class="row mb-4" *ngIf="!createFlag && !fromDashboard">
+    <div class="col-12">
+      <div class="card alv-card border-0 shadow-sm">
+        <div class="card-header alv-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <h5 class="alv-card-title mb-0">Filter Apply Leave</h5>
+          <button *ngIf="createFlag == false" type="button" class="btn btn-sm btn-primary"
             (click)="opencreate()">
-            <i class="fa-solid fa-plus"></i>&nbsp;Add
+            <i class="fa-solid fa-plus me-1"></i>Add
           </button>
-        </h5>
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-3">
-              <label for="defaultFormControlInput" class="form-label">Select Employee</label>
-              <ng-select [items]="EmpList" bindLabel="label" bindValue="value" [(ngModel)]="obj['emp_id']"
-                [multiple]="false" placeholder="Select Employee" name="state" id="select2Danger" required
-                #enCashableRef="ngModel">
+        </div>
+        <div class="card-body alv-card-body">
+          <div class="row g-3 alv-filter-row">
+            <div class="col-12 col-md-6 col-xl">
+              <label class="form-label alv-label">Select Employee</label>
+              <ng-select class="alv-select" [items]="EmpList" bindLabel="label" bindValue="value"
+                [(ngModel)]="obj['emp_id']" [multiple]="false" placeholder="Select Employee"
+                name="filterEmp" [searchable]="true">
               </ng-select>
             </div>
-            <div class="col-3">
-              <label for="defaultFormControlInput" class="form-label">Select Leave Type</label>
-              <ng-select [items]="leaveTypeList" bindLabel="label" bindValue="value" [(ngModel)]="obj['leave_type_id']"
-                [multiple]="false" placeholder="Select Leave Type" name="state" id="select2Danger" required
-                #leaveTypeFilterRef="ngModel">
-              </ng-select>
-
-            </div>
-
-
-            <div class="col-3">
-              <label for="defaultFormControlInput" class="form-label">Select Year
-                <span style="color: red">*</span>
-              </label>
-              <ng-select [items]="yearList" bindLabel="label" bindValue="value" [(ngModel)]="obj['year']"
-                [multiple]="false" placeholder="Select Year" name="state" id="select2Danger" class="w-100 mx-2" required
-                #enCashableRef="ngModel">
+            <div class="col-12 col-md-6 col-xl">
+              <label class="form-label alv-label">Select Leave Type</label>
+              <ng-select class="alv-select" [items]="leaveTypeList" bindLabel="label" bindValue="value"
+                [(ngModel)]="obj['leave_type_id']" [multiple]="false" placeholder="Select Leave Type"
+                name="filterLeaveType">
               </ng-select>
             </div>
-
-            <div class="col-3">
-              <label for="defaultFormControlInput" class="form-label">Select Month
-                <span style="color: red"> * </span>
-              </label>
-              <ng-select [items]="monthList" bindLabel="label" bindValue="value" [(ngModel)]="obj['month']"
-                [multiple]="false" placeholder="Select Month" name="state" id="select2Danger" required
-                #enCashableRef="ngModel">
+            <div class="col-12 col-md-6 col-xl">
+              <label class="form-label alv-label">Select Year</label>
+              <ng-select class="alv-select" [items]="yearList" bindLabel="label" bindValue="value"
+                [(ngModel)]="obj['year']" [multiple]="false" [clearable]="true"
+                placeholder="All Years" name="filterYear">
               </ng-select>
             </div>
-
-            <div class="col-3">
-              <label for="defaultFormControlInput" class="form-label">Select Status
-                <span style="color: red"> * </span>
-              </label>
-              <ng-select [items]="leaveStatus" bindLabel="label" bindValue="value" [(ngModel)]="obj['status']"
-                [multiple]="false" placeholder="Select Status" name="state" id="select2Danger" required
-                #enCashableRef="ngModel">
+            <div class="col-12 col-md-6 col-xl alv-month-col">
+              <label class="form-label alv-label">Select Month</label>
+              <ng-select class="alv-select alv-select--month" [items]="monthList" bindLabel="label" bindValue="value"
+                [(ngModel)]="obj['month']" [multiple]="false" [clearable]="true"
+                placeholder="All Months" name="filterMonth"
+                [searchable]="false" [dropdownPosition]="'bottom'">
               </ng-select>
             </div>
-
+            <div class="col-12 col-md-6 col-xl">
+              <label class="form-label alv-label">Select Status</label>
+              <ng-select class="alv-select" [items]="leaveStatus" bindLabel="label" bindValue="value"
+                [(ngModel)]="obj['status']" [multiple]="false" [clearable]="true"
+                placeholder="All Status" name="filterStatus">
+              </ng-select>
+            </div>
           </div>
-          <div class="row mt-2">
-            <div class="col-12 justify-content-center">
-              <button type="button" class="btn btn-sm btn-primary waves-effect waves-light" (click)="getApplyLeaveList()">
-                Submit
-              </button>
-            </div>
+          <div class="alv-actions mt-3">
+            <button type="button" class="btn btn-sm btn-primary" (click)="getApplyLeaveList()">
+              Submit
+            </button>
           </div>
         </div>
       </div>
-
     </div>
   </div>
 
-  <div class="row mb-6">
-    <div class="col-md">
-      <div class="card">
-        <h5 class="card-header d-flex justify-content-between align-items-center">
-          <span>
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card alv-card border-0 shadow-sm">
+        <div class="card-header alv-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <h5 class="alv-card-title mb-0">
             Apply Leave List
-            <span *ngIf="fromDashboard && !emergencyOnly" class="badge" style="background-color: #fcc479;">On Leave Today</span>
+            <span *ngIf="fromDashboard && !emergencyOnly" class="badge ms-2" style="background-color: #fcc479;">On Leave Today</span>
             <span *ngIf="fromDashboard && emergencyOnly" class="badge bg-danger text-white ms-2">Emergency Leave Today</span>
-          </span>
-          <!-- <button *ngIf="createFlag == false" type="button" class="btn btn-xs btn-primary float-end"
-            (click)="opencreate()">
-            <i class="fa-solid fa-plus"></i>&nbsp;Add
-          </button> -->
-        </h5>
-
-        <!-- <app-search-pagination
-          [totalItems]="applyLeaveList.length"
-          [pageSize]="itemsPerPage"
-          [currentPage]="currentPage"
-          (search)="onSearch($event)"
-          (pageChange)="onPageChange($event)"
-          (pageSizeChange)="onPageSizeChange($event)"
-        > -->
+          </h5>
+        </div>
 
         <app-search-pagination [totalItems]="applyLeaveList.length" [pageSize]="itemsPerPage"
           [currentPage]="currentPage" (search)="onSearch($event)" (pageChange)="onPageChange($event)"
           (pageSizeChange)="onPageSizeChange($event)">
 
           <div class="table-responsive">
-            <table class="table dataTable">
+            <table class="table dataTable alv-table mb-0">
               <thead>
                 <tr>
                   <th>SI.No</th>
@@ -239,8 +235,9 @@
                   <th>From Date</th>
                   <th>To Date</th>
                   <th>Days</th>
-                  <th>Duration Type</th>
-                  <th style="width: 25%;">Reason</th>
+                  <th>From Duration</th>
+                  <th>To Duration</th>
+                  <th style="width: 20%;">Reason</th>
                   <th>Status</th>
                   <th>createdAt</th>
                   <th>Actions</th>
@@ -249,107 +246,48 @@
               <tbody class="table-border-bottom-0">
                 <tr *ngFor="let item of filteredDesignation; let i = index">
                   <th scope="row">{{ i + 1 }}</th>
-                  <td>{{ item["employeeName"] }}
+                  <td>
+                    {{ item["employeeName"] }}
                     <br />
-                    <span class="badge rounded-pill bg-label-primary">
-                      {{item["employeeEmail"]}}
-                    </span>
+                    <span class="badge rounded-pill bg-label-primary">{{ item["employeeEmail"] }}</span>
                   </td>
-                  <td>{{ item["leaveName"] }}
-
-                    <span class="badge rounded-pill bg-label-primary">
-                      {{item["leaveCode"]}}
-                    </span>
+                  <td>
+                    {{ item["leaveName"] }}
+                    <span class="badge rounded-pill bg-label-primary">{{ item["leaveCode"] }}</span>
                   </td>
                   <td>{{ item["fromDate"] }}</td>
                   <td>{{ item["toDate"] }}</td>
                   <td>{{ item["days"] }}</td>
                   <td>{{ item["duration_type_name"] }}</td>
+                  <td>{{ item["to_duration_type_name"] || item["duration_type_name"] }}</td>
                   <td>{{ item["reason"] }}</td>
                   <td>
                     <span class="badge" [ngClass]="getStatusClass(item['status'])">{{ item["status"] }}</span>
                   </td>
-
-                  <td>{{ item["createdAt"] | date: 'short'  }}</td>
-
-                <td>
-                  <ng-container *ngIf="!['approved','rejected','self_declined'].includes(item.status)">
-                    <button type="button" class="leave-icon-btn leave-icon-btn--approve"
-                      (click)="statuschange(item,'approved')" title="Approve">
-                      <i class="ri ri-check-line"></i>
-                    </button>
-                    &nbsp;
+                  <td>{{ item["createdAt"] | date: 'short' }}</td>
+                  <td class="alv-actions-cell">
                     <button *ngIf="['pending','recommended'].includes(item.status)" type="button"
-                      class="leave-icon-btn leave-icon-btn--reject"
-                      (click)="statuschange(item,'rejected')" title="Reject">
-                      <i class="ri ri-close-line"></i>
+                      class="leave-icon-btn leave-icon-btn--edit"
+                      (click)="openEdit(item)" title="Edit">
+                      <i class="ri ri-pencil-line"></i>
                     </button>
-                  </ng-container>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                    <ng-container *ngIf="!['approved','rejected','self_declined'].includes(item.status)">
+                      <button type="button" class="leave-icon-btn leave-icon-btn--approve"
+                        (click)="statuschange(item,'approved')" title="Approve">
+                        <i class="ri ri-check-line"></i>
+                      </button>
+                      <button *ngIf="['pending','recommended'].includes(item.status)" type="button"
+                        class="leave-icon-btn leave-icon-btn--reject"
+                        (click)="statuschange(item,'rejected')" title="Reject">
+                        <i class="ri ri-close-line"></i>
+                      </button>
+                    </ng-container>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </app-search-pagination>
-
-        <!-- <div class="table-responsive text-nowrap">
-          <table class="table table-hover">
-            <thead>
-              <tr>
-                <th>SI.No</th>
-                <th>Employee Name</th>
-                <th>Leave Type</th>
-                <th>From Date</th>
-                <th>To Date</th>
-                <th>Days</th>
-                <th>Duration Type</th>
-                <th>Reason</th>
-                <th>Status</th>
-                <th>createdAt</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody class="table-border-bottom-0">
-              <tr *ngFor="let item of applyLeaveList; let i = index">
-                <th scope="row">{{ i + 1 }}</th>
-                <td>{{ item["employeeName"] }}
-                    <br />
-                  <span class="badge rounded-pill bg-label-primary">
-                    {{item["employeeEmail"]}}
-                  </span>
-                </td>
-                <td>{{ item["leaveName"] }}
-                  <br>
-                      <span class="badge rounded-pill bg-label-primary">
-                    {{item["leaveCode"]}}
-                  </span>
-                </td>
-                <td>{{ item["fromDate"] }}</td>
-                <td>{{ item["toDate"] }}</td>
-                <td>{{ item["days"] }}</td>
-                <td>{{ item["duration_type_name"] }}</td>
-                <td>{{ item["reason"] }}</td>
-                <td>{{ item["status"] }}</td>
-
-                <td>{{ item["createdAt"] }}</td>
-
-                <td>
-                  <button type="button" class="btn btn-outline-success btn-sm" *ngIf="item.status=='pending'" (click)="statuschange(item,'approved')" >
-                    <i class="fas fa-check"></i>
-                  </button>
-                  &nbsp;
-                  <button  *ngIf="item.status=='pending'"
-                    type="button"
-                    class="btn btn-sm btn-outline-danger"
-                    (click)="statuschange(item,'rejected')"
-                  >
-                    <i class="fas fa-trash-alt"></i>
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div> -->
       </div>
     </div>
   </div>

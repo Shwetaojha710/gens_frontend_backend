@@ -2,6 +2,28 @@
   display: block;
 }
 
+.dt-paging .pagination {
+  gap: 0.2rem;
+  justify-content: flex-end;
+}
+
+.dt-paging .page-link {
+  min-width: 2rem;
+  text-align: center;
+  cursor: pointer;
+  border-radius: 0.375rem !important;
+}
+
+.dt-paging .page-item.sp-ellipsis .page-link {
+  cursor: default;
+  pointer-events: none;
+  border: none;
+  background: transparent;
+  min-width: 1.25rem;
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
+
 /* Dark theme — search + page-size values must stay readable */
 :host-context(html.dark) .dt-length,
 :host-context(html.dark) .dt-search,

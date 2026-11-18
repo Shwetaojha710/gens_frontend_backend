@@ -199,6 +199,9 @@ export class MasterService {
   ApplyLeave(dept: any): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}apply-leave`, dept);
   }
+  UpdateAppliedLeave(dept: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}update-applied-leave`, dept);
+  }
   UpdateApplyLeaveStatus(dept: any): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}update-apply-leave-status`, dept);
   }

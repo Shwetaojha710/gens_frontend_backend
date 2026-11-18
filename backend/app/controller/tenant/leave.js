@@ -806,6 +806,7 @@ exports.applyForLeave = async (req, res) => {
     toDate,
     reason,
     duration_type = "full",
+    to_duration_type = "full",
   } = req.body;
 
   const tenantId = req.users?.tenantId;
@@ -978,14 +979,36 @@ exports.applyForLeave = async (req, res) => {
 
     const savedLeaves = [];
 
-    for (const period of leavePeriods) {
+    for (let periodIndex = 0; periodIndex < leavePeriods.length; periodIndex++) {
+      const period = leavePeriods[periodIndex];
       let days = 0;
+      // First segment uses from duration; last segment uses to duration
+      const periodFromDur =
+        periodIndex === 0 ? duration_type || "full" : "full";
+      const periodToDur =
+        periodIndex === leavePeriods.length - 1
+          ? to_duration_type || duration_type || "full"
+          : "full";
 
       if (period.fromDate || period.toDate) {
-        days = moment(period.toDate).diff(moment(period.fromDate), "days") + 1;
-        if (duration_type == "first_half" || duration_type == "second_half") {
-          days = 0.5;
+        const startIso = period.fromDate || period.toDate;
+        const endIso = period.toDate || period.fromDate;
+        days = moment(endIso).diff(moment(startIso), "days") + 1;
+
+        if (startIso === endIso) {
+          days = periodFromDur === "full" ? 1 : 0.5;
+        } else {
+          if (
+            periodFromDur === "first_half" ||
+            periodFromDur === "second_half"
+          ) {
+            days -= 0.5;
+          }
+          if (periodToDur === "first_half" || periodToDur === "second_half") {
+            days -= 0.5;
+          }
         }
+        days = Math.max(0, days);
       }
 
       const existsLeave = await leave_application.findOne({
@@ -1007,7 +1030,8 @@ exports.applyForLeave = async (req, res) => {
         leaveTypeId,
         fromDate: period.fromDate,
         toDate: period.toDate,
-        duration_type,
+        duration_type: periodFromDur,
+        to_duration_type: periodToDur,
         days,
         reason,
         tenantId,
@@ -1391,19 +1415,51 @@ exports.getAppliedLeaves = async (req, res) => {
       whereClause.toDate = { [Op.gte]: today };
       whereClause.status = { [Op.in]: ["pending", "approved"] };
     } else {
-      if (!year) {
-        year = new Date().getFullYear();
+      // ng-select may send { value, label } object — normalize
+      if (year && typeof year === "object") year = year.value ?? year.label;
+      if (month && typeof month === "object") month = month.value ?? month.label;
+
+      const hasYear =
+        year != null && year !== "" && year !== "All" && year !== undefined;
+      const hasMonth =
+        month != null && month !== "" && month !== "All" && month !== undefined;
+      const hasEmp = emp_id && emp_id !== "All";
+      const hasLeaveType = !!leave_type_id;
+      const hasStatus = !!status;
+      const hasAnyUpperFilter = !!(hasEmp || hasLeaveType || hasStatus);
+
+      const dateFilters = [];
+      if (hasYear) {
+        dateFilters.push(
+          where(fn("EXTRACT", literal('YEAR FROM "fromDate"')), Number(year)),
+        );
       }
-      if (!month) {
-        month = new Date().getMonth() + 1;
+      if (hasMonth) {
+        dateFilters.push(
+          where(fn("EXTRACT", literal('MONTH FROM "fromDate"')), Number(month)),
+        );
       }
-      //  Year & Month filter using fromDate
-      if (year && month) {
+
+      if (dateFilters.length) {
+        // Explicit year and/or month selected
+        whereClause[Op.and] = dateFilters;
+      } else if (hasAnyUpperFilter) {
+        // Employee / Leave Type / Status selected, year+month blank → all years & months
+      } else {
+        // All upper filters empty and no year/month → current year + current month
+        const now = new Date();
         whereClause[Op.and] = [
-          where(fn("EXTRACT", literal('YEAR FROM "fromDate"')), year),
-          where(fn("EXTRACT", literal('MONTH FROM "fromDate"')), month),
+          where(
+            fn("EXTRACT", literal('YEAR FROM "fromDate"')),
+            now.getFullYear(),
+          ),
+          where(
+            fn("EXTRACT", literal('MONTH FROM "fromDate"')),
+            now.getMonth() + 1,
+          ),
         ];
       }
+
       if (status) {
         whereClause.status = status;
       }
@@ -1455,12 +1511,169 @@ exports.getAppliedLeaves = async (req, res) => {
           : r.duration_type === "first_half"
             ? "First Half"
             : "Second Half",
+      to_duration_type_name:
+        r.to_duration_type === "full"
+          ? "Full Day"
+          : r.to_duration_type === "first_half"
+            ? "First Half"
+            : r.to_duration_type === "second_half"
+              ? "Second Half"
+              : r.duration_type === "full"
+                ? "Full Day"
+                : r.duration_type === "first_half"
+                  ? "First Half"
+                  : "Second Half",
     }));
 
     return Helper.response(true, "Applied leaves fetched", final, res, 200);
   } catch (error) {
     console.error(error);
     return Helper.response(false, error.message, [], res, 500);
+  }
+};
+
+/** Recalculate leave days from dates + half-day flags (same rules as apply / app API). */
+function calcAppliedLeaveDays(fromDate, toDate, duration_type, to_duration_type) {
+  const startIso = fromDate || toDate;
+  const endIso = toDate || fromDate;
+  if (!startIso || !endIso) return 0;
+  let days = moment(endIso).diff(moment(startIso), "days") + 1;
+  const fromDur = duration_type || "full";
+  const toDur = to_duration_type || fromDur;
+  if (startIso === endIso) {
+    return fromDur === "full" ? 1 : 0.5;
+  }
+  if (fromDur === "first_half" || fromDur === "second_half") days -= 0.5;
+  if (toDur === "first_half" || toDur === "second_half") days -= 0.5;
+  return Math.max(0, days);
+}
+
+/**
+ * Edit an applied leave (dates / duration / type / reason).
+ * Writes LEAVE_EDIT audit with oldValue + newValue.
+ */
+exports.updateAppliedLeave = async (req, res) => {
+  const {
+    id,
+    employeeId,
+    leaveTypeId,
+    fromDate,
+    toDate,
+    reason,
+    status,
+    duration_type = "full",
+    to_duration_type = "full",
+  } = req.body;
+
+  const tenantId = req.users?.tenantId;
+  const branchId = req.users && req.users.branchId;
+  const updatedBy = req.users?.id;
+
+  if (!id || !employeeId || !leaveTypeId || !tenantId) {
+    return Helper.response(false, "Required fields missing", [], res, 200);
+  }
+  if (!branchId || branchId == "null") {
+    return Helper.response(false, "branchId is required!", {}, res, 200);
+  }
+  if (!fromDate || !toDate) {
+    return Helper.response(false, "Leave From and Leave To are required", [], res, 200);
+  }
+  if (moment(toDate).isBefore(moment(fromDate), "day")) {
+    return Helper.response(false, "Leave To cannot be before Leave From", [], res, 200);
+  }
+
+  const allowedStatuses = ["pending", "recommended", "approved", "rejected"];
+  const nextStatus = String(status || "").toLowerCase();
+  if (status && !allowedStatuses.includes(nextStatus)) {
+    return Helper.response(false, "Invalid leave status", [], res, 200);
+  }
+
+  try {
+    const existingLeave = await leave_application.findOne({
+      where: { id, tenantId, branchId },
+    });
+    if (!existingLeave) {
+      return Helper.response(false, "Leave application not found", [], res, 200);
+    }
+
+    const currentStatus = String(existingLeave.status || "").toLowerCase();
+    if (!["pending", "recommended"].includes(currentStatus)) {
+      return Helper.response(
+        false,
+        `Only pending/recommended leaves can be edited (current: ${existingLeave.status})`,
+        [],
+        res,
+        200,
+      );
+    }
+
+    const leaveType = await leaveMaster.findOne({
+      where: { id: leaveTypeId, tenantId, branchId },
+      raw: true,
+    });
+    if (!leaveType) {
+      return Helper.response(false, "Invalid leave type for this branch", [], res, 200);
+    }
+
+    let fromDur = duration_type || "full";
+    let toDur = to_duration_type || fromDur;
+    if (fromDate === toDate) {
+      toDur = fromDur;
+    }
+
+    const days = calcAppliedLeaveDays(fromDate, toDate, fromDur, toDur);
+    const oldLeave = toPlain(existingLeave);
+
+    existingLeave.employeeId = employeeId;
+    existingLeave.leaveTypeId = leaveTypeId;
+    existingLeave.fromDate = fromDate;
+    existingLeave.toDate = toDate;
+    existingLeave.duration_type = fromDur;
+    existingLeave.to_duration_type = toDur;
+    existingLeave.days = days;
+    existingLeave.reason = reason || null;
+    existingLeave.updatedBy = updatedBy;
+
+    if (nextStatus) {
+      existingLeave.status = nextStatus;
+      if (nextStatus === "approved") {
+        existingLeave.approverId = updatedBy;
+      }
+      if (nextStatus === "rejected") {
+        existingLeave.canceledId = updatedBy;
+      }
+      if (nextStatus === "recommended") {
+        existingLeave.recommendedId = updatedBy;
+      }
+    }
+
+    await existingLeave.save();
+
+    const statusNote =
+      nextStatus && nextStatus !== currentStatus
+        ? `, status ${currentStatus} → ${nextStatus}`
+        : "";
+
+    await writeAudit({
+      req,
+      actionType: "LEAVE_EDIT",
+      referenceId: existingLeave.id,
+      employeeId: existingLeave.employeeId,
+      oldValue: oldLeave,
+      newValue: existingLeave,
+      remarks: `Leave edited (${leaveType.leaveName}/${leaveType.leaveCode}) — ${days} day(s)${statusNote}`,
+    });
+
+    return Helper.response(
+      true,
+      "Leave updated successfully.",
+      existingLeave,
+      res,
+      200,
+    );
+  } catch (error) {
+    console.error("Error updating applied leave:", error);
+    return Helper.response(false, error?.message || "Failed to update leave", [], res, 500);
   }
 };
 

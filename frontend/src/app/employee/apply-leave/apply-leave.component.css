@@ -42,3 +42,362 @@
   border-color: #dc2626;
   box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
 }
+
+.leave-icon-btn--edit {
+  background: #e0f2fe;
+  color: #0369a1;
+  border-color: #7dd3fc;
+}
+
+.leave-icon-btn--edit:hover {
+  background: #0284c7;
+  color: #fff;
+  border-color: #0284c7;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+}
+
+.alv-actions-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.alv-card {
+  background: #fff;
+  border-radius: 14px;
+  overflow: visible;
+}
+
+.alv-card-header {
+  background: #fff;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  padding: 1rem 1.25rem;
+}
+
+.alv-card-title {
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.alv-card-sub {
+  margin-top: 0.2rem;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.alv-card-body {
+  padding: 1.25rem;
+  overflow: visible;
+}
+
+.alv-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 0.35rem;
+}
+
+.alv-hint {
+  font-weight: 500;
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+.alv-input {
+  height: 42px !important;
+  min-height: 42px;
+  border-radius: 10px;
+  border-color: #cbd5e1;
+  color: #0f172a;
+  background: #fff;
+}
+
+textarea.alv-input {
+  height: auto !important;
+  min-height: 96px;
+}
+
+.alv-input:focus {
+  border-color: #00b4a6;
+  box-shadow: 0 0 0 0.2rem rgba(0, 180, 166, 0.15);
+}
+
+.alv-days-pill {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  width: 100%;
+  padding: 0.45rem 0.9rem;
+  border-radius: 10px;
+  border: 1.5px solid rgba(0, 180, 166, 0.35);
+  background: rgba(0, 180, 166, 0.08);
+  color: #0f766e;
+  font-weight: 800;
+  font-size: 0.98rem;
+  letter-spacing: -0.01em;
+}
+
+.alv-date-duration-row .alv-input {
+  height: 38px !important;
+  min-height: 38px;
+}
+
+/* Segmented duration control — compact */
+.alv-seg {
+  display: inline-flex;
+  width: auto;
+  max-width: 100%;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  min-height: 34px;
+}
+
+.alv-seg--row {
+  display: flex;
+  width: 100%;
+  min-height: 38px;
+}
+
+.alv-seg--row .alv-seg__btn {
+  flex: 1 1 0;
+  padding: 0.35rem 0.25rem;
+  font-size: 0.7rem;
+}
+
+.alv-seg__btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0.35rem 0.65rem;
+  border: 0;
+  border-right: 1px solid #e2e8f0;
+  background: transparent;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 650;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s, color 0.15s;
+  text-align: center;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.alv-seg__btn:last-child {
+  border-right: 0;
+}
+
+.alv-seg__btn input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.alv-seg__btn.is-active,
+.alv-seg__btn:has(input:checked) {
+  background: #00b4a6;
+  color: #fff;
+}
+
+.alv-seg__btn:hover:not(.is-active):not(:has(input:checked)) {
+  background: rgba(0, 180, 166, 0.08);
+  color: #0f766e;
+}
+
+.alv-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+:host ::ng-deep .alv-select .ng-select-container {
+  min-height: 42px !important;
+  border-radius: 10px !important;
+  border-color: #cbd5e1 !important;
+  background: #fff !important;
+}
+
+:host ::ng-deep .alv-select.ng-select-opened > .ng-select-container {
+  min-height: 42px !important;
+  height: 42px !important;
+}
+
+.alv-filter-row {
+  overflow: visible;
+  position: relative;
+  z-index: 2;
+}
+
+.alv-month-col {
+  position: relative;
+  z-index: 5;
+}
+
+/* Keep month/year panel under the field, not stretching the card */
+:host ::ng-deep .alv-select .ng-dropdown-panel {
+  position: absolute !important;
+  z-index: 20 !important;
+  width: 100% !important;
+  margin-top: 2px;
+  border-radius: 10px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+}
+
+:host ::ng-deep .alv-select .ng-dropdown-panel .ng-dropdown-panel-items {
+  max-height: 220px !important;
+}
+
+:host ::ng-deep .alv-select.ng-select-opened {
+  z-index: 6;
+}
+
+:host ::ng-deep .alv-select.ng-select-focused:not(.ng-select-opened) > .ng-select-container {
+  border-color: #00b4a6 !important;
+  box-shadow: 0 0 0 0.2rem rgba(0, 180, 166, 0.15) !important;
+}
+
+:host ::ng-deep .alv-select .ng-placeholder {
+  color: #94a3b8 !important;
+}
+
+:host ::ng-deep .alv-select .ng-value-label,
+:host ::ng-deep .alv-select .ng-input > input {
+  color: #0f172a !important;
+}
+
+/* ── Dark theme ───────────────────────────────────────────────────────────── */
+:host-context(html.dark) .alv-card,
+:host-context(html.dark-style) .alv-card,
+:host-context([data-bs-theme='dark']) .alv-card {
+  background: #1e293b !important;
+  border-color: rgba(148, 163, 184, 0.14) !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35) !important;
+}
+
+:host-context(html.dark) .alv-card-header,
+:host-context(html.dark-style) .alv-card-header,
+:host-context([data-bs-theme='dark']) .alv-card-header {
+  background: #0f172a !important;
+  border-bottom-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+:host-context(html.dark) .alv-card-title,
+:host-context(html.dark-style) .alv-card-title,
+:host-context([data-bs-theme='dark']) .alv-card-title {
+  color: #f1f5f9 !important;
+}
+
+:host-context(html.dark) .alv-card-sub,
+:host-context(html.dark-style) .alv-card-sub,
+:host-context([data-bs-theme='dark']) .alv-card-sub,
+:host-context(html.dark) .alv-hint,
+:host-context(html.dark-style) .alv-hint,
+:host-context([data-bs-theme='dark']) .alv-hint {
+  color: #94a3b8 !important;
+}
+
+:host-context(html.dark) .alv-label,
+:host-context(html.dark-style) .alv-label,
+:host-context([data-bs-theme='dark']) .alv-label {
+  color: #cbd5e1 !important;
+}
+
+:host-context(html.dark) .alv-input,
+:host-context(html.dark-style) .alv-input,
+:host-context([data-bs-theme='dark']) .alv-input {
+  background: #0f172a !important;
+  border-color: #475569 !important;
+  color: #f1f5f9 !important;
+  color-scheme: dark;
+}
+
+:host-context(html.dark) .alv-input::placeholder,
+:host-context(html.dark-style) .alv-input::placeholder,
+:host-context([data-bs-theme='dark']) .alv-input::placeholder {
+  color: #64748b !important;
+}
+
+:host-context(html.dark) .alv-days-pill,
+:host-context(html.dark-style) .alv-days-pill,
+:host-context([data-bs-theme='dark']) .alv-days-pill {
+  background: rgba(0, 180, 166, 0.14) !important;
+  border-color: rgba(0, 210, 180, 0.35) !important;
+  color: #5eead4 !important;
+}
+
+:host-context(html.dark) .alv-seg,
+:host-context(html.dark-style) .alv-seg,
+:host-context([data-bs-theme='dark']) .alv-seg {
+  background: #0f172a !important;
+  border-color: #475569 !important;
+}
+
+:host-context(html.dark) .alv-seg__btn,
+:host-context(html.dark-style) .alv-seg__btn,
+:host-context([data-bs-theme='dark']) .alv-seg__btn {
+  color: #cbd5e1 !important;
+  border-right-color: #334155 !important;
+}
+
+:host-context(html.dark) .alv-seg__btn.is-active,
+:host-context(html.dark-style) .alv-seg__btn.is-active,
+:host-context([data-bs-theme='dark']) .alv-seg__btn.is-active,
+:host-context(html.dark) .alv-seg__btn:has(input:checked),
+:host-context(html.dark-style) .alv-seg__btn:has(input:checked),
+:host-context([data-bs-theme='dark']) .alv-seg__btn:has(input:checked) {
+  background: #00b4a6 !important;
+  color: #fff !important;
+}
+
+:host-context(html.dark) .alv-seg__btn:hover:not(.is-active):not(:has(input:checked)),
+:host-context(html.dark-style) .alv-seg__btn:hover:not(.is-active):not(:has(input:checked)),
+:host-context([data-bs-theme='dark']) .alv-seg__btn:hover:not(.is-active):not(:has(input:checked)) {
+  background: rgba(0, 180, 166, 0.12) !important;
+  color: #5eead4 !important;
+}
+
+:host-context(html.dark) .alv-table thead th,
+:host-context(html.dark-style) .alv-table thead th,
+:host-context([data-bs-theme='dark']) .alv-table thead th {
+  background: rgba(0, 180, 166, 0.12) !important;
+  color: #cbd5e1 !important;
+  border-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+:host-context(html.dark) .alv-table tbody td,
+:host-context(html.dark-style) .alv-table tbody td,
+:host-context([data-bs-theme='dark']) .alv-table tbody td,
+:host-context(html.dark) .alv-table tbody th,
+:host-context(html.dark-style) .alv-table tbody th,
+:host-context([data-bs-theme='dark']) .alv-table tbody th {
+  color: #e2e8f0 !important;
+  border-color: rgba(148, 163, 184, 0.1) !important;
+}
+
+:host-context(html.dark) ::ng-deep .alv-select .ng-select-container,
+:host-context(html.dark-style) ::ng-deep .alv-select .ng-select-container,
+:host-context([data-bs-theme='dark']) ::ng-deep .alv-select .ng-select-container {
+  background: #0f172a !important;
+  border-color: #475569 !important;
+}
+
+:host-context(html.dark) ::ng-deep .alv-select .ng-value-label,
+:host-context(html.dark-style) ::ng-deep .alv-select .ng-value-label,
+:host-context([data-bs-theme='dark']) ::ng-deep .alv-select .ng-value-label,
+:host-context(html.dark) ::ng-deep .alv-select .ng-input > input,
+:host-context(html.dark-style) ::ng-deep .alv-select .ng-input > input,
+:host-context([data-bs-theme='dark']) ::ng-deep .alv-select .ng-input > input {
+  color: #f1f5f9 !important;
+}
+
+:host-context(html.dark) ::ng-deep .alv-select .ng-placeholder,
+:host-context(html.dark-style) ::ng-deep .alv-select .ng-placeholder,
+:host-context([data-bs-theme='dark']) ::ng-deep .alv-select .ng-placeholder {
+  color: #64748b !important;
+}

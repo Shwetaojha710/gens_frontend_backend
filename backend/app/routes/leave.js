@@ -13,6 +13,7 @@ const {
   getAppliedLeaves,
   getAppAppliedLeaves,
   updatedApplyLeaveStatus,
+  updateAppliedLeave,
   updateAssignedLeave,
   deleteAssignedLeave,
   generateCompOffLeave,
@@ -33,6 +34,7 @@ router.post("/get-leave-type-dd", Admin, getLeaveTypes);
 router.post("/get-leave-by-emp", Admin, getLeaveByEmployee);
 router.post("/get-leave-ledger", Admin, getLeaveLedger);
 router.post("/apply-leave", Admin, applyForLeave);
+router.post("/update-applied-leave", Admin, updateAppliedLeave);
 router.post("/update-apply-leave-status", Admin, updatedApplyLeaveStatus);
 router.post("/get-applied-leaves", Admin, getAppliedLeaves);
 router.post("/generate-comp-off-leave", Admin, generateCompOffLeave);

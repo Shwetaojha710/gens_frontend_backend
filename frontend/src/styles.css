@@ -1380,3 +1380,79 @@ html.dark-style .ng-select.ng-select-multiple .ng-select-container .ng-value-con
   -webkit-text-fill-color: #5eead4 !important;
 }
 
+/* ng-select dropdown (appendTo=body) — keep above cards, scrollable list */
+.ng-dropdown-panel {
+  z-index: 2000 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18) !important;
+}
+
+.ng-dropdown-panel .ng-dropdown-panel-items {
+  max-height: 240px !important;
+}
+
+/* Apply Leave form — dark theme fallback (beats encapsulation / core.css) */
+html.dark .alv-card,
+html.dark-style .alv-card,
+[data-bs-theme='dark'] .alv-card {
+  background: #1e293b !important;
+  background-color: #1e293b !important;
+}
+
+html.dark .alv-card-header,
+html.dark-style .alv-card-header,
+[data-bs-theme='dark'] .alv-card-header {
+  background: #0f172a !important;
+  border-bottom-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+html.dark .alv-card-title,
+html.dark-style .alv-card-title,
+[data-bs-theme='dark'] .alv-card-title {
+  color: #f1f5f9 !important;
+}
+
+html.dark .alv-label,
+html.dark-style .alv-label,
+[data-bs-theme='dark'] .alv-label {
+  color: #cbd5e1 !important;
+}
+
+html.dark .alv-input,
+html.dark-style .alv-input,
+[data-bs-theme='dark'] .alv-input {
+  background: #0f172a !important;
+  border-color: #475569 !important;
+  color: #f1f5f9 !important;
+  color-scheme: dark;
+}
+
+html.dark .alv-days-pill,
+html.dark-style .alv-days-pill,
+[data-bs-theme='dark'] .alv-days-pill {
+  background: rgba(0, 180, 166, 0.14) !important;
+  border-color: rgba(0, 210, 180, 0.35) !important;
+  color: #5eead4 !important;
+}
+
+html.dark .alv-seg,
+html.dark-style .alv-seg,
+[data-bs-theme='dark'] .alv-seg {
+  background: #0f172a !important;
+  border-color: #475569 !important;
+}
+
+html.dark .alv-seg__btn,
+html.dark-style .alv-seg__btn,
+[data-bs-theme='dark'] .alv-seg__btn {
+  color: #cbd5e1 !important;
+  border-right-color: #334155 !important;
+}
+
+html.dark .alv-seg__btn.is-active,
+html.dark-style .alv-seg__btn.is-active,
+[data-bs-theme='dark'] .alv-seg__btn.is-active {
+  background: #00b4a6 !important;
+  color: #fff !important;
+}
+

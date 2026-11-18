@@ -11,6 +11,26 @@ import { ValidationUtil } from '../../shared/utils/validation.util';
 import { SearchPaginationComponent } from '../../master/search-pagination/search-pagination.component';
 import { MessagingService } from '../../services/messaging.service';
 
+function calcLeaveDays(
+  fromIso: string,
+  toIso: string,
+  durationType: string,
+  toDurationType: string,
+): number {
+  if (!fromIso || !toIso) return 0;
+  const from = new Date(`${fromIso}T12:00:00`);
+  const to = new Date(`${toIso}T12:00:00`);
+  if (Number.isNaN(+from) || Number.isNaN(+to) || to < from) return 0;
+  const msDay = 86400000;
+  let days = Math.round((+to - +from) / msDay) + 1;
+  if (fromIso === toIso) {
+    return durationType === 'full' ? 1 : 0.5;
+  }
+  if (durationType === 'first_half' || durationType === 'second_half') days -= 0.5;
+  if (toDurationType === 'first_half' || toDurationType === 'second_half') days -= 0.5;
+  return Math.max(0, days);
+}
+
 @Component({
   selector: 'app-apply-leave',
   imports: [NgSelectModule,
@@ -18,25 +38,73 @@ import { MessagingService } from '../../services/messaging.service';
   templateUrl: './apply-leave.component.html',
   styleUrl: './apply-leave.component.css'
 })
-
 export class ApplyLeaveComponent {
-  obj: any = {}
+  obj: any = {
+    duration_type: 'full',
+    to_duration_type: 'full',
+  }
   notyf: Notyf;
 
-  back() {
-    this.obj = {}
-    this.createFlag = false
+  get isSingleLeaveDay(): boolean {
+    return !!this.obj?.['fromDate'] && !!this.obj?.['toDate'] && this.obj['fromDate'] === this.obj['toDate'];
+  }
 
+  get computedLeaveDays(): number {
+    return calcLeaveDays(
+      String(this.obj?.['fromDate'] || ''),
+      String(this.obj?.['toDate'] || ''),
+      String(this.obj?.['duration_type'] || 'full'),
+      String(this.obj?.['to_duration_type'] || 'full'),
+    );
+  }
+
+  get computedLeaveDaysLabel(): string {
+    if (!this.obj?.['fromDate'] || !this.obj?.['toDate']) return '—';
+    const d = this.computedLeaveDays;
+    if (d <= 0) return '—';
+    if (d === 0.5) return '0.5 day';
+    if (d === 1) return '1 day';
+    return `${d} days`;
+  }
+
+  onFromDateChange() {
+    if (this.obj?.['fromDate'] && this.obj?.['toDate'] && this.obj['toDate'] < this.obj['fromDate']) {
+      this.obj['toDate'] = this.obj['fromDate'];
+    }
+    this.syncHalfDayWhenSingle();
+  }
+
+  onToDateChange() {
+    this.syncHalfDayWhenSingle();
+  }
+
+  onFromDurationChange() {
+    this.syncHalfDayWhenSingle();
+  }
+
+  /** Single calendar day: keep both duration fields in sync for API. */
+  private syncHalfDayWhenSingle() {
+    if (!this.isSingleLeaveDay) return;
+    const d = this.obj?.['duration_type'] || 'full';
+    if (this.obj['to_duration_type'] !== d) {
+      this.obj['to_duration_type'] = d;
+    }
   }
   status: any = [{ value: 'active', label: 'ACTIVE' }, { value: 'inactive', label: 'INACTIVE' }]
   leaveStatus: any = [{ value: 'pending', label: 'Pending' },{ value: 'recommended', label: 'Recommended' },{ value: 'self_declined', label: 'Self Declined' }, { value: 'approved', label: 'Approved' }, { value: 'rejected', label: 'Rejected' }]
+  editStatusList: any = [
+    { value: 'pending', label: 'Pending' },
+    { value: 'recommended', label: 'Recommended' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'rejected', label: 'Rejected' },
+  ]
 
   // onSubmit() {
   //    console.log(this.obj)
   // }
   EmployeeForm!: FormGroup;
   EmployeeList = [];
-  editingId: number | null = null;
+  editingId: string | null = null;
   minDate: any
   fromDashboard = false;
   emergencyOnly = false;
@@ -95,9 +163,7 @@ export class ApplyLeaveComponent {
     await this.messagingService.initMessaging();
     const token = await this.messagingService.requestPermission();
     console.log('FCM Token after init:', token);
-          await this.getYear()
-    const year = new Date().getFullYear()
-   this.obj['year'] = this.yearList.find((item: any) => item.value == year);
+    await this.getYear()
   }
    async getYear() {
     this.yearList = []
@@ -308,10 +374,46 @@ export class ApplyLeaveComponent {
   }
 
   onSubmit() {
-    // if (!ValidationUtil.showRequiredError('Employment Type', this.obj.name, this.notyf)) {
-    //   return;
-    // }
-    // this.obj['employeeId']=
+    if (!this.obj?.['employeeId'] || !this.obj?.['leaveTypeId'] || !this.obj?.['fromDate'] || !this.obj?.['toDate']) {
+      this.notyf.error('Please fill Employee, Leave Type, From and To dates');
+      return;
+    }
+
+    this.syncHalfDayWhenSingle();
+
+    if (this.updateFlag && this.editingId) {
+      const payload = {
+        id: this.editingId,
+        employeeId: this.obj['employeeId'],
+        leaveTypeId: this.obj['leaveTypeId'],
+        fromDate: this.obj['fromDate'],
+        toDate: this.obj['toDate'],
+        duration_type: this.obj['duration_type'] || 'full',
+        to_duration_type: this.obj['to_duration_type'] || this.obj['duration_type'] || 'full',
+        reason: this.obj['reason'] || null,
+        status: this.obj['status'] || 'pending',
+      };
+      this.master.UpdateAppliedLeave(payload).subscribe({
+        next: (response: any) => {
+          const message = response.message ? response.message : 'Leave updated successfully';
+          const status = this.statusService.handleResponseStatus(response.status, message);
+          if (status === true) {
+            this.notyf.success(message);
+            this.getApplyLeaveList();
+            this.resetForm();
+          } else if (status === 'expired') {
+            this.router.navigate(['login']);
+          } else {
+            this.notyf.error(message);
+          }
+        },
+        error: (err) => {
+          console.error('Error:', err);
+          this.notyf.error(err.error?.message || 'Failed to update leave');
+        },
+      });
+      return;
+    }
 
     this.master.ApplyLeave(this.obj).subscribe({
       next: (response: any) => {
@@ -518,7 +620,8 @@ export class ApplyLeaveComponent {
 
   resetForm() {
     this.createFlag = false
-    this.obj = {}
+    this.updateFlag = false
+    this.obj = { duration_type: 'full', to_duration_type: 'full' }
     this.editingId = null;
   }
   isInvalid(field: string): boolean {
@@ -530,13 +633,39 @@ export class ApplyLeaveComponent {
   listflag: any = true
   updateFlag: any = false
   opencreate() {
-    this.obj = {}
+    this.obj = { duration_type: 'full', to_duration_type: 'full' }
     this.createFlag = true
     this.listflag = false
     this.updateFlag = false
+    this.editingId = null
   }
 
+  openEdit(item: any) {
+    if (!item?.id) return;
+    if (!['pending', 'recommended'].includes(String(item.status || '').toLowerCase())) {
+      this.notyf.error('Only pending/recommended leaves can be edited');
+      return;
+    }
+    this.editingId = item.id;
+    this.updateFlag = true;
+    this.createFlag = true;
+    this.listflag = false;
+    this.obj = {
+      employeeId: item.employeeId,
+      leaveTypeId: item.leaveTypeId,
+      fromDate: item.fromDate,
+      toDate: item.toDate || item.fromDate,
+      duration_type: item.duration_type || 'full',
+      to_duration_type: item.to_duration_type || item.duration_type || 'full',
+      reason: item.reason || '',
+      status: item.status || 'pending',
+    };
+    this.syncHalfDayWhenSingle();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 
-
+  back() {
+    this.resetForm();
+  }
 
 }
