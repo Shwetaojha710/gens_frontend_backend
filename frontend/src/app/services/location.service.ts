@@ -45,7 +45,7 @@ export class LocationService {
   async getAddressFromCoords(lat: any, lng: any): Promise<any> {
     try {
       const GOOGLE_API_KEY = this.API_KEY; // 🔐 move key to env
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_API_KEY}`;
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&language=en&key=${GOOGLE_API_KEY}`;
 
       const response = await fetch(url);
       const data = await response.json();
@@ -89,7 +89,7 @@ export class LocationService {
   async getAddressFromGlobalVTS(lat: any, lng: any): Promise<any> {
     try {
       const GOOGLE_API_KEY = this.API_KEY; // 🔐 move key to env
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_API_KEY}`;
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&language=en&key=${GOOGLE_API_KEY}`;
 
       const response = await fetch(url);
       const data = await response.json();

@@ -1709,7 +1709,7 @@ Helper.getAddressFromGlobalVTS = async (lat, lng) => {
 
     if (!lat || !lng) return null;
 
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_API_KEY}`;
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&language=en&key=${GOOGLE_API_KEY}`;
 
     const response = await fetch(url);
 

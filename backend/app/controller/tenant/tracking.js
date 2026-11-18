@@ -843,29 +843,9 @@ exports.getliveLocationHistory = async (req, res) => {
     if (!employeeId) {
       return Helper.response(false, "Employee Id is required", {}, res, 400);
     }
-    // const todayStart = new Date();
-    // todayStart.setHours(0, 0, 0, 0);
 
-    // const todayEnd = new Date();
-    // todayEnd.setHours(23, 59, 59, 999);
-
-    // start_date = start_date ? new Date(start_date) : todayStart;
-    // end_date = end_date ? new Date(end_date) : todayEnd;
-    let whereCondition = {
-      branchId,
-      employeeId,
-    };
-
-    // if (start_date && end_date) {
-    //   whereCondition.tracked_at = {
-    //     [Op.between]: [
-    //       start_date,
-    //       end_date,
-    //     ],
-    //   };
-    // }
-
-    const locations = await DeviceLocationLog.findAll({
+    // Prefer current position: latest point, plus a short recent trail (last 30 min, max 40 pts)
+    const latest = await DeviceLocationLog.findOne({
       attributes: [
         "latitude",
         "longitude",
@@ -877,17 +857,74 @@ exports.getliveLocationHistory = async (req, res) => {
         "device_id",
         "device_os",
         "mode",
+        "location_type",
       ],
-      where: whereCondition,
-      order: [["tracked_at", "ASC"]],
+      where: { branchId, employeeId },
+      order: [["tracked_at", "DESC"]],
       raw: true,
     });
 
-    if (locations.length == 0) {
-      return Helper.response(false, "No Data Found", {}, res, 200);
+    if (!latest) {
+      return Helper.response(
+        false,
+        "No live location found for this employee. Live tracking may be inactive or GPS is unavailable.",
+        [],
+        res,
+        200,
+      );
     }
 
-    const staticLocationData = locations.map((loc) => ({
+    const ageMs = Date.now() - new Date(latest.tracked_at).getTime();
+    const ageMins = Math.max(0, Math.round(ageMs / 60000));
+    // Go Live = recent GPS only. Older than 30 min ⇒ not considered active/live.
+    const LIVE_MAX_AGE_MINUTES = 30;
+
+    if (ageMins > LIVE_MAX_AGE_MINUTES) {
+      const ageLabel =
+        ageMins < 60
+          ? `${ageMins} minute(s)`
+          : ageMins < 1440
+            ? `${Math.round(ageMins / 60)} hour(s)`
+            : `${Math.round(ageMins / 1440)} day(s)`;
+      return Helper.response(
+        false,
+        `Live tracking is not active for this employee. Last GPS update was ${ageLabel} ago.`,
+        [],
+        res,
+        200,
+      );
+    }
+
+    const since = new Date(latest.tracked_at);
+    since.setMinutes(since.getMinutes() - 30);
+
+    const recent = await DeviceLocationLog.findAll({
+      attributes: [
+        "latitude",
+        "longitude",
+        "altitude",
+        "accuracy",
+        "heading",
+        "speed",
+        "tracked_at",
+        "device_id",
+        "device_os",
+        "mode",
+        "location_type",
+      ],
+      where: {
+        branchId,
+        employeeId,
+        tracked_at: { [Op.gte]: since },
+      },
+      order: [["tracked_at", "ASC"]],
+      limit: 40,
+      raw: true,
+    });
+
+    const rows = recent.length ? recent : [latest];
+
+    const staticLocationData = rows.map((loc) => ({
       coords: {
         latitude: Number(loc.latitude),
         longitude: Number(loc.longitude),
@@ -901,19 +938,18 @@ exports.getliveLocationHistory = async (req, res) => {
       mode: loc.mode || "foreground",
       Deviceid: loc.device_id || "unknown",
       deviceOs: loc.device_os || "A",
+      location_type: loc.location_type || "normal",
     }));
 
-    return Helper.response(
-      true,
-      "Employee location history",
+    const message =
+      ageMins <= 5
+        ? "Current live location fetched successfully."
+        : `Last known location fetched (updated ${ageMins} minute(s) ago).`;
 
-      staticLocationData, // 🔥 EXACT SAME FORMAT AS FRONTEND
-      res,
-      200,
-    );
+    return Helper.response(true, message, staticLocationData, res, 200);
   } catch (error) {
-    console.error("Location history error:", error);
-    return Helper.response(false, error.message, {}, res, 500);
+    console.error("Live location history error:", error);
+    return Helper.response(false, error.message || "Failed to fetch live location", [], res, 500);
   }
 };
 

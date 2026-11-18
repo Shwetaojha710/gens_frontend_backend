@@ -513,6 +513,50 @@
   animation: pulse-dot 1.2s ease-in-out infinite;
 }
 
+.live-banner {
+  margin: 0 0.75rem 0.5rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  line-height: 1.35;
+}
+
+.live-banner--ok {
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: #86efac;
+}
+
+.live-banner--warn {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+
+.sb-section--disabled {
+  opacity: 0.72;
+}
+
+.sb-section--disabled .btn-apply:disabled,
+.sb-section--disabled .form-ctrl:disabled {
+  cursor: not-allowed;
+}
+
+.tracking-root.tracking-light .live-banner--ok {
+  background: rgba(22, 163, 74, 0.1);
+  border-color: rgba(22, 163, 74, 0.3);
+  color: #15803d;
+}
+
+.tracking-root.tracking-light .live-banner--warn {
+  background: rgba(217, 119, 6, 0.1);
+  border-color: rgba(217, 119, 6, 0.3);
+  color: #b45309;
+}
+
 .btn-icon {
   width: 34px;
   height: 34px;

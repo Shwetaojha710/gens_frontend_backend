@@ -75,11 +75,12 @@ export class TrackingComponent implements OnInit, AfterViewInit, OnDestroy {
   // ── Tracking ──────────────────────────────────────────────────────────────
   isLiveTrackingEnabled:       boolean = false;
   liveTrackingInterval:        any     = null;
-  liveTrackingIntervalSeconds: number  = 30;
+  liveTrackingIntervalSeconds: number  = 15;
   currentTrackingUser:         any     = null;
   viewLiveTracking:            boolean = true;   // true = employee list
   viewLivePage:                boolean = false;  // true = live tracking page
   isLoading:                   boolean = false;
+  liveStatusMessage:           string  = '';
 
   // ── Data ──────────────────────────────────────────────────────────────────
   locationData:       LocationPoint[] = [];   // raw (used for timeline + stats)
@@ -415,7 +416,21 @@ export class TrackingComponent implements OnInit, AfterViewInit, OnDestroy {
     this.locationService.getLatestLocations(payload).subscribe({
       next: (res: any) => {
         this.isLoading = false;
-        if (!res?.data?.length) { this.cdr.markForCheck(); return; }
+        if (!res?.data?.length) {
+          this.locationData = [];
+          this.filteredLocations = [];
+          this.pinnedLocations = [];
+          this.normalLocations = [];
+          this.pinned = [];
+          this.pinnedLocationList = [];
+          this.resetTrackingStats();
+          this.liveStatusMessage = this.isLiveTrackingEnabled
+            ? 'No live location found for this employee. Live tracking may be inactive or GPS is unavailable.'
+            : 'No location data for this employee today. Choose a date range or press Go Live to track their current position.';
+          this.cdr.markForCheck();
+          return;
+        }
+        this.liveStatusMessage = '';
 
         // ── Step 1: sort by timestamp (once, reused everywhere) ──────────────
         const raw: LocationPoint[] = res.data.sort((a: any, b: any) => a.timestamp - b.timestamp);
@@ -839,8 +854,41 @@ export class TrackingComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // ─── Stats (single pass) ────────────────────────────────────────────────────
 
+  private resetTrackingStats(): void {
+    this.totalDistanceMeters = 0;
+    this.trackingDuration = '--:--';
+    this.avgSpeed = 0;
+    this.bestAccuracy = 0;
+    this.pinnedCount = 0;
+    this.staySummary = [];
+    this.totalStayMinutes = 0;
+  }
+
+  /** Clear map + counters so stale history does not remain after a failed live fetch. */
+  private clearLiveViewState(): void {
+    this.clearMap();
+    this.locationData = [];
+    this.filteredLocations = [];
+    this.pinnedLocations = [];
+    this.normalLocations = [];
+    this.pinned = [];
+    this.pinnedLocationList = [];
+    this.staySummary = [];
+    this.totalStayMinutes = 0;
+    this.selectedLocation = null;
+    this.filterType = 'all';
+    this.resetTrackingStats();
+  }
+
   private computeStats(sorted: LocationPoint[]): void {
-    if (sorted.length < 2) return;
+    if (sorted.length < 2) {
+      this.totalDistanceMeters = 0;
+      this.trackingDuration = '--:--';
+      this.avgSpeed = 0;
+      const a0 = sorted[0]?.coords?.accuracy;
+      this.bestAccuracy = a0 > 0 && a0 < 300 ? a0 : 0;
+      return;
+    }
     let dist = 0, speedSum = 0, speedCnt = 0, bestAcc = Infinity;
     for (let i = 1; i < sorted.length; i++) {
       dist += this.dist(sorted[i-1].coords.latitude, sorted[i-1].coords.longitude,
@@ -1031,17 +1079,91 @@ export class TrackingComponent implements OnInit, AfterViewInit, OnDestroy {
 
   startLiveTracking(): void {
     this.isLiveTrackingEnabled = true;
-    this.loadAndPlotData(this.currentTrackingUser);
+    this.liveStatusMessage = '';
+    this.loadLiveCurrentLocation(this.currentTrackingUser);
     this.liveTrackingInterval = setInterval(() => {
-      if (this.isLiveTrackingEnabled && this.currentTrackingUser) this.loadAndPlotData(this.currentTrackingUser);
+      if (this.isLiveTrackingEnabled && this.currentTrackingUser) {
+        this.loadLiveCurrentLocation(this.currentTrackingUser);
+      }
     }, this.liveTrackingIntervalSeconds * 1000);
     this.cdr.markForCheck();
   }
 
   stopLiveTracking(): void {
     this.isLiveTrackingEnabled = false;
-    if (this.liveTrackingInterval) { clearInterval(this.liveTrackingInterval); this.liveTrackingInterval = null; }
+    if (this.liveTrackingInterval) {
+      clearInterval(this.liveTrackingInterval);
+      this.liveTrackingInterval = null;
+    }
+    this.liveStatusMessage = '';
+    if (this.currentTrackingUser) {
+      this.loadAndPlotData(this.currentTrackingUser);
+    }
     this.cdr.markForCheck();
+  }
+
+  /** Go Live: fetch current / last-known position (not full-day history). */
+  loadLiveCurrentLocation(user: any): void {
+    if (!user) return;
+    this.isLoading = true;
+    this.clearLiveViewState();
+    this.cdr.markForCheck();
+
+    this.locationService.getLiveLatestLocations({ employeeId: user.id }).subscribe({
+      next: (res: any) => {
+        this.isLoading = false;
+        if (!res?.status || !res?.data?.length) {
+          this.clearLiveViewState();
+          this.liveStatusMessage =
+            res?.message ||
+            'No live location found for this employee. Live tracking may be inactive or GPS is unavailable.';
+          this.cdr.markForCheck();
+          return;
+        }
+
+        this.liveStatusMessage = typeof res.message === 'string' ? res.message : '';
+        const raw: LocationPoint[] = [...res.data].sort(
+          (a: any, b: any) => a.timestamp - b.timestamp,
+        );
+        const hardFiltered = this.hardFilterPoints(raw);
+        const pts = hardFiltered.length
+          ? this.clusterAndSimplify(hardFiltered, { radiusMeters: 80, windowSeconds: 60 })
+          : raw;
+
+        if (!pts.length) {
+          this.clearLiveViewState();
+          this.liveStatusMessage =
+            'GPS readings have poor accuracy. Waiting for a better live signal…';
+          this.cdr.markForCheck();
+          return;
+        }
+
+        this.computeStats(pts);
+        this.locationData = pts;
+        this.deriveLocations();
+        this.applyFilters();
+
+        this.ngZone.runOutsideAngular(() => {
+          this.renderLayers(pts, raw);
+          const latest = pts[pts.length - 1];
+          if (latest && this.map) {
+            this.map.setView(
+              [latest.coords.latitude, latest.coords.longitude],
+              17,
+              { animate: true },
+            );
+          }
+          this.ngZone.run(() => this.cdr.markForCheck());
+        });
+      },
+      error: () => {
+        this.isLoading = false;
+        this.clearLiveViewState();
+        this.liveStatusMessage =
+          'Failed to fetch live location. Please try again.';
+        this.cdr.markForCheck();
+      },
+    });
   }
 
   // ─── Date helpers ───────────────────────────────────────────────────────────
@@ -1058,6 +1180,15 @@ export class TrackingComponent implements OnInit, AfterViewInit, OnDestroy {
 
   DateWiseTracking(): void {
     if (this.currentTrackingUser) {
+      // Date filter is history mode — exit live first
+      if (this.isLiveTrackingEnabled) {
+        this.isLiveTrackingEnabled = false;
+        if (this.liveTrackingInterval) {
+          clearInterval(this.liveTrackingInterval);
+          this.liveTrackingInterval = null;
+        }
+        this.liveStatusMessage = '';
+      }
       Object.assign(this.currentTrackingUser, {
         start_date: this.obj['startDate'], end_date: this.obj['endDate'],
         start_time: this.obj['startTime'], end_time: this.obj['endTime']

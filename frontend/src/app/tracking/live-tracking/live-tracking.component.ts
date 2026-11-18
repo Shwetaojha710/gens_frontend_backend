@@ -202,21 +202,23 @@ export class LiveTrackingComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const payload = { employeeId: this.user.id };
 
-    this.locationService.getLatestLocations(payload).subscribe({
+    this.locationService.getLiveLatestLocations(payload).subscribe({
       next: (res: any) => {
         this.isLoading = false;
-        if (!res?.data?.length) {
-          this.errorMsg = 'No location data available for this employee.';
+        if (!res?.status || !res?.data?.length) {
+          this.errorMsg =
+            res?.message ||
+            'No live location found for this employee. Live tracking may be inactive or GPS is unavailable.';
           this.cdr.markForCheck();
           return;
         }
         this.errorMsg = '';
 
-        // Sort and clean
-        const sorted = res.data.sort((a: any, b: any) => a.timestamp - b.timestamp);
+        // Sort and clean — API returns current / recent trail only
+        const sorted = [...res.data].sort((a: any, b: any) => a.timestamp - b.timestamp);
         const cleaned = this.cleanPoints(sorted);
         if (!cleaned.length) {
-          this.errorMsg = 'All GPS readings had poor accuracy. Waiting for better signal…';
+          this.errorMsg = 'All GPS readings had poor accuracy. Waiting for a better live signal…';
           this.cdr.markForCheck();
           return;
         }
@@ -229,7 +231,7 @@ export class LiveTrackingComponent implements OnInit, AfterViewInit, OnDestroy {
       },
       error: () => {
         this.isLoading = false;
-        this.errorMsg = 'Failed to fetch location. Retrying…';
+        this.errorMsg = 'Failed to fetch live location. Retrying…';
         this.cdr.markForCheck();
       }
     });

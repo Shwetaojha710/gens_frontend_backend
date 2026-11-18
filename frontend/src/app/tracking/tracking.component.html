@@ -186,6 +186,12 @@
       </div>
     </div>
 
+    <div class="live-banner" *ngIf="isLiveTrackingEnabled && liveStatusMessage"
+      [class.live-banner--ok]="liveStatusMessage.toLowerCase().includes('successfully') || liveStatusMessage.toLowerCase().includes('updated')"
+      [class.live-banner--warn]="!(liveStatusMessage.toLowerCase().includes('successfully') || liveStatusMessage.toLowerCase().includes('updated'))">
+      <i class="fas fa-info-circle me-2"></i>{{ liveStatusMessage }}
+    </div>
+
     <!-- ── MAIN CONTENT ── -->
     <div class="tracking-body">
 
@@ -231,46 +237,58 @@
             </div>
 
             <!-- Contextual hint below chips -->
-            <div class="fc-hint" *ngIf="filterType==='all'">
+            <div class="fc-hint fc-hint-amber" *ngIf="isLiveTrackingEnabled">
+              <i class="fas fa-satellite-dish me-1"></i>
+              Live mode — showing current GPS only (not full history)
+            </div>
+            <div class="fc-hint" *ngIf="!isLiveTrackingEnabled && filterType==='all'">
               <i class="fas fa-info-circle me-1"></i>
               Showing full route — all track points &amp; pinned visits
             </div>
-            <div class="fc-hint fc-hint-blue" *ngIf="filterType==='normal'">
+            <div class="fc-hint fc-hint-blue" *ngIf="!isLiveTrackingEnabled && filterType==='normal'">
               <i class="fas fa-route me-1"></i>
               Showing normal GPS track points &amp; route only
             </div>
-            <div class="fc-hint fc-hint-amber" *ngIf="filterType==='pinned'">
+            <div class="fc-hint fc-hint-amber" *ngIf="!isLiveTrackingEnabled && filterType==='pinned'">
               <i class="fas fa-map-pin me-1"></i>
               Showing pinned visit locations only
             </div>
           </div>
 
           <!-- Section: Date & Time -->
-          <div class="sb-section">
+          <div class="sb-section" [class.sb-section--disabled]="isLiveTrackingEnabled">
             <div class="sb-label"><i class="fas fa-calendar me-1"></i>Date & Time Filter</div>
+            <div class="fc-hint fc-hint-amber mb-2" *ngIf="isLiveTrackingEnabled">
+              <i class="fas fa-info-circle me-1"></i>
+              Date filter is disabled while Live is on. Press Stop Live to use history filters.
+            </div>
             <div class="form-row">
               <label class="form-lbl">Start Date</label>
-              <input type="date" class="form-ctrl" [(ngModel)]="obj['startDate']" (change)="setMinToDate()">
+              <input type="date" class="form-ctrl" [(ngModel)]="obj['startDate']" (change)="setMinToDate()"
+                [disabled]="isLiveTrackingEnabled">
             </div>
             <div class="form-row">
               <label class="form-lbl">End Date</label>
-              <input type="date" class="form-ctrl" [(ngModel)]="obj['endDate']" [min]="getToDateMin()">
+              <input type="date" class="form-ctrl" [(ngModel)]="obj['endDate']" [min]="getToDateMin()"
+                [disabled]="isLiveTrackingEnabled">
             </div>
             <div class="form-row-split">
               <div class="form-row">
                 <label class="form-lbl">Start Time</label>
-                <input type="time" class="form-ctrl" [(ngModel)]="obj['startTime']">
+                <input type="time" class="form-ctrl" [(ngModel)]="obj['startTime']"
+                  [disabled]="isLiveTrackingEnabled">
               </div>
               <div class="form-row">
                 <label class="form-lbl">End Time</label>
-                <input type="time" class="form-ctrl" [(ngModel)]="obj['endTime']">
+                <input type="time" class="form-ctrl" [(ngModel)]="obj['endTime']"
+                  [disabled]="isLiveTrackingEnabled">
               </div>
             </div>
             <div class="btn-row">
-              <button class="btn-apply" (click)="DateWiseTracking()">
+              <button class="btn-apply" (click)="DateWiseTracking()" [disabled]="isLiveTrackingEnabled">
                 <i class="fas fa-search me-1"></i>Apply Filter
               </button>
-              <button class="btn-reset-sm" (click)="resetTrackingFilters()">
+              <button class="btn-reset-sm" (click)="resetTrackingFilters()" [disabled]="isLiveTrackingEnabled">
                 <i class="fas fa-undo"></i>
               </button>
             </div>
@@ -469,8 +487,14 @@
             <ng-template #emptyTimeline>
               <div class="tl-empty">
                 <i class="fas fa-map-marked-alt fa-2x mb-2"></i>
-                <p>No locations to show</p>
-                <button class="btn-reset-sm" (click)="resetTrackingFilters()">Clear filters</button>
+                <p *ngIf="liveStatusMessage">{{ liveStatusMessage }}</p>
+                <p *ngIf="!liveStatusMessage && isLiveTrackingEnabled">
+                  Waiting for live GPS updates…
+                </p>
+                <p *ngIf="!liveStatusMessage && !isLiveTrackingEnabled">
+                  No location data for this employee today. Choose a date range or press Go Live to track their current position.
+                </p>
+                <button class="btn-reset-sm" *ngIf="!isLiveTrackingEnabled" (click)="resetTrackingFilters()">Clear filters</button>
               </div>
             </ng-template>
           </div>
