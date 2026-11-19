@@ -181,6 +181,18 @@ export const DEFAULT_PERMISSIONS: PermissionSection[] = [
       { key: 'ai.recruitment', label: 'Recruitment Assistant',  roles: ['admin', 'superadmin', 'hr', 'recruiter'] },
     ]
   },
+  {
+    key: 'ai-agent', label: 'AI Agent', icon: 'ri-customer-service-2-line',
+    roles: ['admin', 'superadmin', 'hr'],
+    children: [
+      { key: 'aiagent.dashboard',      label: 'Dashboard',           roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'aiagent.config',         label: 'Agent Configuration', roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'aiagent.knowledge',      label: 'Knowledge Base',      roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'aiagent.leads',          label: 'Leads',               roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'aiagent.conversations',  label: 'Live Conversations',  roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'aiagent.analytics',      label: 'Analytics',           roles: ['admin', 'superadmin', 'hr'] },
+    ]
+  },
   // ── Portal-level visibility keys (control landing-home cards) ───────────────
   {
     key: 'tracking', label: 'Location Tracking', icon: 'ri-map-pin-2-line',
@@ -235,7 +247,7 @@ export class PermissionService {
   private readonly ROLE_PERM_KEY   = 'app_role_permissions';
   private readonly USER_PERM_KEY   = 'custom_user_permissions';
   // Bump this version whenever DEFAULT_PERMISSIONS changes — forces a fresh load
-  private readonly PERM_VERSION    = 'v10';
+  private readonly PERM_VERSION    = 'v11';
   private readonly VERSION_KEY     = 'app_role_permissions_version';
 
   // ── Role-based permissions (admin configures per role) ──────────────────

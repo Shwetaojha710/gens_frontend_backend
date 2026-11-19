@@ -554,6 +554,52 @@ export const layoutRoutes: Routes = [
           ),
       },
 
+      // ── WhatsApp AI Customer Relationship Agent ───────────────────────────
+      {
+        path: 'ai-agent/dashboard',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'aiagent.dashboard' },
+        loadComponent: () =>
+          import('../ai-agent/dashboard/aa-dashboard.component').then((m) => m.AaDashboardComponent),
+      },
+      {
+        path: 'ai-agent/config',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'aiagent.config' },
+        loadComponent: () =>
+          import('../ai-agent/config/aa-config.component').then((m) => m.AaConfigComponent),
+      },
+      {
+        path: 'ai-agent/knowledge',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'aiagent.knowledge' },
+        loadComponent: () =>
+          import('../ai-agent/knowledge/aa-knowledge.component').then((m) => m.AaKnowledgeComponent),
+      },
+      {
+        path: 'ai-agent/leads',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'aiagent.leads' },
+        loadComponent: () =>
+          import('../ai-agent/leads/aa-leads.component').then((m) => m.AaLeadsComponent),
+      },
+      {
+        path: 'ai-agent/conversations',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'aiagent.conversations' },
+        loadComponent: () =>
+          import('../ai-agent/conversations/aa-conversations.component').then(
+            (m) => m.AaConversationsComponent,
+          ),
+      },
+      {
+        path: 'ai-agent/analytics',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'aiagent.analytics' },
+        loadComponent: () =>
+          import('../ai-agent/analytics/aa-analytics.component').then((m) => m.AaAnalyticsComponent),
+      },
+
       // ── Tracking (no permission restriction) ──────────────────────────────
       {
         path: 'tracking',

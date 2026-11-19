@@ -1,0 +1,108 @@
+<div class="container-fluid mt-5">
+  <h4 class="mb-1">Agent Configuration</h4>
+  <p class="text-muted small mb-4">Personality, WhatsApp Cloud API credentials, and LLM settings</p>
+
+  <div *ngIf="loading" class="text-muted">Loading…</div>
+
+  <form *ngIf="!loading" (ngSubmit)="save()" class="row g-4">
+    <div class="col-lg-7">
+      <div class="card mb-3">
+        <h6 class="card-header">Personality</h6>
+        <div class="card-body row g-3">
+          <div class="col-md-8">
+            <label class="form-label">Agent name</label>
+            <input class="form-control" [(ngModel)]="form.name" name="name" required />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Enabled</label>
+            <div class="form-check form-switch mt-2">
+              <input class="form-check-input" type="checkbox" [(ngModel)]="form.isEnabled" name="isEnabled" />
+              <label class="form-check-label">{{ form.isEnabled ? 'On' : 'Off' }}</label>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Personality</label>
+            <textarea class="form-control" rows="3" [(ngModel)]="form.personality" name="personality"></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label">System instructions</label>
+            <textarea class="form-control" rows="3" [(ngModel)]="form.systemInstructions" name="systemInstructions"></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Company intro</label>
+            <textarea class="form-control" rows="2" [(ngModel)]="form.companyIntro" name="companyIntro"></textarea>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">AI provider</label>
+            <select class="form-select" [(ngModel)]="form.aiProvider" name="aiProvider">
+              <option value="gemini">Gemini</option>
+              <option value="openai">OpenAI</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Model</label>
+            <input class="form-control" [(ngModel)]="form.aiModel" name="aiModel" placeholder="gemini-2.0-flash" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Response length</label>
+            <select class="form-select" [(ngModel)]="form.responseLength" name="responseLength">
+              <option value="short">Short</option>
+              <option value="medium">Medium</option>
+              <option value="long">Long</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">LLM API key {{ settingsFlags.hasLlmKey ? '(saved — leave blank to keep)' : '' }}</label>
+            <input class="form-control" type="password" [(ngModel)]="form.llmApiKey" name="llmApiKey" autocomplete="new-password" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="card mb-3">
+        <h6 class="card-header">WhatsApp Cloud API</h6>
+        <div class="card-body row g-3">
+          <div class="col-12">
+            <label class="form-label">Phone number ID</label>
+            <input class="form-control" [(ngModel)]="form.whatsappPhoneNumberId" name="whatsappPhoneNumberId" />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Business account ID</label>
+            <input class="form-control" [(ngModel)]="form.whatsappBusinessAccountId" name="whatsappBusinessAccountId" />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Verify token</label>
+            <input class="form-control" [(ngModel)]="form.whatsappVerifyToken" name="whatsappVerifyToken" />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Access token {{ settingsFlags.hasWhatsappToken ? '(saved)' : '' }}</label>
+            <input class="form-control" type="password" [(ngModel)]="form.whatsappAccessToken" name="whatsappAccessToken" autocomplete="new-password" />
+          </div>
+          <div class="col-12">
+            <label class="form-label">App secret {{ settingsFlags.hasAppSecret ? '(saved)' : '' }}</label>
+            <input class="form-control" type="password" [(ngModel)]="form.whatsappAppSecret" name="whatsappAppSecret" autocomplete="new-password" />
+          </div>
+          <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" [(ngModel)]="form.notifyOnLead" name="notifyOnLead" id="nLead" />
+              <label class="form-check-label" for="nLead">Notify on new lead</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" [(ngModel)]="form.notifyOnHandover" name="notifyOnHandover" id="nHand" />
+              <label class="form-check-label" for="nHand">Notify on handover</label>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label small text-muted">Webhook URL (set in Meta Developer Console)</label>
+            <input class="form-control form-control-sm" [value]="webhookUrl" readonly />
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary w-100" type="submit" [disabled]="saving">
+        {{ saving ? 'Saving…' : 'Save configuration' }}
+      </button>
+    </div>
+  </form>
+</div>

@@ -157,6 +157,19 @@ export const APP_MENU_ITEMS: MenuItem[] = [
     ],
   },
   {
+    title: 'AI Agent',
+    icon: 'ri-customer-service-2-line',
+    permKey: 'ai-agent',
+    children: [
+      { title: 'Dashboard',          icon: 'ri-dashboard-line',        link: '/layout/ai-agent/dashboard',      permKey: 'aiagent.dashboard' },
+      { title: 'Agent Configuration',icon: 'ri-settings-4-line',       link: '/layout/ai-agent/config',         permKey: 'aiagent.config' },
+      { title: 'Knowledge Base',     icon: 'ri-book-open-line',        link: '/layout/ai-agent/knowledge',      permKey: 'aiagent.knowledge' },
+      { title: 'Leads',              icon: 'ri-user-star-line',        link: '/layout/ai-agent/leads',          permKey: 'aiagent.leads' },
+      { title: 'Live Conversations', icon: 'ri-whatsapp-line',         link: '/layout/ai-agent/conversations',  permKey: 'aiagent.conversations' },
+      { title: 'Analytics',          icon: 'ri-bar-chart-box-line',    link: '/layout/ai-agent/analytics',      permKey: 'aiagent.analytics' },
+    ],
+  },
+  {
     title: 'Master',
     icon: 'ri-settings-3-line',
     permKey: 'master',

@@ -1,0 +1,73 @@
+<div class="container-fluid mt-5">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h4 class="mb-0">AI Agent Dashboard</h4>
+      <p class="text-muted small mb-0">WhatsApp customer relationship agent overview</p>
+    </div>
+    <a class="btn btn-sm btn-primary" routerLink="/layout/ai-agent/config">Configure agent</a>
+  </div>
+
+  <div *ngIf="!data" class="text-center py-5 text-muted">Loading…</div>
+  <ng-container *ngIf="data">
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-lg-2"><div class="card h-100"><div class="card-body">
+        <div class="small text-muted">Conversations</div>
+        <div class="fs-3 fw-bold">{{ data.totalConversations }}</div>
+      </div></div></div>
+      <div class="col-6 col-lg-2"><div class="card h-100"><div class="card-body">
+        <div class="small text-muted">Active</div>
+        <div class="fs-3 fw-bold">{{ data.activeConversations }}</div>
+      </div></div></div>
+      <div class="col-6 col-lg-2"><div class="card h-100"><div class="card-body">
+        <div class="small text-muted">Total leads</div>
+        <div class="fs-3 fw-bold">{{ data.totalLeads }}</div>
+      </div></div></div>
+      <div class="col-6 col-lg-2"><div class="card h-100 border-danger border"><div class="card-body">
+        <div class="small text-muted">Hot leads</div>
+        <div class="fs-3 fw-bold text-danger">{{ data.hotLeads }}</div>
+      </div></div></div>
+      <div class="col-6 col-lg-2"><div class="card h-100"><div class="card-body">
+        <div class="small text-muted">Pending handovers</div>
+        <div class="fs-3 fw-bold">{{ data.pendingHandovers }}</div>
+      </div></div></div>
+      <div class="col-6 col-lg-2"><div class="card h-100"><div class="card-body">
+        <div class="small text-muted">Messages</div>
+        <div class="fs-3 fw-bold">{{ data.totalMessages }}</div>
+        <div class="small text-muted">{{ data.aiMessages || 0 }} AI replies</div>
+      </div></div></div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-6">
+        <div class="card">
+          <h6 class="card-header d-flex justify-content-between">
+            <span>Recent leads</span>
+            <a class="small" routerLink="/layout/ai-agent/leads">All →</a>
+          </h6>
+          <ul class="list-group list-group-flush">
+            <li *ngIf="!data.recentLeads?.length" class="list-group-item small text-muted">No leads yet.</li>
+            <li *ngFor="let l of data.recentLeads" class="list-group-item small d-flex justify-content-between">
+              <span>{{ l.fullName || l.phone || 'Unknown' }} <span class="text-muted">{{ l.companyName }}</span></span>
+              <span class="badge" [ngClass]="l.leadPriority === 'HOT' ? 'bg-danger' : l.leadPriority === 'WARM' ? 'bg-warning text-dark' : 'bg-secondary'">{{ l.leadPriority }}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card">
+          <h6 class="card-header d-flex justify-content-between">
+            <span>Pending handovers</span>
+            <a class="small" routerLink="/layout/ai-agent/conversations">Inbox →</a>
+          </h6>
+          <ul class="list-group list-group-flush">
+            <li *ngIf="!data.recentHandovers?.length" class="list-group-item small text-muted">None pending.</li>
+            <li *ngFor="let h of data.recentHandovers" class="list-group-item small">
+              <div class="fw-medium">{{ h.triggerType }}</div>
+              <div class="text-muted">{{ h.reason }}</div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>

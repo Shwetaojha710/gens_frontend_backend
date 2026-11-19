@@ -1,0 +1,116 @@
+<div class="container-fluid mt-5">
+  <h4 class="mb-1">Lead Management</h4>
+  <p class="text-muted small mb-3">Qualified leads captured by the WhatsApp AI agent</p>
+
+  <div class="row g-2 mb-3" *ngIf="!selected">
+    <div class="col-md-3"><input class="form-control" placeholder="Search…" [(ngModel)]="q" (keyup.enter)="load()" /></div>
+    <div class="col-md-2">
+      <select class="form-select" [(ngModel)]="leadPriority" (change)="load()">
+        <option value="">All priorities</option>
+        <option value="HOT">HOT</option>
+        <option value="WARM">WARM</option>
+        <option value="COLD">COLD</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <select class="form-select" [(ngModel)]="leadStatus" (change)="load()">
+        <option value="">All statuses</option>
+        <option value="new">new</option>
+        <option value="qualifying">qualifying</option>
+        <option value="qualified">qualified</option>
+        <option value="demo_scheduled">demo_scheduled</option>
+        <option value="won">won</option>
+        <option value="lost">lost</option>
+        <option value="handed_over">handed_over</option>
+      </select>
+    </div>
+    <div class="col-auto"><button class="btn btn-outline-secondary" type="button" (click)="load()">Filter</button></div>
+  </div>
+
+  <div class="card" *ngIf="!selected">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Company</th>
+            <th>Contact</th>
+            <th>Interest</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="!rows.length"><td colspan="7" class="text-muted">No leads yet.</td></tr>
+          <tr *ngFor="let r of rows" style="cursor:pointer" (click)="open(r)">
+            <td>{{ r.fullName || '—' }}</td>
+            <td>{{ r.companyName || '—' }}</td>
+            <td>
+              <div>{{ r.phone }}</div>
+              <div class="small text-muted">{{ r.email }}</div>
+            </td>
+            <td>{{ r.productInterest || '—' }}</td>
+            <td><span class="badge" [ngClass]="r.leadPriority === 'HOT' ? 'bg-danger' : r.leadPriority === 'WARM' ? 'bg-warning text-dark' : 'bg-secondary'">{{ r.leadPriority }}</span></td>
+            <td>{{ r.leadStatus }}</td>
+            <td>{{ r.qualificationScore }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="row g-3" *ngIf="selected">
+    <div class="col-lg-5">
+      <div class="card">
+        <h6 class="card-header d-flex justify-content-between">
+          <span>Lead details</span>
+          <button class="btn btn-sm btn-outline-secondary" type="button" (click)="close()">Back</button>
+        </h6>
+        <div class="card-body row g-2">
+          <div class="col-md-6"><label class="form-label small">Full name</label><input class="form-control form-control-sm" [(ngModel)]="selected.fullName" /></div>
+          <div class="col-md-6"><label class="form-label small">Company</label><input class="form-control form-control-sm" [(ngModel)]="selected.companyName" /></div>
+          <div class="col-md-6"><label class="form-label small">Email</label><input class="form-control form-control-sm" [(ngModel)]="selected.email" /></div>
+          <div class="col-md-6"><label class="form-label small">Phone</label><input class="form-control form-control-sm" [(ngModel)]="selected.phone" /></div>
+          <div class="col-12"><label class="form-label small">Product interest</label><input class="form-control form-control-sm" [(ngModel)]="selected.productInterest" /></div>
+          <div class="col-12"><label class="form-label small">Requirements</label><textarea class="form-control form-control-sm" rows="3" [(ngModel)]="selected.businessRequirements"></textarea></div>
+          <div class="col-md-4"><label class="form-label small">Employees</label><input class="form-control form-control-sm" [(ngModel)]="selected.employeeCount" /></div>
+          <div class="col-md-4"><label class="form-label small">Budget</label><input class="form-control form-control-sm" [(ngModel)]="selected.budget" /></div>
+          <div class="col-md-4"><label class="form-label small">Timeline</label><input class="form-control form-control-sm" [(ngModel)]="selected.purchaseTimeline" /></div>
+          <div class="col-md-6">
+            <label class="form-label small">Priority</label>
+            <select class="form-select form-select-sm" [(ngModel)]="selected.leadPriority">
+              <option>HOT</option><option>WARM</option><option>COLD</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small">Status</label>
+            <select class="form-select form-select-sm" [(ngModel)]="selected.leadStatus">
+              <option value="new">new</option>
+              <option value="qualifying">qualifying</option>
+              <option value="qualified">qualified</option>
+              <option value="demo_scheduled">demo_scheduled</option>
+              <option value="nurturing">nurturing</option>
+              <option value="won">won</option>
+              <option value="lost">lost</option>
+              <option value="handed_over">handed_over</option>
+            </select>
+          </div>
+          <div class="col-12"><button class="btn btn-primary btn-sm" type="button" (click)="save()">Save lead</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-7">
+      <div class="card">
+        <h6 class="card-header">Conversation history</h6>
+        <div class="card-body" style="max-height:520px;overflow:auto">
+          <div *ngIf="!messages.length" class="text-muted small">No messages linked.</div>
+          <div *ngFor="let m of messages" class="mb-2">
+            <div class="small text-muted">{{ m.senderType }} · {{ m.createdAt | date:'short' }}</div>
+            <div class="p-2 rounded" [ngClass]="m.direction === 'inbound' ? 'bg-light' : 'bg-primary bg-opacity-10'">{{ m.body }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

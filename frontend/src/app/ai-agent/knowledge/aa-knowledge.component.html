@@ -1,0 +1,88 @@
+<div class="container-fluid mt-5">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h4 class="mb-0">Knowledge Base</h4>
+      <p class="text-muted small mb-0">Approved company information the AI can use — never invents beyond this</p>
+    </div>
+    <button class="btn btn-primary btn-sm" type="button" (click)="open()">Add entry</button>
+  </div>
+
+  <div class="row mb-3">
+    <div class="col-md-4">
+      <input class="form-control" placeholder="Search…" [(ngModel)]="q" (keyup.enter)="load()" />
+    </div>
+    <div class="col-auto"><button class="btn btn-outline-secondary" type="button" (click)="load()">Search</button></div>
+  </div>
+
+  <div class="card" *ngIf="!form">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Category</th>
+            <th>Active</th>
+            <th>Approved</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="!rows.length"><td colspan="5" class="text-muted">No knowledge entries yet.</td></tr>
+          <tr *ngFor="let r of rows">
+            <td>
+              <div class="fw-medium">{{ r.title }}</div>
+              <div class="small text-muted text-truncate" style="max-width:420px">{{ r.content }}</div>
+            </td>
+            <td><span class="badge bg-label-primary">{{ r.category }}</span></td>
+            <td>
+              <button class="btn btn-sm" [class.btn-success]="r.isActive" [class.btn-outline-secondary]="!r.isActive" type="button" (click)="toggle(r, 'isActive')">
+                {{ r.isActive ? 'Yes' : 'No' }}
+              </button>
+            </td>
+            <td>
+              <button class="btn btn-sm" [class.btn-success]="r.isApproved" [class.btn-outline-secondary]="!r.isApproved" type="button" (click)="toggle(r, 'isApproved')">
+                {{ r.isApproved ? 'Yes' : 'No' }}
+              </button>
+            </td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-primary me-1" type="button" (click)="open(r)">Edit</button>
+              <button class="btn btn-sm btn-outline-danger" type="button" (click)="remove(r)">Delete</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" *ngIf="form">
+    <h6 class="card-header">{{ form.id ? 'Edit' : 'Add' }} knowledge</h6>
+    <div class="card-body row g-3">
+      <div class="col-md-8">
+        <label class="form-label">Title</label>
+        <input class="form-control" [(ngModel)]="form.title" />
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Category</label>
+        <select class="form-select" [(ngModel)]="form.category">
+          <option *ngFor="let c of categories" [value]="c">{{ c }}</option>
+        </select>
+      </div>
+      <div class="col-12">
+        <label class="form-label">Content</label>
+        <textarea class="form-control" rows="8" [(ngModel)]="form.content"></textarea>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Tags (comma separated)</label>
+        <input class="form-control" [(ngModel)]="form.tags" />
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Upload PDF / Word / text</label>
+        <input class="form-control" type="file" (change)="onFile($event)" accept=".pdf,.doc,.docx,.txt,.md" />
+      </div>
+      <div class="col-12 d-flex gap-2">
+        <button class="btn btn-primary" type="button" [disabled]="saving" (click)="save()">{{ saving ? 'Saving…' : 'Save' }}</button>
+        <button class="btn btn-outline-secondary" type="button" (click)="form = null">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -67,6 +67,17 @@ GeneratedDocument.sync({ alter: false }).catch(err =>
   require('./app/models/as_event'),
   // Employee-wise week off roster
   require('./app/models/employeeWeekOffRoster'),
+  // WhatsApp AI Customer Relationship Agent
+  require('./app/models/ai_agent'),
+  require('./app/models/ai_agent_settings'),
+  require('./app/models/ai_agent_knowledge'),
+  require('./app/models/ai_agent_conversations'),
+  require('./app/models/ai_agent_messages'),
+  require('./app/models/ai_agent_memory'),
+  require('./app/models/ai_agent_intents'),
+  require('./app/models/ai_agent_leads'),
+  require('./app/models/ai_agent_actions'),
+  require('./app/models/ai_agent_handover'),
 ].forEach((model) =>
   model.sync({ alter: false }).catch(err =>
     console.error(`${model.getTableName()} sync error:`, err)
@@ -103,7 +114,15 @@ app.use(cors({
 
 
 
-app.use(bodyParser.json({ limit: '100mb' }));
+// Capture raw body for WhatsApp webhook signature verification (X-Hub-Signature-256)
+app.use(bodyParser.json({
+  limit: '100mb',
+  verify: (req, res, buf) => {
+    if (req.originalUrl && req.originalUrl.includes('/whatsapp/webhook')) {
+      req.rawBody = buf;
+    }
+  },
+}));
 app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 
 
