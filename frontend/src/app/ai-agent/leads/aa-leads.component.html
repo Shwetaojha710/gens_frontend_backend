@@ -1,6 +1,57 @@
 <div class="container-fluid mt-5">
-  <h4 class="mb-1">Lead Management</h4>
-  <p class="text-muted small mb-3">Qualified leads captured by the WhatsApp AI agent</p>
+  <div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+      <h4 class="mb-1">Lead Management</h4>
+      <p class="text-muted small mb-0">
+        Create a lead with a Meta allowlisted number to auto-send the agent welcome template.
+      </p>
+    </div>
+    <button
+      *ngIf="!selected"
+      class="btn btn-primary btn-sm"
+      type="button"
+      (click)="showCreate = !showCreate"
+    >
+      {{ showCreate ? 'Cancel' : 'New lead + welcome' }}
+    </button>
+  </div>
+
+  <div class="card mb-3" *ngIf="showCreate && !selected">
+    <h6 class="card-header">New lead (auto welcome)</h6>
+    <div class="card-body row g-2">
+      <div class="col-md-4">
+        <label class="form-label small">Phone (Meta allowlisted) *</label>
+        <input class="form-control form-control-sm" [(ngModel)]="newLead.phone" placeholder="917905217795" />
+      </div>
+      <div class="col-md-4">
+        <label class="form-label small">Full name</label>
+        <input class="form-control form-control-sm" [(ngModel)]="newLead.fullName" />
+      </div>
+      <div class="col-md-4">
+        <label class="form-label small">Company</label>
+        <input class="form-control form-control-sm" [(ngModel)]="newLead.companyName" />
+      </div>
+      <div class="col-md-4">
+        <label class="form-label small">Email</label>
+        <input class="form-control form-control-sm" [(ngModel)]="newLead.email" />
+      </div>
+      <div class="col-md-4">
+        <label class="form-label small">Product interest</label>
+        <input class="form-control form-control-sm" [(ngModel)]="newLead.productInterest" />
+      </div>
+      <div class="col-md-4 d-flex align-items-end">
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" [(ngModel)]="newLead.autoSend" id="autoSendLead" />
+          <label class="form-check-label" for="autoSendLead">Auto-send hello_world welcome</label>
+        </div>
+      </div>
+      <div class="col-12">
+        <button class="btn btn-primary btn-sm" type="button" [disabled]="creating" (click)="create()">
+          {{ creating ? 'Creating…' : (newLead.autoSend ? 'Create and send welcome' : 'Create lead') }}
+        </button>
+      </div>
+    </div>
+  </div>
 
   <div class="row g-2 mb-3" *ngIf="!selected">
     <div class="col-md-3"><input class="form-control" placeholder="Search…" [(ngModel)]="q" (keyup.enter)="load()" /></div>
@@ -63,7 +114,7 @@
   <div class="row g-3" *ngIf="selected">
     <div class="col-lg-5">
       <div class="card">
-        <h6 class="card-header d-flex justify-content-between">
+        <h6 class="card-header d-flex justify-content-between align-items-center">
           <span>Lead details</span>
           <button class="btn btn-sm btn-outline-secondary" type="button" (click)="close()">Back</button>
         </h6>
@@ -96,7 +147,22 @@
               <option value="handed_over">handed_over</option>
             </select>
           </div>
-          <div class="col-12"><button class="btn btn-primary btn-sm" type="button" (click)="save()">Save lead</button></div>
+          <div class="col-12 small text-muted" *ngIf="selected.meta?.welcomeOutreachAt">
+            Last welcome outreach: {{ selected.meta.welcomeOutreachAt | date:'short' }}
+            <span *ngIf="selected.meta?.welcomeOutreachDelivery?.sent === true">· delivered</span>
+            <span *ngIf="selected.meta?.welcomeOutreachDelivery?.sent === false">· failed</span>
+          </div>
+          <div class="col-12 d-flex flex-wrap gap-2">
+            <button class="btn btn-primary btn-sm" type="button" (click)="save()">Save lead</button>
+            <button
+              class="btn btn-outline-primary btn-sm"
+              type="button"
+              [disabled]="outreaching"
+              (click)="startOutreach()"
+            >
+              {{ outreaching ? 'Sending…' : 'Start outreach (welcome template)' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>

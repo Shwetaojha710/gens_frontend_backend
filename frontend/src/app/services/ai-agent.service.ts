@@ -41,6 +41,12 @@ export class AiAgentService {
 
   listLeads(filters: any = {}): Observable<any> { return this.post('leads/list', filters); }
   getLead(id: string): Observable<any> { return this.post('leads/get', { id }); }
+  /** Create lead; by default auto-sends Meta welcome template to allowlisted phone. */
+  createLead(data: any): Observable<any> { return this.post('leads/create', data); }
+  /** Send / retry agent welcome template for an existing lead. */
+  outreachLead(id: string, force = true): Observable<any> {
+    return this.post('leads/outreach', { id, force });
+  }
   updateLead(data: any): Observable<any> { return this.post('leads/update', data); }
 
   listConversations(filters: any = {}): Observable<any> { return this.post('conversations/list', filters); }

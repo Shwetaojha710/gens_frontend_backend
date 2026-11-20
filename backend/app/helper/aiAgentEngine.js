@@ -145,6 +145,18 @@ async function sendAgentWelcomeTemplate({
   let conversation = await AiAgentConversation.findOne({
     where: { tenantId, waId: to },
   });
+  // Re-open for agent welcome testing: always active + AI on (even if previously handed_over)
+  const reopenPatch = {
+    lastMessageAt: new Date(),
+    updatedBy: userId,
+    status: "active",
+    aiEnabled: true,
+    context: {
+      openedWith: "welcome_template",
+      lastWelcomeTemplateAt: new Date().toISOString(),
+      welcomeTemplate: { name: tpl.name, language: tpl.language },
+    },
+  };
   if (!conversation) {
     conversation = await AiAgentConversation.create({
       tenantId,
@@ -152,27 +164,29 @@ async function sendAgentWelcomeTemplate({
       waId: to,
       customerPhone: to,
       customerName: customerName || null,
-      status: "active",
-      aiEnabled: true,
-      lastMessageAt: new Date(),
-      context: { openedWith: "welcome_template" },
       createdBy: userId,
-      updatedBy: userId,
+      ...reopenPatch,
     });
   } else {
-    const patch = {
-      lastMessageAt: new Date(),
-      updatedBy: userId,
-      status: conversation.status === "closed" ? "active" : conversation.status,
-      context: {
-        ...(conversation.context || {}),
-        openedWith: "welcome_template",
-        lastWelcomeTemplateAt: new Date().toISOString(),
-      },
+    if (customerName) reopenPatch.customerName = customerName;
+    reopenPatch.context = {
+      ...(conversation.context || {}),
+      ...reopenPatch.context,
     };
-    if (customerName && !conversation.customerName) patch.customerName = customerName;
-    await conversation.update(patch);
+    await conversation.update(reopenPatch);
+    await conversation.reload();
   }
+
+  // Clear pending handovers so inbound replies after welcome go to AI again
+  await AiAgentHandover.update(
+    {
+      status: "resolved",
+      resolvedAt: new Date(),
+      notes: "Resolved: conversation reopened with agent welcome template",
+      updatedBy: userId,
+    },
+    { where: { tenantId, conversationId: conversation.id, status: "pending" } }
+  );
 
   let waResponse = null;
   let delivery = { sent: false, error: null };
@@ -214,6 +228,77 @@ async function sendAgentWelcomeTemplate({
     delivery,
     template: tpl,
   };
+}
+
+/**
+ * Automate agent welcome for a lead (Meta allowlisted phone).
+ * Links the conversation back to the lead and records outreach meta.
+ */
+async function outreachLeadWelcome({
+  tenantId,
+  agent,
+  settings,
+  lead,
+  userId = null,
+  force = false,
+}) {
+  const phone = lead?.phone || lead?.waId;
+  if (!phone) {
+    return { skipped: true, reason: "lead_phone_missing" };
+  }
+
+  const lastAt = lead?.meta?.welcomeOutreachAt
+    ? new Date(lead.meta.welcomeOutreachAt).getTime()
+    : 0;
+  const cooldownMs = 6 * 60 * 60 * 1000; // 6h anti-spam
+  if (!force && lastAt && Date.now() - lastAt < cooldownMs) {
+    return {
+      skipped: true,
+      reason: "welcome_recently_sent",
+      error: {
+        code: null,
+        message:
+          "Welcome template already sent recently for this lead. Use force=true to send again.",
+      },
+    };
+  }
+
+  const result = await sendAgentWelcomeTemplate({
+    tenantId,
+    agent,
+    settings,
+    phone,
+    customerName: lead.fullName || null,
+    userId,
+  });
+
+  if (result.skipped) return { ...result, lead };
+
+  const conv = result.conversation;
+  const meta = {
+    ...(lead.meta || {}),
+    welcomeOutreachAt: new Date().toISOString(),
+    welcomeOutreachDelivery: result.delivery || null,
+    welcomeTemplate: result.template
+      ? { name: result.template.name, language: result.template.language }
+      : undefined,
+  };
+
+  const leadPatch = {
+    meta,
+    updatedBy: userId,
+    waId: conv?.waId || lead.waId || normalizeWhatsAppTo(phone),
+    phone: lead.phone || conv?.customerPhone || normalizeWhatsAppTo(phone),
+  };
+  if (conv?.id && !lead.conversationId) leadPatch.conversationId = conv.id;
+  await lead.update(leadPatch);
+
+  if (conv?.id && !conv.leadId) {
+    await conv.update({ leadId: lead.id, updatedBy: userId });
+  }
+
+  await lead.reload();
+  return { ...result, lead };
 }
 
 function safeDecrypt(enc) {
@@ -820,6 +905,7 @@ module.exports = {
   maskSettings,
   getWelcomeTemplate,
   sendAgentWelcomeTemplate,
+  outreachLeadWelcome,
   DEFAULT_WELCOME_TEMPLATE,
   findTenantByPhoneNumberId,
   processInboundMessage,

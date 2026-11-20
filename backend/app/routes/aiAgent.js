@@ -28,6 +28,8 @@ router.post("/ai-agent/knowledge/delete", Admin, ctrl.deleteKnowledge);
 
 router.post("/ai-agent/leads/list", Admin, ctrl.listLeads);
 router.post("/ai-agent/leads/get", Admin, ctrl.getLead);
+router.post("/ai-agent/leads/create", Admin, ctrl.createLead);
+router.post("/ai-agent/leads/outreach", Admin, ctrl.outreachLead);
 router.post("/ai-agent/leads/update", Admin, ctrl.updateLead);
 
 router.post("/ai-agent/conversations/list", Admin, ctrl.listConversations);

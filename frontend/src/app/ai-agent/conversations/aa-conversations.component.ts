@@ -35,15 +35,32 @@ export class AaConversationsComponent implements OnInit, OnDestroy {
   startPhone = '';
   startName = '';
   starting = false;
+  welcomeTemplateName = 'hello_world';
+  welcomeTemplateLanguage = 'en_US';
+  welcomeTemplateBody =
+    'Hello World\nWelcome and congratulations!! This message demonstrates your ability to send a WhatsApp message notification from the Cloud API, hosted by Meta. Thank you for taking the time to test with us.';
 
   constructor(private api: AiAgentService) {}
 
   ngOnInit(): void {
+    this.loadWelcomeTemplate();
     this.loadList();
     this.pollTimer = setInterval(() => {
       this.loadList(true);
       if (this.selectedId) this.open(this.selectedId, true);
     }, 8000);
+  }
+
+  loadWelcomeTemplate(): void {
+    this.api.getConfig().subscribe({
+      next: (res: any) => {
+        const wt = res?.data?.welcomeTemplate || res?.data?.settings?.meta?.welcomeTemplate;
+        if (!wt) return;
+        if (wt.name) this.welcomeTemplateName = wt.name;
+        if (wt.language) this.welcomeTemplateLanguage = wt.language;
+        if (wt.body) this.welcomeTemplateBody = wt.body;
+      },
+    });
   }
 
   ngOnDestroy(): void {
@@ -136,8 +153,11 @@ export class AaConversationsComponent implements OnInit, OnDestroy {
         this.starting = false;
         if (res?.status === true) {
           const delivered = res?.data?.delivery?.sent === true;
-          if (delivered) this.notyf.success(res.message || 'Welcome template sent');
-          else this.notyf.error(res?.message || 'Saved, but WhatsApp delivery failed');
+          if (delivered) {
+            this.notyf.success(res.message || `Agent welcome (${this.welcomeTemplateName}) sent`);
+          } else {
+            this.notyf.error(res?.message || 'Saved, but WhatsApp delivery failed');
+          }
           this.loadList();
           const id = res?.data?.conversation?.id;
           if (id) this.open(id);

@@ -9,12 +9,14 @@ const {
   maskSettings,
   getWelcomeTemplate,
   sendAgentWelcomeTemplate,
+  outreachLeadWelcome,
   findTenantByPhoneNumberId,
   processInboundMessage,
   executeHandover,
   ensureSystemIntents,
   safeDecrypt,
 } = require("../../helper/aiAgentEngine");
+const { normalizeWhatsAppTo } = require("../../helper/whatsappCloud");
 const { extractTextFromUpload, buildSearchText } = require("../../helper/aiAgentKnowledge");
 const {
   verifyWebhookSignature,
@@ -112,7 +114,11 @@ exports.getConfig = hr("getConfig", async (req, res) => {
   return Helper.response(
     true,
     "Config fetched",
-    { agent, settings: maskSettings(settings) },
+    {
+      agent,
+      settings: maskSettings(settings),
+      welcomeTemplate: getWelcomeTemplate(settings),
+    },
     res,
     200
   );
@@ -185,7 +191,11 @@ exports.saveConfig = hr("saveConfig", async (req, res) => {
   return Helper.response(
     true,
     "Config saved",
-    { agent: fresh.agent, settings: maskSettings(fresh.settings) },
+    {
+      agent: fresh.agent,
+      settings: maskSettings(fresh.settings),
+      welcomeTemplate: getWelcomeTemplate(fresh.settings),
+    },
     res,
     200
   );
@@ -356,6 +366,154 @@ exports.updateLead = hr("updateLead", async (req, res) => {
   return Helper.response(true, "Lead updated", lead, res, 200);
 });
 
+/**
+ * Create lead + optionally auto-send agent welcome template (Meta allowlisted phone).
+ * Default: autoSend follows Configuration → autoSendWelcomeTemplate (on by default).
+ */
+exports.createLead = hr("createLead", async (req, res) => {
+  const tenantId = req.users.tenantId;
+  const b = req.body || {};
+  const phoneRaw = String(b.phone || b.waId || "").trim();
+  if (!phoneRaw) return fail(res, "Phone number is required");
+
+  const phone = normalizeWhatsAppTo(phoneRaw);
+  if (!phone) return fail(res, "Invalid phone number");
+
+  const { agent, settings } = await getOrCreateAgent(tenantId, req.users.id);
+  const welcome = getWelcomeTemplate(settings);
+  const autoSend =
+    typeof b.autoSend === "boolean" ? b.autoSend : welcome.autoSend !== false;
+
+  const lead = await AiAgentLead.create({
+    tenantId,
+    waId: phone,
+    phone,
+    fullName: b.fullName ? String(b.fullName).trim() : null,
+    companyName: b.companyName ? String(b.companyName).trim() : null,
+    email: b.email ? String(b.email).trim() : null,
+    productInterest: b.productInterest ? String(b.productInterest).trim() : null,
+    businessRequirements: b.businessRequirements
+      ? String(b.businessRequirements).trim()
+      : null,
+    leadSource: b.leadSource ? String(b.leadSource).slice(0, 80) : "manual_outreach",
+    leadStatus: "new",
+    leadPriority: ["HOT", "WARM", "COLD"].includes(b.leadPriority) ? b.leadPriority : "COLD",
+    meta: { createdVia: "createLead", autoSendRequested: autoSend },
+    createdBy: req.users.id,
+    updatedBy: req.users.id,
+  });
+
+  let outreach = null;
+  if (autoSend) {
+    if (!agent.isEnabled || agent.status !== "active") {
+      outreach = {
+        skipped: true,
+        reason: "agent_disabled",
+        error: { message: "Lead created, but agent is disabled — enable it to auto-send welcome." },
+      };
+    } else {
+      outreach = await outreachLeadWelcome({
+        tenantId,
+        agent,
+        settings,
+        lead,
+        userId: req.users.id,
+        force: true,
+      });
+    }
+  }
+
+  await lead.reload();
+  const delivered = outreach?.delivery?.sent === true;
+  const msg = !autoSend
+    ? "Lead created"
+    : delivered
+      ? "Lead created and welcome template sent"
+      : outreach?.skipped
+        ? outreach?.error?.message || `Lead created (${outreach.reason})`
+        : outreach?.delivery?.error?.message ||
+          "Lead created; welcome template delivery failed (check Meta allowlist)";
+
+  return Helper.response(
+    true,
+    msg,
+    { lead, outreach, delivery: outreach?.delivery || null, template: outreach?.template || welcome },
+    res,
+    200
+  );
+});
+
+/** Start / retry agent welcome outreach for an existing lead. */
+exports.outreachLead = hr("outreachLead", async (req, res) => {
+  const tenantId = req.users.tenantId;
+  const lead = await AiAgentLead.findOne({
+    where: { id: req.body?.id, tenantId },
+  });
+  if (!lead) return fail(res, "Lead not found");
+  if (!lead.phone && !lead.waId) return fail(res, "Lead has no phone number");
+
+  const { agent, settings } = await getOrCreateAgent(tenantId, req.users.id);
+  if (!agent.isEnabled || agent.status !== "active") {
+    return fail(res, "Agent is disabled. Enable it in Configuration first.");
+  }
+
+  const force = req.body?.force !== false; // default force from UI button
+  const result = await outreachLeadWelcome({
+    tenantId,
+    agent,
+    settings,
+    lead,
+    userId: req.users.id,
+    force,
+  });
+
+  if (result.skipped) {
+    return Helper.response(
+      false,
+      result.error?.message ||
+        (result.reason === "lead_phone_missing"
+          ? "Lead has no phone number"
+          : result.reason === "welcome_recently_sent"
+            ? "Welcome already sent recently"
+            : "Could not send welcome template"),
+      { result, lead: result.lead || lead },
+      res,
+      200
+    );
+  }
+
+  if (!result.delivery?.sent) {
+    return Helper.response(
+      true,
+      result.delivery?.error?.message ||
+        "Saved, but WhatsApp template delivery failed (check Meta allowlist)",
+      {
+        lead: result.lead,
+        conversation: result.conversation,
+        message: result.message,
+        delivery: result.delivery,
+        template: result.template,
+      },
+      res,
+      200
+    );
+  }
+
+  return Helper.response(
+    true,
+    "Welcome template sent to lead",
+    {
+      lead: result.lead,
+      conversation: result.conversation,
+      message: result.message,
+      delivery: result.delivery,
+      template: result.template,
+    },
+    res,
+    200
+  );
+});
+
 // ───────────────────────────── conversations ─────────────────────────────
 
 exports.listConversations = hr("listConversations", async (req, res) => {
@@ -489,7 +647,7 @@ exports.startConversation = hr("startConversation", async (req, res) => {
 
   return Helper.response(
     true,
-    "Welcome template sent on WhatsApp",
+    `Agent welcome template (${result.template?.name || "hello_world"}) sent on WhatsApp`,
     {
       conversation: result.conversation,
       message: result.message,
