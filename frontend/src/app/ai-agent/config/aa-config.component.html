@@ -86,8 +86,11 @@
           <div class="col-12">
             <label class="form-label">Access token {{ settingsFlags.hasWhatsappToken ? '(saved)' : '' }}</label>
             <input class="form-control" type="password" [(ngModel)]="form.whatsappAccessToken" name="whatsappAccessToken" autocomplete="new-password" />
-            <div class="form-text text-warning" *ngIf="settingsFlags.hasWhatsappToken && settingsFlags.whatsappTokenDecryptOk === false">
-              WhatsApp token saved but decrypt failed — re-paste Access token and Save.
+            <div class="form-text text-warning" *ngIf="settingsFlags.hasWhatsappToken && settingsFlags.whatsappTokenDecryptOk === false && !settingsFlags.hasEnvWhatsappToken">
+              WhatsApp token saved but decrypt failed — re-paste Access token and Save, or set AI_AGENT_WHATSAPP_TOKEN in .env.
+            </div>
+            <div class="form-text text-success" *ngIf="settingsFlags.hasEnvWhatsappToken">
+              Using AI_AGENT_WHATSAPP_TOKEN from .env as fallback (LLM-style).
             </div>
           </div>
           <div class="col-12">

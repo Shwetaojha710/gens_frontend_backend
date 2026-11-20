@@ -17,9 +17,12 @@ const COMPANY = process.argv[2] || "quaeretech";
   if (!tenant) throw new Error(`tenant not found: ${COMPANY}`);
 
   const { agent, settings } = await getOrCreateAgent(tenant.id);
+  const { resolveWhatsAppAccessToken, resolveLlmApiKey } = require("../app/helper/aiAgentEngine");
   const hasEnc = Boolean(settings.llmApiKeyEnc);
   const llmKey = safeDecrypt(settings.llmApiKeyEnc);
   const envFallback = process.env.AI_AGENT_LLM_KEY || null;
+  const waToken = resolveWhatsAppAccessToken(settings);
+  const llmResolved = resolveLlmApiKey(settings);
 
   const info = {
     tenant: tenant.companyCode,
@@ -35,6 +38,10 @@ const COMPANY = process.argv[2] || "quaeretech";
     looksLikeOpenAI: llmKey ? /^sk-/.test(llmKey) : false,
     looksLikeGemini: llmKey ? /^AIza/.test(llmKey) : false,
     hasEnvFallback: Boolean(envFallback),
+    hasEnvWhatsappToken: Boolean(String(process.env.AI_AGENT_WHATSAPP_TOKEN || "").trim()),
+    whatsappTokenUsable: Boolean(waToken),
+    whatsappTokenLen: waToken ? waToken.length : 0,
+    llmResolvedOk: Boolean(llmResolved),
     hasAiFaceSecret: Boolean(process.env.AI_FACE_SECRET),
     hasSecretKey: Boolean(process.env.SECRET_KEY),
   };

@@ -15,6 +15,7 @@ const {
   executeHandover,
   ensureSystemIntents,
   safeDecrypt,
+  resolveWhatsAppAccessToken,
 } = require("../../helper/aiAgentEngine");
 const { normalizeWhatsAppTo } = require("../../helper/whatsappCloud");
 const { extractTextFromUpload, buildSearchText } = require("../../helper/aiAgentKnowledge");
@@ -700,7 +701,7 @@ exports.sendHumanReply = hr("sendHumanReply", async (req, res) => {
   if (!conv) return fail(res, "Conversation not found");
 
   const { settings } = await getOrCreateAgent(tenantId, req.users.id);
-  const accessToken = safeDecrypt(settings.whatsappAccessTokenEnc);
+  const accessToken = resolveWhatsAppAccessToken(settings);
   let waResponse = null;
   let delivery = { sent: false, error: null };
   if (!settings.whatsappPhoneNumberId) {
@@ -709,17 +710,11 @@ exports.sendHumanReply = hr("sendHumanReply", async (req, res) => {
       message:
         "WhatsApp Phone Number ID missing. Open AI Agent → Configuration and save Phone number ID from Meta API Setup.",
     };
-  } else if (!settings.whatsappAccessTokenEnc) {
-    delivery.error = {
-      code: null,
-      message:
-        "WhatsApp Access Token missing. Open AI Agent → Configuration, paste Meta Access Token, then Save.",
-    };
   } else if (!accessToken) {
     delivery.error = {
       code: null,
       message:
-        "WhatsApp Access Token could not be decrypted. Paste the Meta Access Token again in Agent Configuration and Save.",
+        "WhatsApp Access Token missing. Save it in Agent Configuration, or set AI_AGENT_WHATSAPP_TOKEN in .env, then restart backend.",
     };
   } else {
     try {

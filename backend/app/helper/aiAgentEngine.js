@@ -128,7 +128,7 @@ async function sendAgentWelcomeTemplate({
     return { skipped: true, reason: "invalid_phone", template: tpl };
   }
 
-  const accessToken = safeDecrypt(settings.whatsappAccessTokenEnc);
+  const accessToken = resolveWhatsAppAccessToken(settings);
   if (!settings.whatsappPhoneNumberId || !accessToken) {
     return {
       skipped: true,
@@ -137,7 +137,7 @@ async function sendAgentWelcomeTemplate({
       error: {
         code: null,
         message:
-          "WhatsApp Phone Number ID or Access Token missing. Save them in AI Agent → Configuration.",
+          "WhatsApp Phone Number ID or Access Token missing. Save them in AI Agent → Configuration, or set AI_AGENT_WHATSAPP_TOKEN in .env.",
       },
     };
   }
@@ -310,25 +310,49 @@ function safeDecrypt(enc) {
   }
 }
 
+/** DB decrypt first; fallback to AI_AGENT_WHATSAPP_TOKEN (same pattern as AI_AGENT_LLM_KEY). */
+function resolveWhatsAppAccessToken(settings) {
+  const fromDb = safeDecrypt(settings?.whatsappAccessTokenEnc);
+  if (fromDb) return fromDb;
+  const fromEnv = String(process.env.AI_AGENT_WHATSAPP_TOKEN || "").trim();
+  return fromEnv || null;
+}
+
+/** DB decrypt first; fallback to AI_AGENT_LLM_KEY. */
+function resolveLlmApiKey(settings) {
+  const fromDb = safeDecrypt(settings?.llmApiKeyEnc);
+  if (fromDb) return fromDb;
+  const fromEnv = String(process.env.AI_AGENT_LLM_KEY || "").trim();
+  return fromEnv || null;
+}
+
 function maskSettings(settings) {
   if (!settings) return null;
   const s = settings.toJSON ? settings.toJSON() : { ...settings };
   const whatsappTokenDecryptOk = Boolean(safeDecrypt(settings.whatsappAccessTokenEnc));
   const appSecretDecryptOk = Boolean(safeDecrypt(settings.whatsappAppSecretEnc));
   const llmKeyDecryptOk = Boolean(safeDecrypt(settings.llmApiKeyEnc));
+  const hasEnvWhatsappToken = Boolean(String(process.env.AI_AGENT_WHATSAPP_TOKEN || "").trim());
+  const hasEnvLlmKey = Boolean(String(process.env.AI_AGENT_LLM_KEY || "").trim());
+  const whatsappTokenUsable = whatsappTokenDecryptOk || hasEnvWhatsappToken;
+  const llmKeyUsable = llmKeyDecryptOk || hasEnvLlmKey;
   return {
     ...s,
     whatsappAccessTokenEnc: undefined,
     whatsappAppSecretEnc: undefined,
     llmApiKeyEnc: undefined,
-    hasWhatsappToken: Boolean(settings.whatsappAccessTokenEnc),
+    hasWhatsappToken: Boolean(settings.whatsappAccessTokenEnc) || hasEnvWhatsappToken,
     hasAppSecret: Boolean(settings.whatsappAppSecretEnc),
-    hasLlmKey: Boolean(settings.llmApiKeyEnc),
+    hasLlmKey: Boolean(settings.llmApiKeyEnc) || hasEnvLlmKey,
     // true = ciphertext exists AND decrypts with this server's SECRET_KEY / AI_FACE_SECRET
     whatsappTokenDecryptOk,
     appSecretDecryptOk,
     llmKeyDecryptOk,
-    credentialsHealthy: whatsappTokenDecryptOk && llmKeyDecryptOk,
+    hasEnvWhatsappToken,
+    hasEnvLlmKey,
+    whatsappTokenUsable,
+    llmKeyUsable,
+    credentialsHealthy: whatsappTokenUsable && llmKeyUsable,
   };
 }
 
@@ -708,8 +732,8 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
 
   const llmEncPresent = Boolean(settings.llmApiKeyEnc);
   const llmDecrypted = safeDecrypt(settings.llmApiKeyEnc);
-  const apiKey = llmDecrypted || process.env.AI_AGENT_LLM_KEY || null;
-  const accessToken = safeDecrypt(settings.whatsappAccessTokenEnc);
+  const apiKey = resolveLlmApiKey(settings);
+  const accessToken = resolveWhatsAppAccessToken(settings);
 
   let decision;
   try {
@@ -1014,6 +1038,8 @@ module.exports = {
   getWelcomeTemplate,
   sendAgentWelcomeTemplate,
   outreachLeadWelcome,
+  resolveWhatsAppAccessToken,
+  resolveLlmApiKey,
   DEFAULT_WELCOME_TEMPLATE,
   findTenantByPhoneNumberId,
   processInboundMessage,
