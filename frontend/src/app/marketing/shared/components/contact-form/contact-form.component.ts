@@ -91,21 +91,24 @@ export class ContactFormComponent implements OnInit {
 
     const v = this.contactForm.getRawValue();
     const optionalNote = String(v.message || '').trim();
-    // Compose structured message for existing API (requires message ≥ 10 chars).
-    const fullPhone = `${String(v.countryCode || '').trim()} ${String(v.phone || '').trim()}`.trim();
-    const composed = [
-      `Company: ${String(v.company || '').trim()}`,
-      `Phone: ${fullPhone}`,
-      `Number of Employees: ${String(v.employees || '').trim()}`,
-      optionalNote ? `Notes: ${optionalNote}` : 'Notes: (none)',
-    ].join('\n');
 
     this.contactSubmitting.set(true);
     this.publicLanding
       .submitContact({
         fullName: String(v.fullName || '').trim(),
         email: String(v.email || '').trim(),
-        message: composed,
+        company: String(v.company || '').trim(),
+        countryCode: String(v.countryCode || '+91').trim(),
+        phone: String(v.phone || '').trim(),
+        employees: String(v.employees || '').trim(),
+        notes: optionalNote || undefined,
+        // legacy composed message kept for older API consumers / admin parsers
+        message: [
+          `Company: ${String(v.company || '').trim()}`,
+          `Phone: ${String(v.countryCode || '').trim()} ${String(v.phone || '').trim()}`.trim(),
+          `Number of Employees: ${String(v.employees || '').trim()}`,
+          optionalNote ? `Notes: ${optionalNote}` : 'Notes: (none)',
+        ].join('\n'),
       })
       .pipe(finalize(() => this.contactSubmitting.set(false)))
       .subscribe({

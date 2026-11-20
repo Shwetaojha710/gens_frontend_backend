@@ -129,8 +129,17 @@ export class PublicLandingService {
     return this.http.get(`${this.base()}public/landing`, { responseType: 'text' });
   }
 
-  /** Public POST — body is validated and sanitised on the server */
-  submitContact(body: { fullName: string; email: string; message: string }): Observable<string> {
+  /** Public POST — creates landing submission + AI agent lead / welcome WhatsApp. */
+  submitContact(body: {
+    fullName: string;
+    email: string;
+    company?: string;
+    countryCode?: string;
+    phone?: string;
+    employees?: string;
+    message?: string;
+    notes?: string;
+  }): Observable<string> {
     return this.http.post(`${this.base()}public/contact`, body, { responseType: 'text' });
   }
 
