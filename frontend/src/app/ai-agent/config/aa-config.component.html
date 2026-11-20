@@ -93,6 +93,22 @@
               <label class="form-check-label" for="nHand">Notify on handover</label>
             </div>
           </div>
+          <div class="col-12 border-top pt-3">
+            <h6 class="mb-2">Auto welcome template</h6>
+            <p class="small text-muted mb-2">
+              First outbound from the agent uses this Meta-approved WhatsApp Manager template (required for allowlisted / business-initiated opens).
+            </p>
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="checkbox" [(ngModel)]="form.autoSendWelcomeTemplate" name="autoSendWelcomeTemplate" id="autoTpl" />
+              <label class="form-check-label" for="autoTpl">Auto-send template when starting a chat</label>
+            </div>
+            <label class="form-label">Template name</label>
+            <input class="form-control mb-2" [(ngModel)]="form.welcomeTemplateName" name="welcomeTemplateName" placeholder="hello_world" />
+            <label class="form-label">Language</label>
+            <input class="form-control mb-2" [(ngModel)]="form.welcomeTemplateLanguage" name="welcomeTemplateLanguage" placeholder="en_US" />
+            <label class="form-label">Message preview (display only)</label>
+            <textarea class="form-control" rows="4" [(ngModel)]="form.welcomeTemplateBody" name="welcomeTemplateBody"></textarea>
+          </div>
           <div class="col-12">
             <label class="form-label small text-muted">Webhook URL (set in Meta Developer Console)</label>
             <input class="form-control form-control-sm" [value]="webhookUrl" readonly />

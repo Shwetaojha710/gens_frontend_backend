@@ -32,6 +32,9 @@ export class AaConversationsComponent implements OnInit, OnDestroy {
   simPhone = '';
   simText = '';
   simName = '';
+  startPhone = '';
+  startName = '';
+  starting = false;
 
   constructor(private api: AiAgentService) {}
 
@@ -118,6 +121,29 @@ export class AaConversationsComponent implements OnInit, OnDestroy {
         this.loadList();
         if (res.data?.conversationId) this.open(res.data.conversationId);
       } else this.notyf.error(res?.message || 'Simulation failed');
+    });
+  }
+
+  /** Agent auto-sends Meta-approved welcome template to an allowlisted number. */
+  startWithTemplate(): void {
+    if (!this.startPhone.trim()) {
+      this.notyf.error('Allowlisted WhatsApp number is required');
+      return;
+    }
+    this.starting = true;
+    this.api.startConversation(this.startPhone.trim(), this.startName.trim() || undefined).subscribe({
+      next: (res: any) => {
+        this.starting = false;
+        if (res?.status === true) {
+          const delivered = res?.data?.delivery?.sent === true;
+          if (delivered) this.notyf.success(res.message || 'Welcome template sent');
+          else this.notyf.error(res?.message || 'Saved, but WhatsApp delivery failed');
+          this.loadList();
+          const id = res?.data?.conversation?.id;
+          if (id) this.open(id);
+        } else this.notyf.error(res?.message || 'Failed to start conversation');
+      },
+      error: () => (this.starting = false),
     });
   }
 }

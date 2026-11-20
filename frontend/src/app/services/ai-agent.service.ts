@@ -45,6 +45,10 @@ export class AiAgentService {
 
   listConversations(filters: any = {}): Observable<any> { return this.post('conversations/list', filters); }
   getConversation(id: string): Observable<any> { return this.post('conversations/get', { id }); }
+  /** Business-initiated open: send Meta-approved welcome template to allowlisted number. */
+  startConversation(phone: string, customerName?: string): Observable<any> {
+    return this.post('conversations/start', { phone, customerName });
+  }
   toggleAi(id: string, aiEnabled: boolean): Observable<any> {
     return this.post('conversations/toggle-ai', { id, aiEnabled });
   }

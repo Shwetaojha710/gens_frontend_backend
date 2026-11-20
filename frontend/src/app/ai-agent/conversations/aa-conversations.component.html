@@ -83,6 +83,26 @@
   </div>
 
   <div class="card mt-4">
+    <h6 class="card-header">Start chat with welcome template</h6>
+    <div class="card-body row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label small">Meta allowlisted number</label>
+        <input class="form-control form-control-sm" [(ngModel)]="startPhone" placeholder="9198xxxxxxx" />
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small">Name (optional)</label>
+        <input class="form-control form-control-sm" [(ngModel)]="startName" placeholder="Customer name" />
+      </div>
+      <div class="col-md-5">
+        <button class="btn btn-sm btn-primary" type="button" [disabled]="starting" (click)="startWithTemplate()">
+          {{ starting ? 'Sending…' : 'Send hello_world template' }}
+        </button>
+        <div class="form-text">Agent auto-sends the approved WhatsApp Manager template as the first message.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt-4">
     <h6 class="card-header">Test simulator (no WhatsApp required)</h6>
     <div class="card-body row g-2 align-items-end">
       <div class="col-md-2">

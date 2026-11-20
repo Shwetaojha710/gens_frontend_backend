@@ -32,6 +32,7 @@ router.post("/ai-agent/leads/update", Admin, ctrl.updateLead);
 
 router.post("/ai-agent/conversations/list", Admin, ctrl.listConversations);
 router.post("/ai-agent/conversations/get", Admin, ctrl.getConversation);
+router.post("/ai-agent/conversations/start", Admin, ctrl.startConversation);
 router.post("/ai-agent/conversations/toggle-ai", Admin, ctrl.toggleAi);
 router.post("/ai-agent/conversations/assign", Admin, ctrl.assignConversation);
 router.post("/ai-agent/conversations/reply", Admin, ctrl.sendHumanReply);

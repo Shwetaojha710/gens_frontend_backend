@@ -90,6 +90,53 @@ async function sendTextMessage({ accessToken, phoneNumberId, to, text }) {
   return res.data;
 }
 
+/**
+ * Send an approved WhatsApp message template (required for business-initiated / outside 24h window).
+ * @param {object} opts
+ * @param {string} opts.accessToken
+ * @param {string} opts.phoneNumberId
+ * @param {string} opts.to
+ * @param {string} opts.templateName e.g. hello_world
+ * @param {string} [opts.languageCode=en_US]
+ * @param {Array} [opts.components] optional template components (header/body/button params)
+ */
+async function sendTemplateMessage({
+  accessToken,
+  phoneNumberId,
+  to,
+  templateName,
+  languageCode = "en_US",
+  components,
+}) {
+  const url = `${GRAPH_BASE}/${phoneNumberId}/messages`;
+  const recipient = normalizeWhatsAppTo(to);
+  const name = String(templateName || "").trim();
+  if (!name) throw new Error("templateName is required");
+
+  const payload = {
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    to: recipient,
+    type: "template",
+    template: {
+      name,
+      language: { code: String(languageCode || "en_US") },
+    },
+  };
+  if (Array.isArray(components) && components.length) {
+    payload.template.components = components;
+  }
+
+  const res = await axios.post(url, payload, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    timeout: 30000,
+  });
+  return res.data;
+}
+
 function formatWhatsAppSendError(err) {
   const e = err?.response?.data?.error || {};
   const code = e.code;
@@ -114,6 +161,7 @@ module.exports = {
   verifyWebhookSignature,
   parseInboundMessages,
   sendTextMessage,
+  sendTemplateMessage,
   normalizeWhatsAppTo,
   formatWhatsAppSendError,
   isWithinCustomerServiceWindow,

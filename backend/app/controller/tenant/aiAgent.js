@@ -7,6 +7,8 @@ const { encrypt } = require("../../helper/aiFaceCrypto");
 const {
   getOrCreateAgent,
   maskSettings,
+  getWelcomeTemplate,
+  sendAgentWelcomeTemplate,
   findTenantByPhoneNumberId,
   processInboundMessage,
   executeHandover,
@@ -145,6 +147,38 @@ exports.saveConfig = hr("saveConfig", async (req, res) => {
   if (b.whatsappAccessToken) settingsPatch.whatsappAccessTokenEnc = encrypt(String(b.whatsappAccessToken));
   if (b.whatsappAppSecret) settingsPatch.whatsappAppSecretEnc = encrypt(String(b.whatsappAppSecret));
   if (b.llmApiKey) settingsPatch.llmApiKeyEnc = encrypt(String(b.llmApiKey));
+
+  // Welcome template = agent's auto first outbound (Meta-approved, allowlisted numbers)
+  const hasWelcomePatch =
+    b.welcomeTemplateName != null ||
+    b.welcomeTemplateLanguage != null ||
+    b.welcomeTemplateBody != null ||
+    typeof b.autoSendWelcomeTemplate === "boolean";
+  if (hasWelcomePatch) {
+    const current = getWelcomeTemplate(settings);
+    settingsPatch.meta = {
+      ...(settings.meta || {}),
+      welcomeTemplate: {
+        name:
+          b.welcomeTemplateName != null
+            ? String(b.welcomeTemplateName).trim() || current.name
+            : current.name,
+        language:
+          b.welcomeTemplateLanguage != null
+            ? String(b.welcomeTemplateLanguage).trim() || current.language
+            : current.language,
+        body:
+          b.welcomeTemplateBody != null
+            ? String(b.welcomeTemplateBody)
+            : current.body,
+        autoSend:
+          typeof b.autoSendWelcomeTemplate === "boolean"
+            ? b.autoSendWelcomeTemplate
+            : current.autoSend,
+      },
+    };
+  }
+
   await settings.update(settingsPatch);
 
   const fresh = await getOrCreateAgent(tenantId, req.users.id);
@@ -397,6 +431,74 @@ exports.assignConversation = hr("assignConversation", async (req, res) => {
     updatedBy: req.users.id,
   });
   return Helper.response(true, "Assigned", conv, res, 200);
+});
+
+/**
+ * Start / reopen a conversation by auto-sending the Meta-approved welcome template
+ * to a Meta allowlisted WhatsApp number (business-initiated open).
+ */
+exports.startConversation = hr("startConversation", async (req, res) => {
+  const tenantId = req.users.tenantId;
+  const phone = String(req.body?.phone || req.body?.waId || "").trim();
+  if (!phone) return fail(res, "Phone number is required");
+
+  const { agent, settings } = await getOrCreateAgent(tenantId, req.users.id);
+  if (!agent.isEnabled || agent.status !== "active") {
+    return fail(res, "Agent is disabled. Enable it in Configuration first.");
+  }
+
+  const result = await sendAgentWelcomeTemplate({
+    tenantId,
+    agent,
+    settings,
+    phone,
+    customerName: req.body?.customerName ? String(req.body.customerName).trim() : null,
+    userId: req.users.id,
+  });
+
+  if (result.skipped) {
+    return Helper.response(
+      false,
+      result.error?.message ||
+        (result.reason === "welcome_template_auto_send_disabled"
+          ? "Welcome template auto-send is disabled in Configuration"
+          : result.reason === "invalid_phone"
+            ? "Invalid phone number"
+            : "Could not send welcome template"),
+      { result },
+      res,
+      200
+    );
+  }
+
+  if (!result.delivery?.sent) {
+    return Helper.response(
+      true,
+      result.delivery?.error?.message ||
+        "Saved in inbox, but WhatsApp template delivery failed (check Meta allowlist)",
+      {
+        conversation: result.conversation,
+        message: result.message,
+        delivery: result.delivery,
+        template: result.template,
+      },
+      res,
+      200
+    );
+  }
+
+  return Helper.response(
+    true,
+    "Welcome template sent on WhatsApp",
+    {
+      conversation: result.conversation,
+      message: result.message,
+      delivery: result.delivery,
+      template: result.template,
+    },
+    res,
+    200
+  );
 });
 
 exports.sendHumanReply = hr("sendHumanReply", async (req, res) => {

@@ -15,9 +15,20 @@ const {
 } = require("./aiAgentLead");
 const {
   sendTextMessage,
+  sendTemplateMessage,
+  normalizeWhatsAppTo,
   isWithinCustomerServiceWindow,
   formatWhatsAppSendError,
 } = require("./whatsappCloud");
+
+/** Meta-approved Hello World template — agent's auto first outbound outside the 24h window. */
+const DEFAULT_WELCOME_TEMPLATE = {
+  name: "hello_world",
+  language: "en_US",
+  autoSend: true,
+  body:
+    "Hello World\nWelcome and congratulations!! This message demonstrates your ability to send a WhatsApp message notification from the Cloud API, hosted by Meta. Thank you for taking the time to test with us.",
+};
 
 const AiAgent = require("../models/ai_agent");
 const AiAgentSettings = require("../models/ai_agent_settings");
@@ -64,11 +75,145 @@ async function getOrCreateAgent(tenantId, userId = null) {
       tenantId,
       agentId: agent.id,
       whatsappVerifyToken: `gens-wa-${tenantId.slice(0, 8)}`,
+      meta: { welcomeTemplate: { ...DEFAULT_WELCOME_TEMPLATE } },
       createdBy: userId,
       updatedBy: userId,
     });
+  } else if (!settings.meta?.welcomeTemplate?.name) {
+    await settings.update({
+      meta: {
+        ...(settings.meta || {}),
+        welcomeTemplate: {
+          ...DEFAULT_WELCOME_TEMPLATE,
+          ...(settings.meta?.welcomeTemplate || {}),
+        },
+      },
+    });
+    await settings.reload();
   }
   return { agent, settings };
+}
+
+function getWelcomeTemplate(settings) {
+  const stored = settings?.meta?.welcomeTemplate || {};
+  return {
+    name: String(stored.name || DEFAULT_WELCOME_TEMPLATE.name).trim() || DEFAULT_WELCOME_TEMPLATE.name,
+    language:
+      String(stored.language || DEFAULT_WELCOME_TEMPLATE.language).trim() ||
+      DEFAULT_WELCOME_TEMPLATE.language,
+    autoSend: stored.autoSend !== false,
+    body: String(stored.body || DEFAULT_WELCOME_TEMPLATE.body),
+  };
+}
+
+/**
+ * Business-initiated open: send the approved welcome template to an allowlisted WhatsApp number.
+ * Creates/updates the conversation and logs an outbound template message.
+ */
+async function sendAgentWelcomeTemplate({
+  tenantId,
+  agent,
+  settings,
+  phone,
+  customerName = null,
+  userId = null,
+}) {
+  const tpl = getWelcomeTemplate(settings);
+  if (!tpl.autoSend) {
+    return { skipped: true, reason: "welcome_template_auto_send_disabled", template: tpl };
+  }
+
+  const to = normalizeWhatsAppTo(phone);
+  if (!to) {
+    return { skipped: true, reason: "invalid_phone", template: tpl };
+  }
+
+  const accessToken = safeDecrypt(settings.whatsappAccessTokenEnc);
+  if (!settings.whatsappPhoneNumberId || !accessToken) {
+    return {
+      skipped: true,
+      reason: "whatsapp_credentials_missing",
+      template: tpl,
+      error: {
+        code: null,
+        message:
+          "WhatsApp Phone Number ID or Access Token missing. Save them in AI Agent → Configuration.",
+      },
+    };
+  }
+
+  let conversation = await AiAgentConversation.findOne({
+    where: { tenantId, waId: to },
+  });
+  if (!conversation) {
+    conversation = await AiAgentConversation.create({
+      tenantId,
+      agentId: agent.id,
+      waId: to,
+      customerPhone: to,
+      customerName: customerName || null,
+      status: "active",
+      aiEnabled: true,
+      lastMessageAt: new Date(),
+      context: { openedWith: "welcome_template" },
+      createdBy: userId,
+      updatedBy: userId,
+    });
+  } else {
+    const patch = {
+      lastMessageAt: new Date(),
+      updatedBy: userId,
+      status: conversation.status === "closed" ? "active" : conversation.status,
+      context: {
+        ...(conversation.context || {}),
+        openedWith: "welcome_template",
+        lastWelcomeTemplateAt: new Date().toISOString(),
+      },
+    };
+    if (customerName && !conversation.customerName) patch.customerName = customerName;
+    await conversation.update(patch);
+  }
+
+  let waResponse = null;
+  let delivery = { sent: false, error: null };
+  try {
+    waResponse = await sendTemplateMessage({
+      accessToken,
+      phoneNumberId: settings.whatsappPhoneNumberId,
+      to,
+      templateName: tpl.name,
+      languageCode: tpl.language,
+    });
+    delivery.sent = true;
+  } catch (e) {
+    delivery.error = formatWhatsAppSendError(e);
+    console.error("aiAgentEngine.sendAgentWelcomeTemplate:", delivery.error);
+  }
+
+  const outbound = await AiAgentMessage.create({
+    tenantId,
+    conversationId: conversation.id,
+    direction: "outbound",
+    senderType: "ai",
+    senderId: userId || null,
+    waMessageId: waResponse?.messages?.[0]?.id || null,
+    messageType: "template",
+    body: tpl.body,
+    createdBy: userId,
+    meta: {
+      template: { name: tpl.name, language: tpl.language },
+      delivery,
+      autoWelcome: true,
+    },
+  });
+
+  return {
+    skipped: false,
+    conversation,
+    message: outbound,
+    delivery,
+    template: tpl,
+  };
 }
 
 function safeDecrypt(enc) {
@@ -673,6 +818,9 @@ module.exports = {
   ensureSystemIntents,
   getOrCreateAgent,
   maskSettings,
+  getWelcomeTemplate,
+  sendAgentWelcomeTemplate,
+  DEFAULT_WELCOME_TEMPLATE,
   findTenantByPhoneNumberId,
   processInboundMessage,
   executeHandover,

@@ -46,6 +46,7 @@ export class AaConfigComponent implements OnInit {
           this.webhookUrl = s.meta.publicWebhookUrl;
           this.webhookHint = 'Public tunnel URL (Meta can reach this)';
         }
+        const wt = s?.meta?.welcomeTemplate || {};
         this.form = {
           name: a.name,
           personality: a.personality,
@@ -65,6 +66,12 @@ export class AaConfigComponent implements OnInit {
           notifyOnLead: s.notifyOnLead !== false,
           notifyOnHandover: s.notifyOnHandover !== false,
           defaultAssigneeId: s.defaultAssigneeId || '',
+          welcomeTemplateName: wt.name || 'hello_world',
+          welcomeTemplateLanguage: wt.language || 'en_US',
+          welcomeTemplateBody:
+            wt.body ||
+            'Hello World\nWelcome and congratulations!! This message demonstrates your ability to send a WhatsApp message notification from the Cloud API, hosted by Meta. Thank you for taking the time to test with us.',
+          autoSendWelcomeTemplate: wt.autoSend !== false,
         };
       },
       error: () => (this.loading = false),
