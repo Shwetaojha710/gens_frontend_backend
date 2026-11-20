@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Notyf } from 'notyf';
+import { environment } from '../../../environments/environment';
 import { AiAgentService } from '../../services/ai-agent.service';
 
 @Component({
@@ -17,13 +18,15 @@ export class AaConfigComponent implements OnInit {
   form: any = {};
   settingsFlags: any = {};
   webhookUrl = '';
+  webhookHint = '';
 
   constructor(private api: AiAgentService) {}
 
   ngOnInit(): void {
-    const origin = window.location.origin.replace(/:\d+$/, '');
-    // Best-effort hint; actual API host comes from environment in production
-    this.webhookUrl = `${origin}/api/whatsapp/webhook`;
+    // Prefer API host from environment (not Angular :4200 origin)
+    const apiBase = String(environment.apiUrl || '').replace(/\/+$/, '');
+    this.webhookUrl = `${apiBase}/whatsapp/webhook`;
+    this.webhookHint = '';
     this.load();
   }
 
@@ -39,6 +42,10 @@ export class AaConfigComponent implements OnInit {
         const a = res.data.agent || {};
         const s = res.data.settings || {};
         this.settingsFlags = s;
+        if (s?.meta?.publicWebhookUrl) {
+          this.webhookUrl = s.meta.publicWebhookUrl;
+          this.webhookHint = 'Public tunnel URL (Meta can reach this)';
+        }
         this.form = {
           name: a.name,
           personality: a.personality,

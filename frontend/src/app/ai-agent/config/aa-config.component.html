@@ -96,6 +96,8 @@
           <div class="col-12">
             <label class="form-label small text-muted">Webhook URL (set in Meta Developer Console)</label>
             <input class="form-control form-control-sm" [value]="webhookUrl" readonly />
+            <div class="form-text" *ngIf="webhookHint">{{ webhookHint }}</div>
+            <div class="form-text">Verify token must match the field above. Keep the Cloudflare tunnel running for local inbound replies.</div>
           </div>
         </div>
       </div>

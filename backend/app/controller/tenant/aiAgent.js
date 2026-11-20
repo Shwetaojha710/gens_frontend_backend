@@ -412,7 +412,25 @@ exports.sendHumanReply = hr("sendHumanReply", async (req, res) => {
   const accessToken = safeDecrypt(settings.whatsappAccessTokenEnc);
   let waResponse = null;
   let delivery = { sent: false, error: null };
-  if (accessToken && settings.whatsappPhoneNumberId) {
+  if (!settings.whatsappPhoneNumberId) {
+    delivery.error = {
+      code: null,
+      message:
+        "WhatsApp Phone Number ID missing. Open AI Agent → Configuration and save Phone number ID from Meta API Setup.",
+    };
+  } else if (!settings.whatsappAccessTokenEnc) {
+    delivery.error = {
+      code: null,
+      message:
+        "WhatsApp Access Token missing. Open AI Agent → Configuration, paste Meta Access Token, then Save.",
+    };
+  } else if (!accessToken) {
+    delivery.error = {
+      code: null,
+      message:
+        "WhatsApp Access Token could not be decrypted. Paste the Meta Access Token again in Agent Configuration and Save.",
+    };
+  } else {
     try {
       waResponse = await sendTextMessage({
         accessToken,
@@ -425,8 +443,6 @@ exports.sendHumanReply = hr("sendHumanReply", async (req, res) => {
       delivery.error = formatWhatsAppSendError(e);
       console.error("aiAgent.sendHumanReply WhatsApp:", delivery.error);
     }
-  } else {
-    delivery.error = { code: null, message: "WhatsApp credentials not configured" };
   }
 
   const msg = await AiAgentMessage.create({
