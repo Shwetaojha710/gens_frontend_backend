@@ -20,6 +20,7 @@ export class AaLeadsComponent implements OnInit {
   leadStatus = '';
   creating = false;
   outreaching = false;
+  wiping = false;
   showCreate = false;
   newLead: any = {
     phone: '',
@@ -125,6 +126,26 @@ export class AaLeadsComponent implements OnInit {
         } else this.notyf.error(res?.message || 'Outreach failed');
       },
       error: () => (this.outreaching = false),
+    });
+  }
+
+  wipeAll(): void {
+    const ok = confirm(
+      'Delete ALL leads and conversations for this company?\n\nThis cannot be undone. Agent config and knowledge are kept.'
+    );
+    if (!ok) return;
+    this.wiping = true;
+    this.api.wipeInbox().subscribe({
+      next: (res: any) => {
+        this.wiping = false;
+        if (res?.status === true) {
+          this.notyf.success(res.message || 'Inbox wiped');
+          this.selected = null;
+          this.messages = [];
+          this.load();
+        } else this.notyf.error(res?.message || 'Wipe failed');
+      },
+      error: () => (this.wiping = false),
     });
   }
 

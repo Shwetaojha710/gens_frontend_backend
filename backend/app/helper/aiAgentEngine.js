@@ -313,6 +313,9 @@ function safeDecrypt(enc) {
 function maskSettings(settings) {
   if (!settings) return null;
   const s = settings.toJSON ? settings.toJSON() : { ...settings };
+  const whatsappTokenDecryptOk = Boolean(safeDecrypt(settings.whatsappAccessTokenEnc));
+  const appSecretDecryptOk = Boolean(safeDecrypt(settings.whatsappAppSecretEnc));
+  const llmKeyDecryptOk = Boolean(safeDecrypt(settings.llmApiKeyEnc));
   return {
     ...s,
     whatsappAccessTokenEnc: undefined,
@@ -321,6 +324,72 @@ function maskSettings(settings) {
     hasWhatsappToken: Boolean(settings.whatsappAccessTokenEnc),
     hasAppSecret: Boolean(settings.whatsappAppSecretEnc),
     hasLlmKey: Boolean(settings.llmApiKeyEnc),
+    // true = ciphertext exists AND decrypts with this server's SECRET_KEY / AI_FACE_SECRET
+    whatsappTokenDecryptOk,
+    appSecretDecryptOk,
+    llmKeyDecryptOk,
+    credentialsHealthy: whatsappTokenDecryptOk && llmKeyDecryptOk,
+  };
+}
+
+function isSimpleGreeting(text) {
+  const t = String(text || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[!!.?,]+$/g, "");
+  return /^(hi|hii+|hello|hey|namaste|namaskar|good\s*(morning|afternoon|evening)|hola|yo)\b/.test(
+    t
+  );
+}
+
+function buildLlmFailureDecision(agent, inbound, err) {
+  const hasEnc = Boolean(err?.hasEnc);
+  const decryptFailed = Boolean(err?.decryptFailed);
+  console.error("aiAgentEngine.llm:", err?.message || err, {
+    hasEnc,
+    decryptFailed,
+  });
+
+  // Keep chat usable when LLM is down — don't hand over on a simple Hi
+  if (isSimpleGreeting(inbound?.body)) {
+    const intro =
+      (agent?.companyIntro && String(agent.companyIntro).trim()) ||
+      `Hello! I am ${agent?.name || "the virtual assistant"}. How can I help you today?`;
+    return {
+      intent: "GENERAL_ENQUIRY",
+      confidence: 0.55,
+      reply: intro,
+      actions: [{ type: "ASK_FOLLOWUP", payload: {} }],
+      leadUpdates: {},
+      memoryUpdates: {},
+      needsHuman: false,
+      handoverReason: null,
+      leadPriority: null,
+      language: /[\u0900-\u097F]/.test(String(inbound?.body || "")) ? "hi" : "en",
+    };
+  }
+
+  const hint = decryptFailed
+    ? " (AI key is saved but could not be decrypted — re-paste the LLM API key in Agent Configuration and Save.)"
+    : !hasEnc
+      ? " (LLM API key missing — save it in Agent Configuration.)"
+      : "";
+
+  return {
+    intent: "GENERAL_ENQUIRY",
+    confidence: 0,
+    reply:
+      "Thank you for reaching out. I am having trouble accessing my assistant right now. Would you like me to connect you with a team member?" +
+      hint,
+    actions: [{ type: "TRANSFER_TO_HUMAN", payload: { reason: "llm_error" } }],
+    leadUpdates: {},
+    memoryUpdates: {},
+    needsHuman: true,
+    handoverReason: decryptFailed
+      ? "LLM key decrypt failed — re-save API key"
+      : "AI service unavailable",
+    leadPriority: null,
+    language: "en",
   };
 }
 
@@ -637,11 +706,23 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
   const { missingLeadFields } = require("./aiAgentLead");
   const missing = missingLeadFields(collected);
 
-  const apiKey = safeDecrypt(settings.llmApiKeyEnc) || process.env.AI_AGENT_LLM_KEY || null;
+  const llmEncPresent = Boolean(settings.llmApiKeyEnc);
+  const llmDecrypted = safeDecrypt(settings.llmApiKeyEnc);
+  const apiKey = llmDecrypted || process.env.AI_AGENT_LLM_KEY || null;
   const accessToken = safeDecrypt(settings.whatsappAccessTokenEnc);
 
   let decision;
   try {
+    if (!apiKey) {
+      const err = new Error(
+        llmEncPresent
+          ? "LLM API key is saved but could not be decrypted with this server secret"
+          : "LLM API key is not configured"
+      );
+      err.hasEnc = llmEncPresent;
+      err.decryptFailed = llmEncPresent && !llmDecrypted;
+      throw err;
+    }
     decision = await generateDecision({
       provider: agent.aiProvider,
       model: agent.aiModel,
@@ -656,28 +737,38 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
       }),
     });
   } catch (err) {
-    console.error("aiAgentEngine.llm:", err?.message || err);
-    decision = {
-      intent: "GENERAL_ENQUIRY",
-      confidence: 0,
-      reply:
-        "Thank you for reaching out. I am having trouble accessing my assistant right now. Would you like me to connect you with a team member?",
-      actions: [{ type: "TRANSFER_TO_HUMAN", payload: { reason: "llm_error" } }],
-      leadUpdates: {},
-      memoryUpdates: {},
-      needsHuman: true,
-      handoverReason: "AI service unavailable",
-      leadPriority: null,
-      language: "en",
-    };
+    err.hasEnc = err.hasEnc ?? llmEncPresent;
+    err.decryptFailed = err.decryptFailed ?? (llmEncPresent && !llmDecrypted && !process.env.AI_AGENT_LLM_KEY);
+    decision = buildLlmFailureDecision(agent, inbound, err);
   }
+
+  // Greeting harden: Hi/Hello must get a friendly intro — never silent / never auto-handover
+  if (isSimpleGreeting(inbound.body)) {
+    decision.intent = "GENERAL_ENQUIRY";
+    decision.confidence = Math.max(Number(decision.confidence) || 0, 0.75);
+    decision.needsHuman = false;
+    decision.handoverReason = null;
+    decision.actions = [{ type: "ASK_FOLLOWUP", payload: {} }];
+    if (!String(decision.reply || "").trim() || /connect you with our team|trouble accessing/i.test(decision.reply)) {
+      decision.reply =
+        (agent.companyIntro && String(agent.companyIntro).trim()) ||
+        `Hello! I am ${agent.name || "the virtual assistant"}. How can I help you today?`;
+    }
+  }
+
+  // Lead-collection / demo flow should not be killed by low confidence alone
+  const collectingLead = decision.actions.some((a) =>
+    ["COLLECT_LEAD_INFORMATION", "ASK_FOLLOWUP", "CREATE_LEAD", "UPDATE_LEAD", "SCHEDULE_DEMO"].includes(
+      a.type
+    )
+  );
 
   // Low confidence / complaint / human request → force handover action
   if (
     decision.intent === "HUMAN_AGENT_REQUEST" ||
     decision.intent === "COMPLAINT" ||
-    decision.confidence < 0.35 ||
-    decision.needsHuman
+    (decision.confidence < 0.35 && !collectingLead) ||
+    (decision.needsHuman && decision.intent !== "DEMO_REQUEST" && !collectingLead)
   ) {
     if (!decision.actions.some((a) => a.type === "TRANSFER_TO_HUMAN")) {
       decision.actions.push({
@@ -694,6 +785,23 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
                   : "other",
         },
       });
+    }
+  }
+
+  // Explicit human request always hands over (even mid lead-collect)
+  if (decision.intent === "HUMAN_AGENT_REQUEST" || /connect.*(human|agent|person|team)|talk to (a )?human|real person/i.test(inbound.body || "")) {
+    decision.needsHuman = true;
+    if (!decision.actions.some((a) => a.type === "TRANSFER_TO_HUMAN")) {
+      decision.actions.push({
+        type: "TRANSFER_TO_HUMAN",
+        payload: { reason: "customer_request", triggerType: "customer_request" },
+      });
+    }
+    if (!decision.reply) {
+      decision.reply =
+        decision.language === "hi"
+          ? "ज़रूर — मैं आपको हमारी टीम से जोड़ रहा/रही हूँ।"
+          : "Sure — I am connecting you with our team now.";
     }
   }
 

@@ -299,6 +299,37 @@ exports.deleteKnowledge = hr("deleteKnowledge", async (req, res) => {
   return Helper.response(true, "Deleted", {}, res, 200);
 });
 
+/**
+ * Wipe all AI Agent leads + conversations for this tenant (fresh start).
+ * Keeps agent config, WhatsApp settings, and knowledge base.
+ * Requires confirm: "DELETE" in body.
+ */
+exports.wipeInbox = hr("wipeInbox", async (req, res) => {
+  const tenantId = req.users.tenantId;
+  if (String(req.body?.confirm || "") !== "DELETE") {
+    return fail(res, 'Type confirm: "DELETE" to wipe leads and conversations');
+  }
+
+  const where = { tenantId };
+  const counts = {};
+  counts.messages = await AiAgentMessage.destroy({ where });
+  counts.actions = await AiAgentAction.destroy({ where });
+  counts.handovers = await AiAgentHandover.destroy({ where });
+  counts.memory = await AiAgentMemory.destroy({ where });
+  await AiAgentLead.update({ conversationId: null }, { where });
+  await AiAgentConversation.update({ leadId: null }, { where });
+  counts.leads = await AiAgentLead.destroy({ where });
+  counts.conversations = await AiAgentConversation.destroy({ where });
+
+  return Helper.response(
+    true,
+    "Leads and conversations wiped — ready for a fresh start",
+    { counts },
+    res,
+    200
+  );
+});
+
 // ───────────────────────────── leads ─────────────────────────────
 
 exports.listLeads = hr("listLeads", async (req, res) => {

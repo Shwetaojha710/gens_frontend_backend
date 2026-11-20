@@ -39,6 +39,9 @@ export class AiAgentService {
   }
   deleteKnowledge(id: string): Observable<any> { return this.post('knowledge/delete', { id }); }
 
+  /** Wipe all leads + conversations for this tenant (confirm must be DELETE). */
+  wipeInbox(): Observable<any> { return this.post('inbox/wipe', { confirm: 'DELETE' }); }
+
   listLeads(filters: any = {}): Observable<any> { return this.post('leads/list', filters); }
   getLead(id: string): Observable<any> { return this.post('leads/get', { id }); }
   /** Create lead; by default auto-sends Meta welcome template to allowlisted phone. */

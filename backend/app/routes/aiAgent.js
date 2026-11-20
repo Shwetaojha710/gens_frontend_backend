@@ -26,6 +26,8 @@ router.post(
 router.post("/ai-agent/knowledge/toggle", Admin, ctrl.toggleKnowledge);
 router.post("/ai-agent/knowledge/delete", Admin, ctrl.deleteKnowledge);
 
+router.post("/ai-agent/inbox/wipe", Admin, ctrl.wipeInbox);
+
 router.post("/ai-agent/leads/list", Admin, ctrl.listLeads);
 router.post("/ai-agent/leads/get", Admin, ctrl.getLead);
 router.post("/ai-agent/leads/create", Admin, ctrl.createLead);

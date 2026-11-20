@@ -6,14 +6,23 @@
         Create a lead with a Meta allowlisted number to auto-send the agent welcome template.
       </p>
     </div>
-    <button
-      *ngIf="!selected"
-      class="btn btn-primary btn-sm"
-      type="button"
-      (click)="showCreate = !showCreate"
-    >
-      {{ showCreate ? 'Cancel' : 'New lead + welcome' }}
-    </button>
+    <div class="d-flex gap-2" *ngIf="!selected">
+      <button
+        class="btn btn-outline-danger btn-sm"
+        type="button"
+        [disabled]="wiping"
+        (click)="wipeAll()"
+      >
+        {{ wiping ? 'Deleting…' : 'Delete all leads & chats' }}
+      </button>
+      <button
+        class="btn btn-primary btn-sm"
+        type="button"
+        (click)="showCreate = !showCreate"
+      >
+        {{ showCreate ? 'Cancel' : 'New lead + welcome' }}
+      </button>
+    </div>
   </div>
 
   <div class="card mb-3" *ngIf="showCreate && !selected">

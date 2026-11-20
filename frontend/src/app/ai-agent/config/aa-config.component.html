@@ -54,6 +54,14 @@
           <div class="col-12">
             <label class="form-label">LLM API key {{ settingsFlags.hasLlmKey ? '(saved — leave blank to keep)' : '' }}</label>
             <input class="form-control" type="password" [(ngModel)]="form.llmApiKey" name="llmApiKey" autocomplete="new-password" />
+            <div class="alert alert-warning py-2 small mt-2 mb-0" *ngIf="settingsFlags.hasLlmKey && settingsFlags.llmKeyDecryptOk === false">
+              Key is saved in DB but <strong>cannot be decrypted</strong> on this server.
+              Re-paste your OpenAI/Gemini API key below and click Save (encrypts with current server secret).
+              Until then the intent engine cannot call the LLM.
+            </div>
+            <div class="alert alert-success py-2 small mt-2 mb-0" *ngIf="settingsFlags.llmKeyDecryptOk === true">
+              LLM key decrypts OK on this server.
+            </div>
           </div>
         </div>
       </div>
@@ -78,6 +86,9 @@
           <div class="col-12">
             <label class="form-label">Access token {{ settingsFlags.hasWhatsappToken ? '(saved)' : '' }}</label>
             <input class="form-control" type="password" [(ngModel)]="form.whatsappAccessToken" name="whatsappAccessToken" autocomplete="new-password" />
+            <div class="form-text text-warning" *ngIf="settingsFlags.hasWhatsappToken && settingsFlags.whatsappTokenDecryptOk === false">
+              WhatsApp token saved but decrypt failed — re-paste Access token and Save.
+            </div>
           </div>
           <div class="col-12">
             <label class="form-label">App secret {{ settingsFlags.hasAppSecret ? '(saved)' : '' }}</label>
