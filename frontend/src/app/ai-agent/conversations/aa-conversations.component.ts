@@ -28,6 +28,7 @@ export class AaConversationsComponent implements OnInit, OnDestroy {
   detail: any = null;
   replyText = '';
   sending = false;
+  askingAi = false;
   statusFilter = '';
   simPhone = '';
   simText = '';
@@ -116,13 +117,43 @@ export class AaConversationsComponent implements OnInit, OnDestroy {
         if (res?.status === true) {
           this.replyText = '';
           const delivered = res?.data?.delivery?.sent === true;
-          if (delivered) this.notyf.success(res.message || 'Sent');
+          if (delivered) this.notyf.success(res.message || 'Sent as human');
           else this.notyf.error(res?.message || 'Saved in inbox, WhatsApp delivery failed');
           this.open(this.detail.conversation.id);
           this.loadList(true);
         } else this.notyf.error(res?.message || 'Send failed');
       },
       error: () => (this.sending = false),
+    });
+  }
+
+  /**
+   * Fix: typed text runs as customer inbound → LLM/intent reply.
+   * Do NOT use human Send for questions like "tell me about gens".
+   */
+  askAi(): void {
+    if (!this.detail?.conversation || !this.replyText.trim()) return;
+    this.askingAi = true;
+    const text = this.replyText.trim();
+    this.api.askAi(this.detail.conversation.id, text, true).subscribe({
+      next: (res: any) => {
+        this.askingAi = false;
+        if (res?.status === true) {
+          this.replyText = '';
+          const intent = res?.data?.intent;
+          const reply = res?.data?.reply;
+          if (res?.data?.whatsappError) {
+            this.notyf.error(res.message || 'AI replied in inbox; WhatsApp send failed');
+          } else {
+            this.notyf.success(
+              intent ? `AI (${intent}): ${(reply || '').slice(0, 80)}` : res.message || 'AI answered'
+            );
+          }
+          this.open(this.detail.conversation.id);
+          this.loadList(true);
+        } else this.notyf.error(res?.message || 'Ask AI failed');
+      },
+      error: () => (this.askingAi = false),
     });
   }
 

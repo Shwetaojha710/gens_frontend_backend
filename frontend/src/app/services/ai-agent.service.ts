@@ -67,6 +67,10 @@ export class AiAgentService {
   sendReply(id: string, text: string): Observable<any> {
     return this.post('conversations/reply', { id, text });
   }
+  /** Run typed text as customer inbound → intent/LLM reply (optionally delivers on WhatsApp). */
+  askAi(id: string, text: string, deliverWhatsApp = true): Observable<any> {
+    return this.post('conversations/ask-ai', { id, text, deliverWhatsApp });
+  }
   handover(id: string, reason: string, assignedTo?: string): Observable<any> {
     return this.post('conversations/handover', { id, reason, assignedTo });
   }
@@ -76,7 +80,7 @@ export class AiAgentService {
     return this.post('handovers/resolve', { id, status, notes });
   }
 
-  simulate(text: string, waId: string, customerName?: string): Observable<any> {
-    return this.post('simulate', { text, waId, customerName });
+  simulate(text: string, waId: string, customerName?: string, deliverWhatsApp = false): Observable<any> {
+    return this.post('simulate', { text, waId, customerName, deliverWhatsApp });
   }
 }

@@ -70,10 +70,35 @@
 
         <div class="card-footer">
           <div class="input-group">
-            <input class="form-control" placeholder="Type a manual reply…" [(ngModel)]="replyText" (keyup.enter)="send()" />
-            <button class="btn btn-primary" type="button" [disabled]="sending" (click)="send()">Send</button>
+            <input
+              class="form-control"
+              placeholder="Type a question for AI, or a human reply…"
+              [(ngModel)]="replyText"
+              (keyup.enter)="askAi()"
+            />
+            <button
+              class="btn btn-success"
+              type="button"
+              [disabled]="askingAi || sending"
+              (click)="askAi()"
+              title="Runs as customer inbound → LLM answers (and sends on WhatsApp)"
+            >
+              {{ askingAi ? 'AI…' : 'Ask AI' }}
+            </button>
+            <button
+              class="btn btn-outline-primary"
+              type="button"
+              [disabled]="sending || askingAi"
+              (click)="send()"
+              title="Sends as human agent (does not run LLM)"
+            >
+              {{ sending ? 'Sending…' : 'Send human' }}
+            </button>
           </div>
-          <div class="small text-muted mt-1">Manual reply disables AI for this conversation.</div>
+          <div class="small text-muted mt-1">
+            <strong>Ask AI</strong> = treat text as customer message (intent + knowledge reply).
+            <strong>Send human</strong> = staff reply only (does not call LLM).
+          </div>
         </div>
       </ng-container>
       <ng-template #emptyPane>

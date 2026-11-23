@@ -893,7 +893,99 @@ exports.webhookReceive = async (req, res) => {
   }
 };
 
-// Test harness: simulate inbound without WhatsApp (admin only)
+/**
+ * Treat typed text as a customer inbound for an open conversation.
+ * Turns AI On, runs intent/LLM engine, and delivers WhatsApp reply (unlike manual human Send).
+ */
+exports.askAiAsCustomer = hr("askAiAsCustomer", async (req, res) => {
+  const tenantId = req.users.tenantId;
+  const text = String(req.body?.text || "").trim();
+  if (!text) return fail(res, "Message text is required");
+
+  const conv = await AiAgentConversation.findOne({
+    where: { id: req.body?.id, tenantId },
+  });
+  if (!conv) return fail(res, "Conversation not found");
+
+  const { agent, settings } = await getOrCreateAgent(tenantId, req.users.id);
+  if (!agent.isEnabled || agent.status !== "active") {
+    return fail(res, "Enable the AI agent in Configuration first");
+  }
+
+  const waId = String(conv.waId || conv.customerPhone || "").replace(/\D/g, "");
+  if (!waId) return fail(res, "Conversation has no WhatsApp number");
+
+  await conv.update({
+    aiEnabled: true,
+    status: conv.status === "closed" || conv.status === "handed_over" ? "active" : conv.status,
+    updatedBy: req.users.id,
+  });
+
+  // Resolve any pending handovers so AI can answer
+  await AiAgentHandover.update(
+    {
+      status: "resolved",
+      resolvedAt: new Date(),
+      notes: "Resolved: Ask AI (as customer) from Live Conversations",
+      updatedBy: req.users.id,
+    },
+    { where: { tenantId, conversationId: conv.id, status: "pending" } }
+  );
+
+  const deliverWhatsApp = req.body?.deliverWhatsApp !== false;
+  const result = await processInboundMessage(
+    tenantId,
+    agent,
+    settings,
+    {
+      phoneNumberId: settings.whatsappPhoneNumberId,
+      waId,
+      customerPhone: conv.customerPhone || waId,
+      customerName: conv.customerName || null,
+      // do NOT use sim_/test_ prefix — those skip WhatsApp delivery
+      waMessageId: `ask_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      timestamp: new Date(),
+      messageType: "text",
+      body: text,
+    },
+    { skipWhatsAppSend: !deliverWhatsApp }
+  );
+
+  if (result?.skipped) {
+    return Helper.response(
+      false,
+      result.reason === "ai_disabled_or_handed_over"
+        ? "AI is still disabled for this chat"
+        : result.reason || "AI did not process the message",
+      { result },
+      res,
+      200
+    );
+  }
+
+  const waErr = result?.whatsappError;
+  const msg = waErr
+    ? `AI replied in inbox, but WhatsApp delivery failed: ${waErr.message || "send error"}`
+    : result?.reply
+      ? "AI answered as customer inbound"
+      : "Processed (no AI reply text)";
+
+  return Helper.response(
+    true,
+    msg,
+    {
+      result,
+      conversationId: conv.id,
+      reply: result?.reply || null,
+      intent: result?.intent || null,
+      whatsappError: waErr || null,
+    },
+    res,
+    200
+  );
+});
+
+// Test harness: simulate inbound (admin only). Optional deliverWhatsApp for real send.
 exports.simulateInbound = hr("simulateInbound", async (req, res) => {
   const tenantId = req.users.tenantId;
   const text = String(req.body?.text || "").trim();
@@ -901,6 +993,13 @@ exports.simulateInbound = hr("simulateInbound", async (req, res) => {
   if (!text || !waId) return fail(res, "text and waId/phone are required");
   const { agent, settings } = await getOrCreateAgent(tenantId, req.users.id);
   if (!agent.isEnabled) return fail(res, "Enable the AI agent first");
+
+  const deliverWhatsApp = req.body?.deliverWhatsApp === true;
+
+  await AiAgentConversation.update(
+    { aiEnabled: true, status: "active" },
+    { where: { tenantId, waId } }
+  );
 
   const result = await processInboundMessage(
     tenantId,
@@ -911,12 +1010,14 @@ exports.simulateInbound = hr("simulateInbound", async (req, res) => {
       waId,
       customerPhone: waId,
       customerName: req.body?.customerName || null,
-      waMessageId: `sim_${Date.now()}`,
+      waMessageId: deliverWhatsApp
+        ? `ask_${Date.now()}`
+        : `sim_${Date.now()}`,
       timestamp: new Date(),
       messageType: "text",
       body: text,
     },
-    { skipWhatsAppSend: true }
+    { skipWhatsAppSend: !deliverWhatsApp }
   );
   return Helper.response(true, "Processed", result, res, 200);
 });

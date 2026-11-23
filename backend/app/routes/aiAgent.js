@@ -40,6 +40,7 @@ router.post("/ai-agent/conversations/start", Admin, ctrl.startConversation);
 router.post("/ai-agent/conversations/toggle-ai", Admin, ctrl.toggleAi);
 router.post("/ai-agent/conversations/assign", Admin, ctrl.assignConversation);
 router.post("/ai-agent/conversations/reply", Admin, ctrl.sendHumanReply);
+router.post("/ai-agent/conversations/ask-ai", Admin, ctrl.askAiAsCustomer);
 router.post("/ai-agent/conversations/handover", Admin, ctrl.handover);
 
 router.post("/ai-agent/handovers/list", Admin, ctrl.listHandovers);
