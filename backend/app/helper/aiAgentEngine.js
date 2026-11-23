@@ -22,13 +22,14 @@ const {
   formatWhatsAppSendError,
 } = require("./whatsappCloud");
 
-/** Meta-approved Hello World template — agent's auto first outbound outside the 24h window. */
+/** Meta-approved GENS welcome template — agent's auto first outbound outside the 24h window. */
 const DEFAULT_WELCOME_TEMPLATE = {
-  name: "hello_world",
-  language: "en_US",
+  name: "welcome_message",
+  language: "en",
+  id: "1144034977995928",
   autoSend: true,
   body:
-    "Hello World\nWelcome and congratulations!! This message demonstrates your ability to send a WhatsApp message notification from the Cloud API, hosted by Meta. Thank you for taking the time to test with us.",
+    "Hii,\n\nWelcome to GENS — your smart HR & workforce platform.\n\nWith GENS you can manage attendance, payroll, recruitment, and now talk to our AI Agent on WhatsApp for quick product help.\n\nReply with Hi or Tell me about GENS to get started. Our assistant will guide you.",
 };
 
 const AiAgent = require("../models/ai_agent");
@@ -102,6 +103,7 @@ function getWelcomeTemplate(settings) {
     language:
       String(stored.language || DEFAULT_WELCOME_TEMPLATE.language).trim() ||
       DEFAULT_WELCOME_TEMPLATE.language,
+    id: String(stored.id || DEFAULT_WELCOME_TEMPLATE.id || "").trim() || null,
     autoSend: stored.autoSend !== false,
     body: String(stored.body || DEFAULT_WELCOME_TEMPLATE.body),
   };
