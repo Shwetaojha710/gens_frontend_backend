@@ -91,6 +91,41 @@ async function sendTextMessage({ accessToken, phoneNumberId, to, text }) {
 }
 
 /**
+ * Mark an inbound WhatsApp message as read and show the "typing…" indicator
+ * while the agent prepares a reply. Indicator clears on reply or after ~25s.
+ * @see https://developers.facebook.com/docs/whatsapp/cloud-api/typing-indicators/
+ */
+async function markMessageReadWithTyping({ accessToken, phoneNumberId, messageId }) {
+  const mid = String(messageId || "").trim();
+  if (!accessToken || !phoneNumberId || !mid) {
+    return { skipped: true, reason: "missing_params" };
+  }
+  // Skip local/sim ids — Meta only accepts real wamid.* values
+  if (/^(sim_|test_)/i.test(mid) || !/^wamid\./i.test(mid)) {
+    return { skipped: true, reason: "not_a_whatsapp_message_id" };
+  }
+
+  const url = `${GRAPH_BASE}/${phoneNumberId}/messages`;
+  const res = await axios.post(
+    url,
+    {
+      messaging_product: "whatsapp",
+      status: "read",
+      message_id: mid,
+      typing_indicator: { type: "text" },
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      timeout: 15000,
+    }
+  );
+  return res.data;
+}
+
+/**
  * Send an approved WhatsApp message template (required for business-initiated / outside 24h window).
  * @param {object} opts
  * @param {string} opts.accessToken
@@ -162,6 +197,7 @@ module.exports = {
   parseInboundMessages,
   sendTextMessage,
   sendTemplateMessage,
+  markMessageReadWithTyping,
   normalizeWhatsAppTo,
   formatWhatsAppSendError,
   isWithinCustomerServiceWindow,

@@ -16,6 +16,7 @@ const {
 const {
   sendTextMessage,
   sendTemplateMessage,
+  markMessageReadWithTyping,
   normalizeWhatsAppTo,
   isWithinCustomerServiceWindow,
   formatWhatsAppSendError,
@@ -712,6 +713,27 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
     return { skipped: true, reason: "ai_disabled_or_handed_over", conversationId: conversation.id };
   }
 
+  const accessToken = resolveWhatsAppAccessToken(settings);
+  const phoneNumberId =
+    settings.whatsappPhoneNumberId || inbound.phoneNumberId || null;
+
+  // Show WhatsApp "typing…" (+ mark read) before LLM work so the user sees progress
+  if (!skipWhatsAppSend && accessToken && phoneNumberId && inbound.waMessageId) {
+    try {
+      await markMessageReadWithTyping({
+        accessToken,
+        phoneNumberId,
+        messageId: inbound.waMessageId,
+      });
+    } catch (e) {
+      // Non-fatal: still generate + send the reply even if typing fails
+      console.warn(
+        "aiAgent.typing:",
+        e?.response?.data?.error?.message || e.message || e
+      );
+    }
+  }
+
   const history = await recentMessages(conversation.id, 12);
   const knowledgeDocs = await searchKnowledge(tenantId, inbound.body || "", { limit: 5 });
   const knowledgeBlock = formatKnowledgeForPrompt(knowledgeDocs);
@@ -733,7 +755,6 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
   const llmEncPresent = Boolean(settings.llmApiKeyEnc);
   const llmDecrypted = safeDecrypt(settings.llmApiKeyEnc);
   const apiKey = resolveLlmApiKey(settings);
-  const accessToken = resolveWhatsAppAccessToken(settings);
 
   let decision;
   try {
