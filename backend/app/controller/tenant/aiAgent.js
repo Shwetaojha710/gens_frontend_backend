@@ -25,6 +25,7 @@ const {
   sendTextMessage,
   formatWhatsAppSendError,
 } = require("../../helper/whatsappCloud");
+const { queueKey, enqueueInbound } = require("../../helper/aiAgentInboundQueue");
 
 const AiAgent = require("../../models/ai_agent");
 const AiAgentSettings = require("../../models/ai_agent_settings");
@@ -868,7 +869,7 @@ exports.webhookVerify = async (req, res) => {
 };
 
 exports.webhookReceive = async (req, res) => {
-  // Always ack quickly; process async
+  // Always ack quickly so Meta does not retry; process after respond
   res.status(200).json({ status: "ok" });
 
   try {
@@ -896,28 +897,48 @@ exports.webhookReceive = async (req, res) => {
       if (appSecret && signature) {
         const ok = verifyWebhookSignature(rawBody, signature, appSecret);
         if (!ok) {
-          // Do not drop the message — wrong/rotated secret is common in local+env setups.
-          // Meta already authenticated via HTTPS; log and continue so AI can reply.
           console.warn(
             "aiAgent.webhook: signature mismatch (continuing anyway; set AI_AGENT_WHATSAPP_APP_SECRET to enforce)"
           );
         }
       }
 
+      const key = queueKey(mapped.tenantId, inbound);
       console.log(
-        `aiAgent.webhook: processing from=${inbound.waId} phoneId=${inbound.phoneNumberId} text=${String(inbound.body || "").slice(0, 80)}`
+        `aiAgent.webhook: enqueue key=${key} text=${String(inbound.body || "").slice(0, 80)}`
       );
-      const result = await processInboundMessage(
-        mapped.tenantId,
-        mapped.agent,
-        mapped.settings,
-        inbound
-      );
-      console.log("aiAgent.webhook: process result", {
-        skipped: result?.skipped || false,
-        reason: result?.reason || null,
-        conversationId: result?.conversationId || null,
-        intent: result?.decision?.intent || result?.intent || null,
+
+      // FIFO per customer — overlapping webhooks wait their turn (no parallel LLM races)
+      enqueueInbound(key, async () => {
+        console.log(
+          `aiAgent.webhook: processing from=${inbound.waId} phoneId=${inbound.phoneNumberId} text=${String(inbound.body || "").slice(0, 80)}`
+        );
+        try {
+          const result = await processInboundMessage(
+            mapped.tenantId,
+            mapped.agent,
+            mapped.settings,
+            inbound
+          );
+          console.log("aiAgent.webhook: process result", {
+            skipped: result?.skipped || false,
+            reason: result?.reason || null,
+            conversationId: result?.conversationId || null,
+            intent: result?.decision?.intent || result?.intent || null,
+            replyPreview: String(result?.reply || "").slice(0, 60),
+          });
+          return result;
+        } catch (err) {
+          console.error("aiAgent.webhook: processInboundMessage failed", {
+            key,
+            waId: inbound.waId,
+            text: String(inbound.body || "").slice(0, 80),
+            error: err?.message || err,
+          });
+          throw err;
+        }
+      }).catch((err) => {
+        console.error("aiAgent.webhook: queue job error", err?.message || err);
       });
     }
   } catch (e) {
