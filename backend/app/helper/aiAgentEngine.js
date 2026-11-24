@@ -29,6 +29,7 @@ const {
   resolveDateYmd,
   resolveDemoDateFromText,
   wantsDemoScheduling,
+  isProductInfoQuery,
   todayYmd,
   formatSlotsForReply,
   formatSlotLong,
@@ -544,7 +545,7 @@ ${agent.companyIntro ? `INTRO LINE (use when greeting new customers):\n${agent.c
 HARD RULES:
 - Never invent company information, pricing, discounts, delivery timelines, or product claims.
 - Answer ONLY using APPROVED_KNOWLEDGE below.
-- OUT OF CONTEXT / NO KNOWLEDGE: If the question is unrelated to GENS/HRMS/Quaere, or APPROVED_KNOWLEDGE is missing / says NO_APPROVED_KNOWLEDGE_FOUND, do NOT invent an answer. Reply warmly that our team can help with further queries — invite them to book a free demo; our sales/support team will support them and solve all their questions. Collect name/company/email/phone (one field at a time if details missing). Prefer LIST_DEMO_SLOTS / BOOK_DEMO_SLOT + COLLECT_LEAD_INFORMATION. Set intent DEMO_REQUEST or SALES_ENQUIRY. Do not silently ignore.
+- OUT OF CONTEXT / NO KNOWLEDGE: If APPROVED_KNOWLEDGE is missing, do NOT invent facts. For product/feature questions about GENS/HRMS/ATS, answer helpfully at a high level from company intro and ask which module they want — do NOT switch to demo booking. Only when the customer explicitly asks to book/schedule a demo, use LIST_DEMO_SLOTS / BOOK_DEMO_SLOT.
 - DEMO BOOKING (office hours Asia/Kolkata, Mon–Sat 9:00 AM–6:30 PM; hourly slots 9:00–5:00 PM; Sunday closed):
   - TODAY_IST in the user prompt is the real calendar date — for "aaj"/"today" ALWAYS use that exact YYYY-MM-DD. Never invent old years (e.g. 2023).
   1) If customer wants a demo but no date yet → ask: "Kaunsi date aur time chahiye?" / "Which date and time works for you?"
@@ -893,46 +894,70 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
     }
   }
 
-  // Out of KB / out of context → always steer to book a demo; team will support further queries
+  // Out of KB: soft handle — NEVER force DEMO_REQUEST on product/feature questions
   const noApprovedKnowledge = !knowledgeDocs.length;
   const langHi = decision.language === "hi" || /[\u0900-\u097F]/.test(String(inbound.body || ""));
+  const productInfoQuery = isProductInfoQuery(inbound.body);
+  const explicitDemoAsk = wantsDemoScheduling(inbound.body);
+
   if (
     noApprovedKnowledge &&
     !isSimpleGreeting(inbound.body) &&
-    !isIdentityQuestion(inbound.body)
+    !isIdentityQuestion(inbound.body) &&
+    explicitDemoAsk
   ) {
+    // Only when user clearly asked to schedule a demo
     decision.intent = "DEMO_REQUEST";
     decision.confidence = Math.min(Number(decision.confidence) || 0.4, 0.55);
     decision.needsHuman = false;
     decision.handoverReason = null;
-    const hasDemoAction = decision.actions.some((a) =>
-      ["SCHEDULE_DEMO", "COLLECT_LEAD_INFORMATION", "CREATE_LEAD", "ASK_FOLLOWUP"].includes(a.type)
-    );
-    if (!hasDemoAction) {
+    if (
+      !decision.actions.some((a) =>
+        ["SCHEDULE_DEMO", "LIST_DEMO_SLOTS", "BOOK_DEMO_SLOT", "COLLECT_LEAD_INFORMATION"].includes(a.type)
+      )
+    ) {
       decision.actions = [
         { type: "SCHEDULE_DEMO", payload: {} },
         { type: "COLLECT_LEAD_INFORMATION", payload: {} },
       ];
     }
-    const demoReplyEn =
-      "Thanks for your question. I do not have that detail in my approved knowledge right now. " +
-      "For any further queries, please book a free product demo — our team will support you and help solve all your questions. " +
-      "Could you share your name and preferred demo time?";
-    const demoReplyHi =
-      "Aapka sawal ke liye dhanyavaad. Is detail ke liye mere paas abhi approved knowledge nahi hai. " +
-      "Aage ke kisi bhi query ke liye free product demo book karein — hamari team aapki madad karegi aur aapke saare sawal solve karegi. " +
-      "Kya aap apna naam aur preferred demo time bata sakte hain?";
-    if (
-      !String(decision.reply || "").trim() ||
-      /do not have|don't have|not sure|trouble accessing|connect you with/i.test(decision.reply)
-    ) {
-      decision.reply = langHi ? demoReplyHi : demoReplyEn;
-    } else if (!/demo|book|team will support|hamari team/i.test(decision.reply)) {
-      decision.reply =
-        `${String(decision.reply).trim()} ` +
-        (langHi
-          ? "Aage ke queries ke liye free demo book karein — hamari team support karegi aur saare sawal solve karegi."
-          : "For any further queries, book a free demo — our team will support you and solve all your questions.");
+  } else if (
+    noApprovedKnowledge &&
+    productInfoQuery &&
+    !explicitDemoAsk
+  ) {
+    // Keep product intent; strip accidental demo booking actions
+    if (!decision.intent || decision.intent === "DEMO_REQUEST") {
+      decision.intent = "PRODUCT_ENQUIRY";
+    }
+    decision.needsHuman = false;
+    decision.actions = (decision.actions || []).filter(
+      (a) => !["SCHEDULE_DEMO", "LIST_DEMO_SLOTS", "BOOK_DEMO_SLOT"].includes(a.type)
+    );
+    if (!decision.actions.length) {
+      decision.actions = [{ type: "ANSWER_QUESTION", payload: {} }];
+    }
+    if (!String(decision.reply || "").trim()) {
+      decision.reply = langHi
+        ? "GENS.Ai ek AI-powered cloud HRMS hai — attendance, payroll, leave, recruitment (ATS) aur workforce analytics ek jagah. Kaunsa module detail me jaanna hai?"
+        : "GENS.Ai is an AI-powered cloud HRMS covering attendance, payroll, leave, recruitment (ATS), and workforce analytics. Which module would you like details on?";
+    }
+  } else if (
+    noApprovedKnowledge &&
+    !isSimpleGreeting(inbound.body) &&
+    !isIdentityQuestion(inbound.body) &&
+    !explicitDemoAsk &&
+    !productInfoQuery
+  ) {
+    // Truly out-of-scope: gentle note, optional demo invite — do not overwrite a good LLM reply
+    decision.needsHuman = false;
+    decision.actions = (decision.actions || []).filter(
+      (a) => !["LIST_DEMO_SLOTS", "BOOK_DEMO_SLOT"].includes(a.type)
+    );
+    if (!String(decision.reply || "").trim()) {
+      decision.reply = langHi
+        ? "Is detail ke liye mere paas abhi approved knowledge nahi hai. Aap product ke baare me pooch sakte hain, ya demo book karna ho to bataiye."
+        : "I do not have approved knowledge for that detail right now. You can ask about the product, or tell me if you want to book a demo.";
     }
   }
 
@@ -955,7 +980,6 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
 
   // Strip accidental LLM handovers on normal product / identity chat
   if (!explicitHuman && !isIdentityOrGreeting) {
-    // Low confidence / vague needsHuman → demo collect, NOT human transfer (keeps AI answering)
     if (
       (decision.confidence < 0.35 && !collectingLead) ||
       (decision.needsHuman &&
@@ -967,7 +991,16 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
       decision.needsHuman = false;
       decision.handoverReason = null;
       decision.actions = (decision.actions || []).filter((a) => a.type !== "TRANSFER_TO_HUMAN");
-      if (
+      // Product/feature questions: answer, do NOT push demo booking
+      if (productInfoQuery || !explicitDemoAsk) {
+        decision.actions = (decision.actions || []).filter(
+          (a) => !["SCHEDULE_DEMO", "LIST_DEMO_SLOTS", "BOOK_DEMO_SLOT"].includes(a.type)
+        );
+        if (!decision.actions.length) {
+          decision.actions = [{ type: "ANSWER_QUESTION", payload: {} }];
+        }
+      } else if (
+        explicitDemoAsk &&
         !decision.actions.some((a) =>
           ["SCHEDULE_DEMO", "LIST_DEMO_SLOTS", "BOOK_DEMO_SLOT", "COLLECT_LEAD_INFORMATION"].includes(
             a.type
@@ -976,15 +1009,6 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
       ) {
         decision.actions.push({ type: "SCHEDULE_DEMO", payload: {} });
         decision.actions.push({ type: "COLLECT_LEAD_INFORMATION", payload: {} });
-      }
-      if (!/demo|book|team will support|hamari team/i.test(String(decision.reply || ""))) {
-        decision.reply =
-          (String(decision.reply || "").trim()
-            ? `${String(decision.reply).trim()} `
-            : "") +
-          (langHi
-            ? "Aage ke queries ke liye free demo book karein — hamari team support karegi."
-            : "For further queries, book a free demo — our team will support you.");
       }
     }
   }
@@ -1056,14 +1080,14 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
     }
   }
 
-  // Demo date harden: resolve aaj/today from inbound; force LIST_DEMO_SLOTS with real IST date
-  if (wantsDemoScheduling(inbound.body) || decision.intent === "DEMO_REQUEST") {
+  // Demo harden ONLY when user explicitly asks to schedule (never on product Q&A)
+  if (explicitDemoAsk) {
     const resolved = resolveDemoDateFromText(inbound.body);
     const hasListOrBook = decision.actions.some((a) =>
       ["LIST_DEMO_SLOTS", "BOOK_DEMO_SLOT"].includes(a.type)
     );
+    decision.intent = "DEMO_REQUEST";
     if (resolved) {
-      // Fix hallucinated LLM dates (e.g. 2023-10-05) on LIST/SCHEDULE payloads
       decision.actions = (decision.actions || []).map((a) => {
         if (a.type === "LIST_DEMO_SLOTS" || a.type === "SCHEDULE_DEMO") {
           return { ...a, payload: { ...(a.payload || {}), date: resolved } };
@@ -1073,16 +1097,25 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
       if (!hasListOrBook) {
         decision.actions.push({ type: "LIST_DEMO_SLOTS", payload: { date: resolved } });
       }
-      // Strip invented times from reply; engine will inject real slots after list
       decision.reply = stripSlotHallucinations(decision.reply);
     } else if (!hasListOrBook && !decision.actions.some((a) => a.type === "BOOK_DEMO_SLOT")) {
-      // No date yet — ask clearly instead of inventing slots
       if (!/\b(date|kab|kaunsi|which day|when)\b/i.test(String(decision.reply || ""))) {
         decision.reply =
           decision.language === "hi"
             ? "Zaroor — demo book karte hain. Aapko kab ka schedule chahiye? (aaj, kal, ya specific date jaise 25-11-2026)"
             : "Sure — let's book a demo. Which date do you prefer? (today, tomorrow, or a date like 25-11-2026)";
       }
+    }
+  } else if (productInfoQuery) {
+    // Leave demo booking loop: drop slot actions leftover from prior turn / LLM
+    decision.actions = (decision.actions || []).filter(
+      (a) => !["LIST_DEMO_SLOTS", "BOOK_DEMO_SLOT", "SCHEDULE_DEMO"].includes(a.type)
+    );
+    if (!decision.actions.length) {
+      decision.actions = [{ type: "ANSWER_QUESTION", payload: {} }];
+    }
+    if (decision.intent === "DEMO_REQUEST") {
+      decision.intent = "PRODUCT_ENQUIRY";
     }
   }
 
@@ -1234,10 +1267,8 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
         await ensureLead();
         await logAction(tenantId, conversation.id, inboundMsg.id, action.type, action.payload, "executed");
       } else if (action.type === "LIST_DEMO_SLOTS") {
-        const dateYmd =
-          resolveDateYmd(action.payload || {}, conversation, inbound.body) ||
-          resolveDateYmd({ date: nextDetails.preferredDemoDate }, conversation, inbound.body);
-        if (!dateYmd) {
+        // Never list slots on product/feature turns (avoids sticky-date loop)
+        if (!explicitDemoAsk) {
           await logAction(
             tenantId,
             conversation.id,
@@ -1245,61 +1276,61 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
             action.type,
             action.payload,
             "skipped",
-            "missing_date"
+            "not_a_demo_request"
           );
-          // Ask clearly for date — do not invent slots
-          const ask =
-            decision.language === "hi"
-              ? "Demo ke liye kaunsi date chahiye? (jaise aaj, kal, ya 25-11-2026). Phir main available times bataunga."
-              : "Which date should I book the demo for? (e.g. today, tomorrow, or 25-11-2026). Then I will show available times.";
-          decision.reply = ask;
         } else {
-          lastDemoList = await listAvailableSlots({ tenantId, dateYmd });
-          await conversation.update({
-            context: {
-              ...(conversation.context || {}),
-              demoPreferredDate: dateYmd,
-              lastDemoSlotsAt: new Date().toISOString(),
-            },
-          });
+          const dateYmd = resolveDateYmd(action.payload || {}, conversation, inbound.body);
+          if (!dateYmd) {
+            await logAction(
+              tenantId,
+              conversation.id,
+              inboundMsg.id,
+              action.type,
+              action.payload,
+              "skipped",
+              "missing_date"
+            );
+            const ask =
+              decision.language === "hi"
+                ? "Demo ke liye kaunsi date chahiye? (jaise aaj, kal, ya 25-11-2026). Phir main available times bataunga."
+                : "Which date should I book the demo for? (e.g. today, tomorrow, or 25-11-2026). Then I will show available times.";
+            decision.reply = ask;
+          } else {
+            lastDemoList = await listAvailableSlots({ tenantId, dateYmd });
+            await conversation.update({
+              context: {
+                ...(conversation.context || {}),
+                demoPreferredDate: dateYmd,
+                lastDemoSlotsAt: new Date().toISOString(),
+              },
+            });
+            await logAction(
+              tenantId,
+              conversation.id,
+              inboundMsg.id,
+              action.type,
+              {
+                date: dateYmd,
+                llmDate: action.payload?.date || null,
+                count: lastDemoList.slots?.length || 0,
+                reason: lastDemoList.reason || null,
+              },
+              "executed"
+            );
+          }
+        }
+      } else if (action.type === "BOOK_DEMO_SLOT") {
+        if (!explicitDemoAsk) {
           await logAction(
             tenantId,
             conversation.id,
             inboundMsg.id,
             action.type,
-            {
-              date: dateYmd,
-              llmDate: action.payload?.date || null,
-              count: lastDemoList.slots?.length || 0,
-              reason: lastDemoList.reason || null,
-            },
-            "executed"
+            action.payload,
+            "skipped",
+            "not_a_demo_request"
           );
-        }
-      } else if (action.type === "BOOK_DEMO_SLOT") {
-        const bookResult = await runBookDemo(action);
-        await logAction(
-          tenantId,
-          conversation.id,
-          inboundMsg.id,
-          action.type,
-          {
-            ...(action.payload || {}),
-            ok: bookResult.ok,
-            reason: bookResult.reason || null,
-            label: bookResult.labelLong || null,
-          },
-          bookResult.ok ? "executed" : "failed",
-          bookResult.ok ? null : bookResult.reason || "book_failed"
-        );
-      } else if (action.type === "SCHEDULE_DEMO") {
-        // With datetime → real book; without → intent only (list/ask), do not fake demo_scheduled
-        const hasTime =
-          action.payload?.datetime ||
-          action.payload?.scheduledAt ||
-          action.payload?.preferredTime ||
-          action.payload?.demoTime;
-        if (hasTime || resolveDateYmd(action.payload || {}, conversation, inbound.body)) {
+        } else {
           const bookResult = await runBookDemo(action);
           await logAction(
             tenantId,
@@ -1312,7 +1343,45 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
               reason: bookResult.reason || null,
               label: bookResult.labelLong || null,
             },
-            bookResult.ok ? "executed" : bookResult.reason === "missing_date" || bookResult.reason === "missing_datetime" ? "skipped" : "failed",
+            bookResult.ok ? "executed" : "failed",
+            bookResult.ok ? null : bookResult.reason || "book_failed"
+          );
+        }
+      } else if (action.type === "SCHEDULE_DEMO") {
+        // With datetime → real book; without → intent only (list/ask), do not fake demo_scheduled
+        const hasTime =
+          action.payload?.datetime ||
+          action.payload?.scheduledAt ||
+          action.payload?.preferredTime ||
+          action.payload?.demoTime;
+        if (!explicitDemoAsk) {
+          await logAction(
+            tenantId,
+            conversation.id,
+            inboundMsg.id,
+            action.type,
+            { ...(action.payload || {}), note: "not_a_demo_request" },
+            "skipped",
+            "not_a_demo_request"
+          );
+        } else if (hasTime || resolveDateYmd(action.payload || {}, conversation, inbound.body)) {
+          const bookResult = await runBookDemo(action);
+          await logAction(
+            tenantId,
+            conversation.id,
+            inboundMsg.id,
+            action.type,
+            {
+              ...(action.payload || {}),
+              ok: bookResult.ok,
+              reason: bookResult.reason || null,
+              label: bookResult.labelLong || null,
+            },
+            bookResult.ok
+              ? "executed"
+              : bookResult.reason === "missing_date" || bookResult.reason === "missing_datetime"
+                ? "skipped"
+                : "failed",
             bookResult.ok ? null : bookResult.reason || null
           );
         } else {
@@ -1353,6 +1422,17 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
     } catch (e) {
       await logAction(tenantId, conversation.id, inboundMsg.id, action.type, action.payload, "failed", e.message);
     }
+  }
+
+  // Clear sticky demo date when user is in product Q&A (exits booking loop)
+  if (productInfoQuery && !explicitDemoAsk && conversation?.context?.demoPreferredDate) {
+    await conversation.update({
+      context: {
+        ...(conversation.context || {}),
+        demoPreferredDate: null,
+        demoContextClearedAt: new Date().toISOString(),
+      },
+    });
   }
 
   // Inject authoritative slot / booking text — overwrite hallucinated times/dates

@@ -48,13 +48,22 @@ async function searchKnowledge(tenantId, query, { limit = 5 } = {}) {
     const cat =
       /price|pricing|cost|fee|charge|₹|rs\.?/.test(q)
         ? "pricing"
-        : /product|feature|module|software|app/.test(q)
+        : /product|feature|features|module|modules|software|app|gens|hrms|ats|payroll|attendance|recruit/.test(
+              q
+            )
           ? "product"
           : /service|support|implement/.test(q)
             ? "service"
-            : null;
+            : /tell me about|what is|about gens|kya hai/.test(q)
+              ? "product"
+              : null;
     if (cat) {
-      return rows.filter((r) => r.category === cat).slice(0, limit);
+      const byCat = rows.filter((r) => r.category === cat).slice(0, limit);
+      if (byCat.length) return byCat;
+      // Broad fallback: any approved overview / FAQ docs
+      return rows
+        .filter((r) => /overview|gens|product|feature|faq|about/i.test(`${r.title} ${r.category} ${(r.tags || []).join(" ")}`))
+        .slice(0, limit);
     }
   }
   return ranked;
@@ -64,10 +73,9 @@ function formatKnowledgeForPrompt(docs) {
   if (!docs?.length) {
     return (
       "NO_APPROVED_KNOWLEDGE_FOUND. Do not invent company facts, pricing, features, or timelines. " +
-      "Reply politely that this query is outside your approved knowledge, invite them to book a free product demo, " +
-      "and say our team will support them and help solve all their questions. " +
-      "Ask for name, company, email, phone, and a preferred demo date (one question at a time if details missing). " +
-      "Use LIST_DEMO_SLOTS / BOOK_DEMO_SLOT and COLLECT_LEAD_INFORMATION. Never invent available times."
+      "If the customer asked a product/feature question, say briefly you can share from approved material when available, " +
+      "and offer to help with another question — do NOT jump into demo booking unless they asked to schedule a demo. " +
+      "Only if they explicitly want a demo, ask for a preferred date and use LIST_DEMO_SLOTS / BOOK_DEMO_SLOT."
     );
   }
   return docs

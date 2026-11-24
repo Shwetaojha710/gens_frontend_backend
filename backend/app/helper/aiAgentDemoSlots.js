@@ -132,7 +132,26 @@ function resolveDateYmd(payload = {}, conversation = null, inboundText = null) {
 
 function wantsDemoScheduling(text) {
   const t = String(text || "").toLowerCase();
-  return /\b(demo|schedule|shedule|book|slot|appointment)\b/i.test(t);
+  // Explicit booking / slot language only — not product Q&A
+  return (
+    /\b(demo\s*(book|schedule|shedule)?|schedule\s*demo|shedule\s*(book|demo)?|book\s*(a\s*)?(demo|slot|appointment)|available\s*slots?|time\s*slot)\b/i.test(
+      t
+    ) ||
+    /\b(aaj|kal|parso|today|tomorrow)\s*(ka|ki|ke)?\s*(demo|schedule|shedule|slot|book)/i.test(t) ||
+    /\b(demo|schedule|shedule|slot).{0,20}\b(aaj|kal|today|tomorrow|\d{1,2}[\/\-]\d{1,2})/i.test(t) ||
+    /\b(book|schedule|shedule)\b.{0,15}\b(aaj|kal|today|tomorrow)\b/i.test(t)
+  );
+}
+
+/** Product / feature info questions — must NOT enter demo booking loop. */
+function isProductInfoQuery(text) {
+  const t = String(text || "").toLowerCase();
+  if (wantsDemoScheduling(t)) return false;
+  return (
+    /\b(tell me about|what is|what's|about|feature|features|module|modules|ats|hrms|payroll|attendance|gens|product|kaise|kya hai|kya kya)\b/i.test(
+      t
+    ) || /gens\s*(mein|me|mai)|feature|module|ats/i.test(t)
+  );
 }
 
 async function loadBookedStarts(tenantId, rangeStart, rangeEnd) {
@@ -369,6 +388,7 @@ module.exports = {
   resolveDemoDateFromText,
   resolveDateYmd,
   wantsDemoScheduling,
+  isProductInfoQuery,
   listAvailableSlots,
   isSlotAvailable,
   bookDemoSlot,
