@@ -60,17 +60,79 @@ function parseScheduledAt(input, fallbackDateYmd = null) {
   return m.tz(TZ).second(0).millisecond(0);
 }
 
-function resolveDateYmd(payload = {}, conversation = null) {
+function todayYmd() {
+  return moment().tz(TZ).format("YYYY-MM-DD");
+}
+
+/** Reject LLM hallucinations like 2023-10-05 — only today or future IST dates. */
+function isBookableDateYmd(dateYmd) {
+  if (!dateYmd || !/^\d{4}-\d{2}-\d{2}$/.test(String(dateYmd))) return false;
+  const day = officeDayMoment(dateYmd);
+  if (!day.isValid()) return false;
+  const today = moment().tz(TZ).startOf("day");
+  return day.isSameOrAfter(today, "day");
+}
+
+/**
+ * Resolve relative / local date phrases from customer text (IST).
+ * Handles: aaj/today, kal/tomorrow, parso, DD-MM-YYYY, DD/MM/YYYY, YYYY-MM-DD.
+ */
+function resolveDemoDateFromText(text) {
+  const t = String(text || "").trim().toLowerCase();
+  if (!t) return null;
+  const now = moment().tz(TZ);
+
+  if (/\b(aaj|aj|today|ajj)\b/i.test(t) || /\baaj\s*ka\b/i.test(t)) {
+    return now.format("YYYY-MM-DD");
+  }
+  if (/\b(kal|tomorrow|tmlw)\b/i.test(t)) {
+    return now.clone().add(1, "day").format("YYYY-MM-DD");
+  }
+  if (/\b(parso|day\s*after\s*tomorrow)\b/i.test(t)) {
+    return now.clone().add(2, "day").format("YYYY-MM-DD");
+  }
+
+  // DD-MM-YYYY or DD/MM/YYYY (Indian style) — prefer over US MM/DD
+  const dmy = t.match(/\b(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})\b/);
+  if (dmy) {
+    const ymd = `${dmy[3]}-${String(dmy[2]).padStart(2, "0")}-${String(dmy[1]).padStart(2, "0")}`;
+    if (isBookableDateYmd(ymd)) return ymd;
+  }
+  const iso = t.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+  if (iso) {
+    const ymd = `${iso[1]}-${iso[2]}-${iso[3]}`;
+    if (isBookableDateYmd(ymd)) return ymd;
+  }
+  return null;
+}
+
+/**
+ * Authoritative date for listing/booking.
+ * Priority: customer text (aaj/kal/…) → valid future payload date → conversation context.
+ * Never accepts past LLM hallucination dates.
+ */
+function resolveDateYmd(payload = {}, conversation = null, inboundText = null) {
+  const fromText = resolveDemoDateFromText(inboundText);
+  if (fromText) return fromText;
+
   const fromPayload =
     payload.date ||
     payload.dateYmd ||
     (payload.datetime && String(payload.datetime).slice(0, 10));
-  if (fromPayload && /^\d{4}-\d{2}-\d{2}/.test(String(fromPayload))) {
+  if (fromPayload && isBookableDateYmd(String(fromPayload).slice(0, 10))) {
     return String(fromPayload).slice(0, 10);
   }
+
   const ctx = conversation?.context?.demoPreferredDate;
-  if (ctx && /^\d{4}-\d{2}-\d{2}/.test(String(ctx))) return String(ctx).slice(0, 10);
+  if (ctx && isBookableDateYmd(String(ctx).slice(0, 10))) {
+    return String(ctx).slice(0, 10);
+  }
   return null;
+}
+
+function wantsDemoScheduling(text) {
+  const t = String(text || "").toLowerCase();
+  return /\b(demo|schedule|shedule|book|slot|appointment)\b/i.test(t);
 }
 
 async function loadBookedStarts(tenantId, rangeStart, rangeEnd) {
@@ -244,13 +306,51 @@ async function bookDemoSlot({
   });
 }
 
-function formatSlotsForReply(listResult) {
+function friendlyDateLabel(dateYmd) {
+  const m = officeDayMoment(dateYmd);
+  if (!m.isValid()) return dateYmd;
+  const today = todayYmd();
+  const tomorrow = moment().tz(TZ).add(1, "day").format("YYYY-MM-DD");
+  const long = m.format("dddd, D MMM YYYY");
+  if (dateYmd === today) return `today (${long})`;
+  if (dateYmd === tomorrow) return `tomorrow (${long})`;
+  return long;
+}
+
+function formatSlotsForReply(listResult, language = "en") {
   if (!listResult) return "";
-  if (listResult.message) return listResult.message;
-  if (!listResult.slots?.length) return "No free demo slots for that date.";
-  return `Available demo slots (${listResult.dateYmd} IST): ${listResult.slots
-    .map((s) => s.label)
-    .join(", ")}`;
+  const ymd = listResult.dateYmd;
+  const nice = friendlyDateLabel(ymd);
+  const hi = language === "hi";
+
+  if (listResult.reason === "sunday_closed") {
+    return hi
+      ? `${nice} Sunday hai — hum closed hain. Monday–Saturday me se koi date bataiye.`
+      : `${nice} is Sunday — we are closed. Please choose a Monday–Saturday date.`;
+  }
+  if (!listResult.slots?.length) {
+    return hi
+      ? `${nice} ke liye koi free demo slot nahi bacha. Kripya dusri weekday date batayein.`
+      : `No free demo slots left for ${nice}. Please try another weekday.`;
+  }
+  const times = listResult.slots.map((s) => s.label).join(", ");
+  return hi
+    ? `${nice} ke available demo slots (IST): ${times}.\nKaunsa time book karun?`
+    : `Available demo slots for ${nice} (IST): ${times}.\nWhich time should I book?`;
+}
+
+/** Remove invented times / wrong dates from LLM reply before injecting engine slots. */
+function stripSlotHallucinations(text) {
+  return String(text || "")
+    .replace(/No free demo slots[^\n]*/gi, "")
+    .replace(/available (demo )?slots?[^\n]*/gi, "")
+    .replace(/aaj ke liye available[^\n]*/gi, "")
+    .replace(/\d{1,2}:\d{2}\s*(AM|PM)(\s*(IST)?)?/gi, "")
+    .replace(/\b\d{4}-\d{2}-\d{2}\b/g, "")
+    .replace(/[,\s]+aur[,\s]+/gi, " ")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 module.exports = {
@@ -264,9 +364,15 @@ module.exports = {
   formatSlotLabel,
   formatSlotLong,
   parseScheduledAt,
+  todayYmd,
+  isBookableDateYmd,
+  resolveDemoDateFromText,
   resolveDateYmd,
+  wantsDemoScheduling,
   listAvailableSlots,
   isSlotAvailable,
   bookDemoSlot,
+  friendlyDateLabel,
   formatSlotsForReply,
+  stripSlotHallucinations,
 };

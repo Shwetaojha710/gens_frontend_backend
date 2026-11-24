@@ -13,6 +13,10 @@ const {
   bookDemoSlot,
   isSlotAvailable,
   parseScheduledAt,
+  resolveDemoDateFromText,
+  resolveDateYmd,
+  todayYmd,
+  stripSlotHallucinations,
 } = require("../app/helper/aiAgentDemoSlots");
 const AiAgentDemoSlot = require("../app/models/ai_agent_demo_slots");
 
@@ -29,6 +33,19 @@ function assert(cond, msg) {
   await AiAgentDemoSlot.destroy({
     where: { tenantId: TENANT, waId: "test_demo_slots" },
   });
+
+  // Relative date resolution
+  assert(resolveDemoDateFromText("thik hai shedule book karo aaj ka") === todayYmd(), "aaj → today");
+  assert(resolveDemoDateFromText("kal demo chahiye") === moment().tz(TZ).add(1, "day").format("YYYY-MM-DD"), "kal");
+  assert(
+    resolveDateYmd({ date: "2023-10-05" }, null, "aaj ka schedule") === todayYmd(),
+    "inbound aaj wins over LLM 2023 date"
+  );
+  assert(resolveDateYmd({ date: "2023-10-05" }, null, null) === null, "reject past LLM date");
+  const stripped = stripSlotHallucinations(
+    "Ajay, slots: 3:00 PM, 4:00 PM\n\nNo free demo slots on 2023-10-05. Please try another weekday."
+  );
+  assert(!/2023-10-05/.test(stripped) && !/3:00 PM/.test(stripped), "strip hallucinations");
 
   const sunday = moment().tz(TZ).day(0);
   if (sunday.isBefore(moment().tz(TZ), "day")) sunday.add(7, "days");

@@ -27,8 +27,13 @@ const {
   bookDemoSlot,
   parseScheduledAt,
   resolveDateYmd,
+  resolveDemoDateFromText,
+  wantsDemoScheduling,
+  todayYmd,
   formatSlotsForReply,
   formatSlotLong,
+  stripSlotHallucinations,
+  friendlyDateLabel,
 } = require("./aiAgentDemoSlots");
 
 /** Meta-approved GENS welcome template — agent's auto first outbound outside the 24h window. */
@@ -541,8 +546,9 @@ HARD RULES:
 - Answer ONLY using APPROVED_KNOWLEDGE below.
 - OUT OF CONTEXT / NO KNOWLEDGE: If the question is unrelated to GENS/HRMS/Quaere, or APPROVED_KNOWLEDGE is missing / says NO_APPROVED_KNOWLEDGE_FOUND, do NOT invent an answer. Reply warmly that our team can help with further queries — invite them to book a free demo; our sales/support team will support them and solve all their questions. Collect name/company/email/phone (one field at a time if details missing). Prefer LIST_DEMO_SLOTS / BOOK_DEMO_SLOT + COLLECT_LEAD_INFORMATION. Set intent DEMO_REQUEST or SALES_ENQUIRY. Do not silently ignore.
 - DEMO BOOKING (office hours Asia/Kolkata, Mon–Sat 9:00 AM–6:30 PM; hourly slots 9:00–5:00 PM; Sunday closed):
-  1) If customer wants a demo but no date yet → ask for a preferred date (YYYY-MM-DD or clear day like "tomorrow").
-  2) When a date is known → emit LIST_DEMO_SLOTS with payload { "date": "YYYY-MM-DD" }. Reply MUST list ONLY slots from AVAILABLE_DEMO_SLOTS in the user prompt / engine result — NEVER invent times.
+  - TODAY_IST in the user prompt is the real calendar date — for "aaj"/"today" ALWAYS use that exact YYYY-MM-DD. Never invent old years (e.g. 2023).
+  1) If customer wants a demo but no date yet → ask: "Kaunsi date aur time chahiye?" / "Which date and time works for you?"
+  2) When customer says aaj/today/kal/tomorrow or a clear date → emit LIST_DEMO_SLOTS with payload { "date": "<TODAY_IST or resolved YYYY-MM-DD>" }. NEVER invent slot times in reply — engine will inject real slots.
   3) When customer picks a time → emit BOOK_DEMO_SLOT with payload { "datetime": "YYYY-MM-DD HH:mm" } (IST). Do not claim booked until engine confirms.
   4) SCHEDULE_DEMO without datetime means intent only (ask date / list slots). With datetime, treat like BOOK_DEMO_SLOT.
 - ALWAYS KEEP HELPING: Do NOT use TRANSFER_TO_HUMAN for "who are you", greetings, product/pricing/feature questions, or low confidence. Only use TRANSFER_TO_HUMAN when the customer explicitly asks for a human/sales person, or for a serious complaint. Even then, continue answering — never go silent.
@@ -576,10 +582,14 @@ function buildUserPrompt({ inbound, history, memory, lead, missingFields, availa
   const hist = (history || [])
     .map((m) => `${m.senderType.toUpperCase()}: ${m.body || ""}`)
     .join("\n");
+  const today = todayYmd();
   const slotsBlock = availableDemoSlots
     ? `\nAVAILABLE_DEMO_SLOTS (authoritative — list ONLY these times; do not invent):\n${JSON.stringify(availableDemoSlots, null, 2)}\n`
     : "";
-  return `CUSTOMER_MESSAGE:
+  return `TODAY_IST: ${today} (${friendlyDateLabel(today)})
+Use TODAY_IST for "aaj"/"today". Never use dates from other years.
+
+CUSTOMER_MESSAGE:
 ${inbound.body || "(non-text message)"}
 
 CONVERSATION_HISTORY:
@@ -1046,6 +1056,36 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
     }
   }
 
+  // Demo date harden: resolve aaj/today from inbound; force LIST_DEMO_SLOTS with real IST date
+  if (wantsDemoScheduling(inbound.body) || decision.intent === "DEMO_REQUEST") {
+    const resolved = resolveDemoDateFromText(inbound.body);
+    const hasListOrBook = decision.actions.some((a) =>
+      ["LIST_DEMO_SLOTS", "BOOK_DEMO_SLOT"].includes(a.type)
+    );
+    if (resolved) {
+      // Fix hallucinated LLM dates (e.g. 2023-10-05) on LIST/SCHEDULE payloads
+      decision.actions = (decision.actions || []).map((a) => {
+        if (a.type === "LIST_DEMO_SLOTS" || a.type === "SCHEDULE_DEMO") {
+          return { ...a, payload: { ...(a.payload || {}), date: resolved } };
+        }
+        return a;
+      });
+      if (!hasListOrBook) {
+        decision.actions.push({ type: "LIST_DEMO_SLOTS", payload: { date: resolved } });
+      }
+      // Strip invented times from reply; engine will inject real slots after list
+      decision.reply = stripSlotHallucinations(decision.reply);
+    } else if (!hasListOrBook && !decision.actions.some((a) => a.type === "BOOK_DEMO_SLOT")) {
+      // No date yet — ask clearly instead of inventing slots
+      if (!/\b(date|kab|kaunsi|which day|when)\b/i.test(String(decision.reply || ""))) {
+        decision.reply =
+          decision.language === "hi"
+            ? "Zaroor — demo book karte hain. Aapko kab ka schedule chahiye? (aaj, kal, ya specific date jaise 25-11-2026)"
+            : "Sure — let's book a demo. Which date do you prefer? (today, tomorrow, or a date like 25-11-2026)";
+      }
+    }
+  }
+
   // Never invent pricing: if intent pricing and no knowledge, soften reply
   if (
     decision.intent === "PRICING_ENQUIRY" &&
@@ -1089,7 +1129,7 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
       return { ok: false, reason: "already_booked_this_turn" };
     }
     const lead = await ensureLead();
-    const dateYmd = resolveDateYmd(action.payload || {}, conversation);
+    const dateYmd = resolveDateYmd(action.payload || {}, conversation, inbound.body);
     const parsed =
       parseScheduledAt(
         action.payload?.datetime ||
@@ -1195,8 +1235,8 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
         await logAction(tenantId, conversation.id, inboundMsg.id, action.type, action.payload, "executed");
       } else if (action.type === "LIST_DEMO_SLOTS") {
         const dateYmd =
-          resolveDateYmd(action.payload || {}, conversation) ||
-          resolveDateYmd({ date: nextDetails.preferredDemoDate }, conversation);
+          resolveDateYmd(action.payload || {}, conversation, inbound.body) ||
+          resolveDateYmd({ date: nextDetails.preferredDemoDate }, conversation, inbound.body);
         if (!dateYmd) {
           await logAction(
             tenantId,
@@ -1207,6 +1247,12 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
             "skipped",
             "missing_date"
           );
+          // Ask clearly for date — do not invent slots
+          const ask =
+            decision.language === "hi"
+              ? "Demo ke liye kaunsi date chahiye? (jaise aaj, kal, ya 25-11-2026). Phir main available times bataunga."
+              : "Which date should I book the demo for? (e.g. today, tomorrow, or 25-11-2026). Then I will show available times.";
+          decision.reply = ask;
         } else {
           lastDemoList = await listAvailableSlots({ tenantId, dateYmd });
           await conversation.update({
@@ -1223,6 +1269,7 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
             action.type,
             {
               date: dateYmd,
+              llmDate: action.payload?.date || null,
               count: lastDemoList.slots?.length || 0,
               reason: lastDemoList.reason || null,
             },
@@ -1252,7 +1299,7 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
           action.payload?.scheduledAt ||
           action.payload?.preferredTime ||
           action.payload?.demoTime;
-        if (hasTime || resolveDateYmd(action.payload || {}, conversation)) {
+        if (hasTime || resolveDateYmd(action.payload || {}, conversation, inbound.body)) {
           const bookResult = await runBookDemo(action);
           await logAction(
             tenantId,
@@ -1308,29 +1355,31 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
     }
   }
 
-  // Inject authoritative slot / booking text into the customer reply (never invent times)
+  // Inject authoritative slot / booking text — overwrite hallucinated times/dates
   if (lastDemoBook?.ok && lastDemoBook.labelLong) {
-    const confirmEn = `Your demo is confirmed for ${lastDemoBook.labelLong}. Our sales team will follow up.`;
-    const confirmHi = `Aapka demo confirm ho gaya hai: ${lastDemoBook.labelLong}. Hamari sales team follow-up karegi.`;
-    const conf = decision.language === "hi" ? confirmHi : confirmEn;
-    if (!/confirm|booked|scheduled|हो गया|confirm ho/i.test(String(decision.reply || ""))) {
-      decision.reply = `${String(decision.reply || "").trim()}\n\n${conf}`.trim();
-    } else if (!String(decision.reply || "").includes(lastDemoBook.labelLong)) {
-      decision.reply = `${String(decision.reply || "").trim()} (${lastDemoBook.labelLong})`;
-    }
+    const conf =
+      decision.language === "hi"
+        ? `Aapka demo confirm ho gaya hai: ${lastDemoBook.labelLong}. Hamari sales team follow-up karegi.`
+        : `Your demo is confirmed for ${lastDemoBook.labelLong}. Our sales team will follow up.`;
+    decision.reply = conf;
   } else if (lastDemoList) {
-    const slotText = formatSlotsForReply(lastDemoList);
-    if (slotText && !String(decision.reply || "").includes("AM IST") && !String(decision.reply || "").includes("PM IST")) {
-      decision.reply = `${String(decision.reply || "").trim()}\n\n${slotText}`.trim();
-    }
+    const slotText = formatSlotsForReply(lastDemoList, decision.language);
+    const prefix = stripSlotHallucinations(decision.reply);
+    // Drop leftover empty filler; engine slots are the source of truth
+    const keepPrefix =
+      prefix &&
+      prefix.length < 180 &&
+      !/slot|schedule|shedule|demo.*time|available/i.test(prefix)
+        ? prefix
+        : "";
     if (lastDemoBook && !lastDemoBook.ok && lastDemoBook.reason === "conflict") {
       const conflictNote =
         decision.language === "hi"
-          ? "Woh slot available nahi hai (1 hour gap required). Kripya neeche diye free slots me se choose karein."
-          : "That slot is not available (demos need at least 1 hour gap). Please pick one of the free slots below.";
-      if (!/not available|available nahi|1 hour/i.test(String(decision.reply || ""))) {
-        decision.reply = `${conflictNote}\n\n${String(decision.reply || "").trim()}`.trim();
-      }
+          ? "Woh slot available nahi hai (kam se kam 1 hour ka gap chahiye)."
+          : "That slot is not available (demos need at least a 1 hour gap).";
+      decision.reply = `${conflictNote}\n\n${slotText}`.trim();
+    } else {
+      decision.reply = keepPrefix ? `${keepPrefix}\n\n${slotText}` : slotText;
     }
   }
 
