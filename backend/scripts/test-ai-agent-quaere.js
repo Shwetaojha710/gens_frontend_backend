@@ -15,7 +15,6 @@ const AiAgentConversation = require("../app/models/ai_agent_conversations");
 const AiAgentMessage = require("../app/models/ai_agent_messages");
 const { getOrCreateAgent } = require("../app/helper/aiAgentEngine");
 const { buildSearchText } = require("../app/helper/aiAgentKnowledge");
-
 const API = process.env.API_BASE_URL || "http://127.0.0.1:3002/api/";
 
 const KB_ENTRIES = [

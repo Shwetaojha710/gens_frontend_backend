@@ -1,0 +1,129 @@
+<div class="container-fluid mt-5">
+  <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+    <div>
+      <h4 class="mb-1">Sales Handoff</h4>
+      <p class="text-muted small mb-0">
+        Pending human takeovers from AI conversations — review reason and resolve.
+      </p>
+    </div>
+    <a class="btn btn-sm btn-outline-secondary" routerLink="/layout/ai-agent/crm">← CRM</a>
+  </div>
+
+  <div class="row g-2 mb-3" *ngIf="!selected">
+    <div class="col-md-3">
+      <select class="form-select" [(ngModel)]="status" (change)="load()">
+        <option value="">All</option>
+        <option value="pending">pending</option>
+        <option value="accepted">accepted</option>
+        <option value="resolved">resolved</option>
+        <option value="cancelled">cancelled</option>
+      </select>
+    </div>
+    <div class="col-auto">
+      <button class="btn btn-outline-secondary" type="button" (click)="load()">Refresh</button>
+    </div>
+  </div>
+
+  <div class="card" *ngIf="!selected">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th>Trigger</th>
+            <th>Reason</th>
+            <th>Lead</th>
+            <th>Status</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="!rows.length"><td colspan="6" class="text-muted">No handoffs.</td></tr>
+          <tr *ngFor="let r of rows" style="cursor:pointer" (click)="open(r)">
+            <td>
+              <div>{{ r.customerName || '—' }}</div>
+              <div class="small text-muted">{{ r.customerPhone }}</div>
+            </td>
+            <td>{{ r.triggerType }}</td>
+            <td class="small" style="max-width:280px">{{ r.reason }}</td>
+            <td class="small">
+              <span *ngIf="r.lead">{{ r.lead.leadStatus }} · {{ r.lead.leadPriority }}</span>
+              <span *ngIf="!r.lead" class="text-muted">—</span>
+            </td>
+            <td>
+              <span
+                class="badge"
+                [ngClass]="r.status === 'pending' ? 'bg-danger' : r.status === 'resolved' ? 'bg-success' : 'bg-secondary'"
+              >{{ r.status }}</span>
+            </td>
+            <td class="small text-muted">{{ r.createdAt | date:'short' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="row g-3" *ngIf="selected">
+    <div class="col-lg-7">
+      <div class="card">
+        <h6 class="card-header d-flex justify-content-between align-items-center">
+          <span>Handoff details</span>
+          <button class="btn btn-sm btn-outline-secondary" type="button" (click)="close()">Back</button>
+        </h6>
+        <div class="card-body">
+          <div class="mb-2"><span class="text-muted small">Customer</span>
+            <div class="fw-medium">{{ selected.customerName || '—' }} · {{ selected.customerPhone }}</div>
+          </div>
+          <div class="mb-2"><span class="text-muted small">Trigger</span>
+            <div>{{ selected.triggerType }}</div>
+          </div>
+          <div class="mb-2"><span class="text-muted small">Reason</span>
+            <div>{{ selected.reason }}</div>
+          </div>
+          <div class="mb-2" *ngIf="selected.lead">
+            <span class="text-muted small">Lead</span>
+            <div>
+              {{ selected.lead.fullName || selected.lead.phone }} ·
+              {{ selected.lead.leadStatus }} ·
+              <span class="badge bg-light text-dark">{{ selected.lead.salesDisposition || 'no disposition' }}</span>
+            </div>
+          </div>
+          <div class="mb-3" *ngIf="selected.conversationSnapshot?.length">
+            <span class="text-muted small">Snapshot (last messages)</span>
+            <div class="border rounded p-2 mt-1" style="max-height:240px;overflow:auto">
+              <div *ngFor="let m of selected.conversationSnapshot" class="small mb-1">
+                <span class="text-muted">{{ m.senderType || m.direction }}:</span> {{ m.body }}
+              </div>
+            </div>
+          </div>
+          <label class="form-label small">Resolution notes</label>
+          <textarea class="form-control form-control-sm mb-3" rows="3" [(ngModel)]="notes"></textarea>
+          <div class="d-flex flex-wrap gap-2">
+            <button
+              class="btn btn-primary btn-sm"
+              type="button"
+              [disabled]="resolving || selected.status === 'resolved'"
+              (click)="resolve('resolved')"
+            >{{ resolving ? 'Saving…' : 'Mark resolved' }}</button>
+            <button
+              class="btn btn-outline-secondary btn-sm"
+              type="button"
+              [disabled]="resolving"
+              (click)="resolve('cancelled')"
+            >Cancel handoff</button>
+            <a
+              class="btn btn-outline-primary btn-sm"
+              [routerLink]="['/layout/ai-agent/conversations']"
+            >Open inbox</a>
+            <a
+              *ngIf="selected.lead?.id"
+              class="btn btn-outline-secondary btn-sm"
+              [routerLink]="['/layout/ai-agent/leads']"
+              [queryParams]="{ open: selected.lead.id }"
+            >Open lead</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

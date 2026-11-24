@@ -36,11 +36,46 @@ const AiAgentLead = require("../../models/ai_agent_leads");
 const AiAgentHandover = require("../../models/ai_agent_handover");
 const AiAgentAction = require("../../models/ai_agent_actions");
 const AiAgentMemory = require("../../models/ai_agent_memory");
+const AiAgentDemoSlot = require("../../models/ai_agent_demo_slots");
+const { findDueFollowUpLeads } = require("../../helper/aiAgentFollowups");
+const sequelize = require("../../connection/connection");
 
 const HR_ROLES = ["admin", "hr", "superadmin"];
 
 function fail(res, message) {
   return Helper.response(false, message, {}, res, 200);
+}
+
+/** Normalize disposition for CRM filters / badges. */
+function resolveSalesDisposition(lead) {
+  const meta = lead?.meta || {};
+  if (meta.doNotContact || meta.salesDisposition === "declined" || lead?.leadStatus === "lost") {
+    return "declined";
+  }
+  if (meta.salesDisposition === "not_ready" || lead?.leadStatus === "nurturing") {
+    return "not_ready";
+  }
+  if (
+    meta.salesDisposition === "interested" ||
+    lead?.leadStatus === "demo_scheduled" ||
+    lead?.leadStatus === "won"
+  ) {
+    return "interested";
+  }
+  return meta.salesDisposition || null;
+}
+
+function enrichLeadRow(lead) {
+  const plain = lead?.toJSON ? lead.toJSON() : { ...lead };
+  const meta = plain.meta || {};
+  return {
+    ...plain,
+    salesDisposition: resolveSalesDisposition(plain),
+    followUpAt: meta.followUpAt || null,
+    followUpSentAt: meta.followUpSentAt || null,
+    doNotContact: Boolean(meta.doNotContact),
+    demoScheduledLabel: meta.demoScheduledLabel || plain.purchaseTimeline || null,
+  };
 }
 
 const hr = (name, fn) => async (req, res) => {
@@ -354,28 +389,94 @@ exports.listLeads = hr("listLeads", async (req, res) => {
       { phone: { [Op.iLike]: `%${b.q}%` } },
     ];
   }
+
+  // CRM disposition filter (meta + status heuristics)
+  const disp = String(b.salesDisposition || "").toLowerCase();
+  if (disp === "declined") {
+    where[Op.and] = [
+      ...(where[Op.and] || []),
+      {
+        [Op.or]: [
+          { leadStatus: "lost" },
+          sequelize.where(sequelize.literal(`meta->>'doNotContact'`), "true"),
+          sequelize.where(sequelize.literal(`meta->>'salesDisposition'`), "declined"),
+        ],
+      },
+    ];
+  } else if (disp === "not_ready") {
+    where[Op.and] = [
+      ...(where[Op.and] || []),
+      {
+        [Op.or]: [
+          { leadStatus: "nurturing" },
+          sequelize.where(sequelize.literal(`meta->>'salesDisposition'`), "not_ready"),
+        ],
+      },
+    ];
+  } else if (disp === "interested") {
+    where[Op.and] = [
+      ...(where[Op.and] || []),
+      {
+        [Op.or]: [
+          { leadStatus: { [Op.in]: ["demo_scheduled", "won"] } },
+          sequelize.where(sequelize.literal(`meta->>'salesDisposition'`), "interested"),
+        ],
+      },
+    ];
+  }
+
   const rows = await AiAgentLead.findAll({
     where,
     order: [["updatedAt", "DESC"]],
     limit: Math.min(Number(b.limit) || 100, 300),
   });
-  return Helper.response(true, "Leads fetched", rows, res, 200);
+  return Helper.response(true, "Leads fetched", rows.map(enrichLeadRow), res, 200);
 });
 
 exports.getLead = hr("getLead", async (req, res) => {
+  const tenantId = req.users.tenantId;
   const lead = await AiAgentLead.findOne({
-    where: { id: req.body?.id, tenantId: req.users.tenantId },
+    where: { id: req.body?.id, tenantId },
   });
   if (!lead) return fail(res, "Lead not found");
   let messages = [];
+  let pendingHandover = null;
+  let demos = [];
   if (lead.conversationId) {
     messages = await AiAgentMessage.findAll({
-      where: { conversationId: lead.conversationId, tenantId: req.users.tenantId },
+      where: { conversationId: lead.conversationId, tenantId },
       order: [["createdAt", "ASC"]],
       limit: 200,
     });
+    pendingHandover = await AiAgentHandover.findOne({
+      where: { tenantId, conversationId: lead.conversationId, status: "pending" },
+      order: [["createdAt", "DESC"]],
+    });
   }
-  return Helper.response(true, "Lead fetched", { lead, messages }, res, 200);
+  demos = await AiAgentDemoSlot.findAll({
+    where: {
+      tenantId,
+      [Op.or]: [
+        lead.id ? { leadId: lead.id } : null,
+        lead.conversationId ? { conversationId: lead.conversationId } : null,
+        lead.waId ? { waId: lead.waId } : null,
+      ].filter(Boolean),
+    },
+    order: [["scheduledAt", "DESC"]],
+    limit: 20,
+  });
+  return Helper.response(
+    true,
+    "Lead fetched",
+    {
+      lead: enrichLeadRow(lead),
+      messages,
+      demos,
+      pendingHandover,
+    },
+    res,
+    200
+  );
 });
 
 exports.updateLead = hr("updateLead", async (req, res) => {
@@ -793,14 +894,46 @@ exports.handover = hr("handover", async (req, res) => {
 });
 
 exports.listHandovers = hr("listHandovers", async (req, res) => {
-  const where = { tenantId: req.users.tenantId };
+  const tenantId = req.users.tenantId;
+  const where = { tenantId };
   if (req.body?.status) where.status = req.body.status;
   const rows = await AiAgentHandover.findAll({
     where,
     order: [["createdAt", "DESC"]],
-    limit: 100,
+    limit: Math.min(Number(req.body?.limit) || 100, 300),
   });
-  return Helper.response(true, "Handovers fetched", rows, res, 200);
+
+  const convIds = [...new Set(rows.map((r) => r.conversationId).filter(Boolean))];
+  const convs = convIds.length
+    ? await AiAgentConversation.findAll({
+        where: { tenantId, id: { [Op.in]: convIds } },
+        attributes: ["id", "waId", "customerPhone", "customerName", "leadId", "status", "aiEnabled"],
+      })
+    : [];
+  const convMap = Object.fromEntries(convs.map((c) => [c.id, c.toJSON ? c.toJSON() : c]));
+  const leadIds = [...new Set(convs.map((c) => c.leadId).filter(Boolean))];
+  const leads = leadIds.length
+    ? await AiAgentLead.findAll({
+        where: { tenantId, id: { [Op.in]: leadIds } },
+        attributes: ["id", "fullName", "phone", "companyName", "leadStatus", "leadPriority", "meta"],
+      })
+    : [];
+  const leadMap = Object.fromEntries(leads.map((l) => [l.id, enrichLeadRow(l)]));
+
+  const enriched = rows.map((r) => {
+    const plain = r.toJSON ? r.toJSON() : { ...r };
+    const conv = convMap[plain.conversationId] || null;
+    const lead = conv?.leadId ? leadMap[conv.leadId] || null : null;
+    return {
+      ...plain,
+      conversation: conv,
+      lead,
+      customerName: lead?.fullName || conv?.customerName || null,
+      customerPhone: lead?.phone || conv?.customerPhone || conv?.waId || null,
+    };
+  });
+
+  return Helper.response(true, "Handovers fetched", enriched, res, 200);
 });
 
 exports.resolveHandover = hr("resolveHandover", async (req, res) => {
@@ -829,7 +962,38 @@ exports.analytics = hr("analytics", async (req, res) => {
     group: ["intent"],
     raw: true,
   });
-  // Approximate response time: avg gap between inbound and next outbound AI message is expensive; return placeholder stats
+
+  const [
+    demoScheduled,
+    nurturing,
+    lost,
+    demosBooked,
+    demosCompleted,
+    pendingHandovers,
+  ] = await Promise.all([
+    AiAgentLead.count({ where: { tenantId, leadStatus: "demo_scheduled" } }),
+    AiAgentLead.count({ where: { tenantId, leadStatus: "nurturing" } }),
+    AiAgentLead.count({ where: { tenantId, leadStatus: "lost" } }),
+    AiAgentDemoSlot.count({ where: { tenantId, status: "booked" } }),
+    AiAgentDemoSlot.count({ where: { tenantId, status: "completed" } }),
+    AiAgentHandover.count({ where: { tenantId, status: "pending" } }),
+  ]);
+
+  // Disposition funnel from enriched heuristics (sample recent leads for accurate meta counts)
+  const sample = await AiAgentLead.findAll({
+    where: { tenantId },
+    attributes: ["id", "leadStatus", "meta"],
+    limit: 2000,
+  });
+  const disposition = { interested: 0, not_ready: 0, declined: 0, unset: 0 };
+  for (const row of sample) {
+    const d = resolveSalesDisposition(row);
+    if (d === "interested") disposition.interested += 1;
+    else if (d === "not_ready") disposition.not_ready += 1;
+    else if (d === "declined") disposition.declined += 1;
+    else disposition.unset += 1;
+  }
+
   return Helper.response(
     true,
     "Analytics fetched",
@@ -837,17 +1001,183 @@ exports.analytics = hr("analytics", async (req, res) => {
       totalLeads,
       wonLeads: won,
       conversionRate: totalLeads ? Number(((won / totalLeads) * 100).toFixed(1)) : 0,
+      demoConversionRate: totalLeads
+        ? Number((((demoScheduled + won) / totalLeads) * 100).toFixed(1))
+        : 0,
       handoverRate: conversations ? Number(((handovers / conversations) * 100).toFixed(1)) : 0,
       commonIntents: intents
         .map((i) => ({ intent: i.intent, count: Number(i.count) }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 10),
       totalHandovers: handovers,
+      pendingHandovers,
       totalConversations: conversations,
+      byStatus: {
+        demo_scheduled: demoScheduled,
+        nurturing,
+        lost,
+        won,
+      },
+      demos: { booked: demosBooked, completed: demosCompleted },
+      disposition,
     },
     res,
     200
   );
+});
+
+// ───────────────────────────── CRM & Sales Intelligence ─────────────────────────────
+
+exports.crmDashboard = hr("crmDashboard", async (req, res) => {
+  const tenantId = req.users.tenantId;
+  const [
+    totalLeads,
+    hotLeads,
+    demoScheduled,
+    nurturing,
+    lost,
+    pendingHandovers,
+    demosBooked,
+    demosUpcoming,
+  ] = await Promise.all([
+    AiAgentLead.count({ where: { tenantId } }),
+    AiAgentLead.count({ where: { tenantId, leadPriority: "HOT" } }),
+    AiAgentLead.count({ where: { tenantId, leadStatus: "demo_scheduled" } }),
+    AiAgentLead.count({ where: { tenantId, leadStatus: "nurturing" } }),
+    AiAgentLead.count({ where: { tenantId, leadStatus: "lost" } }),
+    AiAgentHandover.count({ where: { tenantId, status: "pending" } }),
+    AiAgentDemoSlot.count({ where: { tenantId, status: "booked" } }),
+    AiAgentDemoSlot.count({
+      where: {
+        tenantId,
+        status: "booked",
+        scheduledAt: { [Op.gte]: new Date() },
+      },
+    }),
+  ]);
+
+  const dueFollowUps = await findDueFollowUpLeads({ tenantId, limit: 50 });
+  const sample = await AiAgentLead.findAll({
+    where: { tenantId },
+    attributes: ["id", "leadStatus", "meta", "fullName", "phone", "companyName", "leadPriority", "updatedAt"],
+    order: [["updatedAt", "DESC"]],
+    limit: 500,
+  });
+  const disposition = { interested: 0, not_ready: 0, declined: 0, unset: 0 };
+  for (const row of sample) {
+    const d = resolveSalesDisposition(row);
+    if (d === "interested") disposition.interested += 1;
+    else if (d === "not_ready") disposition.not_ready += 1;
+    else if (d === "declined") disposition.declined += 1;
+    else disposition.unset += 1;
+  }
+
+  const recentDispositionLeads = sample
+    .map(enrichLeadRow)
+    .filter((l) => l.salesDisposition)
+    .slice(0, 8);
+
+  const upcomingDemos = await AiAgentDemoSlot.findAll({
+    where: {
+      tenantId,
+      status: "booked",
+      scheduledAt: { [Op.gte]: new Date(Date.now() - 60 * 60 * 1000) },
+    },
+    order: [["scheduledAt", "ASC"]],
+    limit: 8,
+  });
+
+  const recentHandovers = await AiAgentHandover.findAll({
+    where: { tenantId, status: "pending" },
+    order: [["createdAt", "DESC"]],
+    limit: 5,
+  });
+
+  return Helper.response(
+    true,
+    "CRM dashboard fetched",
+    {
+      totalLeads,
+      hotLeads,
+      demoScheduled,
+      nurturing,
+      lost,
+      pendingHandovers,
+      demosBooked,
+      demosUpcoming,
+      dueFollowUpCount: dueFollowUps.length,
+      dueFollowUps: dueFollowUps.slice(0, 10).map(enrichLeadRow),
+      disposition,
+      recentDispositionLeads,
+      upcomingDemos,
+      recentHandovers,
+    },
+    res,
+    200
+  );
+});
+
+exports.listDemos = hr("listDemos", async (req, res) => {
+  const tenantId = req.users.tenantId;
+  const b = req.body || {};
+  const where = { tenantId };
+  if (b.status) where.status = b.status;
+  if (b.from || b.to) {
+    where.scheduledAt = {};
+    if (b.from) where.scheduledAt[Op.gte] = new Date(b.from);
+    if (b.to) where.scheduledAt[Op.lte] = new Date(b.to);
+  }
+  if (b.upcoming === true) {
+    where.status = where.status || "booked";
+    where.scheduledAt = { ...(where.scheduledAt || {}), [Op.gte]: new Date() };
+  }
+
+  const rows = await AiAgentDemoSlot.findAll({
+    where,
+    order: [["scheduledAt", b.order === "asc" ? "ASC" : "DESC"]],
+    limit: Math.min(Number(b.limit) || 100, 300),
+  });
+
+  const leadIds = [...new Set(rows.map((r) => r.leadId).filter(Boolean))];
+  const leads = leadIds.length
+    ? await AiAgentLead.findAll({
+        where: { tenantId, id: { [Op.in]: leadIds } },
+        attributes: ["id", "fullName", "phone", "companyName", "leadStatus", "leadPriority", "meta"],
+      })
+    : [];
+  const leadMap = Object.fromEntries(leads.map((l) => [l.id, enrichLeadRow(l)]));
+
+  const enriched = rows.map((r) => {
+    const plain = r.toJSON ? r.toJSON() : { ...r };
+    return {
+      ...plain,
+      lead: plain.leadId ? leadMap[plain.leadId] || null : null,
+    };
+  });
+
+  return Helper.response(true, "Demos fetched", enriched, res, 200);
+});
+
+exports.updateDemo = hr("updateDemo", async (req, res) => {
+  const tenantId = req.users.tenantId;
+  const row = await AiAgentDemoSlot.findOne({
+    where: { id: req.body?.id, tenantId },
+  });
+  if (!row) return fail(res, "Demo not found");
+  const status = String(req.body?.status || "").toLowerCase();
+  if (!["booked", "cancelled", "completed"].includes(status)) {
+    return fail(res, "Invalid status");
+  }
+  await row.update({
+    status,
+    updatedBy: req.users.id,
+    meta: {
+      ...(row.meta || {}),
+      statusUpdatedAt: new Date().toISOString(),
+      statusNote: req.body?.note ? String(req.body.note).slice(0, 500) : undefined,
+    },
+  });
+  return Helper.response(true, "Demo updated", row, res, 200);
 });
 
 // ───────────────────────────── WhatsApp webhook ─────────────────────────────

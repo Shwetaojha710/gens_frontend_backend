@@ -1,6 +1,11 @@
 <div class="container-fluid mt-5">
-  <h4 class="mb-1">Agent Analytics</h4>
-  <p class="text-muted small mb-4">Lead conversion and enquiry patterns</p>
+  <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+    <div>
+      <h4 class="mb-1">Agent Analytics &amp; Reporting</h4>
+      <p class="text-muted small mb-0">Lead conversion, disposition funnel, demos, and enquiry patterns</p>
+    </div>
+    <a class="btn btn-sm btn-outline-secondary" routerLink="/layout/ai-agent/crm">← CRM</a>
+  </div>
 
   <div *ngIf="!data" class="text-muted">Loading…</div>
   <ng-container *ngIf="data">
@@ -10,19 +15,73 @@
         <div class="fs-3 fw-bold">{{ data.totalLeads }}</div>
       </div></div></div>
       <div class="col-6 col-lg-3"><div class="card"><div class="card-body">
-        <div class="small text-muted">Conversion rate</div>
+        <div class="small text-muted">Won conversion</div>
         <div class="fs-3 fw-bold">{{ data.conversionRate }}%</div>
         <div class="small text-muted">{{ data.wonLeads }} won</div>
       </div></div></div>
       <div class="col-6 col-lg-3"><div class="card"><div class="card-body">
-        <div class="small text-muted">Handover rate</div>
-        <div class="fs-3 fw-bold">{{ data.handoverRate }}%</div>
-        <div class="small text-muted">{{ data.totalHandovers }} handovers</div>
+        <div class="small text-muted">Demo conversion</div>
+        <div class="fs-3 fw-bold">{{ data.demoConversionRate || 0 }}%</div>
+        <div class="small text-muted">{{ data.byStatus?.demo_scheduled || 0 }} demo scheduled</div>
       </div></div></div>
       <div class="col-6 col-lg-3"><div class="card"><div class="card-body">
-        <div class="small text-muted">Conversations</div>
-        <div class="fs-3 fw-bold">{{ data.totalConversations }}</div>
+        <div class="small text-muted">Handover rate</div>
+        <div class="fs-3 fw-bold">{{ data.handoverRate }}%</div>
+        <div class="small text-muted">{{ data.pendingHandovers || 0 }} pending · {{ data.totalHandovers }} total</div>
       </div></div></div>
+    </div>
+
+    <div class="row g-4 mb-4">
+      <div class="col-lg-6">
+        <div class="card h-100">
+          <h6 class="card-header">Sales disposition funnel</h6>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between">
+              <span>Interested</span>
+              <strong class="text-success">{{ data.disposition?.interested || 0 }}</strong>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+              <span>Not ready</span>
+              <strong>{{ data.disposition?.not_ready || 0 }}</strong>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+              <span>Declined</span>
+              <strong>{{ data.disposition?.declined || 0 }}</strong>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+              <span>Unset</span>
+              <strong class="text-muted">{{ data.disposition?.unset || 0 }}</strong>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card h-100">
+          <h6 class="card-header">Lead status &amp; demos</h6>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between">
+              <span>Demo scheduled</span>
+              <strong>{{ data.byStatus?.demo_scheduled || 0 }}</strong>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+              <span>Nurturing</span>
+              <strong>{{ data.byStatus?.nurturing || 0 }}</strong>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+              <span>Lost</span>
+              <strong>{{ data.byStatus?.lost || 0 }}</strong>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+              <span>Demos booked / completed</span>
+              <strong>{{ data.demos?.booked || 0 }} / {{ data.demos?.completed || 0 }}</strong>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+              <span>Conversations</span>
+              <strong>{{ data.totalConversations }}</strong>
+            </li>
+          </ul>
+        </div>
+      </div>
     </div>
 
     <div class="card">

@@ -186,9 +186,12 @@ export const DEFAULT_PERMISSIONS: PermissionSection[] = [
     roles: ['admin', 'superadmin', 'hr'],
     children: [
       { key: 'aiagent.dashboard',      label: 'Dashboard',           roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'aiagent.crm',            label: 'CRM Dashboard',       roles: ['admin', 'superadmin', 'hr'] },
       { key: 'aiagent.config',         label: 'Agent Configuration', roles: ['admin', 'superadmin', 'hr'] },
       { key: 'aiagent.knowledge',      label: 'Knowledge Base',      roles: ['admin', 'superadmin', 'hr'] },
       { key: 'aiagent.leads',          label: 'Leads',               roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'aiagent.demos',          label: 'Demo Tracking',       roles: ['admin', 'superadmin', 'hr'] },
+      { key: 'aiagent.handoffs',       label: 'Sales Handoff',       roles: ['admin', 'superadmin', 'hr'] },
       { key: 'aiagent.conversations',  label: 'Live Conversations',  roles: ['admin', 'superadmin', 'hr'] },
       { key: 'aiagent.analytics',      label: 'Analytics',           roles: ['admin', 'superadmin', 'hr'] },
     ]

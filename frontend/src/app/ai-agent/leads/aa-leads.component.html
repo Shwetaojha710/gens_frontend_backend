@@ -4,9 +4,11 @@
       <h4 class="mb-1">Lead Management</h4>
       <p class="text-muted small mb-0">
         Create a lead with a Meta allowlisted number to auto-send the agent welcome template.
+        Disposition, demos, and conversation history live here for CRM.
       </p>
     </div>
     <div class="d-flex gap-2" *ngIf="!selected">
+      <a class="btn btn-outline-secondary btn-sm" routerLink="/layout/ai-agent/crm">CRM</a>
       <button
         class="btn btn-outline-danger btn-sm"
         type="button"
@@ -79,9 +81,18 @@
         <option value="qualifying">qualifying</option>
         <option value="qualified">qualified</option>
         <option value="demo_scheduled">demo_scheduled</option>
+        <option value="nurturing">nurturing</option>
         <option value="won">won</option>
         <option value="lost">lost</option>
         <option value="handed_over">handed_over</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <select class="form-select" [(ngModel)]="salesDisposition" (change)="load()">
+        <option value="">All dispositions</option>
+        <option value="interested">Interested</option>
+        <option value="not_ready">Not ready</option>
+        <option value="declined">Declined</option>
       </select>
     </div>
     <div class="col-auto"><button class="btn btn-outline-secondary" type="button" (click)="load()">Filter</button></div>
@@ -95,10 +106,10 @@
             <th>Name</th>
             <th>Company</th>
             <th>Contact</th>
-            <th>Interest</th>
+            <th>Disposition</th>
             <th>Priority</th>
             <th>Status</th>
-            <th>Score</th>
+            <th>Follow-up</th>
           </tr>
         </thead>
         <tbody>
@@ -110,10 +121,10 @@
               <div>{{ r.phone }}</div>
               <div class="small text-muted">{{ r.email }}</div>
             </td>
-            <td>{{ r.productInterest || '—' }}</td>
+            <td><span class="badge" [ngClass]="dispClass(r.salesDisposition)">{{ dispLabel(r.salesDisposition) }}</span></td>
             <td><span class="badge" [ngClass]="r.leadPriority === 'HOT' ? 'bg-danger' : r.leadPriority === 'WARM' ? 'bg-warning text-dark' : 'bg-secondary'">{{ r.leadPriority }}</span></td>
             <td>{{ r.leadStatus }}</td>
-            <td>{{ r.qualificationScore }}</td>
+            <td class="small text-muted">{{ r.followUpAt ? (r.followUpAt | date:'short') : '—' }}</td>
           </tr>
         </tbody>
       </table>
@@ -128,6 +139,13 @@
           <button class="btn btn-sm btn-outline-secondary" type="button" (click)="close()">Back</button>
         </h6>
         <div class="card-body row g-2">
+          <div class="col-12 d-flex flex-wrap gap-2 align-items-center mb-1">
+            <span class="badge" [ngClass]="dispClass(selected.salesDisposition)">{{ dispLabel(selected.salesDisposition) }}</span>
+            <span class="badge bg-light text-dark">{{ selected.leadStatus }}</span>
+            <span class="badge" [ngClass]="selected.leadPriority === 'HOT' ? 'bg-danger' : selected.leadPriority === 'WARM' ? 'bg-warning text-dark' : 'bg-secondary'">{{ selected.leadPriority }}</span>
+            <span *ngIf="selected.doNotContact" class="badge bg-dark">Do not contact</span>
+            <span *ngIf="pendingHandover" class="badge bg-danger">Handoff pending</span>
+          </div>
           <div class="col-md-6"><label class="form-label small">Full name</label><input class="form-control form-control-sm" [(ngModel)]="selected.fullName" /></div>
           <div class="col-md-6"><label class="form-label small">Company</label><input class="form-control form-control-sm" [(ngModel)]="selected.companyName" /></div>
           <div class="col-md-6"><label class="form-label small">Email</label><input class="form-control form-control-sm" [(ngModel)]="selected.email" /></div>
@@ -156,21 +174,55 @@
               <option value="handed_over">handed_over</option>
             </select>
           </div>
+          <div class="col-12 small" *ngIf="selected.followUpAt">
+            <span class="text-muted">Follow-up at:</span> {{ selected.followUpAt | date:'medium' }}
+            <span *ngIf="selected.followUpSentAt" class="text-success"> · sent {{ selected.followUpSentAt | date:'short' }}</span>
+          </div>
+          <div class="col-12 small text-muted" *ngIf="selected.demoScheduledLabel">
+            Demo: {{ selected.demoScheduledLabel }}
+          </div>
           <div class="col-12 small text-muted" *ngIf="selected.meta?.welcomeOutreachAt">
             Last welcome outreach: {{ selected.meta.welcomeOutreachAt | date:'short' }}
             <span *ngIf="selected.meta?.welcomeOutreachDelivery?.sent === true">· delivered</span>
             <span *ngIf="selected.meta?.welcomeOutreachDelivery?.sent === false">· failed</span>
+          </div>
+
+          <div class="col-12" *ngIf="demos?.length">
+            <div class="small text-muted mb-1">Linked demos</div>
+            <ul class="list-unstyled small mb-0">
+              <li *ngFor="let d of demos">
+                {{ d.scheduledAt | date:'medium' }} · <span class="badge bg-light text-dark">{{ d.status }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label small">Handoff reason</label>
+            <input class="form-control form-control-sm" [(ngModel)]="handoffReason" />
           </div>
           <div class="col-12 d-flex flex-wrap gap-2">
             <button class="btn btn-primary btn-sm" type="button" (click)="save()">Save lead</button>
             <button
               class="btn btn-outline-primary btn-sm"
               type="button"
-              [disabled]="outreaching"
+              [disabled]="outreaching || selected.doNotContact"
               (click)="startOutreach()"
             >
               {{ outreaching ? 'Sending…' : 'Start outreach (welcome template)' }}
             </button>
+            <button
+              class="btn btn-outline-danger btn-sm"
+              type="button"
+              [disabled]="handingOff || !selected.conversationId"
+              (click)="handoffToSales()"
+            >
+              {{ handingOff ? 'Handing off…' : 'Hand off to sales' }}
+            </button>
+            <a
+              *ngIf="selected.conversationId"
+              class="btn btn-outline-secondary btn-sm"
+              routerLink="/layout/ai-agent/conversations"
+            >Open inbox</a>
           </div>
         </div>
       </div>
@@ -181,7 +233,10 @@
         <div class="card-body" style="max-height:520px;overflow:auto">
           <div *ngIf="!messages.length" class="text-muted small">No messages linked.</div>
           <div *ngFor="let m of messages" class="mb-2">
-            <div class="small text-muted">{{ m.senderType }} · {{ m.createdAt | date:'short' }}</div>
+            <div class="small text-muted">
+              {{ m.senderType }} · {{ m.createdAt | date:'short' }}
+              <span *ngIf="m.intent"> · {{ m.intent }}</span>
+            </div>
             <div class="p-2 rounded" [ngClass]="m.direction === 'inbound' ? 'bg-light' : 'bg-primary bg-opacity-10'">{{ m.body }}</div>
           </div>
         </div>

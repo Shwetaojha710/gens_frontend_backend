@@ -162,9 +162,12 @@ export const APP_MENU_ITEMS: MenuItem[] = [
     permKey: 'ai-agent',
     children: [
       { title: 'Dashboard',          icon: 'ri-dashboard-line',        link: '/layout/ai-agent/dashboard',      permKey: 'aiagent.dashboard' },
+      { title: 'CRM Dashboard',      icon: 'ri-pie-chart-2-line',      link: '/layout/ai-agent/crm',            permKey: 'aiagent.crm' },
       { title: 'Agent Configuration',icon: 'ri-settings-4-line',       link: '/layout/ai-agent/config',         permKey: 'aiagent.config' },
       { title: 'Knowledge Base',     icon: 'ri-book-open-line',        link: '/layout/ai-agent/knowledge',      permKey: 'aiagent.knowledge' },
       { title: 'Leads',              icon: 'ri-user-star-line',        link: '/layout/ai-agent/leads',          permKey: 'aiagent.leads' },
+      { title: 'Demo Tracking',      icon: 'ri-calendar-check-line',   link: '/layout/ai-agent/demos',          permKey: 'aiagent.demos' },
+      { title: 'Sales Handoff',      icon: 'ri-user-shared-line',      link: '/layout/ai-agent/handoffs',       permKey: 'aiagent.handoffs' },
       { title: 'Live Conversations', icon: 'ri-whatsapp-line',         link: '/layout/ai-agent/conversations',  permKey: 'aiagent.conversations' },
       { title: 'Analytics',          icon: 'ri-bar-chart-box-line',    link: '/layout/ai-agent/analytics',      permKey: 'aiagent.analytics' },
     ],

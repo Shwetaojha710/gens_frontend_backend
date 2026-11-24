@@ -1,0 +1,178 @@
+<div class="container-fluid mt-5">
+  <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+    <div>
+      <h4 class="mb-1">CRM &amp; Sales Intelligence</h4>
+      <p class="text-muted small mb-0">
+        Disposition funnel, demos, follow-ups, and sales handoffs from WhatsApp AI Agent.
+      </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-sm btn-outline-primary" routerLink="/layout/ai-agent/leads">Leads</a>
+      <a class="btn btn-sm btn-outline-primary" routerLink="/layout/ai-agent/demos">Demo tracking</a>
+      <a class="btn btn-sm btn-outline-primary" routerLink="/layout/ai-agent/handoffs">Sales handoff</a>
+      <a class="btn btn-sm btn-outline-secondary" routerLink="/layout/ai-agent/analytics">Reporting</a>
+    </div>
+  </div>
+
+  <div *ngIf="!data" class="text-center py-5 text-muted">Loading…</div>
+
+  <ng-container *ngIf="data">
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-lg-2">
+        <div class="card h-100"><div class="card-body">
+          <div class="small text-muted">Total leads</div>
+          <div class="fs-3 fw-bold">{{ data.totalLeads }}</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-lg-2">
+        <div class="card h-100 border-success"><div class="card-body">
+          <div class="small text-muted">Interested</div>
+          <div class="fs-3 fw-bold text-success">{{ data.disposition?.interested || 0 }}</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-lg-2">
+        <div class="card h-100 border-warning"><div class="card-body">
+          <div class="small text-muted">Not ready</div>
+          <div class="fs-3 fw-bold">{{ data.disposition?.not_ready || 0 }}</div>
+          <div class="small text-muted">{{ data.nurturing || 0 }} nurturing</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-lg-2">
+        <div class="card h-100"><div class="card-body">
+          <div class="small text-muted">Declined</div>
+          <div class="fs-3 fw-bold">{{ data.disposition?.declined || 0 }}</div>
+          <div class="small text-muted">{{ data.lost || 0 }} lost</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-lg-2">
+        <div class="card h-100"><div class="card-body">
+          <div class="small text-muted">Demos booked</div>
+          <div class="fs-3 fw-bold">{{ data.demosBooked }}</div>
+          <div class="small text-muted">{{ data.demosUpcoming || 0 }} upcoming</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-lg-2">
+        <div class="card h-100 border-danger"><div class="card-body">
+          <div class="small text-muted">Pending handoffs</div>
+          <div class="fs-3 fw-bold text-danger">{{ data.pendingHandovers }}</div>
+          <div class="small text-muted">{{ data.dueFollowUpCount || 0 }} follow-ups due</div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <div class="card h-100">
+          <h6 class="card-header d-flex justify-content-between">
+            <span>Disposition funnel</span>
+            <a class="small" [routerLink]="['/layout/ai-agent/leads']" [queryParams]="{ disposition: 'interested' }">Filter →</a>
+          </h6>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>Interested / demo</span>
+              <span class="badge bg-success">{{ data.disposition?.interested || 0 }}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>Not ready (nurture)</span>
+              <span class="badge bg-warning text-dark">{{ data.disposition?.not_ready || 0 }}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>Declined</span>
+              <span class="badge bg-secondary">{{ data.disposition?.declined || 0 }}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>Unset</span>
+              <span class="badge bg-light text-dark">{{ data.disposition?.unset || 0 }}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="card h-100">
+          <h6 class="card-header d-flex justify-content-between">
+            <span>Upcoming demos</span>
+            <a class="small" routerLink="/layout/ai-agent/demos">All →</a>
+          </h6>
+          <ul class="list-group list-group-flush">
+            <li *ngIf="!data.upcomingDemos?.length" class="list-group-item small text-muted">No upcoming demos.</li>
+            <li *ngFor="let d of data.upcomingDemos" class="list-group-item small">
+              <div class="fw-medium">{{ d.customerName || d.phone || 'Lead' }}</div>
+              <div class="text-muted">{{ d.scheduledAt | date:'medium' }} · {{ d.companyName || '—' }}</div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="card h-100">
+          <h6 class="card-header d-flex justify-content-between">
+            <span>Due follow-ups</span>
+            <a class="small" [routerLink]="['/layout/ai-agent/leads']" [queryParams]="{ disposition: 'not_ready' }">Nurturing →</a>
+          </h6>
+          <ul class="list-group list-group-flush">
+            <li *ngIf="!data.dueFollowUps?.length" class="list-group-item small text-muted">None due right now.</li>
+            <li *ngFor="let l of data.dueFollowUps" class="list-group-item small d-flex justify-content-between gap-2">
+              <div>
+                <div class="fw-medium">{{ l.fullName || l.phone || 'Lead' }}</div>
+                <div class="text-muted">{{ l.followUpAt | date:'short' }}</div>
+              </div>
+              <span class="badge bg-warning text-dark align-self-start">not ready</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="card">
+          <h6 class="card-header d-flex justify-content-between">
+            <span>Recent disposition leads</span>
+            <a class="small" routerLink="/layout/ai-agent/leads">Open leads →</a>
+          </h6>
+          <div class="table-responsive">
+            <table class="table table-sm mb-0">
+              <thead>
+                <tr>
+                  <th>Lead</th>
+                  <th>Disposition</th>
+                  <th>Status</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="!data.recentDispositionLeads?.length">
+                  <td colspan="4" class="text-muted small">No disposition signals yet.</td>
+                </tr>
+                <tr *ngFor="let l of data.recentDispositionLeads">
+                  <td>
+                    <div>{{ l.fullName || l.phone || '—' }}</div>
+                    <div class="small text-muted">{{ l.companyName }}</div>
+                  </td>
+                  <td><span class="badge" [ngClass]="dispClass(l.salesDisposition)">{{ dispLabel(l.salesDisposition) }}</span></td>
+                  <td class="small">{{ l.leadStatus }}</td>
+                  <td class="small text-muted">{{ l.updatedAt | date:'short' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="card">
+          <h6 class="card-header d-flex justify-content-between">
+            <span>Pending sales handoffs</span>
+            <a class="small" routerLink="/layout/ai-agent/handoffs">Manage →</a>
+          </h6>
+          <ul class="list-group list-group-flush">
+            <li *ngIf="!data.recentHandovers?.length" class="list-group-item small text-muted">None pending.</li>
+            <li *ngFor="let h of data.recentHandovers" class="list-group-item small">
+              <div class="fw-medium">{{ h.triggerType }} · {{ h.createdAt | date:'short' }}</div>
+              <div class="text-muted">{{ h.reason }}</div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>

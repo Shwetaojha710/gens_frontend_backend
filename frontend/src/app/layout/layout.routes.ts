@@ -563,6 +563,13 @@ export const layoutRoutes: Routes = [
           import('../ai-agent/dashboard/aa-dashboard.component').then((m) => m.AaDashboardComponent),
       },
       {
+        path: 'ai-agent/crm',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'aiagent.crm' },
+        loadComponent: () =>
+          import('../ai-agent/crm/aa-crm.component').then((m) => m.AaCrmComponent),
+      },
+      {
         path: 'ai-agent/config',
         canActivate: [PermissionGuard],
         data: { permKey: 'aiagent.config' },
@@ -582,6 +589,20 @@ export const layoutRoutes: Routes = [
         data: { permKey: 'aiagent.leads' },
         loadComponent: () =>
           import('../ai-agent/leads/aa-leads.component').then((m) => m.AaLeadsComponent),
+      },
+      {
+        path: 'ai-agent/demos',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'aiagent.demos' },
+        loadComponent: () =>
+          import('../ai-agent/demos/aa-demos.component').then((m) => m.AaDemosComponent),
+      },
+      {
+        path: 'ai-agent/handoffs',
+        canActivate: [PermissionGuard],
+        data: { permKey: 'aiagent.handoffs' },
+        loadComponent: () =>
+          import('../ai-agent/handoffs/aa-handoffs.component').then((m) => m.AaHandoffsComponent),
       },
       {
         path: 'ai-agent/conversations',

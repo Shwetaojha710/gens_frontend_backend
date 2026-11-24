@@ -16,6 +16,12 @@ export class AiAgentService {
 
   dashboard(): Observable<any> { return this.post('dashboard'); }
   analytics(): Observable<any> { return this.post('analytics'); }
+  /** CRM & Sales Intelligence overview */
+  crmDashboard(): Observable<any> { return this.post('crm/dashboard'); }
+  listDemos(filters: any = {}): Observable<any> { return this.post('demos/list', filters); }
+  updateDemo(id: string, status: string, note = ''): Observable<any> {
+    return this.post('demos/update', { id, status, note });
+  }
 
   getConfig(): Observable<any> { return this.post('config'); }
   saveConfig(data: any): Observable<any> { return this.post('config/save', data); }

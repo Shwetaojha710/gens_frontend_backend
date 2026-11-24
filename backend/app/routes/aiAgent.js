@@ -12,6 +12,9 @@ router.post("/whatsapp/webhook", ctrl.webhookReceive);
 // ── Admin APIs ──
 router.post("/ai-agent/dashboard", Admin, ctrl.dashboard);
 router.post("/ai-agent/analytics", Admin, ctrl.analytics);
+router.post("/ai-agent/crm/dashboard", Admin, ctrl.crmDashboard);
+router.post("/ai-agent/demos/list", Admin, ctrl.listDemos);
+router.post("/ai-agent/demos/update", Admin, ctrl.updateDemo);
 
 router.post("/ai-agent/config", Admin, ctrl.getConfig);
 router.post("/ai-agent/config/save", Admin, ctrl.saveConfig);
