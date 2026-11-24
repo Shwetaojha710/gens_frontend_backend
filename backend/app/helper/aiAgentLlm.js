@@ -13,6 +13,8 @@ const ALLOWED_ACTIONS = new Set([
   "SCHEDULE_DEMO",
   "LIST_DEMO_SLOTS",
   "BOOK_DEMO_SLOT",
+  "SCHEDULE_FOLLOWUP",
+  "STOP_OUTREACH",
   "CREATE_SUPPORT_TICKET",
   "TRANSFER_TO_HUMAN",
   "NO_REPLY",
@@ -25,12 +27,16 @@ const SYSTEM_INTENTS = [
   "PRICING_ENQUIRY",
   "SALES_ENQUIRY",
   "DEMO_REQUEST",
+  "FOLLOWUP_REQUEST",
+  "DECLINED",
   "SUPPORT_REQUEST",
   "COMPLAINT",
   "PARTNERSHIP_ENQUIRY",
   "JOB_ENQUIRY",
   "HUMAN_AGENT_REQUEST",
 ];
+
+const SALES_DISPOSITIONS = new Set(["interested", "not_ready", "declined"]);
 
 function extractJson(text) {
   if (!text) return null;
@@ -87,6 +93,12 @@ function validateDecision(raw) {
     ? String(d.leadPriority).toUpperCase()
     : null;
 
+  const rawDisp = String(d.salesDisposition || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+  const salesDisposition = SALES_DISPOSITIONS.has(rawDisp) ? rawDisp : null;
+
   return {
     intent,
     confidence,
@@ -97,6 +109,7 @@ function validateDecision(raw) {
     needsHuman,
     handoverReason,
     leadPriority,
+    salesDisposition,
     language: d.language === "hi" ? "hi" : "en",
   };
 }

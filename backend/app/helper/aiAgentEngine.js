@@ -21,7 +21,7 @@ const {
   isWithinCustomerServiceWindow,
   formatWhatsAppSendError,
 } = require("./whatsappCloud");
-const { notifySalesDemoScheduled } = require("./aiAgentMail");
+const { notifySalesDemoScheduled, notifySalesFollowUp } = require("./aiAgentMail");
 const {
   listAvailableSlots,
   bookDemoSlot,
@@ -36,6 +36,12 @@ const {
   stripSlotHallucinations,
   friendlyDateLabel,
 } = require("./aiAgentDemoSlots");
+const {
+  detectSalesDisposition,
+  parseFollowUpAt,
+  formatFollowUpLabel,
+  leadBlocksProactive,
+} = require("./aiAgentDisposition");
 
 /** Meta-approved GENS welcome template — agent's auto first outbound outside the 24h window. */
 const DEFAULT_WELCOME_TEMPLATE = {
@@ -146,6 +152,28 @@ async function sendAgentWelcomeTemplate({
     return { skipped: true, reason: "invalid_phone", template: tpl };
   }
 
+  let conversation = await AiAgentConversation.findOne({
+    where: { tenantId, waId: to },
+  });
+
+  // doNotContact / lost lead → never send proactive welcome
+  const existingLead = await AiAgentLead.findOne({
+    where: { tenantId, waId: to },
+    order: [["updatedAt", "DESC"]],
+  });
+  if (leadBlocksProactive(existingLead, conversation)) {
+    console.log(
+      `aiAgentEngine.sendAgentWelcomeTemplate: skipped do_not_contact waId=${to} leadStatus=${existingLead?.leadStatus || "n/a"}`
+    );
+    return {
+      skipped: true,
+      reason: "do_not_contact",
+      template: tpl,
+      conversation: conversation || null,
+      lead: existingLead || null,
+    };
+  }
+
   const accessToken = resolveWhatsAppAccessToken(settings);
   if (!settings.whatsappPhoneNumberId || !accessToken) {
     return {
@@ -160,9 +188,6 @@ async function sendAgentWelcomeTemplate({
     };
   }
 
-  let conversation = await AiAgentConversation.findOne({
-    where: { tenantId, waId: to },
-  });
   // Re-open for agent welcome testing: always active + AI on (even if previously handed_over)
   const reopenPatch = {
     lastMessageAt: new Date(),
@@ -263,6 +288,13 @@ async function outreachLeadWelcome({
   const phone = lead?.phone || lead?.waId;
   if (!phone) {
     return { skipped: true, reason: "lead_phone_missing" };
+  }
+
+  if (leadBlocksProactive(lead)) {
+    console.log(
+      `aiAgentEngine.outreachLeadWelcome: skipped do_not_contact leadId=${lead?.id} status=${lead?.leadStatus}`
+    );
+    return { skipped: true, reason: "do_not_contact", lead };
   }
 
   const lastAt = lead?.meta?.welcomeOutreachAt
@@ -546,6 +578,11 @@ HARD RULES:
 - Never invent company information, pricing, discounts, delivery timelines, or product claims.
 - Answer ONLY using APPROVED_KNOWLEDGE below.
 - OUT OF CONTEXT / NO KNOWLEDGE: If APPROVED_KNOWLEDGE is missing, do NOT invent facts. For product/feature questions about GENS/HRMS/ATS, answer helpfully at a high level from company intro and ask which module they want — do NOT switch to demo booking. Only when the customer explicitly asks to book/schedule a demo, use LIST_DEMO_SLOTS / BOOK_DEMO_SLOT.
+- SALES DISPOSITION (set salesDisposition ONLY on clear buying signals; product Q&A → null):
+  - interested → customer wants demo / is ready to buy → use LIST_DEMO_SLOTS / BOOK_DEMO_SLOT as below. salesDisposition: "interested".
+  - not_ready → "baad me", "later", "not now", "next month", ask to follow up → SCHEDULE_FOLLOWUP with optional payload { "followUpAt": "YYYY-MM-DD" or "YYYY-MM-DD HH:mm" }. salesDisposition: "not_ready". Do NOT book a demo.
+  - declined → "not interested", "stop", "mat bhejo", "unsubscribe", "nahi chahiye" → STOP_OUTREACH. salesDisposition: "declined". Polite close; do not push demo or follow-up.
+  - Never force SCHEDULE_FOLLOWUP / STOP_OUTREACH / demo booking on pure product/feature questions.
 - DEMO BOOKING (office hours Asia/Kolkata, Mon–Sat 9:00 AM–6:30 PM; hourly slots 9:00–5:00 PM; Sunday closed):
   - TODAY_IST in the user prompt is the real calendar date — for "aaj"/"today" ALWAYS use that exact YYYY-MM-DD. Never invent old years (e.g. 2023).
   1) If customer wants a demo but no date yet → ask: "Kaunsi date aur time chahiye?" / "Which date and time works for you?"
@@ -566,11 +603,12 @@ ${knowledgeBlock}
 
 Return STRICT JSON only with this schema:
 {
-  "intent": "GENERAL_ENQUIRY|PRODUCT_ENQUIRY|SERVICE_ENQUIRY|PRICING_ENQUIRY|SALES_ENQUIRY|DEMO_REQUEST|SUPPORT_REQUEST|COMPLAINT|PARTNERSHIP_ENQUIRY|JOB_ENQUIRY|HUMAN_AGENT_REQUEST|CUSTOM_CODE",
+  "intent": "GENERAL_ENQUIRY|PRODUCT_ENQUIRY|SERVICE_ENQUIRY|PRICING_ENQUIRY|SALES_ENQUIRY|DEMO_REQUEST|FOLLOWUP_REQUEST|DECLINED|SUPPORT_REQUEST|COMPLAINT|PARTNERSHIP_ENQUIRY|JOB_ENQUIRY|HUMAN_AGENT_REQUEST|CUSTOM_CODE",
   "confidence": 0.0,
   "language": "en|hi",
+  "salesDisposition": "interested|not_ready|declined|null",
   "reply": "message to send to customer",
-  "actions": [{ "type": "ANSWER_QUESTION|ASK_FOLLOWUP|COLLECT_LEAD_INFORMATION|CREATE_LEAD|UPDATE_LEAD|SCHEDULE_DEMO|LIST_DEMO_SLOTS|BOOK_DEMO_SLOT|CREATE_SUPPORT_TICKET|TRANSFER_TO_HUMAN|NO_REPLY", "payload": {} }],
+  "actions": [{ "type": "ANSWER_QUESTION|ASK_FOLLOWUP|COLLECT_LEAD_INFORMATION|CREATE_LEAD|UPDATE_LEAD|SCHEDULE_DEMO|LIST_DEMO_SLOTS|BOOK_DEMO_SLOT|SCHEDULE_FOLLOWUP|STOP_OUTREACH|CREATE_SUPPORT_TICKET|TRANSFER_TO_HUMAN|NO_REPLY", "payload": {} }],
   "leadUpdates": { "fullName": null, "companyName": null, "email": null, "phone": null, "productInterest": null, "businessRequirements": null, "employeeCount": null, "budget": null, "purchaseTimeline": null },
   "memoryUpdates": { "preferences": {}, "productsDiscussed": [], "requirements": null, "questionsAnswered": [] },
   "leadPriority": "HOT|WARM|COLD|null",
@@ -899,6 +937,48 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
   const langHi = decision.language === "hi" || /[\u0900-\u097F]/.test(String(inbound.body || ""));
   const productInfoQuery = isProductInfoQuery(inbound.body);
   const explicitDemoAsk = wantsDemoScheduling(inbound.body);
+  const salesDisposition = detectSalesDisposition(inbound.body, decision.salesDisposition);
+  decision.salesDisposition = salesDisposition;
+
+  // Disposition harden: inject follow-up / stop; strip conflicting demo actions
+  if (salesDisposition === "declined") {
+    decision.intent = "DECLINED";
+    decision.needsHuman = false;
+    decision.actions = (decision.actions || []).filter(
+      (a) =>
+        !["LIST_DEMO_SLOTS", "BOOK_DEMO_SLOT", "SCHEDULE_DEMO", "SCHEDULE_FOLLOWUP"].includes(a.type)
+    );
+    if (!decision.actions.some((a) => a.type === "STOP_OUTREACH")) {
+      decision.actions.push({ type: "STOP_OUTREACH", payload: {} });
+    }
+    if (!String(decision.reply || "").trim()) {
+      decision.reply = langHi
+        ? "Samajh gaya. Aapko aur messages nahi bhejenge. Agar baad me madad chahiye to yahan message kar dena."
+        : "Understood. We won't send you further outreach. If you need help later, just message here anytime.";
+    }
+  } else if (salesDisposition === "not_ready") {
+    decision.intent = "FOLLOWUP_REQUEST";
+    decision.needsHuman = false;
+    decision.actions = (decision.actions || []).filter(
+      (a) => !["LIST_DEMO_SLOTS", "BOOK_DEMO_SLOT", "SCHEDULE_DEMO", "STOP_OUTREACH"].includes(a.type)
+    );
+    if (!decision.actions.some((a) => a.type === "SCHEDULE_FOLLOWUP")) {
+      decision.actions.push({ type: "SCHEDULE_FOLLOWUP", payload: {} });
+    }
+  } else if (salesDisposition === "interested" && explicitDemoAsk) {
+    decision.intent = decision.intent === "DECLINED" ? "DEMO_REQUEST" : decision.intent || "DEMO_REQUEST";
+  }
+
+  // Product Q&A must never force stop/follow-up
+  if (productInfoQuery && !explicitDemoAsk && salesDisposition !== "declined" && salesDisposition !== "not_ready") {
+    decision.salesDisposition = null;
+    decision.actions = (decision.actions || []).filter(
+      (a) => !["SCHEDULE_FOLLOWUP", "STOP_OUTREACH", "LIST_DEMO_SLOTS", "BOOK_DEMO_SLOT", "SCHEDULE_DEMO"].includes(a.type)
+    );
+    if (!decision.actions.length) {
+      decision.actions = [{ type: "ANSWER_QUESTION", payload: {} }];
+    }
+  }
 
   if (
     noApprovedKnowledge &&
@@ -961,7 +1041,7 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
     }
   }
 
-  // Lead-collection / demo flow should not be killed by low confidence alone
+  // Lead-collection / demo / disposition flow should not be killed by low confidence alone
   const collectingLead = decision.actions.some((a) =>
     [
       "COLLECT_LEAD_INFORMATION",
@@ -971,6 +1051,8 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
       "SCHEDULE_DEMO",
       "LIST_DEMO_SLOTS",
       "BOOK_DEMO_SLOT",
+      "SCHEDULE_FOLLOWUP",
+      "STOP_OUTREACH",
     ].includes(a.type)
   );
 
@@ -1144,6 +1226,8 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
   let lastDemoList = null;
   let lastDemoBook = null;
   let demoBookedThisTurn = false;
+  let lastFollowUp = null;
+  let stoppedOutreach = false;
 
   const ensureLead = async () => {
     updatedLead = await upsertLead(
@@ -1396,6 +1480,134 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
             "missing_datetime"
           );
         }
+      } else if (action.type === "SCHEDULE_FOLLOWUP") {
+        if (productInfoQuery && salesDisposition !== "not_ready") {
+          await logAction(
+            tenantId,
+            conversation.id,
+            inboundMsg.id,
+            action.type,
+            action.payload,
+            "skipped",
+            "product_info_query"
+          );
+        } else {
+          const lead = await ensureLead();
+          const followMoment =
+            parseFollowUpAt(action.payload || {}, inbound.body) ||
+            parseFollowUpAt({}, "baad me");
+          const label = formatFollowUpLabel(followMoment);
+          const followIso = followMoment.toISOString();
+          await lead.update({
+            leadStatus: "nurturing",
+            meta: {
+              ...(lead.meta || {}),
+              salesDisposition: "not_ready",
+              followUpAt: followIso,
+              followUpNote: String(action.payload?.note || inbound.body || "").slice(0, 500),
+              followUpSentAt: null,
+              doNotContact: false,
+            },
+          });
+          await conversation.update({
+            context: {
+              ...(conversation.context || {}),
+              salesDisposition: "not_ready",
+              followUpAt: followIso,
+              followUpNote: String(action.payload?.note || inbound.body || "").slice(0, 500),
+              doNotContact: false,
+            },
+          });
+          memPatch.leadStatus = "nurturing";
+          lastFollowUp = { at: followIso, label };
+          decision.reply =
+            decision.language === "hi"
+              ? `Theek hai — abhi pressure nahi. Main ${label} ke around follow-up karunga. Tab tak sawal ho to poochhte rahiye.`
+              : `No problem — no pressure. I'll follow up around ${label}. Feel free to ask anything until then.`;
+          try {
+            const mailResult = await notifySalesFollowUp({
+              settings,
+              lead,
+              conversation,
+              followUpAt: followMoment.toDate(),
+              followUpLabel: label,
+              note: String(inbound.body || "").slice(0, 500),
+            });
+            await logAction(
+              tenantId,
+              conversation.id,
+              inboundMsg.id,
+              "NOTIFY_SALES_FOLLOWUP_EMAIL",
+              {
+                to: mailResult?.to || null,
+                skipped: mailResult?.skipped || false,
+                reason: mailResult?.reason || null,
+                followUpAt: followIso,
+              },
+              mailResult?.skipped ? "skipped" : "executed"
+            );
+          } catch (mailErr) {
+            console.error("aiAgentEngine.followUpMail:", mailErr?.message || mailErr);
+            await logAction(
+              tenantId,
+              conversation.id,
+              inboundMsg.id,
+              "NOTIFY_SALES_FOLLOWUP_EMAIL",
+              { error: mailErr?.message || String(mailErr) },
+              "failed",
+              mailErr?.message || String(mailErr)
+            );
+          }
+          await logAction(
+            tenantId,
+            conversation.id,
+            inboundMsg.id,
+            action.type,
+            { followUpAt: followIso, label },
+            "executed"
+          );
+        }
+      } else if (action.type === "STOP_OUTREACH") {
+        const lead = await ensureLead();
+        const declinedAt = new Date().toISOString();
+        await lead.update({
+          leadStatus: "lost",
+          meta: {
+            ...(lead.meta || {}),
+            salesDisposition: "declined",
+            doNotContact: true,
+            declinedAt,
+            followUpAt: null,
+          },
+        });
+        await conversation.update({
+          context: {
+            ...(conversation.context || {}),
+            salesDisposition: "declined",
+            doNotContact: true,
+            declinedAt,
+          },
+        });
+        memPatch.leadStatus = "lost";
+        stoppedOutreach = true;
+        // Same turn: strip list/book/follow-up so they never run after stop
+        decision.actions = (decision.actions || []).filter(
+          (a) => !["LIST_DEMO_SLOTS", "BOOK_DEMO_SLOT", "SCHEDULE_DEMO", "SCHEDULE_FOLLOWUP"].includes(a.type)
+        );
+        if (!String(decision.reply || "").trim() || /demo|slot|follow/i.test(decision.reply)) {
+          decision.reply =
+            decision.language === "hi"
+              ? "Samajh gaya. Aapko proactive messages nahi bhejenge. Agar kabhi madad chahiye to yahan likh dena — AI reply kar sakta hai."
+              : "Understood. We won't send proactive outreach. If you message us again anytime, our AI can still help.";
+        }
+        await logAction(
+          tenantId,
+          conversation.id,
+          inboundMsg.id,
+          action.type,
+          { declinedAt, doNotContact: true },
+          "executed"
+        );
       } else if (action.type === "TRANSFER_TO_HUMAN") {
         handover = await executeHandover({
           tenantId,

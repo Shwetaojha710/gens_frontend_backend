@@ -139,8 +139,92 @@ async function notifySalesDemoScheduled({
   return { skipped: false, to, messageId: info.messageId || null };
 }
 
+/**
+ * Email sales when a WhatsApp lead asks to follow up later (not ready).
+ */
+async function notifySalesFollowUp({
+  settings,
+  lead,
+  conversation,
+  followUpAt = null,
+  followUpLabel = null,
+  note = null,
+}) {
+  if (settings && settings.notifyOnLead === false) {
+    return { skipped: true, reason: "notify_on_lead_disabled" };
+  }
+
+  const to = resolveSalesNotifyEmail(settings);
+  if (!to) {
+    return { skipped: true, reason: "no_sales_email" };
+  }
+
+  if (lead?.meta?.followUpEmailSentAt && lead?.meta?.followUpAt === (followUpAt?.toISOString?.() || followUpAt)) {
+    return { skipped: true, reason: "already_sent", to };
+  }
+
+  const transporter = createTransporter();
+  const name = lead?.fullName || conversation?.customerName || "WhatsApp lead";
+  const phone = lead?.phone || lead?.waId || conversation?.customerPhone || conversation?.waId || "—";
+  const company = lead?.companyName || "—";
+  const email = lead?.email || "—";
+  const interest = lead?.productInterest || "—";
+  const when =
+    followUpLabel ||
+    (followUpAt
+      ? new Date(followUpAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
+      : "—");
+  const noteText = note || lead?.meta?.followUpNote || "—";
+
+  const info = await transporter.sendMail({
+    from: process.env.MAIL_FROM || process.env.MAIL_USER,
+    to,
+    subject: `[AI Agent] Follow-up requested — ${name}`,
+    text: [
+      "WhatsApp lead asked to follow up later (not ready for demo).",
+      "",
+      `Name: ${name}`,
+      `Phone: ${phone}`,
+      `Company: ${company}`,
+      `Email: ${email}`,
+      `Follow-up (IST): ${when}`,
+      `Note: ${noteText}`,
+      `Interest: ${interest}`,
+      `Lead ID: ${lead?.id || ""}`,
+    ].join("\n"),
+    html: `
+      <h2>Follow-up requested (not ready)</h2>
+      <p>WhatsApp lead asked to follow up later.</p>
+      <ul>
+        <li><b>Name:</b> ${esc(name)}</li>
+        <li><b>Phone:</b> ${esc(phone)}</li>
+        <li><b>Company:</b> ${esc(company)}</li>
+        <li><b>Email:</b> ${esc(email)}</li>
+        <li><b>Follow-up (IST):</b> ${esc(when)}</li>
+        <li><b>Note:</b> ${esc(noteText)}</li>
+        <li><b>Interest:</b> ${esc(interest)}</li>
+        <li><b>Lead ID:</b> ${esc(lead?.id || "")}</li>
+      </ul>
+    `,
+  });
+
+  if (lead?.update) {
+    await lead.update({
+      meta: {
+        ...(lead.meta || {}),
+        followUpEmailSentAt: new Date().toISOString(),
+        followUpEmailTo: to,
+        followUpEmailMessageId: info.messageId || null,
+      },
+    });
+  }
+
+  return { skipped: false, to, messageId: info.messageId || null };
+}
+
 module.exports = {
   createTransporter,
   resolveSalesNotifyEmail,
   notifySalesDemoScheduled,
+  notifySalesFollowUp,
 };
