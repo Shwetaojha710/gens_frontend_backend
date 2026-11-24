@@ -155,17 +155,18 @@ exports.saveConfig = hr("saveConfig", async (req, res) => {
   if (b.whatsappAppSecret) settingsPatch.whatsappAppSecretEnc = encrypt(String(b.whatsappAppSecret));
   if (b.llmApiKey) settingsPatch.llmApiKeyEnc = encrypt(String(b.llmApiKey));
 
-  // Welcome template = agent's auto first outbound (Meta-approved, allowlisted numbers)
+  // Merge settings.meta patches (welcome template + sales notify email)
   const hasWelcomePatch =
     b.welcomeTemplateName != null ||
     b.welcomeTemplateLanguage != null ||
     b.welcomeTemplateBody != null ||
     typeof b.autoSendWelcomeTemplate === "boolean";
-  if (hasWelcomePatch) {
-    const current = getWelcomeTemplate(settings);
-    settingsPatch.meta = {
-      ...(settings.meta || {}),
-      welcomeTemplate: {
+  const hasSalesEmailPatch = b.salesNotifyEmail !== undefined;
+  if (hasWelcomePatch || hasSalesEmailPatch) {
+    const nextMeta = { ...(settings.meta || {}) };
+    if (hasWelcomePatch) {
+      const current = getWelcomeTemplate(settings);
+      nextMeta.welcomeTemplate = {
         name:
           b.welcomeTemplateName != null
             ? String(b.welcomeTemplateName).trim() || current.name
@@ -182,8 +183,13 @@ exports.saveConfig = hr("saveConfig", async (req, res) => {
           typeof b.autoSendWelcomeTemplate === "boolean"
             ? b.autoSendWelcomeTemplate
             : current.autoSend,
-      },
-    };
+      };
+    }
+    if (hasSalesEmailPatch) {
+      const email = String(b.salesNotifyEmail || "").trim();
+      nextMeta.salesNotifyEmail = email || null;
+    }
+    settingsPatch.meta = nextMeta;
   }
 
   await settings.update(settingsPatch);

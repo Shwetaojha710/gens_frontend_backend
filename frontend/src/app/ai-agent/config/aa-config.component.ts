@@ -65,6 +65,7 @@ export class AaConfigComponent implements OnInit {
           llmApiKey: '',
           notifyOnLead: s.notifyOnLead !== false,
           notifyOnHandover: s.notifyOnHandover !== false,
+          salesNotifyEmail: s?.meta?.salesNotifyEmail || '',
           defaultAssigneeId: s.defaultAssigneeId || '',
           welcomeTemplateName: wt.name || 'hello_world',
           welcomeTemplateLanguage: wt.language || 'en_US',

@@ -21,6 +21,7 @@ const {
   isWithinCustomerServiceWindow,
   formatWhatsAppSendError,
 } = require("./whatsappCloud");
+const { notifySalesDemoScheduled } = require("./aiAgentMail");
 
 /** Meta-approved GENS welcome template — agent's auto first outbound outside the 24h window. */
 const DEFAULT_WELCOME_TEMPLATE = {
@@ -1051,6 +1052,48 @@ async function processInboundMessage(tenantId, agent, settings, inbound, options
         await updatedLead.update({ leadStatus: "demo_scheduled" });
         memPatch.leadStatus = "demo_scheduled";
         await logAction(tenantId, conversation.id, inboundMsg.id, action.type, action.payload, "executed");
+
+        // Sales email when demo is confirmed (uses MAIL_* SMTP; toggle: notifyOnLead)
+        try {
+          const mailResult = await notifySalesDemoScheduled({
+            settings,
+            lead: updatedLead,
+            conversation,
+            preferredTime:
+              action.payload?.preferredTime ||
+              action.payload?.demoTime ||
+              nextDetails.purchaseTimeline ||
+              nextDetails.preferredDemoTime ||
+              null,
+          });
+          await logAction(
+            tenantId,
+            conversation.id,
+            inboundMsg.id,
+            "NOTIFY_SALES_DEMO_EMAIL",
+            { to: mailResult?.to || null, skipped: mailResult?.skipped || false, reason: mailResult?.reason || null },
+            mailResult?.skipped ? "skipped" : "executed"
+          );
+          if (mailResult?.skipped) {
+            console.log("aiAgentEngine.demoMail:", mailResult.reason || "skipped");
+          } else {
+            console.log("aiAgentEngine.demoMail: sent to", mailResult.to);
+          }
+        } catch (mailErr) {
+          console.error(
+            "aiAgentEngine.demoMail:",
+            mailErr?.message || mailErr
+          );
+          await logAction(
+            tenantId,
+            conversation.id,
+            inboundMsg.id,
+            "NOTIFY_SALES_DEMO_EMAIL",
+            { error: mailErr?.message || String(mailErr) },
+            "failed",
+            mailErr?.message || String(mailErr)
+          );
+        }
       } else if (action.type === "TRANSFER_TO_HUMAN") {
         handover = await executeHandover({
           tenantId,

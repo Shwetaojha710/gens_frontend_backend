@@ -100,12 +100,21 @@
           <div class="col-12">
             <div class="form-check">
               <input class="form-check-input" type="checkbox" [(ngModel)]="form.notifyOnLead" name="notifyOnLead" id="nLead" />
-              <label class="form-check-label" for="nLead">Notify on new lead</label>
+              <label class="form-check-label" for="nLead">Email sales when demo is scheduled</label>
             </div>
             <div class="form-check">
               <input class="form-check-input" type="checkbox" [(ngModel)]="form.notifyOnHandover" name="notifyOnHandover" id="nHand" />
               <label class="form-check-label" for="nHand">Notify on handover</label>
             </div>
+            <label class="form-label mt-2">Sales notify email</label>
+            <input
+              class="form-control"
+              type="email"
+              [(ngModel)]="form.salesNotifyEmail"
+              name="salesNotifyEmail"
+              placeholder="sales@quaeretech.com"
+            />
+            <div class="form-text">Used when a WhatsApp lead confirms a demo. Falls back to AI_AGENT_SALES_EMAIL / MAIL_USER.</div>
           </div>
           <div class="col-12 border-top pt-3">
             <h6 class="mb-2">Agent welcome template (test / open chat)</h6>
