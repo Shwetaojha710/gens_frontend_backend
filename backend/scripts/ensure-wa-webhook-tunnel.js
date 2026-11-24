@@ -1,6 +1,5 @@
 /**
- * Start-friendly helper: given a public tunnel base URL, register it with Meta
- * as the WhatsApp webhook callback for QuaereTech.
+ * LOCAL DEV ONLY: register a temporary tunnel URL with Meta.
  *
  * Usage:
  *   node scripts/ensure-wa-webhook-tunnel.js https://xxxx.trycloudflare.com
@@ -9,6 +8,9 @@
  *   1) npm run dev                         (port 3002)
  *   2) cloudflared tunnel --url http://127.0.0.1:3002
  *   3) node scripts/ensure-wa-webhook-tunnel.js <printed-https-url>
+ *
+ * PRODUCTION (permanent): use setup-production-webhook.js instead —
+ *   node scripts/setup-production-webhook.js
  */
 const { spawnSync } = require("child_process");
 const path = require("path");

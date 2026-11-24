@@ -1,6 +1,11 @@
-# Starts a Cloudflare quick tunnel to local WhatsApp webhook backend (port 3002).
-# Keep this window open while testing inbound WhatsApp replies.
+﻿# LOCAL DEV ONLY — Cloudflare quick tunnel to localhost:3002.
+# Keep this window open while testing inbound WhatsApp replies on your laptop.
 # After start, run: node scripts/setup-meta-webhook.js https://YOUR-TUNNEL.trycloudflare.com
+#
+# PRODUCTION: do NOT use this. Point Meta at the live domain instead:
+#   node scripts/setup-production-webhook.js
+#   → https://gens.demoquaeretech.in/api/whatsapp/webhook
+# Tunnel URLs die on sleep/restart; live domain stays permanent with pm2.
 
 $ErrorActionPreference = "Stop"
 $cloudflared = "C:\Program Files (x86)\cloudflared\cloudflared.exe"

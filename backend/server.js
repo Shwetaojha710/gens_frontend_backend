@@ -145,8 +145,13 @@ app.use((req, res, next) => {
 });
 
 
+// Mount under /api for local/direct access (http://host:3002/api/...).
+// Also mount at / because production nginx typically proxies
+// https://domain/api/X → http://node/X (strips the /api prefix).
 readdirSync('./app/routes').forEach((route) => {
-  app.use('/api', require('./app/routes/' + route));
+  const router = require('./app/routes/' + route);
+  app.use('/api', router);
+  app.use('/', router);
 });
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
