@@ -39,7 +39,14 @@ function esc(v) {
  * Email sales when a WhatsApp lead confirms / schedules a demo.
  * Duplicate-safe via lead.meta.demoEmailSentAt.
  */
-async function notifySalesDemoScheduled({ settings, lead, conversation, preferredTime }) {
+async function notifySalesDemoScheduled({
+  settings,
+  lead,
+  conversation,
+  preferredTime,
+  confirmedSlotLabel = null,
+  scheduledAt = null,
+}) {
   if (settings && settings.notifyOnLead === false) {
     return { skipped: true, reason: "notify_on_lead_disabled" };
   }
@@ -60,7 +67,9 @@ async function notifySalesDemoScheduled({ settings, lead, conversation, preferre
   const email = lead?.email || "—";
   const interest = lead?.productInterest || "—";
   const requirements = lead?.businessRequirements || "—";
-  const timeline =
+  const confirmed =
+    confirmedSlotLabel ||
+    lead?.meta?.demoScheduledLabel ||
     preferredTime ||
     lead?.purchaseTimeline ||
     lead?.collectedFields?.purchaseTimeline ||
@@ -68,26 +77,32 @@ async function notifySalesDemoScheduled({ settings, lead, conversation, preferre
     "To be confirmed";
   const priority = lead?.leadPriority || "—";
   const waId = lead?.waId || conversation?.waId || "—";
+  const iso =
+    (scheduledAt && new Date(scheduledAt).toISOString()) ||
+    lead?.meta?.demoScheduledAt ||
+    null;
 
-  const subject = `[GENS] Demo scheduled — ${company !== "—" ? company : name}`;
+  const subject = `[GENS] Demo booked — ${company !== "—" ? company : name} — ${confirmed}`;
   const html = `
     <div style="font-family:Arial,sans-serif;font-size:14px;color:#222;line-height:1.5">
-      <h2 style="margin:0 0 12px;color:#008f84">New demo scheduled (WhatsApp AI Agent)</h2>
-      <p>A customer confirmed interest in a product demo via the GENS WhatsApp agent.</p>
+      <h2 style="margin:0 0 12px;color:#008f84">Demo confirmed (WhatsApp AI Agent)</h2>
+      <p>A customer booked a product demo slot via the GENS WhatsApp agent.</p>
       <table style="border-collapse:collapse;width:100%;max-width:560px">
         <tr><td style="padding:6px 0;width:160px"><b>Name</b></td><td>${esc(name)}</td></tr>
         <tr><td style="padding:6px 0"><b>Company</b></td><td>${esc(company)}</td></tr>
         <tr><td style="padding:6px 0"><b>Phone / WhatsApp</b></td><td>${esc(phone)}</td></tr>
         <tr><td style="padding:6px 0"><b>Email</b></td><td>${esc(email)}</td></tr>
-        <tr><td style="padding:6px 0"><b>Preferred demo time</b></td><td>${esc(timeline)}</td></tr>
+        <tr><td style="padding:6px 0"><b>Confirmed slot (IST)</b></td><td><b>${esc(confirmed)}</b></td></tr>
+        <tr><td style="padding:6px 0"><b>UTC / ISO</b></td><td>${esc(iso || "—")}</td></tr>
         <tr><td style="padding:6px 0"><b>Product interest</b></td><td>${esc(interest)}</td></tr>
         <tr><td style="padding:6px 0"><b>Requirements</b></td><td>${esc(requirements)}</td></tr>
         <tr><td style="padding:6px 0"><b>Lead priority</b></td><td>${esc(priority)}</td></tr>
         <tr><td style="padding:6px 0"><b>WA ID</b></td><td>${esc(waId)}</td></tr>
         <tr><td style="padding:6px 0"><b>Lead ID</b></td><td>${esc(lead?.id)}</td></tr>
         <tr><td style="padding:6px 0"><b>Conversation ID</b></td><td>${esc(conversation?.id)}</td></tr>
+        <tr><td style="padding:6px 0"><b>Demo slot ID</b></td><td>${esc(lead?.meta?.demoSlotId)}</td></tr>
       </table>
-      <p style="margin-top:16px;color:#666">Please follow up and confirm the demo slot.</p>
+      <p style="margin-top:16px;color:#666">Please join / follow up at the confirmed IST time.</p>
     </div>
   `;
 
@@ -98,12 +113,13 @@ async function notifySalesDemoScheduled({ settings, lead, conversation, preferre
     subject,
     html,
     text: [
-      "New demo scheduled (WhatsApp AI Agent)",
+      "Demo confirmed (WhatsApp AI Agent)",
       `Name: ${name}`,
       `Company: ${company}`,
       `Phone: ${phone}`,
       `Email: ${email}`,
-      `Preferred demo time: ${timeline}`,
+      `Confirmed slot (IST): ${confirmed}`,
+      `ISO: ${iso || ""}`,
       `Interest: ${interest}`,
       `Lead ID: ${lead?.id || ""}`,
     ].join("\n"),

@@ -78,6 +78,7 @@ GeneratedDocument.sync({ alter: false }).catch(err =>
   require('./app/models/ai_agent_leads'),
   require('./app/models/ai_agent_actions'),
   require('./app/models/ai_agent_handover'),
+  require('./app/models/ai_agent_demo_slots'),
 ].forEach((model) =>
   model.sync({ alter: false }).catch(err =>
     console.error(`${model.getTableName()} sync error:`, err)

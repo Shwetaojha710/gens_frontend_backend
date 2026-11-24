@@ -66,8 +66,8 @@ function formatKnowledgeForPrompt(docs) {
       "NO_APPROVED_KNOWLEDGE_FOUND. Do not invent company facts, pricing, features, or timelines. " +
       "Reply politely that this query is outside your approved knowledge, invite them to book a free product demo, " +
       "and say our team will support them and help solve all their questions. " +
-      "Ask for name, company, email, phone, and preferred demo time (one question at a time if details missing). " +
-      "Use actions SCHEDULE_DEMO and/or COLLECT_LEAD_INFORMATION."
+      "Ask for name, company, email, phone, and a preferred demo date (one question at a time if details missing). " +
+      "Use LIST_DEMO_SLOTS / BOOK_DEMO_SLOT and COLLECT_LEAD_INFORMATION. Never invent available times."
     );
   }
   return docs
