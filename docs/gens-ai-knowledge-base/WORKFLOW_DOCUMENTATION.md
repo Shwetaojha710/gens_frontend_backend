@@ -149,8 +149,8 @@ sequenceDiagram
 | **Gaps** | Status enum not tightly validated; 2-day calendar check is commented out in favour of working-day rule |
 
 ---
-
 ## 6. Leave application (employee)
+
 
 | | |
 |---|---|
@@ -229,9 +229,7 @@ sequenceDiagram
   end
   API-->>HR: generated + skipped
 ```
-
 ---
-
 ## 9. Payslip retrieval (employee)
 
 | | |
@@ -388,7 +386,6 @@ flowchart LR
   E --> G[rejected]
   B --> G
 ```
-
 ---
 
 ## 17. Performance review cycle
@@ -476,9 +473,7 @@ flowchart TB
 | Missing branch | `"branchId is required!"` on many AppAdmin/Admin writes | multiple controllers |
 | Tenant filter gaps | Some updates by id without tenantId | noted in `BUSINESS_RULES.md` R-X-01 |
 | Backup routes | `app_6_10_2026.js` mounted but shadowed — do not document as alternate live flow | `server.js` + catalog |
-
 ---
-
 ## Workflow coverage checklist
 
 | Workflow | Documented | Runtime tested in this investigation |

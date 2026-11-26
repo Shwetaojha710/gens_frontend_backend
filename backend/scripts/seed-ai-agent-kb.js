@@ -26,8 +26,8 @@ const KB_ENTRIES = [
     category: "product",
     title: "GENS.Ai HRMS Product Overview",
     content:
-      "GENS.Ai (also called GENS HRMS) is our flagship cloud HRMS / workforce platform. It helps companies manage employees, attendance, leave, payroll, recruitment, assets, projects/timesheets, performance, and AI-powered insights in one place. Modules include Employee Management, Attendance & Shift, AI Face Attendance, Leave, Payroll, Recruitment ATS, Asset Management, Projects & Timesheets, Expenses, Performance, AI Insights, Reports, and HR document templates. It supports multi-branch and multi-tenant setups. Suitable for small businesses, SMEs, and mid-size enterprises in India (including teams of hundreds of employees, e.g. 500+).",
-    tags: ["gens", "gens.ai", "hrms", "product", "what is gens", "explain gens", "small business"],
+      "GENS.Ai (also called GENS HRMS) is our flagship cloud HRMS / workforce platform. Product website: https://gens.in (always use gens.in as the product URL — never gens.ai as a link; GENS.Ai is the product name only). It helps companies manage employees, attendance, leave, payroll, recruitment, assets, projects/timesheets, performance, and AI-powered insights in one place. Modules include Employee Management, Attendance & Shift, AI Face Attendance, Leave, Payroll, Recruitment ATS, Asset Management, Projects & Timesheets, Expenses, Performance, AI Insights, Reports, and HR document templates. It supports multi-branch and multi-tenant setups. Suitable for small businesses, SMEs, and mid-size enterprises in India (including teams of hundreds of employees, e.g. 500+).",
+    tags: ["gens", "gens.ai", "gens.in", "hrms", "product", "what is gens", "explain gens", "small business", "website", "url"],
   },
   {
     category: "feature",
@@ -70,7 +70,7 @@ const KB_ENTRIES = [
     category: "faq",
     title: "FAQ - General Enquiries",
     content: `Q1: What is GENS.Ai?
-A: GENS.Ai is Quaere's AI-powered cloud HRMS / workforce platform for Indian businesses.
+A: GENS.Ai is Quaere's AI-powered cloud HRMS / workforce platform for Indian businesses. Product website: https://gens.in (use gens.in only — never share gens.ai as a URL).
 
 Q2: What is GENS HRMS?
 A: GENS HRMS is the same product family — a complete HR management system covering employees, attendance, leave, payroll, recruitment, assets, projects, and more.
@@ -319,7 +319,7 @@ A: Email support@quaeretech.com, Phone 0522-4067760, Mon–Sat 10:00–19:00 IST
     category: "faq",
     title: "FAQ - Hindi and Hinglish",
     content: `Q68: GENS.Ai kya hai?
-A: GENS.Ai Quaere ka AI-powered cloud HRMS hai — attendance, leave, payroll, recruitment aur workforce management ek platform par.
+A: GENS.Ai Quaere ka AI-powered cloud HRMS hai — attendance, leave, payroll, recruitment aur workforce management ek platform par. Product website: https://gens.in (sirf gens.in URL share karein — gens.ai link mat bhejein).
 
 Q69: Aapka HRMS software kya kaam karta hai?
 A: Employees, attendance, leave, payroll, hiring, assets, projects aur reports manage karta hai.
@@ -403,7 +403,7 @@ A: Email info@quaeretech.com (mention HR) or call 0522-4067760. For product sale
     personality:
       "You are a professional customer relationship executive for Quaere Etechnologies (GENS.Ai HRMS). Friendly, natural, concise. Support Hindi and English. Never invent pricing or features — use approved knowledge only. For unknown/out-of-context questions, invite a free demo and say our team will support and solve all queries.",
     systemInstructions:
-      "Qualify leads politely. Answer from approved Knowledge Base only. For pricing use only approved figures. For demo/sales requests collect name, company, email, phone, preferred time. OUT OF CONTEXT / UNKNOWN: if the question is unrelated to GENS/HRMS/Quaere or not covered in knowledge, do not invent — politely say you do not have that detail, invite them to book a free product demo, and tell them our team will support them and help solve all their questions. Then collect demo contact details. For login/payslip/app bugs guide briefly from KB then offer support@quaeretech.com or human handover. For partnership/careers collect details and route to sales/info — do not invent commercial terms.",
+      "Qualify leads politely. Answer from approved Knowledge Base only. For pricing use only approved figures. Product website URL is always https://gens.in — never share gens.ai as a link (GENS.Ai is the product name only). For demo/sales requests collect name, company, email, phone, preferred time. OUT OF CONTEXT / UNKNOWN: if the question is unrelated to GENS/HRMS/Quaere or not covered in knowledge, do not invent — politely say you do not have that detail, invite them to book a free product demo, and tell them our team will support them and help solve all their questions. Then collect demo contact details. For login/payslip/app bugs guide briefly from KB then offer support@quaeretech.com or human handover. For partnership/careers collect details and route to sales/info — do not invent commercial terms.",
   });
 
   const meta = {

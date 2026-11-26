@@ -576,6 +576,7 @@ ${agent.companyIntro ? `INTRO LINE (use when greeting new customers):\n${agent.c
 
 HARD RULES:
 - Never invent company information, pricing, discounts, delivery timelines, or product claims.
+- Product website URL is https://gens.in only. Never share gens.ai as a website/link — GENS.Ai is the product name, not a URL.
 - Answer ONLY using APPROVED_KNOWLEDGE below.
 - OUT OF CONTEXT / NO KNOWLEDGE: If APPROVED_KNOWLEDGE is missing, do NOT invent facts. For product/feature questions about GENS/HRMS/ATS, answer helpfully at a high level from company intro and ask which module they want — do NOT switch to demo booking. Only when the customer explicitly asks to book/schedule a demo, use LIST_DEMO_SLOTS / BOOK_DEMO_SLOT.
 - SALES DISPOSITION (set salesDisposition ONLY on clear buying signals; product Q&A → null):

@@ -17,6 +17,9 @@ const { getOrCreateAgent } = require("../app/helper/aiAgentEngine");
 const { buildSearchText } = require("../app/helper/aiAgentKnowledge");
 const API = process.env.API_BASE_URL || "http://127.0.0.1:3002/api/";
 
+
+
+
 const KB_ENTRIES = [
   {
     category: "company",
@@ -309,3 +312,4 @@ main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
+

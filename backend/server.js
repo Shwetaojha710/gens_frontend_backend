@@ -124,11 +124,13 @@ app.use(bodyParser.json({
     }
   },
 }));
+
 app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 
 
 app.use(express.static(path.join(__dirname, 'upload')));
 app.use('/upload', express.static(path.join(__dirname, 'upload')));
+
 
 // Employee face / profile photos (attendance facedata)
 try {
@@ -168,4 +170,7 @@ app.get("/download/:file", (req, res) => {
   });
 });
 
+
 app.listen(port, () => console.log(`Server running on port ${port}`));
+
+
